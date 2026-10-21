@@ -30,7 +30,7 @@ class Worker:
         self.lease=json.loads(self.row['lease_json']);self.spec=self.lease['spec'];self.binding=Path(self.lease['binding'])
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
         self.provider=None;self.provider_identity=None;self.client=None;self.native=self.row['native_id'];self.turn=None
-        self.stopping=False;self.running_task=None;self.tasks_started=0
+        self.stopping=False;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
         self.expected_native=self.native;self.model_observed=None
 
     def emit(self,event,**payload):
@@ -126,6 +126,8 @@ class Worker:
             async with asyncio.timeout(self.spec.get('wall_time_seconds',1800)):
                 result=await (self.codex_turn(text) if self.row['provider']=='codex' else self.claude_turn(text))
         except BaseException as error:
+            self.retire_after_task=True
+            self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=?",(self.row['worker_id'],))
             await self.interrupt()
             code=classify(error.error) if isinstance(error,ProviderError) else 'BUDGET_EXHAUSTED' if isinstance(error,TimeoutError) else 'WORKER_CRASHED'
             result={'status':'canceled' if self.stopping else 'timed_out' if isinstance(error,TimeoutError) else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':code,'message':str(error)[:1000]},'native_turn_ids':[self.turn] if self.turn else []}
@@ -151,9 +153,10 @@ class Worker:
         with self.journal.transaction() as db:
             db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
                 (result['status'].upper(),artifact,self.turn,json.dumps(result.get('error')),task_id,self.row['generation']))
-            db.execute("UPDATE workers SET state='IDLE_GRACE' WHERE worker_id=?",(self.row['worker_id'],))
+            db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if self.retire_after_task else 'IDLE_GRACE',self.row['worker_id']))
         self.journal.event(task_id,'native-task-terminal',record)
         self.running_task=None;self.emit('task_terminal',task_id=task_id,artifact_id=artifact,status=result['status'])
+        if self.retire_after_task:await self.close()
         if reservation:budget.settle(reservation,observed_turns=1,native_id=self.native)
 
     def ingested(self):
@@ -272,6 +275,7 @@ async def run(worker_id,lease_fd):
         while (event:=await worker.queue.get()) is not None:
             if worker.stopping:break
             await worker.task(event['task_id'],event['text'])
+            if worker.retire_after_task:break
     except Exception as error:
         worker.emit('failed',error=error.json() if isinstance(error,PeerError) else {'code':'WORKER_CRASHED','message':str(error)[:1000]})
     finally:
