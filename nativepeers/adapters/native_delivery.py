@@ -6,11 +6,25 @@ from pathlib import Path
 import re
 import socket
 import stat
+import signal
 
 from ..errors import PeerError, require
 from ..files import canonical
 from ..launch import launch_environment
 from ..models import PEER_FRAME, new_id
+from ..process import identity,signal_owned
+
+QUEUE_STOP_GRACE=2
+
+
+async def stop_queue_writer(process,owner):
+    if owner and process.returncode is None:signal_owned(owner,signal.SIGTERM,group=True)
+    try:await asyncio.wait_for(process.communicate(),QUEUE_STOP_GRACE)
+    except asyncio.TimeoutError:
+        if owner and process.returncode is None:signal_owned(owner,signal.SIGKILL,group=True)
+        try:await asyncio.wait_for(process.communicate(),QUEUE_STOP_GRACE)
+        except asyncio.TimeoutError:
+            raise PeerError('DELIVERY_UNKNOWN','Queue helper cleanup could not be confirmed; reconcile the owned attempt',may_have_received=True) from None
 
 
 async def codex_queue(peer, message):
@@ -21,11 +35,20 @@ async def codex_queue(peer, message):
         peer["peer_key"]["native_session_id"], "--message", canonical(message).decode(),
         env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True)
+    try:owner=identity(process.pid).json()
+    except ProcessLookupError:owner=None
     try:
         stdout, stderr = await asyncio.wait_for(process.communicate(), 25)
     except asyncio.TimeoutError:
-        process.terminate(); await process.wait()
+        await stop_queue_writer(process,owner)
         raise PeerError("DELIVERY_UNKNOWN", "Queue writer timed out; reconcile before another submission", may_have_received=True)
+    except asyncio.CancelledError as error:
+        try:await stop_queue_writer(process,owner)
+        except PeerError as cleanup:error.add_note(str(cleanup))
+        raise
+    except Exception:
+        await stop_queue_writer(process,owner)
+        raise
     match = re.fullmatch(rb"Queued message ([0-9a-f-]+) for thread ([0-9a-f-]+)\.\s*", stdout)
     if process.returncode or not match or match[2].decode() != peer["peer_key"]["native_session_id"]:
         raise PeerError("DELIVERY_UNKNOWN", "Native queue outcome is unconfirmed", may_have_received=True,
