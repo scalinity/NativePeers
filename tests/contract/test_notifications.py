@@ -101,6 +101,20 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         for expected,actual in zip(results,sent):
             self.assertEqual(actual['native_session_id'],expected['worker']['native_session_id']);self.assertEqual(actual['result_artifact_id'],expected['result_artifact_id']);self.assertTrue(actual['summary_truncated'])
 
+    async def test_terminal_wait_reads_retained_results_without_a_supervisor(self):
+        from nativepeers.artifacts import Artifacts
+        from nativepeers.delegation import Delegation
+        result={'summary':'retained finding','task_id':self.task,'status':'completed'}
+        artifact=Artifacts(self.j).put(canonical(result),self.worker,[self.parent],media_type='application/json')
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED',result_artifact_id=?",(artifact,))
+        delegation=Delegation(self.j,Registry(self.j))
+        with patch('nativepeers.delegation.group_call',side_effect=AssertionError('No supervisor should be contacted')):
+            for handle in [self.id,self.task]:
+                value=await delegation.wait(self.group.parent,handle)
+                self.assertTrue(value['ready']);self.assertEqual(value['result']['results'][0]['summary'],'retained finding')
+                self.assertEqual(value['notification_disposition'],'retained-result-read')
+        self.assertEqual(self.route()['state'],'UNCLAIMED')
+
     async def test_late_old_generation_cannot_reclaim_output(self):
         self.j.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',claimed_generation=0")
         await self.group.notify();self.assertEqual(self.route()['claimed_generation'],0)

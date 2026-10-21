@@ -210,8 +210,13 @@ class Delegation:
         return dict(status,results=results)
 
     async def wait(self,caller,handle,timeout_ms=30000,on_timeout=None):
-        require(isinstance(timeout_ms,int) and 1<=timeout_ms<=30000,'PROTOCOL_ERROR','Wait is bounded to 30 seconds')
+        require(type(timeout_ms) is int and 1<=timeout_ms<=30000,'PROTOCOL_ERROR','Wait is bounded to 30 seconds')
+        require(on_timeout in (None,'push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         group=self.group(caller,handle)
+        status=self.status(caller,handle)
+        tasks=[t for t in status['tasks'] if handle==group['group_id'] or t['task_id']==handle]
+        if tasks and all(t['state'] in TERMINAL for t in tasks):
+            return {'ready':True,'result':self.result(caller,handle),'notification_output_uncertain':False,'notification_disposition':'retained-result-read'}
         return await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
 
     async def cancel(self,caller,handle,reason):
