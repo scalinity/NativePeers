@@ -43,6 +43,10 @@ def read_binding(journal, binding: Path):
     return value
 
 
+def native_ancestor(owner, ancestors):
+    return any(all(owner[k]==candidate[k] for k in ('pid','pgid','uid','start','executable')) for candidate in ancestors)
+
+
 def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
     path = fixed_binding or os.getenv("NPEER_BINDING")
     if path:
@@ -52,12 +56,12 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
             return Caller("controller", "controller:"+value["group_id"]+":"+str(value["generation"]), grants=value)
         peer = registry.verify(value["peer_key"], value["incarnation_id"])
         if fixed_binding is None:
-            require(peer["owner"] in [p.json() for p in ancestry()], "CALLER_UNBOUND", "Native owner is outside caller ancestry")
+            require(native_ancestor(peer["owner"], [p.json() for p in ancestry()]), "CALLER_UNBOUND", "Native owner is outside caller ancestry")
         return Caller("peer", peer["handle"], peer["incarnation_id"], value.get("grants", {}))
     native = os.getenv("CODEX_THREAD_ID")
     ancestors = [p.json() for p in ancestry()]
     if native:
-        candidates = [p for p in registry.list("codex") if p["peer_key"]["native_session_id"] == native and p["owner"] in ancestors]
+        candidates = [p for p in registry.list("codex") if p["peer_key"]["native_session_id"] == native and native_ancestor(p["owner"],ancestors)]
         require(len(candidates) == 1, "CALLER_UNBOUND", "Tool thread has no unique hook-observed native owner")
         p = candidates[0]
         return Caller("peer", p["handle"], p["incarnation_id"], p.get("policy", {}))

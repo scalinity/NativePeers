@@ -105,6 +105,13 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(rebound['incarnation_id'],self.b['incarnation_id'])
         with self.assertRaises(PeerError):self.registry.verify(self.b['handle'],self.b['incarnation_id'])
 
+    def test_native_owner_binding_survives_parent_reparenting(self):
+        from dataclasses import replace
+        from unittest.mock import patch
+        ancestor=replace(identity(os.getpid()),ppid=99999999)
+        with patch.dict(os.environ,{'CODEX_THREAD_ID':self.a['peer_key']['native_session_id'],'NPEER_BINDING':''}),patch('nativepeers.caller.ancestry',return_value=[ancestor]):
+            self.assertEqual(bind_caller(self.journal,self.registry).key,self.a['handle'])
+
     async def test_frame_limits_and_ack(self):
         with self.assertRaises(PeerError):await self.router.send(self.ca,'b','x'*12289)
         result=await self.router.send(self.ca,'b','ok')
