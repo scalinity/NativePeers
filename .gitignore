@@ -1,0 +1,13 @@
+.DS_Store
+__pycache__/
+.pytest_cache/
+.venv/
+backups/
+evidence/private/
+evidence/scratch/
+evidence/passive/
+evidence/protected-files.json
+evidence/baseline.json
+evidence/live/
+.claude/
+.codex/

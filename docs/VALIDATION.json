@@ -1,0 +1,268 @@
+{
+  "validation_kind": "static document consistency and illustrative example checks only",
+  "overall_document_validation": "PASS",
+  "checks_total": 47,
+  "checks_passed": 47,
+  "runtime_tests_performed": false,
+  "local_mac_inspection_performed": false,
+  "paid_model_turns_used": 0,
+  "scope_note": "This validates reproduced documents, not NativePeers software or local provider capabilities. Example schema checks cover selected documented fields, not a completed production JSON-schema implementation.",
+  "inputs": {
+    "IMPLEMENTATION(3).md": "778f6dcf07bcde2f031051a6eb22d4cf41abe3aecc01d3bd4cd2bca63cd60a16",
+    "KICKOFF_PROMPT(3).md": "1ed50c27cdcf6c920ca66aaacf8d1bf95bd73e3920afa270c0372cb14f3fe336"
+  },
+  "files": {
+    "IMPLEMENTATION.md": {
+      "sha256": "615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb8160e",
+      "bytes": 153419,
+      "lines": 1767
+    },
+    "KICKOFF_PROMPT.md": {
+      "sha256": "18de5e0d3230bba5bab4a380108c3a8cd420d4ddc281936e4104d89138841141",
+      "bytes": 26990,
+      "lines": 225
+    },
+    "REVIEW.md": {
+      "sha256": "625e8ec453a673e1c616bc359cdba269741e721f685031389ddc65586d2778e1",
+      "bytes": 13714,
+      "lines": 88
+    }
+  },
+  "checks": [
+    {
+      "check": "original implementation attachment unchanged",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "original kickoff attachment unchanged",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "implementation retains 26 numbered sections",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "kickoff retains 11 numbered sections",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "canonical revision synchronized",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "review distinguishes document acceptance from runtime acceptance",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "IMPLEMENTATION.md Markdown parses",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "IMPLEMENTATION.md code fences closed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "IMPLEMENTATION.md UTF-8/newline hygiene",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "KICKOFF_PROMPT.md Markdown parses",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "KICKOFF_PROMPT.md code fences closed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "KICKOFF_PROMPT.md UTF-8/newline hygiene",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "REVIEW.md Markdown parses",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "REVIEW.md code fences closed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "REVIEW.md UTF-8/newline hygiene",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "all five illustrative JSON payloads parse",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "illustrative JSON 1 selected field/format contract",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "illustrative JSON 2 selected field/format contract",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "illustrative JSON 3 selected field/format contract",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "illustrative JSON 4 selected field/format contract",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "illustrative JSON 5 selected field/format contract",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "message example expiry follows creation",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "message example sender differs from recipient and reply targets sender",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "worker example requests two distinct Sol/xhigh workers",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "result example does not fabricate observed model/effort",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "source register S01-S23 preserved",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "source references resolve",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "explicit section references resolve",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "18 LIVE scenario rows retained",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "GATE-ID synchronized across documents",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "GATE-INGRESS synchronized across documents",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "GATE-SUPERVISOR synchronized across documents",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "GATE-RETURN synchronized across documents",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "GATE-BOOTSTRAP synchronized across documents",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "PROGRESS.md continuation contract synchronized",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "evidence/checkpoint.json continuation contract synchronized",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "evidence/live-budget.json continuation contract synchronized",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "unchanged verification ceiling in both files",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "planning allowance totals 48",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "public spawn tool consistently worker_spawn",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "unbound-origin human-identity fallback removed",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "reply continuation explicit in protocol and CLI",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "wait timeout disposition reflected in CLI/tool/signature",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "conditional Codex patch remains evidence-gated",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "protected naming MCP and daemon settings retained",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "core scope retains no Herdr/T3 dependencies and no permanent broker",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "check": "no source or runtime claims fabricated by validation",
+      "status": "PASS",
+      "detail": ""
+    }
+  ]
+}

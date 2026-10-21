@@ -1,0 +1,105 @@
+"""Bound official-SDK facade. Initialization never waits for a native ID."""
+from __future__ import annotations
+
+import argparse
+import asyncio
+import json
+from pathlib import Path
+
+from mcp.server import Server, NotificationOptions
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, ListToolsResult, CallToolResult, TextContent
+
+from .errors import PeerError, require
+from .journal import Journal
+from .registry import Registry
+from .caller import bind_caller
+
+
+def object_schema(properties, required=()):
+    return dict(type='object',properties=properties,required=list(required),additionalProperties=False)
+
+
+STRING={'type':'string'}
+TOOLS={
+ 'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
+ 'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
+ 'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
+ 'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100}})),
+ 'worker_spawn':('Launch independent native workers; these are not vendor-native subagents.',object_schema({'spec':{'type':'object'}},['spec'])),
+ 'task_status':('Read local task/group or bootstrap state, without inference.',object_schema({'handle':STRING})),
+ 'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
+ 'task_result':('Read retained immutable attributed results.',object_schema({'handle':STRING},['handle'])),
+ 'task_cancel':('Cancel only work owned by this caller.',object_schema({'handle':STRING,'reason':STRING},['handle','reason'])),
+ 'artifact_read':('Read a registered artifact page within the caller grant.',object_schema({'handle':STRING,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':262144}},['handle'])),
+}
+
+
+class Facade:
+    def __init__(self,journal,binding):
+        self.journal,self.binding=journal,binding
+        self.sessions=set();self.watch_task=None
+
+    def binding_state(self):
+        return json.loads(self.binding.read_text())
+
+    def names(self):
+        state=self.binding_state()
+        if state.get('state')!='BOUND':return ['task_status']
+        granted=state.get('grants',{})
+        names=['peer_list','peer_send','peer_reply','peer_inbox','task_status','task_wait','task_result','artifact_read']
+        if granted.get('can_spawn'):names += ['worker_spawn','task_cancel']
+        return names
+
+    async def watch(self):
+        prior=self.names()
+        while True:
+            await asyncio.sleep(.1)
+            current=self.names()
+            if current!=prior:
+                for session in list(self.sessions):
+                    try:await session.send_tool_list_changed()
+                    except Exception:self.sessions.discard(session)
+                prior=current
+
+    async def list_tools(self,ctx,params):
+        self.sessions.add(ctx.session)
+        if self.watch_task is None:self.watch_task=asyncio.create_task(self.watch())
+        return ListToolsResult(tools=[Tool(name=n,description=TOOLS[n][0],input_schema=TOOLS[n][1]) for n in self.names()])
+
+    async def call(self,ctx,params):
+        try:
+            require(params.name in TOOLS,'PROTOCOL_ERROR','Unknown namespaced tool')
+            args=params.arguments or {};schema=TOOLS[params.name][1]
+            require(isinstance(args,dict) and not (set(args)-set(schema['properties'])) and set(schema['required'])<=set(args),'PROTOCOL_ERROR','Invalid tool arguments')
+            state=self.binding_state()
+            if state.get('state')!='BOUND':
+                require(params.name=='task_status','CALLER_NOT_READY','Native identity is reserved but not bound')
+                value={'state':'RESERVED_UNBOUND','worker_id':state.get('worker_id')}
+            else:
+                require(params.name in self.names(),'APPROVAL_BLOCKED','Tool is outside the fixed lease')
+                from .core import Core
+                caller=bind_caller(self.journal,Registry(self.journal),fixed_binding=self.binding,allow_external=False)
+                value=await Core(self.journal).tool(caller,params.name,args)
+            response=dict(schema_version=1,ok=True,data=value,error=None)
+        except PeerError as error:
+            response=dict(schema_version=1,ok=False,data=None,error=error.json())
+        return CallToolResult(content=[TextContent(type='text',text=json.dumps(response))],is_error=not response['ok'])
+
+
+async def serve(binding):
+    journal=Journal();facade=Facade(journal,binding)
+    server=Server('nativepeers',version='0.1.0',on_list_tools=facade.list_tools,on_call_tool=facade.call)
+    try:
+        async with stdio_server() as (reader,writer):
+            await server.run(reader,writer,server.create_initialization_options(notification_options=NotificationOptions(tools_changed=True)))
+    finally:
+        if facade.watch_task:facade.watch_task.cancel()
+        journal.close()
+
+
+def main():
+    parser=argparse.ArgumentParser();parser.add_argument('--binding',type=Path,required=True);args=parser.parse_args();asyncio.run(serve(args.binding))
+
+
+if __name__=='__main__':main()

@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "test_id": "LIVE-01",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-02",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-03",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-04",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-05",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-06",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-07",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-08",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-09",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-10",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-11",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-12",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-13",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-14",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-15",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-16",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-17",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    },
+    {
+      "test_id": "LIVE-18",
+      "status": "NOT_RUN",
+      "evidence_class": "live"
+    }
+  ]
+}
