@@ -2,13 +2,38 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
+from nativepeers.errors import PeerError
 from nativepeers.files import private_directory
 from nativepeers.install import Installer
 from nativepeers.journal import Journal
 
 
 class InstallTests(unittest.IsolatedAsyncioTestCase):
+    async def test_concurrent_hook_edit_is_preserved_during_install_and_uninstall(self):
+        for remove in (False,True):
+            with self.subTest(remove=remove),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);home=private_directory(root/'home');journal=Journal(root/'state')
+                self.addCleanup(journal.close)
+                settings=home/'.claude/settings.json';settings.parent.mkdir();settings.write_text('{"unrelated":false}')
+                installer=Installer(journal,home=home,native=False)
+                if remove:await installer.install()
+                merged=installer.merged;newer=None
+                def concurrent_merge(path,provider,remove=False):
+                    nonlocal newer
+                    before,after=merged(path,provider,remove)
+                    if provider=='claude':
+                        newer=json.dumps(dict(before,laterEdit={'enabled':False})).encode()
+                        path.write_bytes(newer)
+                    return before,after
+                plan={'operations':[{'operation':'fixture'}],'command_collision':False}
+                with patch.object(installer,'plan',return_value=plan),patch.object(installer,'merged',side_effect=concurrent_merge):
+                    with self.assertRaises(PeerError) as error:
+                        await (installer.uninstall() if remove else installer.install())
+                self.assertEqual(error.exception.code,'OWNERSHIP_CONFLICT')
+                self.assertEqual(settings.read_bytes(),newer)
+
     async def test_idempotent_install_and_owned_uninstall_preserve_later_edits(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);home=private_directory(root/'home');journal=Journal(private_directory(root/'state'))

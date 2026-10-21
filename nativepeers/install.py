@@ -69,8 +69,9 @@ class Installer:
     def plan(self,remove=False):
         operations=[]
         for provider,path in self.targets.items():
+            expected=file_hash(path)
             before,after=self.merged(path,provider,remove)
-            if before!=after:operations.append({'path':str(path),'operation':'remove-owned-hooks' if remove else 'append-owned-hooks','before_sha256':file_hash(path)})
+            if before!=after:operations.append({'path':str(path),'operation':'remove-owned-hooks' if remove else 'append-owned-hooks','before_sha256':expected})
         for provider,path in self.skills.items():
             source=ROOT/'integrations'/provider/'skills/nativepeers/SKILL.md'
             if remove:
@@ -139,11 +140,12 @@ class Installer:
             atomic_json(self.manifest,manifest)
             # Only changed hook blocks are recoverable snapshots. Credentials elsewhere in settings/config are never copied.
             for provider,path in self.targets.items():
+                expected=file_hash(path)
                 before,after=self.merged(path,provider)
                 if before!=after:
-                    atomic_json(backup/(provider+'-owned-blocks.json'),{'path':str(path),'before_sha256':file_hash(path),
+                    atomic_json(backup/(provider+'-owned-blocks.json'),{'path':str(path),'before_sha256':expected,
                         'before_hooks':before.get('hooks',{}),'changed_events':['SessionStart','SessionEnd']})
-                    compare_write(path,(json.dumps(after,indent=2,ensure_ascii=False)+'\n').encode(),file_hash(path))
+                    compare_write(path,(json.dumps(after,indent=2,ensure_ascii=False)+'\n').encode(),expected)
                     manifest['changed_keys'].append(str(path)+':hooks.SessionStart/SessionEnd')
                     atomic_json(self.manifest,manifest)
             for provider,path in self.skills.items():
@@ -171,8 +173,9 @@ class Installer:
         manifest=json.loads(self.manifest.read_text());conflicts=[]
         with self.lock():
             for provider,path in self.targets.items():
+                expected=file_hash(path)
                 before,after=self.merged(path,provider,remove=True)
-                if before!=after:compare_write(path,(json.dumps(after,indent=2,ensure_ascii=False)+'\n').encode(),file_hash(path))
+                if before!=after:compare_write(path,(json.dumps(after,indent=2,ensure_ascii=False)+'\n').encode(),expected)
             if self.native:await self.trust(remove=True,manifest=manifest)
             for provider,path in self.skills.items():
                 if not path.exists():continue
