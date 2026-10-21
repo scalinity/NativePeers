@@ -52,7 +52,13 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
     async with async_advisory_lock(journal.root/'locks'/(worker_id+'.resume.lock')):
         row,group=owned_worker(journal,caller,worker_id);assert_released(journal,row)
         registry=Registry(journal);parent=registry.verify(caller.key,caller.incarnation)
-        lease=json.loads(row['lease_json']);profile=lease['spec']['permission_profile']
+        from .policy import load
+        local=load(journal)
+        lease=json.loads(row['lease_json'])
+        require(lease['grants'].get('depth',1)<=local['max_depth'],'CAPACITY_UNAVAILABLE','Current local depth ceiling is lower than this worker grant')
+        lease['spec']['max_task_turns']=min(lease['spec']['max_task_turns'],local['max_task_turns'])
+        lease['spec']['wall_time_seconds']=min(lease['spec']['wall_time_seconds'],local['task_wall_seconds'])
+        profile=lease['spec']['permission_profile']
         if row['model_observed']:lease['spec']['model']=row['model_observed']
         require(profile in parent.get('policy',{}).get('profiles',['analysis']),'PERMISSION_CAPABILITY_UNKNOWN','Current parent does not retain the original permission ceiling')
         policy=json.loads(group['policy_json']);manifest_path=journal.root/'groups'/group['group_id']/'owner.json'
@@ -65,7 +71,7 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
         lease['grants']['message_targets']=[caller.key]
         with journal.transaction() as db:
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
-            require(active<8,'CAPACITY_UNAVAILABLE','No safe native worker slot is available')
+            require(active<local["workers_total"],'CAPACITY_UNAVAILABLE','No safe native worker slot is available')
             db.execute("UPDATE workers SET state='RESERVED',generation=generation+1,lease_json=? WHERE worker_id=? AND state='RELEASED_RESUMABLE'",(canonical(lease).decode(),worker_id))
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,None,None,'QUEUED',None,None,row['generation']+1,canonical({'text':text,'initial':False}).decode()))
             db.execute('UPDATE groups SET state=?,policy_json=? WHERE group_id=?',('RESERVED',canonical(policy).decode(),group['group_id']))

@@ -112,6 +112,16 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ,{'CODEX_THREAD_ID':self.a['peer_key']['native_session_id'],'NPEER_BINDING':''}),patch('nativepeers.caller.ancestry',return_value=[ancestor]):
             self.assertEqual(bind_caller(self.journal,self.registry).key,self.a['handle'])
 
+    async def test_native_titles_with_colons_and_configured_expiry(self):
+        from nativepeers.files import atomic_json
+        self.journal.db.execute("UPDATE peer_instances SET title=?,descriptor_json=json_set(descriptor_json,'$.title',?) WHERE peer_key=?",('Review: Fixture','Review: Fixture',self.b['handle']))
+        self.assertEqual(self.registry.resolve('Review: Fixture')['handle'],self.b['handle'])
+        self.assertEqual(self.registry.resolve('codex:Review: Fixture')['handle'],self.b['handle'])
+        atomic_json(self.journal.root/'policy.json',{'request_expiry_seconds':2})
+        outcome=await self.router.send(self.ca,'Review: Fixture','expires')
+        message=self.journal.one('SELECT * FROM messages WHERE message_id=?',(outcome['message_id'],))
+        self.assertEqual(message['expires_at']-message['created_at'],2)
+
     async def test_frame_limits_and_ack(self):
         with self.assertRaises(PeerError):await self.router.send(self.ca,'b','x'*12289)
         result=await self.router.send(self.ca,'b','ok')

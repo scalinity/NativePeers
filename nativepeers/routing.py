@@ -64,12 +64,14 @@ class Router:
         self.authorize(caller, peer["handle"], kind, reference)
         hop = reference.get("hop_count",0)+1 if reference else 0
         require(hop <= local["exchange_hops"], "CAPACITY_UNAVAILABLE", "Exchange hop limit reached")
+        expiry=local["request_expiry_seconds"] if expires_seconds==1800 else expires_seconds
+        require(0<expiry<=86400,"PROTOCOL_ERROR","Invalid configured message expiry")
         now, message_id, attempt_id = time.time(), new_id(), new_id()
         envelope = dict(schema_version=1,message_id=message_id,
             exchange_id=reference["exchange_id"] if reference else new_id(),kind=kind,
             **{"from":caller.actor()},to={"peer_key":peer["handle"]},
             reply_to={"peer_key":caller.key} if caller.kind=="peer" else None,
-            in_reply_to=in_reply_to,created_at=now,expires_at=now+expires_seconds,delivery_mode="queue",
+            in_reply_to=in_reply_to,created_at=now,expires_at=now+expiry,delivery_mode="queue",
             expect_reply=expect_reply,hop_count=hop,max_hops=local["exchange_hops"],
             origin="peer-agent" if caller.kind=="peer" else "group-controller",
             body={"text":text},artifact_refs=list(artifact_refs),task_id=None)
@@ -89,7 +91,7 @@ class Router:
                 require(pending<local["pending_messages"],"CAPACITY_UNAVAILABLE","Recipient has 32 pending requests")
             for ref in artifact_refs:Artifacts(self.journal).grant(ref,caller.key,[peer["handle"]])
             db.execute("INSERT INTO send_requests VALUES(?,?,?,?)",(caller.key,request_id,digest,message_id))
-            db.execute("INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)",(message_id,envelope["exchange_id"],caller.key,peer["handle"],in_reply_to,None,canonical(envelope).decode(),sha256(envelope),now+expires_seconds,now))
+            db.execute("INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)",(message_id,envelope["exchange_id"],caller.key,peer["handle"],in_reply_to,None,canonical(envelope).decode(),sha256(envelope),now+expiry,now))
             db.execute("INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)",(attempt_id,message_id,peer["incarnation_id"],transport,"OUTBOX_COMMITTED",now))
             if reference:
                 original_attempt=db.execute('SELECT attempt_id FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1',(in_reply_to,)).fetchone()

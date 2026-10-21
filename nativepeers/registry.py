@@ -83,13 +83,13 @@ class Registry:
         if selector.startswith("np1_"):
             return self.get(selector)
         provider, label, alias = None, None, selector
+        require('://' not in selector,'REMOTE_HOST_UNSUPPORTED','Only local native peers are addressable')
         if ":" in selector:
-            qualifier, alias = selector.split(":", 1)
-            if "@" in qualifier:
-                provider, label = qualifier.split("@", 1)
-            else:
-                provider = qualifier
-            require(provider in ("codex", "claude"), "REMOTE_HOST_UNSUPPORTED", "Only configured local providers are addressable")
+            qualifier, possible_alias = selector.split(":", 1)
+            possible_provider=qualifier.split('@',1)[0]
+            if possible_provider in ('codex','claude'):
+                provider=possible_provider;alias=possible_alias
+                if '@' in qualifier:label=qualifier.split('@',1)[1]
         alias = title(alias)
         candidates = [p for p in self.list(provider) if p["title"] == alias and (label is None or p["home_label"] == label)]
         require(candidates, "TARGET_OFFLINE", "No eligible live peer has that exact native title")
