@@ -17,7 +17,7 @@ from .delegation import Delegation,TERMINAL,supervisor_environment
 from .errors import PeerError,require
 from .files import advisory_lock,atomic_json,canonical
 from .journal import Journal
-from .models import PEER_FRAME,CONTROL_RESPONSE,new_id
+from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,PYTHON
 from .registry import Registry
@@ -278,8 +278,19 @@ class Group:
             db.execute("UPDATE completion_routes SET state='PUSH_SUBMITTING',claimed_generation=? WHERE group_id=? AND completion_generation=?",(self.generation,self.id,generation))
         from .core import Core
         result=Delegation(self.journal,Registry(self.journal)).result(self.parent,self.id)
-        summaries=[dict(title=r['worker']['title'],provider=r['worker']['provider'],native_session_id=r['worker']['native_session_id'],status=r['status'],summary=r['summary'][:2000],result_artifact_id=r['result_artifact_id']) for r in result['results'] if r['task_id'] in self.phases()[str(generation)]]
-        text='NativePeers group '+self.id+' completion generation '+str(generation)+'. These are independently produced worker results.\n'+json.dumps(summaries,ensure_ascii=False)
+        phase_results=[r for r in result['results'] if r['task_id'] in self.phases()[str(generation)]]
+        summary_limit,title_limit=2000,512
+        while True:
+            summaries=[dict(title=r['worker']['title'][:title_limit],title_truncated=len(r['worker']['title'])>title_limit,
+                provider=r['worker']['provider'],native_session_id=r['worker']['native_session_id'],status=r['status'],
+                summary=r['summary'][:summary_limit],summary_truncated=r.get('summary_truncated',False) or len(r['summary'])>summary_limit,
+                result_artifact_id=r['result_artifact_id']) for r in phase_results]
+            text='NativePeers group '+self.id+' completion generation '+str(generation)+'. These are independently produced worker results.\n'+json.dumps(summaries,ensure_ascii=False)
+            if len(text.encode('utf-8'))<=INLINE_BODY:break
+            if summary_limit:summary_limit//=2
+            else:
+                title_limit//=2
+                require(title_limit>=16,'PAYLOAD_TOO_LARGE','Completion metadata exceeds the peer body limit; retained artifact reads remain available')
         budget=None;reservation=None
         test=self.journal.root/'test-budget.json'
         try:

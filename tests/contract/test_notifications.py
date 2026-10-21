@@ -10,6 +10,7 @@ from unittest.mock import patch
 from nativepeers.files import canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
+from nativepeers.models import INLINE_BODY,bounded_text
 from nativepeers.process import identity
 from nativepeers.registry import Registry
 from nativepeers.supervisor import Group
@@ -81,6 +82,24 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             def __init__(s,j):s.router=FakeRouter()
         with patch('nativepeers.core.Core',FakeCore):await asyncio.gather(*[self.group.notify() for _ in range(5)])
         self.assertEqual(calls,[delivery]);self.assertEqual(self.route()['delivery_id'],delivery);self.assertEqual(self.route()['state'],'PUSH_ACCEPTED')
+
+    async def test_multibyte_and_escaped_completion_summaries_fit_the_final_body(self):
+        tasks=[self.task]+[new_id() for _ in range(3)];self.group.policy['phases']={'1':tasks}
+        for task in tasks[1:]:self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,self.worker,None,None,'COMPLETED',None,None,1,'{}'))
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED'")
+        summary=('中💡\n"\\\t'*400)
+        results=[{'task_id':task,'worker':{'title':'worker '+str(i),'provider':'claude','native_session_id':new_id()},'status':'completed','summary':summary,'result_artifact_id':'art_'+new_id()} for i,task in enumerate(tasks)]
+        bodies=[]
+        class FakeRouter:
+            async def send(s,caller,target,text,**kwargs):
+                bounded_text(text);bodies.append(text);return {'state':'ACCEPTED_QUEUED','message_id':new_id()}
+        class FakeCore:
+            def __init__(s,j):s.router=FakeRouter()
+        with patch('nativepeers.core.Core',FakeCore),patch('nativepeers.delegation.Delegation.result',return_value={'results':results}):await self.group.notify()
+        self.assertEqual(self.route()['state'],'PUSH_ACCEPTED');self.assertLessEqual(len(bodies[0].encode()),INLINE_BODY)
+        sent=json.loads(bodies[0].split('\n',1)[1]);self.assertEqual(len(sent),4)
+        for expected,actual in zip(results,sent):
+            self.assertEqual(actual['native_session_id'],expected['worker']['native_session_id']);self.assertEqual(actual['result_artifact_id'],expected['result_artifact_id']);self.assertTrue(actual['summary_truncated'])
 
     async def test_late_old_generation_cannot_reclaim_output(self):
         self.j.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',claimed_generation=0")
