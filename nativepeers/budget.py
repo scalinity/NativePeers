@@ -45,9 +45,12 @@ class LiveBudget:
             record = next(r for r in data["reservations"] if r["id"] == reservation)
             if record["state"] != "reserved":
                 raise RuntimeError("Reservation already used")
-            record.update(state="admitted", admitted_at=time.time())
+            admitted_at=time.time()
+            record.update(state="admitted", admitted_at=admitted_at)
             if not data["outstanding_native_requests"]:
-                data["active_intervals"].append({"start": time.time(), "end": None})
+                data["active_intervals"].append({"start":admitted_at,"end":None,"reservation_ids":[]})
+            interval=data['active_intervals'][-1]
+            if 'reservation_ids' in interval:interval['reservation_ids'].append(reservation)
             data["outstanding_native_requests"].append(reservation)
             data["consumed_turns"] += record["count"]
             data["reserved_turns"] -= record["count"]
@@ -62,10 +65,13 @@ class LiveBudget:
                           native_session_id=native_id,observed_completed_at=completed_at)
             data["outstanding_native_requests"].remove(reservation)
             if not data["outstanding_native_requests"]:
-                batch_start=data['active_intervals'][-1]['start']
-                data["active_intervals"][-1]["end"] = max(
-                    (r.get('observed_completed_at') or r.get('settled_at',time.time()))
-                    for r in data['reservations'] if r.get('state')=='settled' and r.get('admitted_at',0)>=batch_start)
+                interval=data['active_intervals'][-1]
+                if 'reservation_ids' not in interval:
+                    # Older ledgers stamped the first admission just before the interval.
+                    previous_end=data['active_intervals'][-2]['end'] if len(data['active_intervals'])>1 else float('-inf')
+                    interval['reservation_ids']=[r['id'] for r in data['reservations'] if r.get('state')=='settled' and r.get('admitted_at',float('-inf'))>=previous_end]
+                batch=set(interval['reservation_ids'])
+                interval['end']=max(r['observed_completed_at'] if r.get('observed_completed_at') is not None else r['settled_at'] for r in data['reservations'] if r['id'] in batch)
             data["active_seconds"] = sum((i.get("end") or time.time())-i["start"]
                                           for i in data["active_intervals"])
         self.change(operation)
