@@ -1,5 +1,7 @@
 # Installation and rollback
 
+Installation and uninstall pin each hook merge to the configuration hash captured before reading it. A concurrent edit causes `OWNERSHIP_CONFLICT`; reconcile the newer file before retrying. Reinstall updates an installed skill only when it still matches the recorded installed hash or already matches the desired content. Local skill edits are preserved and reported as conflicts.
+
 The installed project is `/Users/danny/Documents/Tools/NativePeers`. Its shell entrypoints select the pinned project virtual environment and module path. There is no permanent service or provider executable replacement.
 
 ```sh

@@ -2,6 +2,8 @@
 
 Use these commands from a registered native conversation's shell tool. Both providers share the same routing core and JSON envelope. `--json` may follow the subcommand. Success has `ok:true`; errors have stable `error.code` and `may_have_received`. Exit 6 means delivery uncertainty: keep the request ID and reconcile rather than sending a fresh copy.
 
+A definite send failure returns `ok:false` and the documented nonzero exit code. Its `data` retains the message and client-request IDs for inspection. Held, queued and ingested receipts remain distinct; a held receipt does not establish model processing. An outbox record without confirmed admission also returns exit 6.
+
 | Need | Command |
 |---|---|
 | Verify this native caller | `npeer whoami --json` |
@@ -37,6 +39,8 @@ Peer frames are at most 64 KiB, inline text 12 KiB, local control responses 2 Mi
 Use [the Claude-to-Codex example](../examples/claude-to-two-codex.json) or [the Codex-to-Claude example](../examples/codex-to-two-claude.json) as a batch template. The Sol example requests `gpt-6.1-sol` and `xhigh` without a fallback. Installed catalog checks precede dispatch; entitlement remains a real-inference question. Requested and provider-reported models are stored separately. Effort observation stays unverified when the backend does not independently echo it.
 
 Set `allow_sibling_messages:true` only for tasks that request collaboration. Completed initial task records remain immutable; peer follow-ups get separate tasks and completion generations. Follow-up message tasks are retained for result reads instead of submitting another aggregate by default. Worker follow-ups serialize through their existing controller; a Claude headless writer exits before the exact owned history is resumed.
+
+Waiting for one task in a multi-task batch leaves the batch notification unchanged. Waiting for already-terminal work reads its retained results even after the finite supervisor exits. Canceling a task affects that task; a canceled queued frame cannot start later, and canceling a terminal task leaves later follow-ups alone. Cancel the group handle to stop the whole owned group. A scoped running-turn cancellation closes its writer before any pending task continues in the same owned native history.
 
 For writing tasks use `permission_profile:"workspace"` and `workspace:{"mode":"isolated-worktree"}`. Each worker gets a separate branch/worktree and an exact baseline. Dirty tracked changes are captured into that worktree, selected untracked files require `untracked_allowlist`, and secrets are excluded. NativePeers does not stash, reset, clean or automatically merge the source checkout. Results retain the owned worktree path for inspection.
 
