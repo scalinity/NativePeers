@@ -93,3 +93,17 @@ def signal_owned(record: dict, sig: int = signal.SIGTERM, *, group: bool = False
     else:
         os.kill(record["pid"], sig)
     return True
+
+
+def terminal_owner(record: dict) -> bool:
+    """A Codex TUI owns terminal stdin; a private app-server's pipe is not TUI ingress."""
+    import subprocess
+    if not matches(record):return False
+    if sys.platform=='darwin':
+        result=subprocess.run(['/usr/sbin/lsof','-a','-p',str(record['pid']),'-d','0','-Fn'],capture_output=True,text=True,timeout=1)
+        paths=[line[1:] for line in result.stdout.splitlines() if line.startswith('n')]
+        terminal=any(path.startswith('/dev/tty') for path in paths)
+    else:
+        try:terminal=os.readlink('/proc/'+str(record['pid'])+'/fd/0').startswith(('/dev/pts/','/dev/tty'))
+        except OSError:terminal=False
+    return terminal and matches(record)

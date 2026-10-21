@@ -31,6 +31,9 @@ def observe(provider, event, journal):
         # Bounded observation only: no registration, waits, identity change, or turn-end unregistration.
         journal.event(lease['worker_id'],'native-hook-observed',dict(event=event['hook_event_name'],native_id=event['session_id'],process=owner))
         return {'controller_owned':True,'worker_id':lease['worker_id']}
+    if provider=='codex':
+        from .process import terminal_owner
+        require(terminal_owner(owner),'UNSUPPORTED_TRANSPORT','Unowned private app-server has no verified standalone TUI ingress')
     registry=Registry(journal)
     if event['hook_event_name']=='SessionEnd':
         journal.db.execute("UPDATE peer_instances SET status='offline' WHERE native_id=? AND pid=? AND process_start=? AND owner_kind='interactive-standalone'",(event['session_id'],owner['pid'],owner['start']))
