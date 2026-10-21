@@ -25,11 +25,12 @@ def snapshot(cwd):
             'patch_sha256':hashlib.sha256(git(root,'diff','HEAD','--binary').stdout).hexdigest()}
 
 
-def prepare(journal,cwd,worker_id,workspace):
+def prepare(journal,cwd,worker_id,workspace,*,expected_baseline=None):
     baseline=snapshot(cwd)
     mode=workspace.get('mode','inherit-read-only')
     if mode=='inherit-read-only':return str(Path(cwd).resolve()),None,baseline
     require(mode=='isolated-worktree','WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated-worktree mode')
+    require(expected_baseline is None or baseline==expected_baseline,'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout differs from the shared writing-batch baseline')
     require(baseline['git'],'WORKSPACE_SNAPSHOT_REQUIRED','Concurrent writing in a non-Git directory requires an explicit isolated copy')
     root=Path(baseline['root']);patch=git(root,'diff','HEAD','--binary').stdout
     names=git(root,'diff','--name-only','HEAD','-z').stdout.split(b'\0')

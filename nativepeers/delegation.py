@@ -86,7 +86,7 @@ class Delegation:
             client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex')
             try:await client.start();catalog=(await client.call('model/list',{'includeHidden':True,'limit':100}))['data']
             finally:await client.close()
-        prepared=[]
+        prepared=[];batch_baseline=snapshot(parent['cwd'])
         for source in workers:
             require(isinstance(source,dict) and source.get('provider') in ('claude','codex'),'PROTOCOL_ERROR','Unknown worker provider')
             spec=dict(source);spec['title']=title(spec['title']);spec['task']=bounded_text(spec['task'])
@@ -116,7 +116,7 @@ class Delegation:
             executable=(Path.home()/('.local/bin/claude' if spec['provider']=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')).resolve(strict=True)
             lease=dict(spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
                 executable=str(executable),live_budget_file=test_budget.get('path'),live_tranche=test_budget.get('tranche','first_cross_provider_delegations'))
-            prepared.append(dict(worker_id=worker_id,task_id=task_id,lease=lease,workspace=workspace,baseline=snapshot(parent['cwd'])))
+            prepared.append(dict(worker_id=worker_id,task_id=task_id,lease=lease,workspace=workspace))
             policy['workers'].append(worker_id);policy['initial_tasks'].append(task_id)
         policy['phases']={'1':policy['initial_tasks']}
         policy['controller_generation']=1
@@ -147,9 +147,11 @@ class Delegation:
         directory=private_directory(self.journal.root/'groups'/group_id)
         try:
             for worker in prepared:
-                cwd,worktree_id,baseline=await asyncio.to_thread(prepare,self.journal,parent['cwd'],worker['worker_id'],worker['workspace'])
+                cwd,worktree_id,baseline=await asyncio.to_thread(prepare,self.journal,parent['cwd'],worker['worker_id'],worker['workspace'],expected_baseline=batch_baseline)
                 worker['lease']['spec']['cwd']=cwd;worker['lease']['baseline']=baseline
                 self.journal.db.execute('UPDATE workers SET cwd=?,worktree_id=?,lease_json=? WHERE worker_id=?',(cwd,worktree_id,canonical(worker['lease']).decode(),worker['worker_id']))
+            if any(w['workspace'].get('mode')=='isolated-worktree' for w in prepared):
+                require(snapshot(parent['cwd'])==batch_baseline,'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout changed before writing-batch startup')
             await self.ensure_supervisor(group_id)
         except Exception as error:
             self.journal.event(group_id,'startup-error',{'type':type(error).__name__,'message':str(error)[:1000]})
