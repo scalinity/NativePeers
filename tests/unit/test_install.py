@@ -11,6 +11,25 @@ from nativepeers.journal import Journal
 
 
 class InstallTests(unittest.IsolatedAsyncioTestCase):
+    async def test_reinstall_preserves_local_skill_edits_and_updates_unchanged_skills(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);home=private_directory(root/'home');journal=Journal(root/'state');self.addCleanup(journal.close)
+            project=private_directory(root/'project')
+            for provider in ('claude','codex'):
+                source=project/'integrations'/provider/'skills/nativepeers/SKILL.md';source.parent.mkdir(parents=True);source.write_text('installed revision 1\n')
+            (project/'bin').mkdir()
+            for name in ('npeer','npeer-hook'):(project/'bin'/name).write_text('#!/bin/sh\n')
+            with patch('nativepeers.install.ROOT',project):
+                installer=Installer(journal,home=home,native=False);await installer.install()
+                skill=installer.skills['claude'];skill.write_text('local edit\n')
+                with self.assertRaises(PeerError) as error:await installer.install()
+                self.assertEqual(error.exception.code,'OWNERSHIP_CONFLICT');self.assertEqual(skill.read_text(),'local edit\n')
+                skill.write_text('installed revision 1\n')
+                for provider in ('claude','codex'):(project/'integrations'/provider/'skills/nativepeers/SKILL.md').write_text('installed revision 2\n')
+                await installer.install()
+                self.assertTrue(all(p.read_text()=='installed revision 2\n' for p in installer.skills.values()))
+                self.assertFalse((await installer.install())['changed'])
+
     async def test_concurrent_hook_edit_is_preserved_during_install_and_uninstall(self):
         for remove in (False,True):
             with self.subTest(remove=remove),tempfile.TemporaryDirectory() as directory:

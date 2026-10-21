@@ -131,10 +131,13 @@ class Installer:
             trusted=all(current_state.get(k,{}).get('trusted_hash')==v for k,v in prior.get('trusted_hooks',{}).items())
             if prior and not plan['operations'] and trusted and prior.get('state')=='INSTALLED' and not prior.get('uninstalled'):
                 return dict(plan,installed=True,changed=False,manifest=str(self.manifest))
+            skill_inputs={}
             for provider,path in self.skills.items():
                 source=ROOT/'integrations'/provider/'skills/nativepeers/SKILL.md'
-                require(not path.exists() or path.read_bytes()==source.read_bytes() or str(path) in prior.get('owned_files',{}),
-                        'OWNERSHIP_CONFLICT','Namespaced skill path is already owned by another installation')
+                expected=file_hash(path);raw=source.read_bytes();desired=hashlib.sha256(raw).hexdigest()
+                require(not path.is_symlink() and expected in (None,desired,prior.get('owned_files',{}).get(str(path))),
+                        'OWNERSHIP_CONFLICT','Installed skill has local changes; preserve and reconcile them before updating')
+                skill_inputs[provider]=(expected,raw,desired)
             backup=private_directory(ROOT/'backups'/('install-'+str(time.time_ns())))
             manifest=dict(schema_version=1,state='INSTALLING',project=str(ROOT),backup=str(backup),trusted_hooks=prior.get('trusted_hooks',{}),owned_files=prior.get('owned_files',{}),changed_keys=[])
             atomic_json(self.manifest,manifest)
@@ -149,10 +152,10 @@ class Installer:
                     manifest['changed_keys'].append(str(path)+':hooks.SessionStart/SessionEnd')
                     atomic_json(self.manifest,manifest)
             for provider,path in self.skills.items():
-                source=ROOT/'integrations'/provider/'skills/nativepeers/SKILL.md'
-                if path.exists():require(path.read_bytes()==source.read_bytes() or str(path) in prior.get('owned_files',{}),'OWNERSHIP_CONFLICT','Namespaced skill path is already owned by another installation')
-                if not path.exists() or path.read_bytes()!=source.read_bytes():compare_write(path,source.read_bytes(),file_hash(path))
-                manifest['owned_files'][str(path)]=file_hash(path)
+                expected,raw,desired=skill_inputs[provider]
+                require(not path.is_symlink() and file_hash(path)==expected,'OWNERSHIP_CONFLICT','Installed skill changed during installation')
+                if expected!=desired:compare_write(path,raw,expected)
+                manifest['owned_files'][str(path)]=desired
                 atomic_json(self.manifest,manifest)
             for entry in [ROOT/'bin/npeer',ROOT/'bin/npeer-hook']:entry.chmod(0o755)
             if not plan['command_collision'] and not self.command.exists() and not self.command.is_symlink():
