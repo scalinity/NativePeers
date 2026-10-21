@@ -228,10 +228,12 @@ class Group:
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         waiter=new_id();claimed=False
         generation=self.phase_for(payload['handle'])
-        with self.journal.transaction() as db:
-            row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()
-            if row['state']=='UNCLAIMED' or (row['state']=='WAIT_LEASED' and row['lease_deadline']<time.time()):
-                db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=?",(waiter,time.time()+timeout+1,self.generation,self.id,generation));claimed=True
+        owns_notification=payload['handle']==self.id or self.phases()[str(generation)]==[payload['handle']]
+        if owns_notification:
+            with self.journal.transaction() as db:
+                row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()
+                if row['state']=='UNCLAIMED' or (row['state']=='WAIT_LEASED' and row['lease_deadline']<time.time()):
+                    db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=?",(waiter,time.time()+timeout+1,self.generation,self.id,generation));claimed=True
         deadline=time.monotonic()+timeout
         disconnected=asyncio.create_task(reader.read(1))
         try:
@@ -246,10 +248,10 @@ class Group:
                 if claimed:
                     self.journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",(self.id,generation,waiter,self.generation))
                 return {'ready':True,'result':Delegation(self.journal,Registry(self.journal)).result(self.parent,payload['handle']),
-                        'notification_output_uncertain':claimed,'notification_disposition':'tool-result-output-pending-observation'}
+                        'notification_output_uncertain':claimed,'notification_disposition':'tool-result-output-pending-observation' if owns_notification else 'batch-notification-unchanged'}
             if claimed:
                 self.journal.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode=?,waiter_id=NULL,lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",('push' if mode=='push' else 'wait',self.id,generation,waiter,self.generation))
-            return {'ready':False,'state':'WAIT_EXPIRED','notification_disposition':mode}
+            return {'ready':False,'state':'WAIT_EXPIRED','notification_disposition':mode if owns_notification else 'batch-notification-unchanged'}
         finally:disconnected.cancel();self.changed.set()
 
     async def notify(self,generation=1):

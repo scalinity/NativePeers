@@ -40,6 +40,27 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         result=await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':5,'on_timeout':'push'},Reader())
         self.assertEqual(result['notification_disposition'],'push');self.assertEqual(self.route()['state'],'UNCLAIMED')
 
+    async def test_wait_for_one_task_does_not_consume_the_batch_notification(self):
+        second=new_id();policy=dict(self.group.policy)
+        policy['initial_tasks']=[self.task,second];policy['phases']={'1':[self.task,second]};self.group.policy=policy
+        self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(policy).decode(),))
+        self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(second,self.worker,None,None,'RUNNING',None,None,1,'{}'))
+        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.task,'timeout_ms':1000},Reader()))
+        await asyncio.sleep(.01)
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(self.task,));self.group.changed.set()
+        result=await waiter
+        self.assertTrue(result['ready']);self.assertEqual(self.route()['state'],'UNCLAIMED')
+        self.assertEqual(result['notification_disposition'],'batch-notification-unchanged')
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(second,));calls=[]
+        class FakeRouter:
+            async def send(s,*args,**kwargs):
+                calls.append(kwargs['client_request_id']);return {'state':'ACCEPTED_QUEUED','message_id':new_id()}
+        class FakeCore:
+            def __init__(s,j):s.router=FakeRouter()
+        with patch('nativepeers.core.Core',FakeCore):
+            await self.group.notify();await self.group.notify()
+        self.assertEqual(len(calls),1);self.assertEqual(self.route()['state'],'PUSH_ACCEPTED')
+
     async def test_disconnect_before_output_does_not_keep_a_claim(self):
         await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':100,'on_timeout':'retain'},Reader(True))
         self.assertEqual(self.route()['state'],'UNCLAIMED');self.assertEqual(self.route()['mode'],'wait')
