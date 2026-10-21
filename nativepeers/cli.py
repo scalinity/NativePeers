@@ -16,6 +16,7 @@ from .files import canonical
 from .journal import Journal
 from .models import CONTROL_RESPONSE,new_id
 from .process import matches
+from .receipts import RANK
 
 
 def parser():
@@ -110,17 +111,35 @@ async def dispatch(args,journal):
     raise PeerError('PROTOCOL_ERROR','Unknown command')
 
 
+def error_exit(error):
+    if error.may_have_received:return 6
+    code=error.code
+    if code.startswith(('TARGET_','AMBIGUOUS')):return 3
+    if code in ('CALLER_UNBOUND','CALLER_NOT_READY','APPROVAL_BLOCKED','AUTH_REQUIRED','PROVIDER_POLICY_REFUSED'):return 4
+    if code in ('BUDGET_EXHAUSTED','WAIT_EXPIRED','CAPACITY_UNAVAILABLE','EXPIRED_BEFORE_SUBMISSION','CANCELED_BEFORE_SUBMISSION'):return 8
+    if code=='CAPABILITY_MISMATCH' or code.startswith(('UNSUPPORTED','PERMISSION_','OWNERSHIP_')):return 5
+    return 7
+
+
 def main():
     args=parser().parse_args();journal=None;request_id=new_id();exit_code=0
     try:
         journal=Journal();value=asyncio.run(dispatch(args,journal))
         response=dict(schema_version=1,ok=True,data=value,error=None,request_id=request_id)
-        if isinstance(value,dict) and value.get('state') in ('DELIVERY_UNKNOWN','SUBMITTING','SUBMITTED_UNCONFIRMED'):
+        if isinstance(value,dict) and value.get('state') in ('DELIVERY_UNKNOWN','SUBMITTING','SUBMITTED_UNCONFIRMED','OUTBOX_COMMITTED'):
             exit_code=6
         if isinstance(value,dict) and value.get('state')=='WAIT_EXPIRED':exit_code=8
+        if args.command in ('send','reply') and isinstance(value,dict):
+            state=value.get('state')
+            if state=='REJECTED' or state not in RANK:
+                info=json.loads((value.get('attempt') or {}).get('error_json') or '{}')
+                error=PeerError('PROVIDER_POLICY_REFUSED' if state=='REJECTED' else info.get('code',state or 'PROTOCOL_ERROR'),
+                    info.get('message','Native recipient rejected delivery' if state=='REJECTED' else 'Peer delivery failed before confirmed admission'),
+                    may_have_received=info.get('may_have_received',False),details=info.get('details'))
+                response.update(ok=False,error=error.json());exit_code=error_exit(error)
     except PeerError as error:
         response=dict(schema_version=1,ok=False,data=None,error=error.json(),request_id=request_id)
-        exit_code=6 if error.may_have_received else (3 if error.code.startswith(('TARGET_','AMBIGUOUS')) else 4 if error.code in ('CALLER_UNBOUND','CALLER_NOT_READY','APPROVAL_BLOCKED','AUTH_REQUIRED') else 8 if error.code in ('BUDGET_EXHAUSTED','WAIT_EXPIRED','CAPACITY_UNAVAILABLE') else 5 if error.code.startswith(('UNSUPPORTED','PERMISSION_','OWNERSHIP_')) else 7)
+        exit_code=error_exit(error)
     except (ValueError,OSError) as error:
         response=dict(schema_version=1,ok=False,data=None,error={'code':'PROTOCOL_ERROR','message':str(error)[:1000],'may_have_received':False},request_id=request_id);exit_code=2
     finally:
