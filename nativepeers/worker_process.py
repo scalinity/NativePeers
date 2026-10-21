@@ -31,6 +31,7 @@ class Worker:
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
         self.provider=None;self.provider_identity=None;self.client=None;self.native=self.row['native_id'];self.turn=None
         self.stopping=False;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
+        self.canceling_task=None;self.turn_task=None
         self.expected_native=self.native;self.model_observed=None
 
     def emit(self,event,**payload):
@@ -108,11 +109,12 @@ class Worker:
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
 
     async def task(self,task_id,text):
+        claimed=self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
+        if not claimed:return
         self.tasks_started+=1
         require(self.tasks_started<=self.spec.get('max_task_turns',8),'BUDGET_EXHAUSTED','Worker task-turn limit reached')
         self.running_task=task_id;started=time.time();self.turn=None
         text='NativePeers assigned worker title: '+self.row['role_title']+'. Provider: '+self.row['provider']+'.\n'+text
-        self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND generation=?",(task_id,self.row['generation']))
         self.journal.db.execute("UPDATE workers SET state='RUNNING' WHERE worker_id=?",(self.row['worker_id'],))
         reservation=None
         budget=None
@@ -124,7 +126,8 @@ class Worker:
                 except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
                 budget.admit(reservation)
             async with asyncio.timeout(self.spec.get('wall_time_seconds',1800)):
-                result=await (self.codex_turn(text) if self.row['provider']=='codex' else self.claude_turn(text))
+                self.turn_task=asyncio.create_task(self.codex_turn(text) if self.row['provider']=='codex' else self.claude_turn(text))
+                result=await self.turn_task
         except BaseException as error:
             self.retire_after_task=True
             self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=?",(self.row['worker_id'],))
@@ -132,7 +135,8 @@ class Worker:
             code=classify(error.error) if isinstance(error,ProviderError) else 'BUDGET_EXHAUSTED' if isinstance(error,TimeoutError) else 'WORKER_CRASHED'
             result={'status':'canceled' if self.stopping else 'timed_out' if isinstance(error,TimeoutError) else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':code,'message':str(error)[:1000]},'native_turn_ids':[self.turn] if self.turn else []}
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
-        if self.stopping and result['status'] in ('failed','canceled'):
+        scoped_cancel=self.canceling_task==task_id and not self.stopping
+        if (self.stopping or scoped_cancel) and result['status'] in ('failed','canceled'):
             result['status']='canceled';result['error']={'code':'USER_CANCELED','native_error':result.get('error')}
         row=self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))
         record=dict(schema_version=1,group_id=self.row['group_id'],task_id=task_id,
@@ -156,8 +160,29 @@ class Worker:
             db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if self.retire_after_task else 'IDLE_GRACE',self.row['worker_id']))
         self.journal.event(task_id,'native-task-terminal',record)
         self.running_task=None;self.emit('task_terminal',task_id=task_id,artifact_id=artifact,status=result['status'])
-        if self.retire_after_task:await self.close()
+        self.turn_task=None
+        if scoped_cancel:
+            await self.close_provider()
+            self.canceling_task=None
+            if not self.stopping:
+                self.retire_after_task=False
+                if self.row['provider']=='codex':
+                    self.lease['released_native']=True
+                    await self.prepare()
+                self.journal.db.execute("UPDATE workers SET state='IDLE_GRACE' WHERE worker_id=?",(self.row['worker_id'],))
+        elif self.retire_after_task:await self.close()
         if reservation:budget.settle(reservation,observed_turns=1,native_id=self.native)
+
+    async def cancel_task(self,task_id):
+        if self.running_task!=task_id:return
+        self.canceling_task=task_id
+        await self.interrupt()
+        turn=self.turn_task
+        if self.running_task==task_id and turn and not turn.done():
+            try:await asyncio.wait_for(asyncio.shield(turn),1)
+            except asyncio.TimeoutError:
+                if self.running_task==task_id:turn.cancel()
+            except Exception:pass
 
     def ingested(self):
         task=self.journal.one('SELECT request_message_id FROM tasks WHERE task_id=?',(self.running_task,))
@@ -172,6 +197,7 @@ class Worker:
         response=await self.client.call('turn/start',{'threadId':self.native,'input':[{'type':'text','text':text}],
             'model':self.spec['model'],'effort':self.spec.get('reasoning_effort'),'approvalPolicy':'never'})
         self.turn=response['turn']['id'];self.ingested();self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
+        if self.canceling_task==self.running_task:await self.interrupt()
         items={}
         while True:
             event=await asyncio.wait_for(self.client.next_event(),self.spec.get('wall_time_seconds',1800))
@@ -198,6 +224,7 @@ class Worker:
             start_new_session=True,close_fds=True,limit=8*1024*1024)
         self.provider_identity=identity(self.provider.pid).json();self.manifest()
         self.provider.stdin.write(text.encode());await self.provider.stdin.drain();self.provider.stdin.close()
+        if self.canceling_task==self.running_task:await self.interrupt()
         errors=bytearray()
         async def stderr():
             while chunk:=await self.provider.stderr.read(4096):
@@ -232,14 +259,15 @@ class Worker:
 
     async def interrupt(self):
         if not self.provider or self.provider.returncode is not None:return
-        if self.client and self.turn:
-            try:await self.client.call('turn/interrupt',{'threadId':self.native,'turnId':self.turn},timeout=5)
-            except Exception:pass
+        if self.client:
+            if self.turn:
+                try:await self.client.call('turn/interrupt',{'threadId':self.native,'turnId':self.turn},timeout=5)
+                except Exception:pass
         elif self.provider_identity:
             signal_owned(self.provider_identity,signal.SIGINT,group=True)
 
-    async def close(self):
-        self.stopping=True;await self.interrupt()
+    async def close_provider(self):
+        await self.interrupt()
         if self.client:await self.client.close()
         elif self.provider and self.provider.returncode is None:
             try:await asyncio.wait_for(self.provider.wait(),15)
@@ -248,6 +276,11 @@ class Worker:
                 try:await asyncio.wait_for(self.provider.wait(),5)
                 except asyncio.TimeoutError:
                     signal_owned(self.provider_identity,signal.SIGKILL,group=True);await self.provider.wait()
+        self.client=None;self.provider=None;self.provider_identity=None;self.turn=None
+        self.manifest()
+
+    async def close(self):
+        self.stopping=True;await self.close_provider()
         self.journal.db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=?",(self.row['worker_id'],))
         self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE pid=? AND process_start=?",(self.owner['pid'],self.owner['start']))
         self.emit('released',native_id=self.native)
@@ -261,6 +294,7 @@ async def run(worker_id,lease_fd):
             require(len(line)<=65536,'PAYLOAD_TOO_LARGE','Worker control request too large')
             event=json.loads(line)
             if event['operation']=='cancel':worker.stopping=True;await worker.interrupt()
+            elif event['operation']=='cancel-task':await worker.cancel_task(event['task_id'])
             elif event['operation']=='release':worker.stopping=True;await worker.queue.put(None);return
             elif event['operation']=='task':await worker.queue.put(event)
         worker.stopping=True;await worker.interrupt();await worker.queue.put(None)

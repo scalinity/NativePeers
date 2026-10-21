@@ -158,14 +158,7 @@ class Group:
             if op=='enqueue':value=await self.enqueue(payload)
             elif op=='wait':value=await self.wait(payload,reader);uncertain=value.get('notification_output_uncertain',False)
             elif op=='cancel':
-                require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Cancellation requires the owning parent')
-                handle=payload['handle'];tasks=self.tasks()
-                targets={t['worker_id'] for t in tasks if handle==self.id or t['task_id']==handle}
-                await asyncio.gather(*[self.cancel_worker(w) for w in targets])
-                for t in tasks:
-                    if t['worker_id'] in targets and t['state']=='QUEUED':self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='USER_CANCELED' WHERE task_id=?",(t['task_id'],))
-                value={'state':'CANCEL_REQUESTED','workers':list(targets)}
-                for worker in targets:asyncio.create_task(self.cancel_and_release(worker))
+                value=await self.cancel(payload)
             elif op=='resume':
                 require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Resume requires the owning parent')
                 self.policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(self.id,))['policy_json'])
@@ -190,6 +183,26 @@ class Group:
             writer.write(wire);await writer.drain()
         finally:
             writer.close();await writer.wait_closed()
+
+    async def cancel(self,payload):
+        require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Cancellation requires the owning parent')
+        handle=payload['handle']
+        with self.journal.transaction() as db:
+            tasks=self.tasks();scoped=next((t for t in tasks if t['task_id']==handle),None)
+            require(handle==self.id or scoped,'PROTOCOL_ERROR','Unknown task handle')
+            for task in tasks:
+                if (handle==self.id or task['task_id']==handle) and task['state']=='QUEUED':
+                    db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='USER_CANCELED' WHERE task_id=? AND state='QUEUED'",(task['task_id'],))
+        self.changed.set()
+        if scoped:
+            if scoped['state']=='QUEUED' or scoped['state'] in TERMINAL:
+                return {'state':'CANCELED' if scoped['state']=='QUEUED' else scoped['state'],'workers':[]}
+            await self.send_worker(scoped['worker_id'],{'operation':'cancel-task','task_id':handle})
+            return {'state':'CANCEL_REQUESTED','workers':[scoped['worker_id']],'task_id':handle}
+        targets={t['worker_id'] for t in tasks}
+        await asyncio.gather(*[self.cancel_worker(w) for w in targets])
+        for worker in targets:asyncio.create_task(self.cancel_and_release(worker))
+        return {'state':'CANCEL_REQUESTED','workers':list(targets)}
 
     async def cancel_and_release(self,worker_id):
         deadline=time.monotonic()+15

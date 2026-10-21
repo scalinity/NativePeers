@@ -1,11 +1,100 @@
-import json,os,tempfile,time,unittest
+import asyncio,json,os,tempfile,time,unittest
+from unittest.mock import AsyncMock,Mock,patch
 from pathlib import Path
 from nativepeers.files import canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
 from nativepeers.worker_process import Worker
+from nativepeers.supervisor import Group
+
+
+def fixture(j):
+ group,worker,a,b,native=[new_id() for _ in range(5)]
+ policy={'initial_tasks':[a],'parent_incarnation':new_id(),'phases':{'1':[a],'2':[b]}}
+ lease={'spec':{'provider':'claude','model':'sonnet','max_task_turns':8,'wall_time_seconds':5},'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
+ j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent',canonical(policy).decode(),'RUNNING','{}'))
+ j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,'peer','claude',native,'worker','sonnet',None,None,str(j.root),None,'RUNNING',1,canonical(lease).decode()))
+ for task,state in [(a,'RUNNING'),(b,'QUEUED')]:j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,state,None,None,1,'{}'))
+ supervisor=Group(j,group);supervisor.children[worker]={}
+ return supervisor,Worker(j,worker),a,b
+
+
+async def cancel(group,handle):
+ reader=asyncio.StreamReader();reader.feed_data(canonical({'operation':'cancel','token':group.token,'payload':{'caller_key':'parent','handle':handle}})+b'\n');reader.feed_eof()
+ writer=Mock();writer.drain=AsyncMock();writer.wait_closed=AsyncMock()
+ await group.connection(reader,writer)
+ response=json.loads(writer.write.call_args.args[0]);assert response['ok'],response
+ return response['data']
 
 class CancellationTests(unittest.IsolatedAsyncioTestCase):
+ async def test_cancel_queued_task_preserves_running_task_and_buffered_input_stays_canceled(self):
+  with tempfile.TemporaryDirectory() as d:
+   j=Journal(Path(d));self.addCleanup(j.close);group,w,a,b=fixture(j)
+   with patch.object(group,'send_worker',new_callable=AsyncMock) as send,patch.object(group,'cancel_and_release',new_callable=AsyncMock):
+    result=await cancel(group,b);await asyncio.sleep(0)
+    send.assert_not_awaited()
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(a,))['state'],'RUNNING')
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'CANCELED')
+   w.claude_turn=AsyncMock(return_value={'status':'completed','text':'should not execute'});w.emit=Mock()
+   await w.task(b,'buffered control frame')
+   w.claude_turn.assert_not_awaited();self.assertEqual(w.tasks_started,0)
+
+ async def test_cancel_terminal_task_does_not_touch_a_running_followup(self):
+  with tempfile.TemporaryDirectory() as d:
+   j=Journal(Path(d));self.addCleanup(j.close);group,w,a,b=fixture(j)
+   j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(a,));j.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=?",(b,))
+   with patch.object(group,'send_worker',new_callable=AsyncMock) as send,patch.object(group,'cancel_and_release',new_callable=AsyncMock):
+    result=await cancel(group,a);await asyncio.sleep(0);send.assert_not_awaited()
+   self.assertEqual(result['state'],'COMPLETED');self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'RUNNING')
+
+ async def test_running_task_cancel_is_exact_and_preserves_the_followup(self):
+  with tempfile.TemporaryDirectory() as d:
+   j=Journal(Path(d));self.addCleanup(j.close);group,w,a,b=fixture(j)
+   with patch.object(group,'send_worker',new_callable=AsyncMock) as send,patch.object(group,'cancel_and_release',new_callable=AsyncMock):
+    await cancel(group,a);await asyncio.sleep(0)
+    send.assert_awaited_once_with(w.row['worker_id'],{'operation':'cancel-task','task_id':a})
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'QUEUED')
+   j.db.execute("UPDATE tasks SET state='QUEUED' WHERE task_id=?",(a,))
+   started=asyncio.Event();interrupted=asyncio.Event();calls=[]
+   async def turn(text):
+    calls.append(text)
+    if len(calls)==1:
+     started.set();await interrupted.wait();return {'status':'canceled','text':'partial'}
+    return {'status':'completed','text':'followup'}
+   async def interrupt():interrupted.set()
+   w.claude_turn=turn;w.interrupt=interrupt;w.emit=Mock()
+   task=asyncio.create_task(w.task(a,'first'));await started.wait();await w.cancel_task(a);await task
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(a,))['state'],'CANCELED')
+   self.assertFalse(w.stopping);self.assertFalse(w.retire_after_task)
+   await w.cancel_task(a)  # A late cancel cannot interrupt the next task.
+   await w.task(b,'second');self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'COMPLETED')
+
+ async def test_stalled_codex_cancel_closes_writer_before_resuming_pending_work(self):
+  with tempfile.TemporaryDirectory() as d:
+   j=Journal(Path(d));self.addCleanup(j.close);group,w,a,b=fixture(j)
+   w.row['provider']='codex';j.db.execute("UPDATE tasks SET state='QUEUED' WHERE task_id=?",(a,))
+   started=asyncio.Event();closed=asyncio.Event();native=w.native
+   async def stalled(text):started.set();await asyncio.Future()
+   async def close():closed.set()
+   async def prepare():
+    self.assertTrue(closed.is_set());self.assertTrue(w.lease['released_native']);self.assertEqual(w.native,native)
+   w.codex_turn=stalled;w.interrupt=AsyncMock();w.client=Mock();w.client.close=AsyncMock(side_effect=close)
+   w.prepare=AsyncMock(side_effect=prepare);w.emit=Mock()
+   task=asyncio.create_task(w.task(a,'first'));await started.wait();await w.cancel_task(a);await task
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(a,))['state'],'CANCELED')
+   self.assertFalse(w.retire_after_task);w.prepare.assert_awaited_once()
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'QUEUED')
+   w.codex_turn=AsyncMock(return_value={'status':'completed','text':'pending finding'});await w.task(b,'second')
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'COMPLETED')
+
+ async def test_group_cancel_still_cancels_the_whole_owned_queue(self):
+  with tempfile.TemporaryDirectory() as d:
+   j=Journal(Path(d));self.addCleanup(j.close);group,w,a,b=fixture(j)
+   with patch.object(group,'send_worker',new_callable=AsyncMock) as send,patch.object(group,'cancel_and_release',new_callable=AsyncMock):
+    await cancel(group,group.id);await asyncio.sleep(0)
+    send.assert_awaited_once_with(w.row['worker_id'],{'operation':'cancel'})
+   self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'CANCELED')
+
  async def test_known_interrupt_retains_partial_result_as_canceled(self):
   with tempfile.TemporaryDirectory() as d:
    j=Journal(Path(d));group,worker,task,native=[new_id() for _ in range(4)]
