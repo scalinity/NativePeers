@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NativePeers result v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "group_id",
+    "task_id",
+    "worker",
+    "status",
+    "summary",
+    "model_requested",
+    "model_observed",
+    "native_turn_ids",
+    "completed_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "worker": {
+      "type": "object",
+      "required": [
+        "provider",
+        "native_session_id",
+        "title"
+      ]
+    },
+    "status": {
+      "enum": [
+        "completed",
+        "failed",
+        "canceled",
+        "timed_out",
+        "partial",
+        "interrupted"
+      ]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "native_turn_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

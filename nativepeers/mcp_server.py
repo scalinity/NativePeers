@@ -35,6 +35,9 @@ TOOLS={
 }
 
 
+from .protocol import valid
+
+
 class Facade:
     def __init__(self,journal,binding):
         self.journal,self.binding=journal,binding
@@ -45,7 +48,7 @@ class Facade:
 
     def names(self):
         state=self.binding_state()
-        if state.get('state')!='BOUND':return ['task_status']
+        if state.get('state')!='BOUND' and state.get('provider')!='claude':return ['task_status']
         granted=state.get('grants',{})
         names=['peer_list','peer_send','peer_reply','peer_inbox','task_status','task_wait','task_result','artifact_read']
         if granted.get('can_spawn'):names += ['worker_spawn','task_cancel']
@@ -71,7 +74,7 @@ class Facade:
         try:
             require(params.name in TOOLS,'PROTOCOL_ERROR','Unknown namespaced tool')
             args=params.arguments or {};schema=TOOLS[params.name][1]
-            require(isinstance(args,dict) and not (set(args)-set(schema['properties'])) and set(schema['required'])<=set(args),'PROTOCOL_ERROR','Invalid tool arguments')
+            require(valid(args,schema),'PROTOCOL_ERROR','Invalid tool arguments')
             state=self.binding_state()
             if state.get('state')!='BOUND':
                 require(params.name=='task_status','CALLER_NOT_READY','Native identity is reserved but not bound')
@@ -80,7 +83,10 @@ class Facade:
                 require(params.name in self.names(),'APPROVAL_BLOCKED','Tool is outside the fixed lease')
                 from .core import Core
                 caller=bind_caller(self.journal,Registry(self.journal),fixed_binding=self.binding,allow_external=False)
-                value=await Core(self.journal).tool(caller,params.name,args)
+                if params.name=='task_status' and not args.get('handle'):
+                    peer=Registry(self.journal).verify(caller.key,caller.incarnation)
+                    value={'state':'BOUND','peer_key':caller.key,'native_session_id':peer['peer_key']['native_session_id'],'title':peer['title'],'worker_id':caller.grants.get('worker_id')}
+                else:value=await Core(self.journal).tool(caller,params.name,args)
             response=dict(schema_version=1,ok=True,data=value,error=None)
         except PeerError as error:
             response=dict(schema_version=1,ok=False,data=None,error=error.json())

@@ -31,7 +31,7 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.cb=Caller('peer',self.b['handle'],self.b['incarnation_id'])
 
     def peer(self,name,native,pid,provider='codex',home='home'):
-        return self.registry.register(provider,Path(self.temporary.name)/home,native,name,identity(pid).json(),self.temporary.name,{'kind':'fake'})
+        return self.registry.register(provider,Path(self.temporary.name)/home,native,name,identity(pid).json(),self.temporary.name,{'kind':'fake'},owner_kind='test')
 
     async def test_reply_to_reply_and_exchange(self):
         first=await self.router.send(self.ca,'b','first',expect_reply=True)
@@ -83,6 +83,27 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.registry.resolve('claude:b')['handle'],c['handle'])
         self.assertNotEqual(PeerKey(self.journal.host_id,'codex',home_id(Path('/a')),self.a['peer_key']['native_session_id']).handle,
                             PeerKey(self.journal.host_id,'codex',home_id(Path('/b')),self.a['peer_key']['native_session_id']).handle)
+
+    async def test_artifact_grants_are_checked_before_send(self):
+        from nativepeers.artifacts import Artifacts
+        artifacts=Artifacts(self.journal)
+        handle=artifacts.put(b'approved',self.ca.key)
+        await self.router.send(self.ca,'b','context',artifact_refs=[handle])
+        self.assertEqual(artifacts.read(handle,self.cb.key)['byte_size'],8)
+        outsider=artifacts.put(b'private','other')
+        with self.assertRaises(PeerError):await self.router.send(self.ca,'b','no grant',artifact_refs=[outsider])
+        self.assertEqual(len(self.admissions),1)
+
+    async def test_reversed_crossed_replies_and_stale_incarnation(self):
+        first=await self.router.send(self.ca,'b','one',expect_reply=True)
+        second=await self.router.send(self.ca,'b','two',expect_reply=True)
+        r2=await self.router.send(self.cb,'unused','two reply',in_reply_to=second['message_id'])
+        r1=await self.router.send(self.cb,'unused','one reply',in_reply_to=first['message_id'])
+        self.assertEqual(r2['exchange_id'],second['exchange_id']);self.assertEqual(r1['exchange_id'],first['exchange_id'])
+        self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE peer_key=?",(self.b['handle'],))
+        rebound=self.peer('b',self.b['peer_key']['native_session_id'],os.getpid())
+        self.assertNotEqual(rebound['incarnation_id'],self.b['incarnation_id'])
+        with self.assertRaises(PeerError):self.registry.verify(self.b['handle'],self.b['incarnation_id'])
 
     async def test_frame_limits_and_ack(self):
         with self.assertRaises(PeerError):await self.router.send(self.ca,'b','x'*12289)

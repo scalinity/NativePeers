@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "client_request_id": "example-claude-two-codex-1",
+  "completion_mode": "push",
+  "failure_policy": "collect-all",
+  "workers": [
+    {
+      "provider": "codex",
+      "title": "NativePeers Numbers",
+      "task": "Independently analyze the fixture numbers and report your finding.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      },
+      "context_refs": [],
+      "result_format": "nativepeers.result.v1",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "xhigh"
+    },
+    {
+      "provider": "codex",
+      "title": "NativePeers Review",
+      "task": "Independently review the fixture and report one useful finding.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      },
+      "context_refs": [],
+      "result_format": "nativepeers.result.v1",
+      "model": "gpt-6.1-sol",
+      "reasoning_effort": "xhigh"
+    }
+  ],
+  "limits": {
+    "max_concurrent_workers": 2,
+    "max_depth": 1,
+    "wall_time_seconds": 1800,
+    "max_task_turns_per_worker": 8
+  },
+  "allow_sibling_messages": false
+}

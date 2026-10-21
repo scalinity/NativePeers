@@ -31,7 +31,7 @@ class LiveBudget:
             used = sum(r["count"] for r in data["reservations"] if r["state"] != "not_admitted")
             if used + count > data["ceiling"]["submitted_turns"]:
                 raise RuntimeError("BUDGET_EXHAUSTED: submitted turns")
-            if tranche not in ("M1", "first_cross_provider_delegations") and used + count > 32:
+            if tranche not in ("M1", "first_cross_provider_delegations") and used + count > data['ceiling']['submitted_turns']-data.get('delegation_reserve',0):
                 raise RuntimeError("BUDGET_EXHAUSTED: preserve delegation reserve")
             reservation = str(uuid.uuid4())
             data["reservations"].append(dict(id=reservation, label=label, count=count,
@@ -53,16 +53,19 @@ class LiveBudget:
             data["reserved_turns"] -= record["count"]
         self.change(operation)
 
-    def settle(self, reservation: str, *, observed_turns: int | None = None, native_id=None):
+    def settle(self, reservation: str, *, observed_turns: int | None = None, native_id=None, completed_at=None):
         def operation(data):
             record = next(r for r in data["reservations"] if r["id"] == reservation)
             if record["state"] not in ("admitted", "uncertain"):
                 raise RuntimeError("Only admitted work can settle")
             record.update(state="settled", settled_at=time.time(), observed_turns=observed_turns,
-                          native_session_id=native_id)
+                          native_session_id=native_id,observed_completed_at=completed_at)
             data["outstanding_native_requests"].remove(reservation)
             if not data["outstanding_native_requests"]:
-                data["active_intervals"][-1]["end"] = time.time()
+                batch_start=data['active_intervals'][-1]['start']
+                data["active_intervals"][-1]["end"] = max(
+                    (r.get('observed_completed_at') or r.get('settled_at',time.time()))
+                    for r in data['reservations'] if r.get('state')=='settled' and r.get('admitted_at',0)>=batch_start)
             data["active_seconds"] = sum((i.get("end") or time.time())-i["start"]
                                           for i in data["active_intervals"])
         self.change(operation)

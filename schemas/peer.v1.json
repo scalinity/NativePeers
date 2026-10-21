@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "peer_key",
+    "handle",
+    "incarnation_id",
+    "owner",
+    "transport",
+    "title_source"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "peer_key": {
+      "type": "object",
+      "required": [
+        "host_id",
+        "provider",
+        "home_id",
+        "native_session_id"
+      ]
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^np1_"
+    },
+    "owner": {
+      "type": "object",
+      "required": [
+        "pid",
+        "start",
+        "executable",
+        "pgid",
+        "uid"
+      ]
+    }
+  }
+}

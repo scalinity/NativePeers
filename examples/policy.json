@@ -1,0 +1,13 @@
+{
+  "workers_per_group": 4,
+  "workers_total": 8,
+  "max_depth": 1,
+  "task_wall_seconds": 1800,
+  "group_wall_seconds": 3600,
+  "max_task_turns": 8,
+  "pending_messages": 32,
+  "exchange_hops": 8,
+  "request_expiry_seconds": 1800,
+  "followup_grace_seconds": 600,
+  "home_labels": {}
+}

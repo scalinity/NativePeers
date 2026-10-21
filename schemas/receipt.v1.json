@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "message_id",
+    "stage",
+    "evidence_kind"
+  ],
+  "properties": {
+    "stage": {
+      "enum": [
+        "CREATED",
+        "OUTBOX_COMMITTED",
+        "SUBMITTING",
+        "DELIVERY_UNKNOWN",
+        "SUBMITTED_UNCONFIRMED",
+        "HELD",
+        "REJECTED",
+        "ACCEPTED_QUEUED",
+        "INGESTED",
+        "MODEL_REPORTED_PROCESSED",
+        "REPLY_RECORDED",
+        "REPLY_SUBMITTED"
+      ]
+    }
+  }
+}

@@ -1,0 +1,31 @@
+# Runtime and permissions
+
+The own SQLite WAL journal stores identities, incarnations, immutable requests, uncertain native attempts, attributed tasks/results, completion claims and leases. Native provider databases/transcripts are never edited. Short lifecycle hooks verify native ancestry and register the exact UUID/owner/PID-start identity. A transient shell, matching cwd or a thread ID alone is insufficient to impersonate a session. Fixed MCP facades are bound to one owned worker lease; no tool accepts an arbitrary sender field.
+
+Claude interactive delivery uses its installed native inbox protocol and preserves its inbound policy. Codex interactive delivery uses the native queue without adding `--no-daemon` to the sender. The original loaded owner consumes the queue. Sender validation, ordinary recipient configuration, standalone topology and unloaded-target behavior are separate facts. The required owner/return probes selected the native queue; no conditional Rust patch was installed. Existing live peers are never resumed by a second writer for message injection.
+
+Each group supervisor detaches without terminal streams, owns lease pipes to worker controllers and exits after work/grace or loss of the owning parent. Codex workers use private stdio app-server processes from immutable managed package paths. Claude workers use the installed native CLI with structured headless turns and the normal native authentication route. The controller persists across serialized Claude turn processes. Inherited native hooks report owned-worker observations without replacing the controller route or unregistering between turns.
+
+Claude's initial MCP snapshot is populated with permitted tool names while calls remain nonmutating in `RESERVED_UNBOUND`. After the emitted native ID is verified, the same facade becomes bound. Codex additionally verifies the refreshed effective MCP inventory before input. NativePeers tools on a Codex worker have an explicit worker-local `default_tools_approval_mode="approve"`; the fixed facade enforces the lease and granted targets. Other MCP/plugin tools are disabled only in the new worker's runtime overlay. Parent registrations and permissions are preserved. Claude analysis exposes Read/Glob/Grep and the scoped facade; Codex analysis uses the native read-only sandbox. Startup project/user hooks remain trusted local execution context; this is not isolation from malicious same-UID startup code.
+
+The native CLI owns authentication: Codex uses the existing ChatGPT sign-in; Claude uses the existing claude.ai Max route. No OAuth credentials are extracted, borrowed, translated into an API key or placed in backups. Launch environments preserve intended provider-home/auth variables while excluding parent messaging credentials, bindings and `CLAUDE_ENV_FILE`. Existing parent YOLO behavior and `features.daemon_auto_start=false` are unchanged.
+
+| Host | Intended support and boundary |
+|---|---|
+| Registered Claude interactive CLI | Native title discovery, inbox delivery, native policy, explicit replies, spawning |
+| Managed registered Codex TUI | Native title discovery, external queue, explicit replies, spawning |
+| Owned Claude headless worker | Separate native UUID; serialized follow-ups; scoped sibling/parent tools; owned cancel/release/resume |
+| Owned managed Codex app-server worker | Separate native UUID/private stdio owner; scoped tools; owned cancel/release/resume |
+| Ordinary local terminal | Passive discovery/setup; no invented model identity or arbitrary worker control |
+| Existing session started before hooks | Register at its next normal launch/resume; no production injection or forced restart |
+| External app-server | Conditional on a supported caller binding and exact owning route; not automatically adopted |
+| Codex Desktop private backend / T3 backend | Not verified or supported for inbound takeover in v1; no second writer or backend interception |
+| Herdr-hosted underlying native CLI | Optional host; no Herdr runtime dependency. Host-specific integration requires the same native binding/route |
+| Distinct provider homes | Identity/home qualification supported; transport/policy depends on the selected native home. Default-home workers are the verified mode |
+| Another machine | Unsupported; `REMOTE_HOST_UNSUPPORTED` |
+
+Installed integration and native permission to run unattended are different. The installer adds owned hooks and skills; it does not globally accept cross-session requests or rewrite native permission policy. Live fixtures disclose their explicit `dontAsk`/existing Codex full-access settings and test scope. An ordinary auto-policy session may hold, refuse or ask about a request. A model can also refuse a task outside the human's delegated scope even after native ingestion; that is not a transport success or a reason to impersonate the user.
+
+A bounded wait leases completion delivery only for that call. Timeout/disconnect releases the claim and chooses push or retain. An uncertain tool-result write or native push is retained as uncertain instead of automatically duplicated. Immutable result reads remain available. Push completion uses a separate controller actor for that group/generation. Exactly one reasoning model is used per native worker; supervisors and aggregation are ordinary local code.
+
+Compatibility receipts bind the verified native executable hashes. A changed binary blocks affected worker launch/native delivery until its changed seam is revalidated; existing immutable owned workers retain their package path. NativePeers does not activate an unrelated Codex update, disable the hourly manager job, drop patches or roll back completed naming/MCP work. Revalidate installed schemas, native hook/queue/MCP behavior and the relevant live checks for a new runtime; use the manager's supported lock/activation mechanism for any separately authorized package change.

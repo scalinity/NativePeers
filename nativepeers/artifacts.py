@@ -24,6 +24,13 @@ class Artifacts:
             json.dumps(list(set(readers)))))
         return handle
 
+    def grant(self, handle, caller, readers):
+        # The caller must already own or be allowed to read the immutable object.
+        self.read(handle,caller,0,1)
+        row=self.journal.one('SELECT allowed_readers_json FROM artifacts WHERE artifact_id=?',(handle,))
+        allowed=set(json.loads(row['allowed_readers_json']));allowed.update(readers)
+        self.journal.db.execute('UPDATE artifacts SET allowed_readers_json=? WHERE artifact_id=?',(json.dumps(sorted(allowed)),handle))
+
     def read(self, handle, caller, offset=0, limit=RESULT_PAGE):
         require(isinstance(offset, int) and offset >= 0 and isinstance(limit, int) and 0 < limit <= RESULT_PAGE,
                 "PROTOCOL_ERROR", "Invalid artifact page")

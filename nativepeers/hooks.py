@@ -48,8 +48,17 @@ def observe(provider, event, journal):
     # Analysis is the only inferred worker grant. Workspace is granted only when native mode is known.
     profiles=['analysis']
     if mode in ('bypassPermissions','dontAsk','acceptEdits','never','full-auto','default'):profiles.append('workspace')
-    policy={'profiles':profiles,'max_depth':1,'max_concurrent_workers':4,'permission_mode_observed':mode}
+    from .policy import load
+    local=load(journal)
+    policy={'profiles':profiles,'max_depth':local['max_depth'],'max_concurrent_workers':local['workers_per_group'],'permission_mode_observed':mode}
     peer=registry.register(provider,home,event['session_id'],native_title,owner,event['cwd'],transport,policy=policy)
+    transcript=event.get('transcript_path')
+    if transcript:
+        path=Path(transcript).resolve()
+        if path.is_relative_to(home):
+            peer['native_transcript']=str(path)
+            from .files import canonical
+            journal.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE incarnation_id=?',(canonical(peer).decode(),peer['incarnation_id']))
     binding=journal.root/'bindings'/new_id()
     atomic_json(binding,dict(state='BOUND',kind='peer',peer_key=peer['handle'],incarnation_id=peer['incarnation_id'],owner=owner,expires_at=time.time()+7*86400,grants=policy))
     if provider=='claude' and os.getenv('CLAUDE_ENV_FILE'):

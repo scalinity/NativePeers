@@ -21,7 +21,7 @@ def codex_config(journal,binding,profile):
     config=tomllib.loads((home/'config.toml').read_text())
     policies={name:{'enabled':False} for name in config.get('mcp_servers',{})}
     policies.update({'codex_apps':{'enabled':False},'openai-api-key-local-confirmation':{'enabled':False}})
-    return {'mcp_servers':{'nativepeers':facade_config(journal,binding)},
+    return {'mcp_servers':{'nativepeers':dict(facade_config(journal,binding),default_tools_approval_mode='approve')},
             'mcp_server_policy':policies,
             'plugins':{name:{'enabled':False} for name in config.get('plugins',{})},
             'features.multi_agent':False,'features.multi_agent_v2':False,

@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NativePeers peer frame v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "message_id",
+    "exchange_id",
+    "kind",
+    "from",
+    "to",
+    "body",
+    "created_at",
+    "expires_at",
+    "hop_count",
+    "artifact_refs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "exchange_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "kind": {
+      "enum": [
+        "request",
+        "notify",
+        "reply",
+        "completion",
+        "failure"
+      ]
+    },
+    "from": {
+      "type": "object"
+    },
+    "to": {
+      "type": "object",
+      "required": [
+        "peer_key"
+      ]
+    },
+    "body": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "created_at": {
+      "type": "number"
+    },
+    "expires_at": {
+      "type": "number"
+    },
+    "hop_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "artifact_refs": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

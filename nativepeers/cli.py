@@ -9,7 +9,7 @@ from pathlib import Path
 import shlex
 import sys
 
-from .caller import bind_caller
+from .caller import bind_caller,Caller
 from .core import Core
 from .errors import PeerError,require
 from .files import canonical
@@ -42,7 +42,7 @@ def parser():
         if name=='cancel':q.add_argument('--reason',required=True)
     q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144)
     q=command('resume-command');q.add_argument('worker_id')
-    q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True)
+    q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait'])
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
@@ -57,7 +57,11 @@ def read_file(path,limit=65536):
 
 
 async def dispatch(args,journal):
-    core=Core(journal);caller=bind_caller(journal,core.registry)
+    core=Core(journal)
+    try:caller=bind_caller(journal,core.registry)
+    except PeerError:
+        if args.command not in ('list','resolve','doctor','install','uninstall'):raise
+        caller=Caller('external-local','external-local')
     name=args.command
     if name=='whoami':return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants)
     if name=='list':return core.registry.list(args.provider,args.include_offline)
@@ -81,12 +85,20 @@ async def dispatch(args,journal):
     if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))
     if name in ('resume-worker','resume-command'):
         from .recovery import resume_command,resume_worker
-        return resume_command(journal,caller,args.worker_id) if name=='resume-command' else await resume_worker(journal,caller,args.worker_id,read_file(args.task_file))
+        return resume_command(journal,caller,args.worker_id) if name=='resume-command' else await resume_worker(journal,caller,args.worker_id,read_file(args.task_file),args.completion_mode)
     if name=='recover':
         group=core.delegation.group(caller,args.group)
         workers=journal.all('SELECT worker_id,native_id,state FROM workers WHERE group_id=?',(group['group_id'],))
-        return {'group_id':group['group_id'],'workers':workers,'state':'RECONCILIATION_REQUIRED','replayed':False,
-                'next_action':'Inspect exact owned process manifests and native terminal evidence; no model input was replayed.'}
+        messages=journal.all('SELECT message_id FROM messages WHERE from_actor_key LIKE ?',('controller:'+group['group_id']+':%',))
+        from .reconcile import observe
+        observations=[]
+        for message in messages:
+            if args.dry_run:observations.append(core.router.outcome(message['message_id']))
+            else:observations.append(await observe(journal,core.registry,core.router,message['message_id']))
+        from .recovery import reconcile_owned
+        lifecycle=reconcile_owned(journal,caller,group['group_id'],dry_run=args.dry_run)
+        return {'group_id':group['group_id'],'workers':workers,'message_observations':observations,'lifecycle':lifecycle,'replayed':False,
+                'next_action':'Read retained results; uncertain native input was not resubmitted.'}
     if name=='doctor':
         require(not args.live,'BUDGET_EXHAUSTED','Live doctor never submits models automatically; use the explicit approved live harness and durable budget')
         return dict(registered_peers=core.registry.list(include_offline=True),
@@ -94,7 +106,7 @@ async def dispatch(args,journal):
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):
         from .install import install,uninstall
-        return (install if name=='install' else uninstall)(journal,dry_run=args.dry_run)
+        return await (install if name=='install' else uninstall)(journal,dry_run=args.dry_run)
     raise PeerError('PROTOCOL_ERROR','Unknown command')
 
 

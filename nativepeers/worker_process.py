@@ -20,6 +20,8 @@ from .models import new_id
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
 from .registry import Registry
+from .compatibility import verify
+from .provider_errors import classify
 
 
 class Worker:
@@ -35,7 +37,7 @@ class Worker:
         print(canonical(dict(event=event,worker_id=self.row['worker_id'],generation=self.row['generation'],**payload)).decode(),flush=True)
 
     def bootstrap(self):
-        atomic_json(self.binding,dict(state='RESERVED_UNBOUND',kind='peer',worker_id=self.row['worker_id'],
+        atomic_json(self.binding,dict(state='RESERVED_UNBOUND',kind='peer',provider=self.row['provider'],worker_id=self.row['worker_id'],
             owner=self.owner,expires_at=self.lease['expires_at'],grants=self.lease['grants']))
         self.manifest()
 
@@ -65,10 +67,16 @@ class Worker:
         self.bootstrap()
         if self.row['provider']=='codex':
             executable=Path(self.lease['executable']).resolve(strict=True)
+            verify(self.journal,'codex',executable)
             config=codex_config(self.journal,self.binding,self.spec['permission_profile'])
             self.client=AppServer(executable,config_arguments(config),cwd=Path(self.row['cwd']),
                 environment={'NPEER_HOME':str(self.journal.root),'NPEER_BOOTSTRAP':str(self.binding),'PYTHONPATH':str(ROOT)})
             await self.client.start();self.provider=self.client.process;self.provider_identity=identity(self.provider.pid).json();self.manifest()
+            catalog=(await self.client.call('model/list',{'includeHidden':True,'limit':100}))['data']
+            model=next((m for m in catalog if m['model']==self.spec['model']),None)
+            require(model,'MODEL_UNAVAILABLE','The immutable worker executable does not advertise the exact model')
+            require(self.spec.get('reasoning_effort') in [e['reasoningEffort'] for e in model['supportedReasoningEfforts']],
+                    'EFFORT_UNSUPPORTED','The immutable worker executable does not advertise the exact effort')
             if self.native:
                 require(self.lease.get('released_native',False),'OWNERSHIP_CONFLICT','Existing native worker was not released')
                 response=await self.client.call('thread/resume',{'threadId':self.native,'cwd':self.row['cwd'],'model':self.spec['model'],'approvalPolicy':'never','sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
@@ -94,6 +102,7 @@ class Worker:
         else:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'AUTH_REQUIRED','Installed Claude executable is unavailable')
+            verify(self.journal,'claude',self.lease['executable'])
             launch_environment('claude');claude_arguments(self.journal,self.binding,self.spec,self.expected_native)
         self.journal.db.execute("UPDATE workers SET state='READY' WHERE worker_id=?",(self.row['worker_id'],))
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
@@ -102,30 +111,42 @@ class Worker:
         self.tasks_started+=1
         require(self.tasks_started<=self.spec.get('max_task_turns',8),'BUDGET_EXHAUSTED','Worker task-turn limit reached')
         self.running_task=task_id;started=time.time();self.turn=None
+        text='NativePeers assigned worker title: '+self.row['role_title']+'. Provider: '+self.row['provider']+'.\n'+text
         self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND generation=?",(task_id,self.row['generation']))
         self.journal.db.execute("UPDATE workers SET state='RUNNING' WHERE worker_id=?",(self.row['worker_id'],))
         reservation=None
-        if self.lease.get('live_budget_file'):
-            from .budget import LiveBudget
-            budget=LiveBudget(Path(self.lease['live_budget_file']))
-            reservation=budget.reserve('worker '+self.row['worker_id']+' task '+task_id,tranche=self.lease.get('live_tranche','first_cross_provider_delegations'))
-            budget.admit(reservation)
+        budget=None
         try:
+            if self.lease.get('live_budget_file'):
+                from .budget import LiveBudget
+                budget=LiveBudget(Path(self.lease['live_budget_file']))
+                try:reservation=budget.reserve('worker '+self.row['worker_id']+' task '+task_id,tranche=self.lease.get('live_tranche','first_cross_provider_delegations'))
+                except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
+                budget.admit(reservation)
             async with asyncio.timeout(self.spec.get('wall_time_seconds',1800)):
                 result=await (self.codex_turn(text) if self.row['provider']=='codex' else self.claude_turn(text))
         except BaseException as error:
             await self.interrupt()
-            result={'status':'canceled' if self.stopping else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':'WORKER_CRASHED','message':type(error).__name__},'native_turn_ids':[self.turn] if self.turn else []}
+            code=classify(error.error) if isinstance(error,ProviderError) else 'BUDGET_EXHAUSTED' if isinstance(error,TimeoutError) else 'WORKER_CRASHED'
+            result={'status':'canceled' if self.stopping else 'timed_out' if isinstance(error,TimeoutError) else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':code,'message':str(error)[:1000]},'native_turn_ids':[self.turn] if self.turn else []}
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
+        if self.stopping and result['status'] in ('failed','canceled'):
+            result['status']='canceled';result['error']={'code':'USER_CANCELED','native_error':result.get('error')}
         row=self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))
         record=dict(schema_version=1,group_id=self.row['group_id'],task_id=task_id,
             worker={'provider':self.row['provider'],'native_session_id':self.native,'title':self.row['role_title'],'peer_key':row['peer_key']},
-            model_requested=self.spec['model'],model_observed=self.model_observed,
+            model_requested=self.row['model_requested'],model_observed=self.model_observed,
             reasoning_effort_requested=self.spec.get('reasoning_effort'),reasoning_effort_observed=None,
             status=result['status'],summary=result.get('text',''),findings=[],artifacts=[],
             verification={'tests_run':[],'limitations':['Provider final text retained; structured findings were not inferred.','Reasoning effort independently echoed by inference: unverified.']},
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
+        if self.row['worktree_id']:
+            from .worktrees import git
+            baseline=self.lease['baseline'];patch=git(self.row['cwd'],'diff',baseline['head'],'--binary').stdout
+            record['changes']['commit']=git(self.row['cwd'],'rev-parse','HEAD').stdout.decode().strip()
+            record['changes']['baseline']=baseline
+            if patch:record['changes']['patch_artifact']=Artifacts(self.journal).put(patch,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
         artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='application/json')
         with self.journal.transaction() as db:
             db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
@@ -135,11 +156,19 @@ class Worker:
         self.running_task=None;self.emit('task_terminal',task_id=task_id,artifact_id=artifact,status=result['status'])
         if reservation:budget.settle(reservation,observed_turns=1,native_id=self.native)
 
+    def ingested(self):
+        task=self.journal.one('SELECT request_message_id FROM tasks WHERE task_id=?',(self.running_task,))
+        if task and task['request_message_id']:
+            from .routing import Router
+            router=Router(self.journal,Registry(self.journal));outcome=router.outcome(task['request_message_id'])
+            peer=Registry(self.journal).get(self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))['peer_key'])
+            router.record(task['request_message_id'],outcome['attempt']['attempt_id'],{'stage':'INGESTED','evidence_kind':'owned-native-turn-start','native_turn_id':self.turn},peer)
+
     async def codex_turn(self,text):
         require(not self.stopping,'USER_CANCELED','Worker is stopping')
         response=await self.client.call('turn/start',{'threadId':self.native,'input':[{'type':'text','text':text}],
             'model':self.spec['model'],'effort':self.spec.get('reasoning_effort'),'approvalPolicy':'never'})
-        self.turn=response['turn']['id'];self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
+        self.turn=response['turn']['id'];self.ingested();self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
         items={}
         while True:
             event=await asyncio.wait_for(self.client.next_event(),self.spec.get('wall_time_seconds',1800))
@@ -154,8 +183,9 @@ class Worker:
                     if item.get('type')=='agentMessage':items[item['id']]=item
                 final=[i['text'] for i in items.values() if i.get('phase') in (None,'final_answer')]
                 require(final or terminal['status']!='completed','PROTOCOL_ERROR','Terminal native turn has no final assistant result')
+                error=terminal.get('error')
                 return dict(status={'completed':'completed','interrupted':'canceled','failed':'failed'}.get(terminal['status'],'failed'),
-                            text='\n'.join(final),native_turn_ids=[self.turn],error=terminal.get('error'))
+                            text='\n'.join(final),native_turn_ids=[self.turn],error={'code':classify(error),'native_error':error} if error else None)
 
     async def claude_turn(self,text):
         args=claude_arguments(self.journal,self.binding,self.spec,self.expected_native,resume=self.tasks_started>1 or self.lease.get('released_native',False))
@@ -184,6 +214,7 @@ class Worker:
                     require(not unsafe,'PERMISSION_CAPABILITY_UNKNOWN','Claude worker inherited tools outside its profile',details=unsafe)
                     self.journal.event(self.row['worker_id'],'effective-tool-profile',{'tools':event.get('tools',[]),'model':self.model_observed,'profile':self.spec['permission_profile']})
                     self.turn=event.get('uuid') or new_id()
+                    self.ingested()
                     self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
                 if event.get('type')=='assistant':assistant_rounds+=1
                 if event.get('type')=='result':terminal=event
@@ -192,7 +223,7 @@ class Worker:
             self.journal.event(self.running_task,'provider-internal-rounds',{'assistant_events':assistant_rounds,'num_turns':terminal.get('num_turns')})
             return dict(status='completed' if terminal.get('subtype')=='success' and not terminal.get('is_error') and self.provider.returncode==0 else 'failed',
                         text=terminal.get('result',''),native_turn_ids=[self.turn] if self.turn else [],
-                        error=None if terminal.get('subtype')=='success' else {'code':'PROVIDER_TASK_FAILED','subtype':terminal.get('subtype'),'errors':terminal.get('errors',[])},usage=terminal.get('usage'))
+                        error=None if terminal.get('subtype')=='success' else {'code':classify(terminal),'subtype':terminal.get('subtype'),'errors':terminal.get('errors',[])},usage=terminal.get('usage'))
         finally:
             if not drain.done():drain.cancel()
 

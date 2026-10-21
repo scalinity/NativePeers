@@ -1,0 +1,2 @@
+# Preserve canonical document bytes, including intentional Markdown hard breaks.
+docs/REVIEW.md whitespace=-blank-at-eol

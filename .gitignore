@@ -11,3 +11,5 @@ evidence/baseline.json
 evidence/live/
 .claude/
 .codex/
+
+evidence/live-budget.lock

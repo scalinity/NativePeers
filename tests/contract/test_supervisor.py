@@ -12,6 +12,8 @@ from nativepeers.models import new_id
 from nativepeers.process import identity,matches
 from nativepeers.registry import Registry
 from nativepeers.supervisor import Group
+from nativepeers.compatibility import fingerprint
+from nativepeers.files import atomic_json
 
 ROOT=Path(__file__).resolve().parents[2]
 
@@ -29,6 +31,7 @@ class SupervisorTests(unittest.IsolatedAsyncioTestCase):
                 worker_id,task_id=new_id(),new_id();policy['workers'].append(worker_id);policy['initial_tasks'].append(task_id)
                 spec=dict(provider=provider,title='fake '+str(index),task=task,permission_profile='analysis',model='fake-claude' if provider=='claude' else 'gpt-6.1-sol',reasoning_effort='xhigh',cwd=temporary,wall_time_seconds=5,max_task_turns=2)
                 executable=ROOT/'tests/fixtures'/('fake_'+provider+'.py');executable.chmod(0o755)
+                atomic_json(j.root/'compat/runtime.json',{'providers':{provider:fingerprint(executable)}})
                 lease=dict(spec=spec,grants={'worker_id':worker_id,'group_id':group_id},binding=str(j.root/'bindings'/new_id()),parent_key=parent['handle'],expires_at=time.time()+30,executable=str(executable))
                 j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker_id,group_id,None,provider,new_id() if provider=='claude' else None,spec['title'],spec['model'],None,'xhigh',temporary,None,'RESERVED',1,canonical(lease).decode()))
                 j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,None,None,'QUEUED',None,None,1,canonical({'text':task,'initial':True}).decode()))

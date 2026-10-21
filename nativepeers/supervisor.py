@@ -28,10 +28,10 @@ class Group:
         self.journal,self.id=journal,group_id
         self.row=journal.one('SELECT * FROM groups WHERE group_id=?',(group_id,))
         self.policy=json.loads(self.row['policy_json']);self.owner=identity(os.getpid()).json()
-        self.generation=1;self.token=secrets.token_hex(32)
+        self.generation=self.policy.get('controller_generation',1);self.token=secrets.token_hex(32)
         self.endpoint=runtime_root()/('g-'+group_id[:24]+'.sock')
         self.children={};self.changed=asyncio.Event();self.closing=False;self.finished_at=None
-        self.controller=Caller('controller','controller:'+group_id+':1',grants={'group_id':group_id,'generation':1,'parent_key':self.row['parent_key']})
+        self.controller=Caller('controller','controller:'+group_id+':'+str(self.generation),grants={'group_id':group_id,'generation':self.generation,'parent_key':self.row['parent_key']})
         self.parent=Caller('peer',self.row['parent_key'],self.policy['parent_incarnation'])
 
     def tasks(self):
@@ -39,6 +39,20 @@ class Group:
 
     def initial_done(self):
         return all(t['state'] in TERMINAL for t in self.tasks() if t['task_id'] in self.policy['initial_tasks'])
+
+    def phases(self):return self.policy.get('phases',{'1':self.policy['initial_tasks']})
+
+    def phase_done(self,generation):
+        wanted=self.phases()[str(generation)];rows={t['task_id']:t for t in self.tasks()}
+        return all(task in rows and rows[task]['state'] in TERMINAL for task in wanted)
+
+    def target_done(self,handle):
+        if handle==self.id:return all(t['state'] in TERMINAL for t in self.tasks())
+        return any(t['task_id']==handle and t['state'] in TERMINAL for t in self.tasks())
+
+    def phase_for(self,handle):
+        if handle==self.id:return max(int(n) for n in self.phases())
+        return next(int(n) for n,tasks in self.phases().items() if handle in tasks)
 
     async def send_worker(self,worker_id,value):
         child=self.children[worker_id];wire=canonical(value)+b'\n'
@@ -71,17 +85,18 @@ class Group:
                 if event['event']=='ready' and not child['ready'].done():child['ready'].set_result(event)
                 if event['event']=='failed':
                     if not child['ready'].done():child['ready'].set_exception(PeerError('WORKER_CRASHED',str(event['error'])))
-                    self.fail_worker(worker_id,event['error'])
+                    self.fail_worker(worker_id,event['error'],child['row']['generation'])
                 if event['event']=='task_terminal':self.changed.set()
-            if not self.closing and not self.initial_done():self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':'Owned worker closed its control stream'})
+            if not self.closing and any(t['worker_id']==worker_id and t['state'] not in TERMINAL for t in self.tasks()):self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':'Owned worker closed its control stream'},child['row']['generation'])
         except Exception as error:
-            self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':str(error)[:1000]})
+            self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':str(error)[:1000]},child['row']['generation'])
         finally:
             if not child['ready'].done():child['ready'].set_exception(PeerError('WORKER_CRASHED','Worker exited before readiness'))
             self.changed.set()
 
-    def fail_worker(self,worker_id,error):
+    def fail_worker(self,worker_id,error,generation=None):
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
+        if generation is not None and row['generation']!=generation:return
         self.journal.db.execute("UPDATE workers SET state='FAILED' WHERE worker_id=?",(worker_id,))
         for task in self.tasks():
             if task['worker_id']!=worker_id or task['state'] in TERMINAL:continue
@@ -99,6 +114,7 @@ class Group:
 
     async def release_worker(self,worker_id):
         child=self.children[worker_id]
+        self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND state!='RELEASED_RESUMABLE'",(worker_id,))
         try:await self.send_worker(worker_id,{'operation':'release'})
         except (BrokenPipeError,ConnectionError):pass
         if child.get('lease_fd') is not None:
@@ -117,9 +133,9 @@ class Group:
     async def initialize(self):
         self.server=await asyncio.start_unix_server(self.connection,path=str(self.endpoint),limit=PEER_FRAME+1)
         os.chmod(self.endpoint,0o600)
-        atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=1,endpoint=str(self.endpoint),token=self.token))
-        self.journal.db.execute("UPDATE groups SET state='STARTING',owner_manifest=? WHERE group_id=?",(canonical({'owner':self.owner,'endpoint':str(self.endpoint),'generation':1}).decode(),self.id))
-        rows=self.journal.all('SELECT * FROM workers WHERE group_id=?',(self.id,))
+        atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token))
+        self.journal.db.execute("UPDATE groups SET state='STARTING',owner_manifest=? WHERE group_id=?",(canonical({'owner':self.owner,'endpoint':str(self.endpoint),'generation':self.generation}).decode(),self.id))
+        rows=self.journal.all("SELECT * FROM workers WHERE group_id=? AND state='RESERVED'",(self.id,))
         results=await asyncio.gather(*[self.start_worker(row) for row in rows],return_exceptions=True)
         if any(isinstance(r,BaseException) for r in results):
             for row in rows:self.fail_worker(row['worker_id'],{'code':'CAPABILITY_MISMATCH','message':'Batch readiness failed before task admission'})
@@ -128,7 +144,7 @@ class Group:
         # Readiness barrier is complete for both controllers before either native task is submitted.
         await asyncio.gather(*[self.send_worker(task['worker_id'],{'operation':'task','task_id':task['task_id'],
             'text':json.loads(task['task_json'])['text']+'\n\nNativePeers contract: work only on this focused task. Do not invoke vendor-native Agent/subagents. Use the bound NativePeers tools for permitted peer communication. Return your own final findings.'})
-            for task in self.tasks() if task['task_id'] in self.policy['initial_tasks']])
+            for task in self.tasks() if task['state']=='QUEUED' and task['worker_id'] in self.children])
 
     async def connection(self,reader,writer):
         uncertain=False
@@ -138,7 +154,7 @@ class Group:
             request=json.loads(raw)
             require(secrets.compare_digest(request.get('token',''),self.token),'CALLER_UNBOUND','Invalid group capability')
             op=request.get('operation');payload=request.get('payload',{})
-            require(op in ('hello','status','enqueue','wait','cancel','result','release-idle'),'PROTOCOL_ERROR','Unknown scoped group operation')
+            require(op in ('hello','status','enqueue','wait','cancel','result','release-idle','resume'),'PROTOCOL_ERROR','Unknown scoped group operation')
             if op=='enqueue':value=await self.enqueue(payload)
             elif op=='wait':value=await self.wait(payload,reader);uncertain=value.get('notification_output_uncertain',False)
             elif op=='cancel':
@@ -149,6 +165,16 @@ class Group:
                 for t in tasks:
                     if t['worker_id'] in targets and t['state']=='QUEUED':self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='USER_CANCELED' WHERE task_id=?",(t['task_id'],))
                 value={'state':'CANCEL_REQUESTED','workers':list(targets)}
+                for worker in targets:asyncio.create_task(self.cancel_and_release(worker))
+            elif op=='resume':
+                require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Resume requires the owning parent')
+                self.policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(self.id,))['policy_json'])
+                row=self.journal.one("SELECT * FROM workers WHERE worker_id=? AND group_id=? AND state='RESERVED'",(payload['worker_id'],self.id))
+                require(row,'OWNERSHIP_CONFLICT','Worker is not reserved for this resume')
+                self.finished_at=None
+                await self.start_worker(row)
+                await self.send_worker(row['worker_id'],{'operation':'task','task_id':payload['task_id'],'text':payload['text']})
+                self.finished_at=None;value={'worker_id':row['worker_id'],'task_id':payload['task_id'],'state':'QUEUED'}
             elif op=='release-idle':
                 row=self.journal.one('SELECT state FROM workers WHERE worker_id=?',(payload['worker_id'],))
                 require(row and row['state']=='IDLE_GRACE' and not any(t['worker_id']==payload['worker_id'] and t['state'] not in TERMINAL for t in self.tasks()),'CAPACITY_UNAVAILABLE','Worker is not safely idle')
@@ -165,6 +191,14 @@ class Group:
         finally:
             writer.close();await writer.wait_closed()
 
+    async def cancel_and_release(self,worker_id):
+        deadline=time.monotonic()+15
+        while time.monotonic()<deadline:
+            if not any(t['worker_id']==worker_id and t['state']=='RUNNING' for t in self.tasks()):break
+            await asyncio.sleep(.05)
+        await self.release_worker(worker_id)
+        self.changed.set()
+
     async def enqueue(self,payload):
         message=payload['message'];worker_id=payload['worker_id']
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=? AND group_id=?',(worker_id,self.id))
@@ -179,6 +213,10 @@ class Group:
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],canonical({'text':canonical(message).decode(),'initial':False}).decode()))
             db.execute('UPDATE messages SET task_id=? WHERE message_id=?',(task_id,message['message_id']))
+            generation=max(int(n) for n in self.phases())+1
+            self.policy['phases']=dict(self.phases(),**{str(generation):[task_id]})
+            db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(self.policy).decode(),self.id))
+            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait','UNCLAIMED',None,None,new_id(),self.generation))
         await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':canonical(message).decode()})
         self.finished_at=None;self.changed.set()
         return {'stage':'ACCEPTED_QUEUED','evidence_kind':'controller-queue-admission','external_submission_id':task_id,'native_expiry_enforced':False}
@@ -189,66 +227,70 @@ class Group:
         mode=payload.get('on_timeout') or ('push' if self.policy['completion_mode']=='push' else 'retain')
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         waiter=new_id();claimed=False
+        generation=self.phase_for(payload['handle'])
         with self.journal.transaction() as db:
-            row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=1',(self.id,)).fetchone()
+            row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()
             if row['state']=='UNCLAIMED' or (row['state']=='WAIT_LEASED' and row['lease_deadline']<time.time()):
-                db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=? WHERE group_id=? AND completion_generation=1",(waiter,time.time()+timeout+1,self.id));claimed=True
+                db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=?",(waiter,time.time()+timeout+1,self.generation,self.id,generation));claimed=True
         deadline=time.monotonic()+timeout
         disconnected=asyncio.create_task(reader.read(1))
         try:
-            while not self.initial_done():
+            while not self.target_done(payload['handle']):
                 remaining=deadline-time.monotonic()
                 if remaining<=0 or disconnected.done():break
                 changed=asyncio.create_task(self.changed.wait())
                 try:await asyncio.wait([changed,disconnected],timeout=remaining,return_when=asyncio.FIRST_COMPLETED)
                 finally:changed.cancel()
                 self.changed.clear()
-            if self.initial_done() and not disconnected.done():
+            if self.target_done(payload['handle']) and not disconnected.done():
                 if claimed:
-                    self.journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=1 AND waiter_id=?",(self.id,waiter))
+                    self.journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",(self.id,generation,waiter,self.generation))
                 return {'ready':True,'result':Delegation(self.journal,Registry(self.journal)).result(self.parent,payload['handle']),
                         'notification_output_uncertain':claimed,'notification_disposition':'tool-result-output-pending-observation'}
             if claimed:
-                self.journal.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode=?,waiter_id=NULL,lease_deadline=NULL WHERE group_id=? AND completion_generation=1 AND waiter_id=?",('push' if mode=='push' else 'wait',self.id,waiter))
+                self.journal.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode=?,waiter_id=NULL,lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",('push' if mode=='push' else 'wait',self.id,generation,waiter,self.generation))
             return {'ready':False,'state':'WAIT_EXPIRED','notification_disposition':mode}
         finally:disconnected.cancel();self.changed.set()
 
-    async def notify(self):
-        if not self.initial_done():return
+    async def notify(self,generation=1):
+        if not self.phase_done(generation):return
         with self.journal.transaction() as db:
-            row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=1',(self.id,)).fetchone()
+            row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()
             if row['state']=='WAIT_LEASED' and row['lease_deadline']<time.time():
-                db.execute("UPDATE completion_routes SET state='UNCLAIMED',waiter_id=NULL WHERE group_id=? AND completion_generation=1",(self.id,))
+                db.execute("UPDATE completion_routes SET state='UNCLAIMED',waiter_id=NULL WHERE group_id=? AND completion_generation=?",(self.id,generation))
                 row=dict(row);row['state']='UNCLAIMED'
             if row['state']!='UNCLAIMED' or row['mode']!='push':return
-            db.execute("UPDATE completion_routes SET state='PUSH_SUBMITTING' WHERE group_id=? AND completion_generation=1",(self.id,))
+            db.execute("UPDATE completion_routes SET state='PUSH_SUBMITTING',claimed_generation=? WHERE group_id=? AND completion_generation=?",(self.generation,self.id,generation))
         from .core import Core
         result=Delegation(self.journal,Registry(self.journal)).result(self.parent,self.id)
-        summaries=[dict(title=r['worker']['title'],provider=r['worker']['provider'],native_session_id=r['worker']['native_session_id'],status=r['status'],summary=r['summary'][:2000],result_artifact_id=r['result_artifact_id']) for r in result['results'] if r['initial_task']]
-        text='NativePeers group '+self.id+' completed. These are independently produced worker results.\n'+json.dumps(summaries,ensure_ascii=False)
+        summaries=[dict(title=r['worker']['title'],provider=r['worker']['provider'],native_session_id=r['worker']['native_session_id'],status=r['status'],summary=r['summary'][:2000],result_artifact_id=r['result_artifact_id']) for r in result['results'] if r['task_id'] in self.phases()[str(generation)]]
+        text='NativePeers group '+self.id+' completion generation '+str(generation)+'. These are independently produced worker results.\n'+json.dumps(summaries,ensure_ascii=False)
         budget=None;reservation=None
         test=self.journal.root/'test-budget.json'
-        if test.exists():
-            from .budget import LiveBudget
-            spec=json.loads(test.read_text());budget=LiveBudget(Path(spec['path']));reservation=budget.reserve('parent completion '+self.id,tranche=spec.get('tranche','first_cross_provider_delegations'));budget.admit(reservation)
         try:
+            if test.exists():
+                from .budget import LiveBudget
+                spec=json.loads(test.read_text());budget=LiveBudget(Path(spec['path']))
+                try:reservation=budget.reserve('parent completion '+self.id,tranche=spec.get('tranche','first_cross_provider_delegations'))
+                except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
+                budget.admit(reservation)
             receipt=await Core(self.journal).router.send(self.controller,self.row['parent_key'],text,kind='completion',client_request_id=row['delivery_id'])
             state='PUSH_ACCEPTED' if receipt['state'] in ('INGESTED','ACCEPTED_QUEUED') else ('HELD' if receipt['state']=='HELD' else 'NOTIFICATION_UNKNOWN')
-            self.journal.db.execute('UPDATE completion_routes SET state=?,delivery_id=? WHERE group_id=? AND completion_generation=1',(state,receipt['message_id'],self.id))
+            self.journal.db.execute('UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?',(state,self.id,generation,self.generation))
             self.journal.event(self.id,'parent-completion-submitted',{'receipt':receipt,'live_reservation':reservation})
             # Accepted/uncertain model work remains reserved until the live collector observes it.
         except PeerError as error:
-            self.journal.db.execute("UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=1",('NOTIFICATION_UNKNOWN' if error.may_have_received else 'RETAINED',self.id))
+            self.journal.db.execute("UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?",('NOTIFICATION_UNKNOWN' if error.may_have_received else 'RETAINED',self.id,generation,self.generation))
             self.journal.event(self.id,'parent-completion-retained',error.json())
 
     async def monitor(self):
-        deadline=self.policy['created_at']+self.policy['wall_time_seconds']
+        deadline=self.policy['created_at']+self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
         while True:
             tasks=self.tasks();active=any(t['state'] not in TERMINAL for t in tasks)
             if self.initial_done():
                 state='COMPLETED' if all(t['state']=='COMPLETED' for t in tasks if t['task_id'] in self.policy['initial_tasks']) else 'PARTIAL'
                 self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(state,self.id))
-                await self.notify()
+                for phase in self.phases():await self.notify(int(phase))
                 if not active and self.finished_at is None:self.finished_at=time.time()
             parent_gone=not matches(self.policy['parent_owner']) and not self.policy['survive_parent']
             if parent_gone or time.time()>deadline:

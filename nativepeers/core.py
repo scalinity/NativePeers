@@ -1,5 +1,6 @@
 """Shared authenticated application operations for CLI and MCP."""
 import json
+from pathlib import Path
 
 from .artifacts import Artifacts
 from .control import group_call
@@ -13,6 +14,23 @@ class Core:
     def __init__(self,journal):
         self.journal=journal;self.registry=Registry(journal)
         self.router=Router(journal,self.registry)
+        from .compatibility import verify
+        from pathlib import Path
+        for provider,kind in [('claude','claude-inbox'),('codex','codex-native-queue')]:
+            adapter=self.router.adapters[kind]
+            async def checked(peer,message,provider=provider,adapter=adapter):
+                executable=Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
+                verify(journal,provider,executable)
+                test=journal.root/'test-budget.json'
+                if test.exists() and message['from']['kind']=='peer':
+                    from .budget import LiveBudget
+                    config=json.loads(test.read_text());budget=LiveBudget(Path(config['path']))
+                    try:reservation=budget.reserve('peer native input '+message['message_id'],tranche=config.get('tranche','remaining_mandatory'))
+                    except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
+                    budget.admit(reservation)
+                    journal.event(message['message_id'],'live-peer-reservation',{'reservation':reservation,'native_id':peer['peer_key']['native_session_id']})
+                return await adapter(peer,message)
+            self.router.adapters[kind]=checked
         async def owned(peer,message):
             return await group_call(journal,peer['transport']['group_id'],'enqueue',{'worker_id':peer['transport']['worker_id'],'message':message})
         self.router.adapters['owned-worker']=owned
