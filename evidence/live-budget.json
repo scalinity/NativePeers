@@ -292,9 +292,31 @@
         "281ff036-094a-4deb-83ce-4374cba868bd"
       ],
       "start": 1792695979.859434
+    },
+    {
+      "end": 1792701930.6526358,
+      "reservation_ids": [
+        "08671043-3d17-41d3-91a0-a30c8b3d516c",
+        "d4e1d9c8-b3df-4254-aea2-6fe78e39a3e9",
+        "d2e705dc-105f-412b-b621-6193ea868137",
+        "8ce927da-3dc0-4cb5-b2d2-914e02cfcc39",
+        "620fa65e-fff5-405f-ac28-d100de746dba"
+      ],
+      "start": 1792701853.97549
+    },
+    {
+      "end": 1792702248.618921,
+      "reservation_ids": [
+        "c3e29f98-0786-42b4-b5b0-761646786853",
+        "5a974fd4-938e-4400-87a1-ab25f5d9acf9",
+        "a069f6fe-fea9-4a9a-a4bb-6475659f33f9",
+        "dc6f88bb-22d2-46d6-9b67-e87fbde01168",
+        "7cfd1c8e-12d4-4d03-b7c8-5f5fc64cebe6"
+      ],
+      "start": 1792702162.050019
     }
   ],
-  "active_seconds": 3712.270929813385,
+  "active_seconds": 3875.5169775485992,
   "allocation": {
     "M1": 10,
     "antigravity": 36,
@@ -512,7 +534,7 @@
       "worker_id": "0911bc4f-8417-4291-99d2-14ec4e1e2406"
     }
   ],
-  "consumed_turns": 157,
+  "consumed_turns": 167,
   "delegation_reserve": 0,
   "final": false,
   "outstanding_native_requests": [],
@@ -2722,10 +2744,140 @@
       "settled_at": 1792696037.0811992,
       "state": "settled",
       "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792701853.97549,
+      "at": 1792701853.970461,
+      "count": 1,
+      "id": "08671043-3d17-41d3-91a0-a30c8b3d516c",
+      "label": "Native Flash parent input; simulated Claude excluded",
+      "native_session_id": "654b879e-9b6e-4634-b6bb-b11c7252c34d",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792701930.646545,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792701853.9763148,
+      "at": 1792701853.97189,
+      "count": 1,
+      "id": "d4e1d9c8-b3df-4254-aea2-6fe78e39a3e9",
+      "label": "Native Flash wait input; simulated Claude excluded",
+      "native_session_id": "f1471b2c-8d0c-4b7b-b395-ecca825dc483",
+      "observed_completed_at": 1792701904.5918632,
+      "observed_turns": 1,
+      "settled_at": 1792701930.6480482,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792701853.9771378,
+      "at": 1792701853.972831,
+      "count": 1,
+      "id": "d2e705dc-105f-412b-b621-6193ea868137",
+      "label": "Native Flash push input; simulated Claude excluded",
+      "native_session_id": "086e4473-35e2-44b3-93fc-1334b23b48b8",
+      "observed_completed_at": 1792701915.441021,
+      "observed_turns": 1,
+      "settled_at": 1792701930.649407,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792701853.9779148,
+      "at": 1792701853.973682,
+      "count": 1,
+      "id": "8ce927da-3dc0-4cb5-b2d2-914e02cfcc39",
+      "label": "Native Flash resume input; simulated Claude excluded",
+      "native_session_id": "086e4473-35e2-44b3-93fc-1334b23b48b8",
+      "observed_completed_at": 1792701925.515275,
+      "observed_turns": 1,
+      "settled_at": 1792701930.650517,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792701853.978702,
+      "at": 1792701853.97459,
+      "count": 1,
+      "id": "620fa65e-fff5-405f-ac28-d100de746dba",
+      "label": "Native Flash completion input; simulated Claude excluded",
+      "native_session_id": "654b879e-9b6e-4634-b6bb-b11c7252c34d",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792701930.6526358,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792702162.050019,
+      "at": 1792702162.044718,
+      "count": 1,
+      "id": "c3e29f98-0786-42b4-b5b0-761646786853",
+      "label": "Native Flash parent input; simulated Claude excluded",
+      "native_session_id": "44f5a900-3036-4cea-8350-8a38fc10e96e",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792702248.61302,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792702162.050915,
+      "at": 1792702162.045904,
+      "count": 1,
+      "id": "5a974fd4-938e-4400-87a1-ab25f5d9acf9",
+      "label": "Native Flash wait input; simulated Claude excluded",
+      "native_session_id": "1aacc1bb-ff91-4a44-8f76-28d53b821396",
+      "observed_completed_at": 1792702221.783649,
+      "observed_turns": 1,
+      "settled_at": 1792702248.6146078,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792702162.05189,
+      "at": 1792702162.0469701,
+      "count": 1,
+      "id": "a069f6fe-fea9-4a9a-a4bb-6475659f33f9",
+      "label": "Native Flash push input; simulated Claude excluded",
+      "native_session_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
+      "observed_completed_at": 1792702232.089534,
+      "observed_turns": 1,
+      "settled_at": 1792702248.616123,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792702162.052809,
+      "at": 1792702162.0480142,
+      "count": 1,
+      "id": "dc6f88bb-22d2-46d6-9b67-e87fbde01168",
+      "label": "Native Flash resume input; simulated Claude excluded",
+      "native_session_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
+      "observed_completed_at": 1792702242.137536,
+      "observed_turns": 1,
+      "settled_at": 1792702248.6176288,
+      "state": "settled",
+      "tranche": "flash_fallback"
+    },
+    {
+      "admitted_at": 1792702162.05367,
+      "at": 1792702162.049046,
+      "count": 1,
+      "id": "7cfd1c8e-12d4-4d03-b7c8-5f5fc64cebe6",
+      "label": "Native Flash completion input; simulated Claude excluded",
+      "native_session_id": "44f5a900-3036-4cea-8350-8a38fc10e96e",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792702248.618921,
+      "state": "settled",
+      "tranche": "flash_fallback"
     }
   ],
   "reserved_turns": 0,
   "schema_version": 1,
   "updated_at": "2026-10-22T15:09:24.282632-04:00",
-  "updated_at_unix": 1792696037.0812118
+  "updated_at_unix": 1792702248.6189451
 }

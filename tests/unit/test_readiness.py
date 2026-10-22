@@ -280,8 +280,9 @@ class ReadinessTests(unittest.TestCase):
         worker.row={'provider':'antigravity','worker_id':'fixture'}
         worker.spec={'cwd':str(self.cwd),'permission_profile':'analysis'}
         worker.lease={'executable':str(self.project/'bin/npeer')}
-        worker.journal=SimpleNamespace(db=SimpleNamespace(execute=lambda *args: self.fail('worker became READY')))
+        def metadata_write(sql,*args):self.assertNotIn("state='READY'",sql)
+        worker.journal=SimpleNamespace(db=SimpleNamespace(execute=metadata_write))
         worker.bootstrap=lambda:None;worker.emit=lambda *args,**kwargs:self.fail('worker announced READY')
-        with patch('nativepeers.antigravity_install.verify'),self.assertRaises(PeerError) as error:
+        with patch('nativepeers.antigravity_install.verify'),patch('nativepeers.worker_process.verify',return_value={'sha256':'fixture'}),self.assertRaises(PeerError) as error:
             asyncio.run(worker.prepare())
         self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')

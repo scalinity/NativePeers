@@ -149,3 +149,22 @@ MCP `task_status` accepts `refresh:true`, `scan_cursor` and `scan_max_bytes`. Ev
 Set a Claude worker's `fallbacks` to `[{"provider":"antigravity","model":"gemini-4-argon-high"}]` when that exact alternative is authorized for the existing task. Tailor `examples/claude-gemini-fallback.json`; the normal `spawn --check`, CLI spawn and bound MCP `worker_spawn` share this schema. Only a confirmed clean quota/auth failure may advance. Original budgets, frozen inputs and one logical completion remain in force; partial or uncertain work is retained without replay. Read [Provider errors and explicit fallback](PROVIDER_FALLBACK.md) for a complete example, attempt attribution and the native verification boundary.
 
 Native chat input now shows readable outcomes and references. Full structured envelopes stay in the journal and are available to authorized senders/recipients through `status MESSAGE_ID --json`; full results use `result GROUP_ID --json`. Queued/held/unknown receipts retain their existing meaning.
+
+
+## Bound MCP checks, resume and phase progress
+
+A bound parent with delegation authority can use `worker_spawn({"spec":BATCH,"check":true})`. The plan shares CLI validation, makes no reservation or workspace, and reports native metadata helpers. Git inspection leaves index metadata unchanged and never executes external filters. If a custom clean filter is needed to normalize the input, the check reports `WORKSPACE_SNAPSHOT_REQUIRED`; built-in line-ending conversion remains supported.
+
+Continue an exact released owned worker with `worker_resume({"worker_id":"WORKER_ID","task":"FOCUSED FOLLOW-UP","completion_mode":"wait","client_request_id":"NEW_OPERATION_ID"})`. The request ID is required through MCP. Reuse identical arguments and the original ID after a lost response to retrieve that task, including a terminal failure; an unknown startup is never replayed. Wrong-parent and inactive calls are refused. New tool declarations appear when the MCP facade next starts normally.
+
+`groups --mine`, MCP `task_groups`, and detailed status expose `progress.active_tasks`, `queued_tasks`, `initial_batch_complete`, `latest_completion_phase`, `deadline` and `last_native_activity`. Existing group-state semantics describe the initial batch; use the additive counts for follow-ups/resumes. Only the current worker generation contributes native activity, and activity is not evidence of success.
+
+## Retained runtime approvals and never-launched cleanup
+
+Normal worker readiness records its verified executable fingerprint in the owned lease. An explicit compatibility update retains the previous approval only for those already-verified exact leases. New work uses the current managed executable. Old packages must still exist with identical bytes/path; unrelated leases and unknown hashes do not gain approval. Legacy leases without a recorded fingerprint require explicit revalidation. Retained approval is scoped historical integration evidence, not a claim of indefinite native compatibility.
+
+Revoke a retained approval explicitly with `npeer runtime-revoke --provider codex --sha256 EXACT_RETAINED_SHA256 --json`. This is a local maintenance command unavailable to owned workers; it does not change the current approval, activate a package or modify provider configuration. A no-op verification refresh preserves revocation.
+
+`cleanup --plan` also considers a failed initial workspace with a durable exact-generation controller-never-created record and no native execution evidence. It checks frozen content and Git ownership again, retains histories/artifacts and deletes nothing. Missing manifests, unknown startup, resumed generations, unique changes and inherited dirty Git inputs remain refused. Inherited dirty inputs require reconciliation before ordinary worktree removal; no force-removal command is generated.
+
+Post-admission controller handoff failures retain `DELIVERY_UNKNOWN`, original task/message IDs and `may_have_received:true`. Use exact retries and receipt observation, never a fresh copy. Codex teardown has bounded process and output-reader waits; `CLEANUP_UNCERTAIN` means a descendant may still hold output pipes. No dead leader’s process group is signaled.

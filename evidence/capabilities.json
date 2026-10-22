@@ -8,7 +8,7 @@
     "Required LIVE-01 through LIVE-18 are not accepted by M1 evidence."
   ],
   "native_queue_decision": "use-native-queue; no Rust patch selected",
-  "overall_acceptance": "Qualified: all review 9e0cefb corrections and suggestions verified offline; installed passive PASS; current-source native acceptance NOT_RUN",
+  "overall_acceptance": "Qualified: review 0274647 defects and suggestions addressed; scoped current-source Flash fallback/MCP check/exact-history resume PASS; complete all-provider matrix NOT_RUN; Codex raw config drift attribution unresolved.",
   "providers": {
     "antigravity": {
       "auth_route": "Native Google sign-in, Google AI Pro; no credential extraction or API key substitution",
@@ -170,6 +170,12 @@
         "submitted_inputs": 0,
         "reason": "No fresh native acceptance after review fixes; cumulative ledger unchanged. Earlier native observations keep their source/runtime fingerprints."
       }
+    },
+    "review_0274647": {
+      "report": "evidence/review-0274647.json",
+      "native": "PASS: final-source exact Flash fallback, original-parent readable return, MCP check, idempotent exact-history resume; fake Claude quota only",
+      "preservation": "Owned instructions/idempotency pass; raw Codex config drift retained and unattributed",
+      "offline": "PASS: 375 tests / 554 subtests; 23 manager/naming fixtures"
     }
   }
 }

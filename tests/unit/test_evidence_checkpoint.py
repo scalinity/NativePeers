@@ -19,3 +19,7 @@ def test_checkpoint_current_verification_and_budget_match_their_sources():
     assert all('status' in result for result in checkpoint['tests_current'].values())
     for name,document in checkpoint['canonical_documents'].items():
         assert hashlib.sha256((ROOT/'docs'/name).read_bytes()).hexdigest()==document['sha256']
+    fingerprints=json.loads((ROOT/'evidence/fingerprints.json').read_text())
+    assert fingerprints['canonical_and_dependency_sha256']['evidence/capabilities.json']==hashlib.sha256((ROOT/'evidence/capabilities.json').read_bytes()).hexdigest()
+    assert fingerprints['current_verification']==checkpoint['current_review']['evidence']
+    assert fingerprints['source_sha256']==evidence['source']

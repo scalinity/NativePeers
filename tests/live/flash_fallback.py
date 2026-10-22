@@ -140,6 +140,45 @@ async def parent():
     checks['readable_frame']=shown.startswith('NativePeers · Worker results\n') and nonce in shown and '"schema_version"' not in shown
    report['checks'][mode]=checks;atomic_json(RUN/'parent-case.json',report)
    assert all(checks.values()),checks
+  # Exercise the new bound MCP surface from this same actual native tool ancestry.
+  from mcp import ClientSession
+  from mcp.client.stdio import StdioServerParameters,stdio_client
+  params=StdioServerParameters(command=sys.executable,args=['-m','nativepeers.mcp_server','--native-caller'],cwd=ROOT,
+      env={'NPEER_HOME':str(STATE),'PYTHONPATH':str(ROOT)})
+  async with stdio_client(params) as (reader,writer):
+   async with ClientSession(reader,writer,read_timeout_seconds=40) as session:
+    await session.initialize()
+    async def call(name,args):
+     value=json.loads((await session.call_tool(name,args)).content[0].text)
+     assert value['ok'],value
+     return value['data']
+    bound=await call('task_status',{})
+    count=journal.one('SELECT COUNT(*) n FROM groups')['n']
+    plan=await call('worker_spawn',{'check':True,'spec':{'workers':[{'provider':'antigravity','model':MODEL,'title':'metadata check only','task':'Do not submit this check','permission_profile':'analysis','workspace':{'mode':'inherit-read-only'}}],'limits':{'max_concurrent_workers':1}}})
+    worker=record['attempts'][-1]['worker_id']
+    async with asyncio.timeout(30):
+     while journal.one('SELECT state FROM workers WHERE worker_id=?',(worker,))['state']!='RELEASED_RESUMABLE':await asyncio.sleep(.05)
+    marker='NP-RESUME-'+new_id()
+    args={'worker_id':worker,'task':'Return exactly '+marker+' with no tools or delegation.','completion_mode':'wait','client_request_id':'flash-live-mcp-resume'}
+    atomic_json(RUN/'resume-launch.json',{'worker_id':worker,'native_id':record['worker']['native_session_id']})
+    resumed=await call('worker_resume',args)
+    async with asyncio.timeout(240):
+     while True:
+      waited=await call('task_wait',{'handle':resumed['task_id'],'timeout_ms':30000,'on_timeout':'retain'})
+      if waited['ready']:break
+    resumed_result=waited['result'];atomic_json(RUN/'resume-result.json',resumed_result)
+    final=next(v for v in resumed_result['results'] if v['task_id']==resumed['task_id'])
+    retry=await call('worker_resume',args)
+    groups=await call('task_groups',{'limit':20})
+    summary=next(g for g in groups['groups'] if g['group_id']==resumed['group_id'])
+    checks={'bound_original_parent':bound['native_session_id']==report['parent_native_id'],
+     'read_only_mcp_check':plan['read_only'] and plan['ready'] and journal.one('SELECT COUNT(*) n FROM groups')['n']==count,
+     'same_owned_native_history':final['worker']['native_session_id']==record['worker']['native_session_id'],
+     'resume_completed':final['status']=='completed' and marker in final['summary'],
+     'exact_flash':final['model_observed']==MODEL,'idempotent_resume':retry['task_id']==resumed['task_id'] and retry['state']=='COMPLETED',
+     'phase_progress':summary['progress']['latest_completion_phase']==2 and summary['progress']['active_tasks']==0,
+     'pinned_runtime':bool(json.loads(journal.one('SELECT lease_json FROM workers WHERE worker_id=?',(worker,))['lease_json']).get('verified_runtime'))}
+    report['checks']['mcp']=checks;atomic_json(RUN/'parent-case.json',report);assert all(checks.values()),checks
   print(json.dumps({'status':'PASS','parent_native_id':report['parent_native_id'],'groups':report['groups'],'checks':report['checks'],'push_result':'withheld; read the NativePeers completion injected at your next native invocation'}))
  except Exception as error:
   report['error']={'type':type(error).__name__,'message':str(error)[:1500]};atomic_json(RUN/'parent-case.json',report);raise
@@ -153,7 +192,7 @@ async def run():
  command=str(ROOT/'.venv/bin/python')+' '+str(ROOT/'tests/live/flash_fallback.py')+' parent --run-id '+RUN.name
  prompt=('Authorized NativePeers Flash-only fallback acceptance. Run exactly this command ONCE with your native run_command tool, in '+str(FIXTURE)+':\n'+command+
   '\nAllow up to 540 seconds for this same command; collect its output if backgrounded. Do not retry, read private test files, change configuration, start agents or solve child tasks yourself. '
-  'It uses deterministic fake Claude errors and two real Gemini 3.8 Flash replacement tasks. After the command returns, an incoming NativePeers worker-results notice will contain the push worker marker. '
+  'It uses deterministic fake Claude errors, two real Gemini 3.8 Flash replacement tasks, and one exact owned Flash resume through MCP. After the command returns, an incoming NativePeers worker-results notice will contain the push worker marker. '
   'Return NP-FLASH-PARENT, the parent native UUID from the command, its PASS/FAIL, and copy the NP-FLASH marker from that incoming completion. If the notice is absent say MISSING_COMPLETION. End the turn.')
  env=launch_environment('antigravity');env.update(NPEER_HOME=str(STATE),PYTHONPATH=str(ROOT))
  # The parent is an ordinary native host, not an owned worker. Preserve its
@@ -163,7 +202,7 @@ async def run():
  args=['--input-format','stream-json','--output-format','stream-json',
        '--model',MODEL,'--print-timeout','540s']
  budget=LiveBudget(LEDGER)
- reservations={name:budget.reserve('Native Flash '+name+' input; simulated Claude excluded',tranche='flash_fallback') for name in ('parent','wait','push','completion')}
+ reservations={name:budget.reserve('Native Flash '+name+' input; simulated Claude excluded',tranche='flash_fallback') for name in ('parent','wait','push','resume','completion')}
  for reservation in reservations.values():budget.admit(reservation)
  # The outer collector writes the cumulative ledger. The native parent's
  # sandbox writes only its fixture-local journal and outcome records.
@@ -183,14 +222,14 @@ async def run():
   (RUN/'parent-stderr.txt').write_bytes(await stderr)
   atomic_json(RUN/'parent-terminal.json',{'native_id':native,'terminal':terminal,'exit':process.returncode,'at':stamp()})
   budget.settle(reservations['parent'],observed_turns=1,native_id=native)
-  for mode in ('wait','push'):
+  for mode in ('wait','push','resume'):
    path=RUN/(mode+'-result.json')
    if path.exists():
     record=json.loads(path.read_text())['results'][0]
     budget.settle(reservations[mode],observed_turns=1,native_id=record['worker']['native_session_id'],completed_at=record['completed_at'])
    else:
     journal=Journal(STATE)
-    try:started=journal.one("SELECT 1 FROM events WHERE kind='native-task-started' AND subject_id IN (SELECT task_id FROM tasks JOIN workers USING(worker_id) WHERE provider='antigravity' AND role_title=?)",('Flash fallback '+mode,))
+    try:started=(RUN/'resume-launch.json').exists() if mode=='resume' else journal.one("SELECT 1 FROM workers WHERE provider='antigravity' AND role_title=?",('Flash fallback '+mode,))
     finally:journal.close()
     if not started:budget.release_unsubmitted(reservations[mode])
   delivery=RUN/'push-delivery.json'
@@ -201,7 +240,7 @@ async def run():
   else:
    seen=False;budget.release_unsubmitted(reservations['completion'])
   case=json.loads((RUN/'parent-case.json').read_text()) if (RUN/'parent-case.json').exists() else {}
-  checks={'same_parent':case.get('parent_native_id')==native,'helper_pass':bool(case.get('checks')) and len(case['checks'])==2 and all(all(v.values()) for v in case['checks'].values()),'readable_completion_observed':seen,'parent_succeeded':(terminal or {}).get('status')=='SUCCESS'}
+  checks={'same_parent':case.get('parent_native_id')==native,'helper_pass':bool(case.get('checks')) and len(case['checks'])==3 and all(all(v.values()) for v in case['checks'].values()),'readable_completion_observed':seen,'parent_succeeded':(terminal or {}).get('status')=='SUCCESS'}
   atomic_json(RUN/'verdict.json',{'status':'PASS' if all(checks.values()) else 'FAIL','checks':checks,'parent_native_id':native,'source':sources(),'at':stamp()})
   print(json.dumps({'native_id':native,'exit':process.returncode,'status':(terminal or {}).get('status'),'response':(terminal or {}).get('response','')}),flush=True)
  finally:

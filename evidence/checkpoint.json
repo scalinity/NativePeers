@@ -107,24 +107,23 @@
   },
   "capabilities": "evidence/capabilities.json",
   "cleanup": {
-    "fixture_worktrees_removed": 4,
-    "fixture_branches_removed": 4,
-    "generated_files_checksum_preserved": true,
+    "first_review_batch_fixture_worktrees_removed": 2,
     "native_histories_retained": true,
-    "active_owned_processes": 0,
-    "private_capture_size": "under 2 MiB"
+    "final_batch_cleanup": "Two final fixture worktrees/branches removed after checksum preservation; seven recorded final owner identities exited",
+    "total_review_fixture_worktrees_removed": 4
   },
   "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
   "current_review": {
     "evidence": "evidence/review-0274647.json",
-    "status": "IN_PROGRESS",
+    "status": "COMPLETE: all review defects and suggestions fixed; offline and scoped Flash native PASS; Codex raw-config attribution BLOCKED",
     "branch": "fix/pro-0274647",
-    "source_map_sha256": "ad9132c5789f0ff639c3abdf99a8b6f7fd62a3c3f17d6febdcf6267267d065fc"
+    "source_map_sha256": "ad9132c5789f0ff639c3abdf99a8b6f7fd62a3c3f17d6febdcf6267267d065fc",
+    "code_commit": "f421295a7d6b4c7cef010a391a3533e805cab466"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "branch": "fix/pro-0274647",
-    "code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa",
+    "code_commit": "f421295a7d6b4c7cef010a391a3533e805cab466",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -133,7 +132,7 @@
     ],
     "base_commit": "a987587e517fd8b1f32e913ac321731d6d300203",
     "owned_uncommitted_changes": [
-      "Review 0274647 corrections, tests, docs and checkpoint"
+      "Final review documentation, owned instruction sources, acceptance harness, fixture adjustment, source/evidence cross-references"
     ],
     "last_verified_publication": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
   },
@@ -169,14 +168,14 @@
       "concurrent_owned_workers": 8,
       "submitted_turns": null
     },
-    "consumed_turns": 157,
+    "consumed_turns": 167,
     "reserved_turns": 0,
-    "active_seconds": 3712.270929813385,
+    "active_seconds": 3875.5169775485992,
     "path": "evidence/live-budget.json",
-    "sha256": "9239fbf36aae7043663b867b594627f8e11198cf8540aedf61f6f46c5cb9768e"
+    "sha256": "98ae8d7bf55a18435a220d5792b2ea7897efb3e5a80f59543a6ce22f188a5b35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Next pending review item: EVIDENCE",
+  "next_action": "Commit/push final verification, fast-forward main, remove the merged review branch, verify remote HEAD, and save the next independent-review prompt.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -186,26 +185,86 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "status": "PUSHED",
     "repository": "https://github.com/scalinity/NativePeers",
-    "branch": "main",
-    "verified_remote_code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa",
+    "branch": "fix/pro-0274647",
+    "status": "Individual fix commits pushed; final verification metadata pending",
     "source_zip_uploaded": false
   },
   "schema_version": 2,
-  "stage": "Offline 374/554 PASS; native Flash reacceptance prepared",
+  "stage": "COMPLETE: all review defects and suggestions fixed; offline and scoped Flash native PASS; Codex raw-config attribution BLOCKED",
   "tests_current": {
     "offline": {
       "status": "PASS",
-      "tests": 374,
+      "tests": 375,
       "subtests": 554,
-      "seconds": 160.49,
+      "seconds": 164.94,
       "command": ".venv/bin/python -m pytest -q",
-      "source_frozen_during_run": true
+      "source_frozen_during_run": true,
+      "scope": "Full locked offline unit/property/contract suite; native checks reported separately"
     },
     "native": {
-      "status": "NOT_RUN",
-      "scope": "Current-source Flash fallback/MCP check and exact-history resume batch prepared"
+      "status": "PASS",
+      "scope": "Final-source real Flash parent, two replacement histories, one exact-history resume; fake Claude quota only",
+      "model": "gemini-3.8-flash-medium",
+      "parent_native_id": "44f5a900-3036-4cea-8350-8a38fc10e96e",
+      "groups": [
+        "a48d4322-cb3d-456d-9975-816689dccce6",
+        "4a619964-5e55-45f4-9f56-94433e6fcfcf"
+      ],
+      "checks": {
+        "helper_pass": true,
+        "parent_succeeded": true,
+        "readable_completion_observed": true,
+        "same_parent": true,
+        "mcp": {
+          "bound_original_parent": true,
+          "exact_flash": true,
+          "idempotent_resume": true,
+          "phase_progress": true,
+          "pinned_runtime": true,
+          "read_only_mcp_check": true,
+          "resume_completed": true,
+          "same_owned_native_history": true
+        },
+        "push": {
+          "completed": true,
+          "distinct_native_ids": true,
+          "flash_observed": true,
+          "flash_requested": true,
+          "nonce_in_worker_result": true,
+          "old_controller_exited": true,
+          "old_native_exited": true,
+          "original_parent_target": true,
+          "parent_distinct": true,
+          "primary_quota": true,
+          "readable_frame": true,
+          "source_preserved": true,
+          "two_retained_attempts": true
+        },
+        "wait": {
+          "completed": true,
+          "distinct_native_ids": true,
+          "flash_observed": true,
+          "flash_requested": true,
+          "independent_check": true,
+          "isolated_directory": true,
+          "nonce_in_worker_result": true,
+          "old_controller_exited": true,
+          "old_native_exited": true,
+          "original_parent_wait": true,
+          "parent_distinct": true,
+          "primary_quota": true,
+          "reconstruction_patch": true,
+          "source_preserved": true,
+          "two_retained_attempts": true,
+          "wait_claimed": true,
+          "worker_delta": true
+        }
+      },
+      "new_inputs_final_batch": 5,
+      "new_inputs_this_review": 10,
+      "source_frozen_during_run": true,
+      "capture": "Private, ignored native streams and journals retained locally"
     },
     "focused": {
       "status": "PASS",
@@ -223,7 +282,10 @@
       "second_install_operations": [
         0,
         0
-      ]
+      ],
+      "provider_fingerprints_match": true,
+      "owned_integrations": "PRESENT",
+      "entrypoint_uses_checkout": true
     },
     "preservation": {
       "status": "BLOCKED",
