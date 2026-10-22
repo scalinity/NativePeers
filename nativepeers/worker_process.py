@@ -22,6 +22,7 @@ from .profiles import ROOT,claude_arguments,codex_config,config_arguments
 from .registry import Registry
 from .compatibility import verify
 from .provider_errors import classify
+from .worker_report import PROMPT,extract
 
 
 class Worker:
@@ -133,7 +134,7 @@ class Worker:
         self.tasks_started+=1
         require(self.tasks_started<=self.spec.get('max_task_turns',8),'BUDGET_EXHAUSTED','Worker task-turn limit reached')
         self.running_task=task_id;started=time.time();self.turn=None
-        text='NativePeers assigned worker title: '+self.row['role_title']+'. Provider: '+self.row['provider']+'.\n'+text
+        text='NativePeers assigned worker title: '+self.row['role_title']+'. Provider: '+self.row['provider']+'.\n'+text+PROMPT
         self.journal.db.execute("UPDATE workers SET state='RUNNING' WHERE worker_id=?",(self.row['worker_id'],))
         reservation=None
         budget=None
@@ -161,12 +162,13 @@ class Worker:
         if (self.stopping or scoped_cancel) and result['status'] in ('failed','canceled'):
             result['status']='canceled';result['error']={'code':self.shutdown_reason or 'USER_CANCELED','native_error':result.get('error')}
         row=self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))
+        findings,checks,report_limits=extract(result.get('text',''))
         record=dict(schema_version=1,group_id=self.row['group_id'],task_id=task_id,
             worker={'provider':self.row['provider'],'native_session_id':self.native,'title':self.row['role_title'],'peer_key':row['peer_key']},
             model_requested=self.row['model_requested'],model_observed=self.model_observed,
             reasoning_effort_requested=self.spec.get('reasoning_effort'),reasoning_effort_observed=None,
-            status=result['status'],summary=result.get('text',''),findings=[],artifacts=[],
-            verification={'tests_run':[],'limitations':['Provider final text retained; structured findings were not inferred.','Reasoning effort independently echoed by inference: unverified.']},
+            status=result['status'],summary=result.get('text',''),findings=findings,artifacts=[],
+            verification={'tests_run':checks,'limitations':report_limits+['Worker-supplied checks are not independently verified.','Reasoning effort independently echoed by inference: unverified.']},
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
         if self.row['worktree_id']:

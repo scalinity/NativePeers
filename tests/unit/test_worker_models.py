@@ -162,6 +162,22 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
             worker.bind(worker.native, model='claude-sonnet-5-5')
         self.assertEqual(error.exception.code, 'MODEL_UNAVAILABLE')
 
+    async def test_task_retains_optional_report_and_raw_final_output(self):
+        from unittest.mock import Mock
+        worker=await self.worker();task=new_id()
+        text='actual final output\n```nativepeers-result\n'+json.dumps({'findings':[{'severity':'info','summary':'scoped finding'}],
+            'tests_run':[{'command':'python fixture.py','outcome':'passed'}]})+'\n```'
+        self.journal.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker.row['worker_id'],None,None,'QUEUED',None,None,1,'{}'))
+        worker.claude_turn=AsyncMock(return_value={'status':'completed','text':text});worker.emit=Mock()
+        await worker.task(task,'fixture')
+        self.assertIn('nativepeers-result',worker.claude_turn.call_args.args[0])
+        row=self.journal.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(task,))
+        result=json.loads((self.journal.root/'artifacts'/row['result_artifact_id']).read_text())
+        self.assertEqual(result['summary'],text);self.assertEqual(result['findings'][0]['summary'],'scoped finding')
+        self.assertEqual(result['verification']['tests_run'][0]['outcome'],'passed')
+        self.assertFalse(result['verification']['tests_run'][0]['independently_verified'])
+        worker.claude_turn.assert_awaited_once()
+
     async def test_exact_claude_model_cannot_be_silently_substituted(self):
         worker = await self.worker('claude-opus-5-5')
         with self.assertRaises(PeerError) as error:
