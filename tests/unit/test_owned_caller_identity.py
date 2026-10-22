@@ -1,5 +1,6 @@
 """Real native-shaped process trees; the compiled fixtures never run a model."""
 import contextlib
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -10,12 +11,14 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from nativepeers.files import atomic_json, canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
 from nativepeers.process import identity
 from nativepeers.registry import Registry
+from nativepeers.worker_process import Worker
 
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -75,6 +78,45 @@ for line in sys.stdin:
         finally:journal.close()
     print(json.dumps(response),flush=True)
 '''
+STARTUP_SOURCE=r'''
+import asyncio, json, os, sys, time
+from pathlib import Path
+from mcp import ClientSession
+from mcp.client.stdio import StdioServerParameters, stdio_client
+
+MUTATIONS=[('peer_send',{'target':'absent','text':'inactive','client_request_id':'inactive-send'}),
+           ('peer_reply',{'message_id':'absent','text':'inactive','client_request_id':'inactive-reply'}),
+           ('worker_spawn',{'spec':{'workers':[{'provider':'claude','title':'inactive','task':'never run'}]}}),
+           ('task_cancel',{'handle':'absent','reason':'inactive'})]
+
+async def main():
+    parameters=StdioServerParameters(command=sys.executable,args=['-m','nativepeers.mcp_server','--native-caller'],env=dict(os.environ))
+    async with stdio_client(parameters) as (reader,writer):
+        async with ClientSession(reader,writer) as session:
+            await session.initialize()
+            try:tools={'ok':True,'names':[tool.name for tool in (await session.list_tools()).tools]}
+            except Exception as error:tools={'ok':False,'error':str(error)}
+            async def call(name,args):return json.loads((await session.call_tool(name,args)).content[0].text)
+            initial={'tools':tools,'status':await call('task_status',{}),
+                     'mutations':[await call(name,args) for name,args in MUTATIONS]}
+            print(json.dumps(initial),flush=True)
+            # Worker.claude_turn sends its input only after recording native_process.
+            await asyncio.to_thread(sys.stdin.readline)
+            manifest=json.loads(Path(os.environ['NPEER_FIXTURE_MANIFEST']).read_text())
+            native=os.environ['NPEER_FIXTURE_NATIVE']
+            print(json.dumps({'type':'system','subtype':'init','session_id':native,'tools':['Read']}),flush=True)
+            deadline=time.monotonic()+5
+            while json.loads(Path(os.environ['NPEER_BOOTSTRAP']).read_text())['state']!='BOUND':
+                if time.monotonic()>deadline:raise TimeoutError('Worker did not bind the fake native init')
+                await asyncio.sleep(.005)
+            active={'manifest':manifest,'status':await call('task_status',{})}
+            if os.getenv('NPEER_FIXTURE_NESTED'):
+                active['mutations']=[await call(name,args) for name,args in MUTATIONS]
+            Path(os.environ['NPEER_FIXTURE_REPORT']).write_text(json.dumps(active))
+    print(json.dumps({'type':'result','subtype':'success','session_id':native,'result':'harmless bootstrap ordering checked','num_turns':1}),flush=True)
+
+asyncio.run(main())
+'''
 
 
 class OwnedCallerIdentityTests(unittest.TestCase):
@@ -92,6 +134,7 @@ class OwnedCallerIdentityTests(unittest.TestCase):
         for relative in BINARIES.values():
             binary=cls.home/relative;binary.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(executable,binary)
         cls.probe=cls.home/'probe.py';cls.probe.write_text(PROBE_SOURCE)
+        cls.startup_probe=cls.home/'startup.py';cls.startup_probe.write_text(STARTUP_SOURCE)
 
     def setUp(self):
         self.journal=Journal(self.home/new_id());self.addCleanup(self.journal.close)
@@ -225,3 +268,67 @@ class OwnedCallerIdentityTests(unittest.TestCase):
                     else:atomic_json(self.manifest_path,dict(correct,**override))
                     for surface in ('cli','mcp','hook'):
                         self.assert_unbound(self.call(process,surface,provider='claude',native_id=self.native))
+
+    def test_mcp_initializes_before_spawn_returns_without_activating_inherited_binding(self):
+        async def exercise(nested):
+            self.seed('claude',reserved=True)
+            lease=dict(binding=str(self.binding),provider_home=str(self.home/'.claude'),
+                executable=str(self.home/BINARIES['claude']),expires_at=self.lease['expires_at'],
+                grants=self.lease['grants'],spec={'permission_profile':'analysis'})
+            self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(lease).decode(),self.worker))
+            # Claude reserves its UUID before launching; its native PID is unknown.
+            self.journal.db.execute('UPDATE workers SET native_id=? WHERE worker_id=?',(self.native,self.worker))
+            worker=Worker(self.journal,self.worker);worker.bootstrap()
+            worker.tasks_started=1;worker.running_task=new_id()
+            before={table:self.journal.all('SELECT * FROM '+table) for table in
+                    ('workers','peer_instances','messages','events','spawn_requests','send_requests','tasks','attempts')}
+            report=self.journal.root/'startup-report.json'
+            environment=dict(os.environ,HOME=str(self.home),PYTHONPATH=str(ROOT),NPEER_HOME=str(self.journal.root),
+                NPEER_BINDING='',NPEER_BOOTSTRAP=str(self.binding),NPEER_FIXTURE_MANIFEST=str(self.manifest_path),
+                NPEER_FIXTURE_NATIVE=self.native,NPEER_FIXTURE_REPORT=str(report),CODEX_THREAD_ID='')
+            if nested:environment['NPEER_FIXTURE_NESTED']='1'
+            arguments=([str(self.home/BINARIES['codex'])] if nested else [])+[sys.executable,str(self.startup_probe)]
+            spawn=asyncio.create_subprocess_exec;process=None;initial=None
+            async def delayed_spawn(*args,**kwargs):
+                nonlocal process,initial
+                process=await spawn(str(self.home/BINARIES['claude']),*args[1:],**kwargs)
+                # Hold the actual worker's create_subprocess_exec await until the
+                # child has initialized MCP and requested tools in another process.
+                initial=json.loads(await asyncio.wait_for(process.stdout.readline(),10))
+                self.assertIsNone(worker.provider_identity)
+                self.assertIsNone(json.loads(self.manifest_path.read_text())['native_process'])
+                self.assertEqual({table:self.journal.all('SELECT * FROM '+table) for table in before},before)
+                return process
+            try:
+                with patch('nativepeers.worker_process.claude_arguments',return_value=arguments), \
+                     patch('nativepeers.worker_process.launch_environment',return_value=environment), \
+                     patch('nativepeers.worker_process.asyncio.create_subprocess_exec',side_effect=delayed_spawn):
+                    result=await asyncio.wait_for(worker.claude_turn('no model input'),15)
+                self.assertEqual(result['status'],'completed',result)
+                self.assertTrue(initial['tools']['ok'],initial)
+                self.assertIn('peer_send',initial['tools']['names'])
+                self.assertEqual(initial['status']['data']['state'],'RESERVED_UNBOUND')
+                for response in initial['mutations']:
+                    self.assertFalse(response['ok'],response)
+                    self.assertEqual(response['error']['code'],'CALLER_NOT_READY',response)
+                active=json.loads(report.read_text())
+                self.assertEqual(active['manifest']['native_process'],worker.provider_identity)
+                if nested:
+                    for response in [active['status'],*active['mutations']]:self.assert_unbound(response)
+                else:
+                    self.assertTrue(active['status']['ok'],active)
+                    self.assertEqual(active['status']['data']['native_session_id'],self.native)
+                for table in ('messages','send_requests','spawn_requests','attempts','tasks'):
+                    self.assertEqual(self.journal.all('SELECT * FROM '+table),[])
+            finally:
+                if process and process.returncode is None:
+                    process.stdin.close()
+                    try:await asyncio.wait_for(process.communicate(),5)
+                    except asyncio.TimeoutError:
+                        import signal
+                        os.killpg(process.pid,signal.SIGKILL);await process.wait()
+        for nested in (False,True):
+            with self.subTest(nested=nested):
+                if hasattr(self,'provider'):
+                    self.journal.db.execute('DELETE FROM workers');self.journal.db.execute('DELETE FROM groups')
+                asyncio.run(exercise(nested))
