@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 from pathlib import Path
+import subprocess
 import tempfile
 import time
 import sys
@@ -13,7 +14,6 @@ from nativepeers.compatibility import fingerprint
 from nativepeers.files import atomic_json,canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
-from nativepeers.process import identity
 from nativepeers.worker_process import Worker
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -36,14 +36,38 @@ class AntigravityContractTests(unittest.IsolatedAsyncioTestCase):
             binary=home/'fake_antigravity.py';shutil.copyfile(ROOT/'tests/fixtures/fake_antigravity.py',binary);binary.chmod(0o755)
             binary.write_text(binary.read_text().replace('#!/usr/bin/env python3','#!'+sys.executable,1))
             binary.with_suffix('.scenario').write_text(scenario)
-            native_binary=home/'.local/bin/agy';native_binary.parent.mkdir(parents=True);native_binary.symlink_to(identity(os.getpid()).executable)
+            # A compiled owner keeps its executable identity while Python starts.
+            # A Python shebang can exec Python.app after the worker records its PID.
+            native_binary=home/'.local/bin/agy';native_binary.parent.mkdir(parents=True)
+            source=home/'native.c';source.write_text('''
+#include <unistd.h>
+#include <sys/wait.h>
+#include <stdlib.h>
+int main(int argc, char **argv) {
+    pid_t child = fork();
+    if (child < 0) return 2;
+    if (!child) {
+        char **args = calloc(argc + 2, sizeof(char *));
+        args[0] = PYTHON; args[1] = SCRIPT;
+        for (int i = 1; i < argc; ++i) args[i + 1] = argv[i];
+        execv(PYTHON, args); _exit(127);
+    }
+    int status;
+    if (waitpid(child, &status, 0) < 0) return 3;
+    return WIFEXITED(status) ? WEXITSTATUS(status) : 128 + WTERMSIG(status);
+}
+''')
+            compiler=shutil.which('cc')
+            if compiler is None:self.skipTest('A C compiler is required for the native owner fixture')
+            subprocess.run([compiler,'-DPYTHON='+json.dumps(sys.executable),'-DSCRIPT='+json.dumps(str(binary)),
+                str(source),'-o',str(native_binary)],check=True,capture_output=True,timeout=30)
             spec={'provider':'antigravity','model':'gemini-fixture-high','title':'fixture','cwd':directory,'permission_profile':'analysis','max_task_turns':2,'wall_time_seconds':5}
             if scenario=='display-model':spec['model_display_name']='Gemini Fixture High'
-            lease={'spec':spec,'parent_key':'parent','binding':str(j.root/'bindings'/new_id()),'grants':{'group_id':group,'worker_id':worker},'expires_at':time.time()+60,'executable':str(binary)}
+            lease={'spec':spec,'parent_key':'parent','binding':str(j.root/'bindings'/new_id()),'grants':{'group_id':group,'worker_id':worker},'expires_at':time.time()+60,'executable':str(native_binary)}
             j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RESERVED','{}'))
             j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,None,'antigravity',None,'fixture',spec['model'],None,None,directory,None,'RESERVED',1,canonical(lease).decode()))
             for task in [first,second]:j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,'QUEUED',None,None,1,'{}'))
-            atomic_json(j.root/'compat/runtime.json',{'providers':{'antigravity':fingerprint(binary)}})
+            atomic_json(j.root/'compat/runtime.json',{'providers':{'antigravity':fingerprint(native_binary)}})
             value=Worker(j,worker)
             try:
                 await value.prepare()
