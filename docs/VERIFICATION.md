@@ -1,4 +1,26 @@
-# Review 0274647 current verification
+# Usage intelligence current verification
+
+The usage subsystem is implemented and installed at product commit `0f1c0fff41a414f20c31c53a9c732b6dbde49212`. The full locked offline suite passes **405 tests / 556 subtests**; existing external manager/naming fixtures pass **23 tests**. The separate focused run passed 46 tests / 23 subtests before final home/event regressions, which are included in the full suite. No provider inference was submitted for this feature. [Source/runtime fingerprints and results](../evidence/usage-intelligence.json), [daily commands and source boundaries](USAGE_INTELLIGENCE.md).
+
+| Check | Result | Scope |
+|---|---|---|
+| Unit/property/fake-provider contracts | **PASS** | Multi-pool intersections, stale/reset/clock handling, imported/native provenance, home isolation, read-only RPC allowlist, concurrent refresh/cancellation, quota guards/overrides, shared demand, exact selection/fallback, local estimates and CLI/MCP parity |
+| Managed Codex authenticated metadata | **PASS** | Current approved immutable 0.163.0 build: account/rateLimits/read and model/list, normal subscription route, no model input; complete model-to-pool membership remains unavailable |
+| Claude 2.1.309 native envelope | **PASS** | A sacrificial zero-input native TUI actually invoked the status-line helper with exact native owner/UUID; its blank startup supplied no quota values |
+| Claude native quota-value capture | **NOT_RUN** | Supported parser and installed helper are verified offline; actual rate_limits values must come from ordinary native telemetry |
+| Antigravity 1.4.5 catalog | **PASS** | Signed-in native models command; model advertisement is not quota or entitlement |
+| Antigravity native quota-value capture | **NOT_RUN** | Installed helper is present; bounded zero-input TUI startup emitted no quota snapshot and exited cleanly |
+| Owned installation/idempotency | **PASS** | Two statusLine entries, three matching skills, zero-operation second installs and owned-block uninstall preservation fixtures; current npeer link uses this checkout |
+| Protected environment | **PASS within scope** | Original settings hashes reconstruct by restoring only prior statusLine values; authentication and current Codex TOML unchanged, daemon_auto_start=false preserved. Concurrent shell-file hash drift is retained; this feature performs no shell writes. |
+| Current-source all-provider inference | **NOT_RUN** | No paid calibration or inference turns; historical messaging/delegation observations below retain their fingerprints |
+
+Claude independently updated to 2.1.309. Its new receipt approves **only the zero-input status-line contract**; worker/inbox approval was not renewed and remains scoped to the earlier verified runtime. A separately approved managed Codex update was retained and passes the metadata read. No binary/package activation, authentication change, credit redemption, background quota polling or permanent service was introduced.
+
+All known applicable pools participate in assessment. Unknown membership/telemetry remains unknown, stale data does not become fresh on read, and explicit model requests/defaults are never rewritten. Quality recommendations require attributed local capability preferences; token estimates require matched measured attempts. NativePeers-local task metrics are separate from account-wide quota. Usage state is in the existing journal, with bounded observations and on-demand collection.
+
+The historical ledger remains 167 counted inputs, zero reserved and zero outstanding; its cumulative ceilings remain removed. Both zero-input probe owners exited. Raw status-line/terminal captures and protected inventory hashes stay private and ignored. The exact frozen `729042b` source archive and follow-up review prompt were supplied in Downloads without uploading a ZIP. Worker-history visibility and the independent Pro review remain separate work.
+
+# Review 0274647 historical verification
 
 All four reported defects, the conditional Codex pipe-teardown issue, all five capability suggestions and the capability-hash discrepancy are addressed. The final settled full suite passes **375 tests / 554 subtests**; external manager/naming fixtures pass **23 tests**. Final-source Flash native acceptance passes editing/wait, readable return to the exact original parent, bound MCP preflight, phase progress and idempotent resume of the exact same Gemini history. Real Claude quota is simulated; all real model inputs use exact `gemini-3.8-flash-medium`. See [resolutions](REVIEW_0274647.md) and [current source/runtime assertions](../evidence/review-0274647.json).
 

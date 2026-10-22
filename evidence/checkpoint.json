@@ -3,10 +3,12 @@
   "active_owned_processes": [],
   "authorized_current_deltas": {
     "auth_and_provider_defaults": "No changes",
+    "codex_configuration": "Current settings difference confirmed as an intentional settings edit; preserve current TOML.",
     "current_review": "Review 0274647 product/tests/docs, three owned skills and owned CLAUDE block. Codex configuration raw drift retained without attribution; no further writes planned.",
     "global_claude_owned_block": "NativePeers section only; outside bytes unchanged; source docs/CLAUDE_CONVENTIONS.md; private original backups/astra4-20261022/CLAUDE-owned-block.md",
     "managed_package": "No activation or native patch",
-    "native_test_trust": "Removed exact owned fixture entries under manager lock; original config bytes reconstructed"
+    "native_test_trust": "Removed exact owned fixture entries under manager lock; original config bytes reconstructed",
+    "usage_intelligence": "Owned Claude/Antigravity statusLine capture, three owned skills, NativePeers and CodeGraph global instruction blocks. Auth/Codex TOML unchanged; independent shell/runtime updates retained."
   },
   "authorized_protected_deltas": [
     {
@@ -107,73 +109,123 @@
   },
   "capabilities": "evidence/capabilities.json",
   "cleanup": {
+    "final_batch_cleanup": "Two final fixture worktrees/branches removed after checksum preservation; seven recorded final owner identities exited",
     "first_review_batch_fixture_worktrees_removed": 2,
     "native_histories_retained": true,
-    "final_batch_cleanup": "Two final fixture worktrees/branches removed after checksum preservation; seven recorded final owner identities exited",
-    "total_review_fixture_worktrees_removed": 4
+    "total_review_fixture_worktrees_removed": 4,
+    "usage_intelligence": {
+      "branch": "feat/usage-intelligence; remove after main fast-forward",
+      "codegraph": "Existing local index retained and synced; ignored",
+      "owned_probe_processes_remaining": 0,
+      "private_backups_retained": true,
+      "private_capture_size": "284 KiB at close-out",
+      "worktrees_created": 0
+    }
   },
   "current_protected_baseline": "evidence/private/review-0274647/protected-before-install.json",
   "current_review": {
-    "evidence": "evidence/review-0274647.json",
-    "status": "COMPLETE: all review defects and suggestions fixed; offline and scoped Flash native PASS; Codex raw-config attribution BLOCKED",
     "branch": "main",
-    "source_map_sha256": "ad9132c5789f0ff639c3abdf99a8b6f7fd62a3c3f17d6febdcf6267267d065fc",
-    "code_commit": "f421295a7d6b4c7cef010a391a3533e805cab466"
+    "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+    "evidence": "evidence/usage-intelligence.json",
+    "source_map_sha256": "52a755e716d015c06152bfa12221fa77fb7d00b9c04afdafbf009494cd71e60f",
+    "status": "IMPLEMENTED_AND_INSTALLED; offline and metadata checks PASS, runtime quota emission qualified"
+  },
+  "feature_work": {
+    "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
+    "branch": "feat/usage-intelligence",
+    "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+    "concurrent_review": "Independent frozen Pro review; no fixes adopted",
+    "focused_tests": "46 tests / 23 subtests PASS; home-scoped model-support test PASS after fixture column correction",
+    "full_suite_final": {
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8",
+      "scope": "Combined locked unit/property/fake-provider contract suite; executable logic unchanged after run, package docstring trailing whitespace normalized",
+      "seconds": 178.66,
+      "status": "PASS",
+      "subtests": 556,
+      "tests": 405
+    },
+    "full_suite_initial": "398 tests / 553 subtests passed; three existing Antigravity cases found redundant catalog collection before readiness. Removed redundant per-task telemetry collector launch; regression rerun in progress.",
+    "full_suite_second": "21 regression failures from optional quota-ceiling path requiring full metadata in legacy/minimal leases; skip optional path when no ceiling is configured; focused regressions running.",
+    "installed": true,
+    "milestone": "IMPLEMENTED_AND_INSTALLED; offline and metadata checks PASS, runtime quota emission qualified",
+    "name": "usage-intelligence",
+    "native_inference_submitted": 0,
+    "next_action": "Await independent Pro review; no pending feature implementation or native model work.",
+    "publication_checks": "36 tests / 19 subtests PASS",
+    "review_archive": {
+      "commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
+      "sha256": "a2fd639683845b8868d242c8bd8a6ac2e35f214f85c7fad3fed348c6bcbac9ef",
+      "tracked_files": 201,
+      "uncompressed_bytes": 2216835
+    },
+    "runtime_changes": {
+      "claude": "Independent native update to 2.1.309 detected; worker/inbox approval remains 2.1.308. Verify only usage status-line scope.",
+      "codex": "Current independently approved managed 0.163.0 reasoning-wrap build passes authenticated quota RPC; no package changes performed."
+    },
+    "status": "COMPLETE"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
+    "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
     "branch": "main",
-    "code_commit": "f421295a7d6b4c7cef010a391a3533e805cab466",
+    "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+    "last_verified_publication": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
       "?? patches/session-naming-native.patch",
       "?? test_name_session.py"
     ],
-    "base_commit": "a987587e517fd8b1f32e913ac321731d6d300203",
-    "owned_uncommitted_changes": [],
-    "last_verified_publication": "f3a35170692c08440a794527a546c5153f8dcc83"
+    "owned_uncommitted_changes": []
   },
+  "historical_blockers": [
+    {
+      "check": "EXT-PROTECTED-RAW",
+      "reason": "Concurrent global Claude settings drift and current native node_repl definition retained; no further configuration writes until exact current ownership/delta reconciliation. See private protected-final.json."
+    }
+  ],
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
     "astra4": "evidence/astra4-review.json",
+    "before_usage_intelligence": "evidence/review-0274647.json",
     "checkpoint": "https://github.com/scalinity/NativePeers/blob/89d1d3bc7feb5bb30bf312a38cfbd5c8a5db84e1/evidence/checkpoint.json",
-    "pro": "evidence/pro-review.json",
-    "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints.",
-    "pro_followup": "evidence/pro-followup-review.json",
-    "review_9e0cefb": "evidence/review-9e0cefb.json",
     "previous_publication": {
-      "repository": "https://github.com/scalinity/NativePeers",
       "branch": "main",
-      "owned_fixes_pushed": true,
-      "source_zip_uploaded": false,
-      "release_created": false,
-      "current_verification": "evidence/review-9e0cefb.json",
-      "review_snapshot": "0274647a6a039e264afd11b7e3891075f5af9f20",
-      "review_tree": "9bb648f6e8f856837c3f5c708f0c24266991c1f2",
-      "tracked_files": 189,
       "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
-      "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
+      "current_verification": "evidence/review-9e0cefb.json",
+      "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt",
+      "owned_fixes_pushed": true,
       "prompt": "docs/GPT6_PRO_REVIEW_PROMPT.txt",
       "prompt_sha256": "ee91ef5cc0e253a27fb1abb988d53f322230edac69a22b13a06a543db8bd162c",
-      "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt"
+      "release_created": false,
+      "repository": "https://github.com/scalinity/NativePeers",
+      "review_snapshot": "0274647a6a039e264afd11b7e3891075f5af9f20",
+      "review_tree": "9bb648f6e8f856837c3f5c708f0c24266991c1f2",
+      "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
+      "source_zip_uploaded": false,
+      "tracked_files": 189
     },
-    "provider_fallback": "evidence/provider-fallback.json"
+    "pro": "evidence/pro-review.json",
+    "pro_followup": "evidence/pro-followup-review.json",
+    "provider_fallback": "evidence/provider-fallback.json",
+    "review_9e0cefb": "evidence/review-9e0cefb.json",
+    "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints."
   },
   "live_budget": {
+    "active_seconds": 3875.5169775485992,
     "ceiling": {
       "active_seconds": null,
       "concurrent_owned_workers": 8,
       "submitted_turns": null
     },
     "consumed_turns": 167,
-    "reserved_turns": 0,
-    "active_seconds": 3875.5169775485992,
     "path": "evidence/live-budget.json",
+    "reserved_turns": 0,
     "sha256": "98ae8d7bf55a18435a220d5792b2ea7897efb3e5a80f59543a6ce22f188a5b35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "No implementation work remains from review 0274647. Read the next independent review against the published pin; retain separate historical/native scopes and do not overwrite concurrent Codex config edits.",
+  "next_action": "Await independent frozen Pro review; worker visibility remains a separate proposed feature.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -183,148 +235,71 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "repository": "https://github.com/scalinity/NativePeers",
     "branch": "main",
-    "status": "PUSHED",
+    "repository": "https://github.com/scalinity/NativePeers",
+    "scope": "Product code commit verified on origin feature ref before final verification publication; main fast-forward is checked at close-out.",
     "source_zip_uploaded": false,
-    "verified_remote_commit": "f3a35170692c08440a794527a546c5153f8dcc83"
+    "status": "PUSHED",
+    "verified_remote_code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212"
   },
   "schema_version": 2,
-  "stage": "COMPLETE: all review defects and suggestions fixed; offline and scoped Flash native PASS; Codex raw-config attribution BLOCKED",
+  "stage": "USAGE_INTELLIGENCE_COMPLETE",
   "tests_current": {
-    "offline": {
-      "status": "PASS",
-      "tests": 375,
-      "subtests": 554,
-      "seconds": 164.94,
-      "command": ".venv/bin/python -m pytest -q",
-      "source_frozen_during_run": true,
-      "scope": "Full locked offline unit/property/contract suite; native checks reported separately",
-      "python": "3.14.8"
-    },
-    "native": {
-      "status": "PASS",
-      "scope": "Final-source real Flash parent, two replacement histories, one exact-history resume; fake Claude quota only",
-      "model": "gemini-3.8-flash-medium",
-      "parent_native_id": "44f5a900-3036-4cea-8350-8a38fc10e96e",
-      "groups": [
-        "a48d4322-cb3d-456d-9975-816689dccce6",
-        "4a619964-5e55-45f4-9f56-94433e6fcfcf"
-      ],
-      "checks": {
-        "helper_pass": true,
-        "parent_succeeded": true,
-        "readable_completion_observed": true,
-        "same_parent": true,
-        "mcp": {
-          "bound_original_parent": true,
-          "exact_flash": true,
-          "idempotent_resume": true,
-          "phase_progress": true,
-          "pinned_runtime": true,
-          "read_only_mcp_check": true,
-          "resume_completed": true,
-          "same_owned_native_history": true
-        },
-        "push": {
-          "completed": true,
-          "distinct_native_ids": true,
-          "flash_observed": true,
-          "flash_requested": true,
-          "nonce_in_worker_result": true,
-          "old_controller_exited": true,
-          "old_native_exited": true,
-          "original_parent_target": true,
-          "parent_distinct": true,
-          "primary_quota": true,
-          "readable_frame": true,
-          "source_preserved": true,
-          "two_retained_attempts": true
-        },
-        "wait": {
-          "completed": true,
-          "distinct_native_ids": true,
-          "flash_observed": true,
-          "flash_requested": true,
-          "independent_check": true,
-          "isolated_directory": true,
-          "nonce_in_worker_result": true,
-          "old_controller_exited": true,
-          "old_native_exited": true,
-          "original_parent_wait": true,
-          "parent_distinct": true,
-          "primary_quota": true,
-          "reconstruction_patch": true,
-          "source_preserved": true,
-          "two_retained_attempts": true,
-          "wait_claimed": true,
-          "worker_delta": true
-        }
-      },
-      "new_inputs_final_batch": 5,
-      "new_inputs_this_review": 10,
-      "source_frozen_during_run": true,
-      "capture": "Private, ignored native streams and journals retained locally",
-      "workers": [
-        {
-          "mode": "wait",
-          "task_id": "843f5bf6-f583-40f5-be91-120953702f51",
-          "native_id": "1aacc1bb-ff91-4a44-8f76-28d53b821396",
-          "provider": "antigravity",
-          "model_requested": "gemini-3.8-flash-medium",
-          "model_observed": "gemini-3.8-flash-medium",
-          "status": "completed",
-          "retained_attempt_count": 2,
-          "fixture_primary": "fake Claude quota; no real Claude inference"
-        },
-        {
-          "mode": "push",
-          "task_id": "deb708a9-e730-467a-a5e4-602ffcbec9dc",
-          "native_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
-          "provider": "antigravity",
-          "model_requested": "gemini-3.8-flash-medium",
-          "model_observed": "gemini-3.8-flash-medium",
-          "status": "completed",
-          "retained_attempt_count": 2,
-          "fixture_primary": "fake Claude quota; no real Claude inference"
-        },
-        {
-          "mode": "resume",
-          "task_id": "e2df381e-fc76-4189-a464-37c8f6a5868f",
-          "native_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
-          "provider": "antigravity",
-          "model_requested": "gemini-3.8-flash-medium",
-          "model_observed": "gemini-3.8-flash-medium",
-          "status": "completed",
-          "retained_attempt_count": 1,
-          "fixture_primary": null
-        }
-      ]
-    },
     "focused": {
+      "scope": "Expanded focused CLI/MCP, quota and collection set before final additional home/event cases; final cases included in full suite",
       "status": "PASS",
-      "scope": "Item-specific offline regressions; full suite and native acceptance recorded separately"
-    },
-    "manager_and_naming": {
-      "status": "PASS",
-      "tests": 23,
-      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py"
+      "subtests": 23,
+      "tests": 46
     },
     "installed": {
-      "status": "PASS",
+      "entrypoint_uses_checkout": true,
+      "outside_owned_instruction_sections_unchanged": true,
       "owned_skills_match": true,
-      "CLAUDE_outside_owned_block_unchanged": true,
+      "owned_statuslines_present": true,
       "second_install_operations": [
+        0,
         0,
         0
       ],
-      "provider_fingerprints_match": true,
-      "owned_integrations": "PRESENT",
-      "entrypoint_uses_checkout": true
+      "status": "PASS"
+    },
+    "manager_and_naming": {
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
+      "scope": "Existing external fixture tests; no manager activation",
+      "status": "PASS",
+      "tests": 23
+    },
+    "native_inference": {
+      "scope": "Collection/forecasting uses no calibration turns; full all-provider messaging/delegation reacceptance not performed for new source",
+      "status": "NOT_RUN",
+      "submitted_inputs": 0
+    },
+    "native_metadata": {
+      "antigravity": "Signed-in native models catalog; catalog is not quota or entitlement",
+      "claude": "Actual 2.1.309 zero-input status-line envelope and exact owner verified; quota values absent at blank startup",
+      "codex": "Authenticated account/rateLimits/read and model/list; normal subscription route, no inference",
+      "status": "PASS"
+    },
+    "native_quota_emission_antigravity": {
+      "scope": "Installed helper, 20-second zero-input TUI startup, no quota snapshot emitted; owner exited",
+      "status": "NOT_RUN"
+    },
+    "native_quota_emission_claude": {
+      "scope": "No rate_limits values emitted at blank startup; needs ordinary native telemetry, no calibration inference submitted",
+      "status": "NOT_RUN"
+    },
+    "offline": {
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8",
+      "scope": "Combined locked unit/property/fake-provider contract suite; executable logic unchanged after run, package docstring trailing whitespace normalized",
+      "seconds": 178.66,
+      "status": "PASS",
+      "subtests": 556,
+      "tests": 405
     },
     "preservation": {
-      "status": "BLOCKED",
-      "scope": "Codex raw config drift attribution only; other protected hashes unchanged, owned hook trust unchanged, Sol/xhigh and daemon_auto_start=false retained"
+      "scope": "Only owned statusLine values and skills/instruction sections changed; auth and Codex TOML unchanged. Concurrent shell hash drift retained, no shell writes performed. No manager activation.",
+      "status": "PASS"
     }
   },
   "transports": {
@@ -333,11 +308,5 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "historical_blockers": [
-    {
-      "check": "EXT-PROTECTED-RAW",
-      "reason": "Concurrent global Claude settings drift and current native node_repl definition retained; no further configuration writes until exact current ownership/delta reconciliation. See private protected-final.json."
-    }
-  ],
-  "updated_at": "2026-10-22T15:12:21.462189-04:00"
+  "updated_at": "2026-10-22T18:59:11.685995-04:00"
 }
