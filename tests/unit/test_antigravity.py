@@ -20,6 +20,11 @@ class AntigravityTests(unittest.TestCase):
     def setUp(self):
         self.temporary=tempfile.TemporaryDirectory();self.addCleanup(self.temporary.cleanup)
         self.home=Path(self.temporary.name);self.j=Journal(self.home/'state');self.addCleanup(self.j.close)
+        self.project=self.home/'project'
+        skill=self.project/'integrations/claude/skills/nativepeers/SKILL.md'
+        skill.parent.mkdir(parents=True);skill.write_text('NativePeers fixture skill\n')
+        root_patch=patch('nativepeers.antigravity_install.ROOT',self.project)
+        root_patch.start();self.addCleanup(root_patch.stop)
         self.native=new_id();self.provider_home=self.home/'.gemini/antigravity-cli';self.provider_home.mkdir(parents=True)
         with sqlite3.connect(self.provider_home/'conversation_summaries.db') as db:
             db.execute('CREATE TABLE conversation_summaries(conversation_id TEXT,title TEXT)')

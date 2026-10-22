@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 from pathlib import Path
 import tempfile
 import time
@@ -22,7 +23,8 @@ class AntigravityContractTests(unittest.IsolatedAsyncioTestCase):
             home=Path(directory);j=Journal(home/'state');self.addCleanup(j.close)
             profile=home/'.gemini/config/agents/nativepeers-analysis.md';profile.parent.mkdir(parents=True);profile.write_text(worker_profile('analysis'))
             hooks=home/'.gemini/config/hooks.json';hooks.write_text(json.dumps({'nativepeers':desired(home)[hooks][2]}))
-            group,worker,first,second=[new_id() for _ in range(4)];binary=ROOT/'tests/fixtures/fake_antigravity.py';binary.chmod(0o755)
+            group,worker,first,second=[new_id() for _ in range(4)]
+            binary=home/'fake_antigravity.py';shutil.copyfile(ROOT/'tests/fixtures/fake_antigravity.py',binary);binary.chmod(0o755)
             spec={'provider':'antigravity','model':'gemini-fixture-high','title':'fixture','cwd':directory,'permission_profile':'analysis','max_task_turns':2,'wall_time_seconds':5}
             lease={'spec':spec,'parent_key':'parent','binding':str(j.root/'bindings'/new_id()),'grants':{'group_id':group,'worker_id':worker},'expires_at':time.time()+60,'executable':str(binary)}
             j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RESERVED','{}'))
