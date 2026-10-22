@@ -42,27 +42,37 @@ Four independent read-only lanes reviewed `c165dbe2a009f55c42c990635a8e0f3b65393
 
 ## Resolution ledger
 
-Every item, including suggestions, is assigned a focused fix and regression. Resolution status is recorded after verification; this review is not itself runtime acceptance.
+All 17 review findings are addressed. Four neighboring corrections are also retained: A08F direct-peer errors, A18 native Gemini MCP wrapper admission, A04F installed native event observation, and A19 shutdown/resume serialization. Each focused fix was verified and pushed. The read-only verdict above describes the reviewed snapshot, not a second agent approval of later code.
 
 | ID | Finding | Status | Commit |
 | --- | --- | --- | --- |
-| A01 | Retain unconfirmed receipt after native history lookup failure | Pending | — |
-| A02 | Isolate selected-home offline fixtures from ambient provider settings | Pending | — |
-| A03 | Renew only verified compatibility receipts on no-op installation | Pending | — |
-| A04 | Require observable artifact consumption in native fixture | Pending | — |
-| A05 | Describe structured reports and worker deltas in result schema | Pending | — |
-| A06 | Preserve confirmed ingestion after late adapter failure | Pending | — |
-| A07 | Exclude all registered native provider homes from context imports | Pending | — |
-| A08 | Bound artifact offsets by stored size | Pending | — |
-| A09 | Preserve both rename paths in patch discovery | Pending | — |
-| A10 | Normalize tracked Git attributes in worker delta capture | Pending | — |
-| A11 | Retain completed results after recursive optional JSON | Pending | — |
-| A12 | Exercise selected homes through real fake-provider launches | Pending | — |
-| A13 | Clean exact native provider after controller death | Pending | — |
-| A14 | Refresh idle activity after notification awaits | Pending | — |
-| A15 | Renew live supervisor deadline consistently on owned resume | Pending | — |
-| A16 | Fence completion admission by group lifetime | Pending | — |
-| A17 | Settle definitely unsubmitted completion reservations on retention or wait | Pending | — |
+| A01 | Retain unconfirmed receipt after native history lookup failure | FIXED | `85b2893` |
+| A02 | Isolate selected-home offline fixtures from ambient provider settings | FIXED | `e89319b` |
+| A03 | Renew only verified compatibility receipts on no-op installation | FIXED | `4e6ac1c` |
+| A04 | Require observable artifact consumption in native fixture | FIXED | `222346b` |
+| A05 | Describe structured reports and worker deltas in result schema | FIXED | `b157f7e` |
+| A06 | Preserve confirmed ingestion after late adapter failure | FIXED | `1013dbc` |
+| A07 | Exclude all registered native provider homes from context imports | FIXED | `c30f759` |
+| A08 | Bound artifact offsets by stored size | FIXED | `04a7593` |
+| A09 | Preserve both rename paths in patch discovery | FIXED | `e41727b` |
+| A10 | Normalize tracked Git attributes in worker delta capture | FIXED | `88e75df` |
+| A11 | Retain completed results after recursive optional JSON | FIXED | `0d1aeba` |
+| A12 | Exercise selected homes through real fake-provider launches | FIXED | `cbcb261` |
+| A13 | Clean exact native provider after controller death | FIXED | `d606538` |
+| A14 | Refresh idle activity after notification awaits | FIXED | `9cd8ae3` |
+| A15 | Renew live supervisor deadline consistently on owned resume | FIXED | `60a290b` |
+| A16 | Fence completion admission by group lifetime | FIXED | `e552792` |
+| A17 | Settle definitely unsubmitted completion reservations on retention or wait | FIXED | `e950705` |
+| A08F | Preserve direct-peer protocol errors through artifact reader fallback | FIXED | `99f3d74` |
+| A18 | Admit only namespaced NativePeers calls through native Gemini MCP wrapper | FIXED | `51c52a2` |
+| A04F | Observe installed owned native history and actual tool event variants | FIXED | `e70dfaa` |
+| A19 | Serialize idle shutdown against owned resume admission | FIXED | `7b3a6f7` |
+
+Final offline verification: **203 tests and 252 subtests PASS**; manager/naming fixtures: **23 PASS**. Current-source Sol/Flash original-parent results, concurrent implementation/analysis workers, real artifact tool calls, exact Gemini resume and original-Codex native queue completion pass. Claude current-source inference remains **BLOCKED** by usage limit. Exact fingerprints and scoped assertions: [astra4-review.json](../evidence/astra4-review.json).
+
+Git discovery can execute clean/process filters before hashing; capture therefore suppresses external filters throughout and marks unsupported custom-filter deltas unavailable. Python 3.14’s C JSON decoder accepts the originally suggested nesting depth; the regression uses the standard-library Python decoder to exercise a genuine recursion failure below the byte ceiling.
+
+The first stronger native check exposed the Gemini wrapper contract; the next exposed a real shutdown/resume race. Failed observations remain recorded. One fixture preflight used an inconsistent local time limit and admitted no workers; corrected continuation reused each original parent. An interrupted resume remains an immutable unknown-execution result with both writers dead and no replay.
 
 ## Per-agent reports (verbatim)
 

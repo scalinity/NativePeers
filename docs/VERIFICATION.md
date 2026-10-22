@@ -1,3 +1,9 @@
+# Four-agent review verification
+
+Current correction code: `7b3a6f7398ea46f48ea9151b1a7c262a53f40cad`. Full offline suite: **203 tests and 252 subtests PASS**. Manager/naming fixtures: **23 PASS**. The final-source Sol/Flash run proves original-parent waits, overlapping separate native workers, isolated edits and both patch views, successful native artifact consumption, exact owned Gemini history resume, and native queue return to the original Codex UUID. See [ASTRA4_REVIEW.md](ASTRA4_REVIEW.md) and [astra4-review.json](../evidence/astra4-review.json).
+
+Fresh Claude inference remains **BLOCKED** by its reported usage limit. The complete native matrix is not an unqualified current-source PASS; historical observations below retain their stated source/runtime scope. Alternate-home launch/resume is verified through real fake-provider processes, not separate authenticated native accounts.
+
 # Pro review verification
 
 The current reliability correction report is [PRO_REVIEW.md](PRO_REVIEW.md), with exact code/runtime fingerprints in [pro-review.json](../evidence/pro-review.json). The full offline suite passes **165 tests and 149 subtests**, and manager/naming fixtures pass **23 tests**. Final-source Sol/Flash original-parent waits, concurrent implementation/analysis workers, exact Gemini history resume and native original-Codex queue return pass. Fresh Claude inference remains **BLOCKED** by its usage limit; the complete all-provider matrix is not a current unqualified PASS.
