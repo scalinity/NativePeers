@@ -316,3 +316,21 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED'")
         with patch.object(self.group,'notify',side_effect=notify):await asyncio.wait_for(self.group.monitor(),3)
         self.assertEqual(calls,2);self.assertIsNone(self.group.shutdown_reason)
+
+    async def test_running_monitor_honors_owned_resume_lifetime_renewal(self):
+        self.complete();self.group.policy.update(created_at=time.time()-20,wall_time_seconds=1,survive_parent=False,followup_grace_seconds=0)
+        calls=0;followup=new_id()
+        async def notify(generation):
+            nonlocal calls
+            calls+=1
+            if calls==1:
+                # The resume connection reloads this same persisted policy on a live supervisor.
+                self.group.policy.update(created_at=time.time(),wall_time_seconds=10)
+                self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(self.group.policy).decode(),))
+                self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(followup,self.worker,None,None,'RUNNING',None,None,1,'{}'))
+            else:self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(followup,))
+            self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED'")
+        with patch.object(self.group,'notify',side_effect=notify):await asyncio.wait_for(self.group.monitor(),3)
+        self.assertEqual(calls,2);self.assertIsNone(self.group.shutdown_reason)
+        restarted=Group(self.j,self.id)
+        self.assertEqual(restarted.lifetime_deadline(),self.group.lifetime_deadline())

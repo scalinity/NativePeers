@@ -346,8 +346,10 @@ class Group:
             self.journal.event(self.id,'parent-completion-retained',error.json())
             if not error.may_have_received and budget and reservation:budget.settle(reservation,observed_turns=0)
 
+    def lifetime_deadline(self):
+        return self.policy['created_at']+self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
+
     async def monitor(self):
-        deadline=self.policy['created_at']+self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
         while True:
             tasks=self.tasks();active=any(t['state'] not in TERMINAL for t in tasks)
             if self.initial_done():
@@ -359,6 +361,8 @@ class Group:
                 active=any(t['state'] not in TERMINAL for t in self.tasks())
                 if active:self.finished_at=None
                 elif self.finished_at is None:self.finished_at=time.time()
+            # Owned resume reloads the persisted policy, including renewed lifetime.
+            deadline=self.lifetime_deadline()
             parent_gone=not matches(self.policy['parent_owner']) and not self.policy['survive_parent']
             if parent_gone or time.time()>deadline:
                 self.shutdown_reason=self.shutdown_reason or ('PARENT_LOST' if parent_gone else 'GROUP_DEADLINE_EXCEEDED')
