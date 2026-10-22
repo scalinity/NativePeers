@@ -255,5 +255,18 @@
     "private_record": "evidence/private/review-9e0cefb-20261022/cleanup.json"
   },
   "public_repository": "https://github.com/scalinity/NativePeers",
-  "next_action": "Read docs/REVIEW_9E0CEFB.md and use the installed commands. Further native acceptance must retain the ledger and existing active-time ceiling; no uncertain input may be replayed."
+  "next_action": "Read docs/REVIEW_9E0CEFB.md and use the installed commands. Further native acceptance must retain the ledger and existing active-time ceiling; no uncertain input may be replayed.",
+  "publication": {
+    "repository": "https://github.com/scalinity/NativePeers",
+    "review_snapshot": "0274647a6a039e264afd11b7e3891075f5af9f20",
+    "review_tree": "9bb648f6e8f856837c3f5c708f0c24266991c1f2",
+    "tracked_files": 189,
+    "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
+    "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
+    "prompt": "docs/GPT6_PRO_REVIEW_PROMPT.txt",
+    "prompt_sha256": "ee91ef5cc0e253a27fb1abb988d53f322230edac69a22b13a06a543db8bd162c",
+    "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt",
+    "source_zip_uploaded": false,
+    "release_created": false
+  }
 }
