@@ -27,7 +27,7 @@ def extract(text):
         if len(raw.encode())>16384:raise ValueError('oversize')
         value=json.loads(raw)
         if not isinstance(value,dict) or set(value)-{'findings','tests_run'}:raise ValueError('invalid report')
-    except (ValueError,TypeError):
+    except (ValueError,TypeError,RecursionError):
         return findings,checks,['Malformed structured worker report; provider final text retained.']
     for field,schema,output in [('findings',FINDING,findings),('tests_run',CHECK,checks)]:
         items=value.get(field,[])
