@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import tempfile
 import time
+import threading
 import unittest
 from unittest.mock import AsyncMock,patch
 
@@ -540,3 +541,66 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.j.one('SELECT state FROM tasks')['state'],'RUNNING')
             self.assertEqual(self.route()['state'],'UNCLAIMED')
         finally:server.close();await server.wait_closed();endpoint.unlink(missing_ok=True)
+
+    async def test_terminal_wait_freezes_membership_against_a_separate_writer(self):
+        from nativepeers.cli import parser,dispatch
+        from nativepeers.mcp_server import Facade
+        from types import SimpleNamespace
+        for interface in ('cli','mcp','supervised'):
+            with self.subTest(interface=interface):
+                self.j.db.execute('DELETE FROM tasks WHERE task_id!=?',(self.task,))
+                self.j.db.execute('DELETE FROM completion_routes WHERE completion_generation!=1')
+                self.j.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode='push',waiter_id=NULL")
+                self.group.policy['phases']={'1':[self.task]}
+                self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(self.group.policy).decode(),))
+                self.complete();late=new_id()
+                artifact=Artifacts(self.j).put(canonical({'task_id':late,'summary':'new concurrent result','status':'completed','worker':{'provider':'codex','native_session_id':new_id(),'title':'late'}}),self.worker,[self.parent],media_type='application/json')
+                ready,start,attempted,finished=[threading.Event() for _ in range(4)];errors=[]
+                def writer():
+                    try:
+                        other=Journal(self.j.root)
+                        try:
+                            ready.set()
+                            assert start.wait(2)
+                            attempted.set()
+                            with other.transaction() as db:
+                                policy=json.loads(other.one('SELECT policy_json FROM groups')['policy_json'])
+                                policy['phases']['2']=[late]
+                                db.execute('UPDATE groups SET policy_json=?',(canonical(policy).decode(),))
+                                db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(late,self.worker,None,None,'COMPLETED',artifact,None,1,'{}'))
+                                db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,2,self.parent,'push','UNCLAIMED',None,None,new_id(),1))
+                        finally:other.close()
+                    except BaseException as error:errors.append(error)
+                    finally:finished.set()
+                thread=threading.Thread(target=writer);thread.start();self.assertTrue(ready.wait(2))
+                original_group=Delegation.group;original_render=Delegation._render_result;injected=False
+                def lookup(delegation,caller,handle):
+                    nonlocal injected
+                    value=original_group(delegation,caller,handle)
+                    if not injected and delegation.journal.db.in_transaction:
+                        injected=True;start.set();self.assertTrue(attempted.wait(2))
+                    return value
+                def render(delegation,status,policy,handle):
+                    self.assertTrue(finished.wait(2))
+                    return original_render(delegation,status,policy,handle)
+                try:
+                    with patch.object(Delegation,'group',lookup),patch.object(Delegation,'_render_result',render):
+                        if interface=='cli':
+                            with patch('nativepeers.cli.bind_caller',return_value=self.group.parent):value=await dispatch(parser().parse_args(['wait',self.id]),self.j)
+                        elif interface=='mcp':
+                            facade=Facade(self.j,None)
+                            with patch.object(facade,'binding_state',return_value={'state':'BOUND','provider':'codex','grants':{}}),patch('nativepeers.mcp_server.bind_caller',return_value=self.group.parent):
+                                response=await facade.call(None,SimpleNamespace(name='task_wait',arguments={'handle':self.id}))
+                            self.assertFalse(response.is_error);value=json.loads(response.content[0].text)['data']
+                        else:value=await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':1000},Reader())
+                finally:
+                    start.set();thread.join(timeout=3)
+                self.assertFalse(thread.is_alive());self.assertEqual(errors,[])
+                self.assertEqual([r['task_id'] for r in value['result']['results']],[self.task])
+                routes=self.j.all('SELECT * FROM completion_routes ORDER BY completion_generation')
+                self.assertEqual([r['state'] for r in routes],['NOTIFICATION_UNKNOWN','UNCLAIMED'])
+                self.group.policy=json.loads(self.j.one('SELECT policy_json FROM groups')['policy_json'])
+                with patch('nativepeers.core.Core') as fake:
+                    send=fake.return_value.router.send=AsyncMock(return_value={'state':'ACCEPTED_QUEUED','message_id':new_id()})
+                    await self.group.notify(1);send.assert_not_awaited()
+                    await self.group.notify(2);send.assert_awaited_once()

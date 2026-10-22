@@ -289,14 +289,15 @@ class Group:
             while True:
                 # A group read includes every phase. Enqueue/resume can add phases
                 # while the waiter is suspended, so extend the claim before output.
+                self.policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(self.id,))['policy_json'])
                 generations=wait_generations(self.id,self.policy,payload['handle'])
                 remaining=max(0,deadline-time.monotonic())
                 claimed=[g for g in generations if claim_wait(self.journal,self.id,g,self.generation,waiter,remaining)]
-                if self.target_done(payload['handle']) and not disconnected.done():
-                    emitted=[wait_output(self.journal,self.id,g,self.generation,waiter) for g in claimed]
-                    output=True;uncertain=any(emitted)
-                    return {'ready':True,'result':Delegation(self.journal,Registry(self.journal)).result(self.parent,payload['handle']),
-                            'notification_output_uncertain':uncertain,'notification_disposition':('tool-result-output-pending-observation' if uncertain else 'retained-result-read') if generations else 'batch-notification-unchanged'}
+                if not disconnected.done():
+                    terminal=Delegation(self.journal,Registry(self.journal)).terminal_wait(self.parent,payload['handle'],max(1,int(remaining*1000)),waiter=waiter,controller_generation=self.generation)
+                    if terminal is not None:
+                        output=True
+                        return terminal
                 if remaining<=0 or disconnected.done():break
                 changed=asyncio.create_task(self.changed.wait())
                 try:await asyncio.wait([changed,disconnected],timeout=remaining,return_when=asyncio.FIRST_COMPLETED)

@@ -15,7 +15,7 @@ from .errors import PeerError,SupervisorNotStarted,require
 from .files import async_advisory_lock,atomic_json,canonical,private_directory,sha256
 from .launch import launch_environment,provider_home,home_environment
 from .models import bounded_text,new_id,title
-from .notifications import claim_wait,wait_generations,wait_output
+from .notifications import claim_wait,wait_generations,wait_output,settle_deferred
 from .process import matches
 from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
@@ -251,6 +251,11 @@ class Delegation:
 
     def result(self,caller,handle):
         status=self.status(caller,handle);policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(status['group_id'],))['policy_json'])
+        return self._render_result(status,policy,handle)
+
+    def _render_result(self,status,policy,handle):
+        # Only render the captured membership; concurrent admission belongs to a
+        # later read, even if its immutable result becomes available meanwhile.
         results=[]
         for task in status['tasks']:
             if handle!=status['group_id'] and task['task_id']!=handle:continue
@@ -261,22 +266,34 @@ class Delegation:
                 result['result_artifact_id']=task['result_artifact_id'];result['initial_task']=task['task_id'] in policy['initial_tasks'];results.append(result)
         return dict(status,results=results)
 
+    def terminal_wait(self,caller,handle,timeout_ms,*,waiter=None,controller_generation=None):
+        claimed=False;deliveries=[];waiter=waiter or new_id()
+        with self.journal.transaction() as db:
+            group=self.group(caller,handle)
+            status=self.status(caller,handle)
+            tasks=[t for t in status['tasks'] if handle==group['group_id'] or t['task_id']==handle]
+            if not tasks or any(t['state'] not in TERMINAL for t in tasks):return None
+            policy=json.loads(group['policy_json']);generations=wait_generations(group['group_id'],policy,handle)
+            controller_generation=controller_generation or policy.get('controller_generation',1)
+            if caller.key==group['parent_key']:
+                for generation in generations:
+                    if claim_wait(self.journal,group['group_id'],generation,controller_generation,waiter,timeout_ms/1000,db=db):
+                        emitted=wait_output(self.journal,group['group_id'],generation,controller_generation,waiter,settle=False)
+                        claimed=emitted or claimed
+                        if emitted:
+                            deliveries.append(self.journal.one('SELECT delivery_id FROM completion_routes WHERE group_id=? AND completion_generation=?',(group['group_id'],generation))['delivery_id'])
+                status['notifications']=self.journal.all('SELECT * FROM completion_routes WHERE group_id=? ORDER BY completion_generation',(group['group_id'],))
+        # Artifact/budget I/O happens after committing the exact claims/membership.
+        for delivery in deliveries:settle_deferred(self.journal,group['group_id'],delivery)
+        return {'ready':True,'result':self._render_result(status,policy,handle),'notification_output_uncertain':claimed,
+                'notification_disposition':('tool-result-output-pending-observation' if claimed else 'retained-result-read') if generations else 'batch-notification-unchanged'}
+
     async def wait(self,caller,handle,timeout_ms=30000,on_timeout=None):
         require(type(timeout_ms) is int and 1<=timeout_ms<=30000,'PROTOCOL_ERROR','Wait is bounded to 30 seconds')
         require(on_timeout in (None,'push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
+        terminal=self.terminal_wait(caller,handle,timeout_ms)
+        if terminal is not None:return terminal
         group=self.group(caller,handle)
-        status=self.status(caller,handle)
-        tasks=[t for t in status['tasks'] if handle==group['group_id'] or t['task_id']==handle]
-        if tasks and all(t['state'] in TERMINAL for t in tasks):
-            claimed=False
-            policy=json.loads(group['policy_json']);generations=wait_generations(group['group_id'],policy,handle)
-            if caller.key==group['parent_key']:
-                waiter=new_id();controller_generation=policy.get('controller_generation',1)
-                for generation in generations:
-                    if claim_wait(self.journal,group['group_id'],generation,controller_generation,waiter,timeout_ms/1000):
-                        claimed=wait_output(self.journal,group['group_id'],generation,controller_generation,waiter) or claimed
-            return {'ready':True,'result':self.result(caller,handle),'notification_output_uncertain':claimed,
-                    'notification_disposition':'tool-result-output-pending-observation' if claimed else 'retained-result-read'}
         try:
             return await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
         except (PeerError,FileNotFoundError,ConnectionRefusedError) as error:

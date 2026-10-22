@@ -23,7 +23,8 @@
     {
       "id": "R4",
       "description": "Atomic terminal-wait result membership",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 37 focused tests and 26 subtests; second SQLite writer scheduled at terminal lookup; CLI/MCP/supervised waits render only transactionally claimed membership"
     },
     {
       "id": "R5",

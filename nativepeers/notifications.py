@@ -11,12 +11,14 @@ def wait_generations(group_id,policy,handle):
     return [int(n) for n,tasks in phases.items() if int(n)!=1 and tasks==[handle]]
 
 
-def claim_wait(journal,group_id,generation,controller_generation,waiter,timeout):
+def claim_wait(journal,group_id,generation,controller_generation,waiter,timeout,*,db=None):
     if generation is None:return False
+    if db is None:
+        with journal.transaction() as db:
+            return claim_wait(journal,group_id,generation,controller_generation,waiter,timeout,db=db)
     now=time.time()
-    with journal.transaction() as db:
-        return bool(db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=? AND (state='UNCLAIMED' OR (state='WAIT_LEASED' AND (lease_deadline<? OR (waiter_id=? AND claimed_generation=?))))",
-            (waiter,now+timeout+1,controller_generation,group_id,generation,now,waiter,controller_generation)).rowcount)
+    return bool(db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=? AND (state='UNCLAIMED' OR (state='WAIT_LEASED' AND (lease_deadline<? OR (waiter_id=? AND claimed_generation=?))))",
+        (waiter,now+timeout+1,controller_generation,group_id,generation,now,waiter,controller_generation)).rowcount)
 
 
 def release_wait(journal,group_id,controller_generation,waiter,mode):
@@ -24,11 +26,11 @@ def release_wait(journal,group_id,controller_generation,waiter,mode):
         ('push' if mode=='push' else 'wait',group_id,waiter,controller_generation))
 
 
-def wait_output(journal,group_id,generation,controller_generation,waiter):
+def wait_output(journal,group_id,generation,controller_generation,waiter,*,settle=True):
     # Tool output can be lost after this point. Keep the claim rather than push a duplicate.
     changed=bool(journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND state='WAIT_LEASED' AND waiter_id=? AND claimed_generation=?",
         (group_id,generation,waiter,controller_generation)).rowcount)
-    if changed:
+    if changed and settle:
         row=journal.one('SELECT delivery_id FROM completion_routes WHERE group_id=? AND completion_generation=?',(group_id,generation))
         settle_deferred(journal,group_id,row['delivery_id'])
     return changed
