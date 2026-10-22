@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import time
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from nativepeers.antigravity import observe, resolve_name
@@ -33,6 +34,7 @@ class AntigravityTests(unittest.TestCase):
         self.owner=identity(os.getpid())
         binary=self.home/'.local/bin/agy';binary.parent.mkdir(parents=True);binary.symlink_to(self.owner.executable)
         self.evidence=self.home/'capabilities.json';self.evidence.write_text(json.dumps({'providers':{'antigravity':{'executable_sha256':fingerprint(binary)['sha256'],'version':'fixture'}}}))
+        atomic_json(self.j.root/'compat/runtime.json',{'providers':{'antigravity':fingerprint(binary)}})
         self.event={'conversationId':self.native,'workspacePaths':[str(self.home)],'modelName':'gemini-4-argon-high',
                     'transcriptPath':str(self.provider_home/'brain'/self.native/'.system_generated/logs/transcript.jsonl')}
 
@@ -97,6 +99,26 @@ class AntigravityTests(unittest.TestCase):
                 with self.subTest(event=event):
                     with self.assertRaises(Exception):observe(self.j,event,'SessionStart')
                     self.assertEqual(self.j.all('SELECT * FROM peer_instances'),before)
+
+    def test_updated_binary_cannot_register_or_inject_retained_messages(self):
+        with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
+             patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':''}):
+            observe(self.j,self.event,'SessionStart')
+            before=self.j.all('SELECT * FROM peer_instances');peer=before[0];message=new_id()
+            self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,new_id(),'sender',peer['peer_key'],None,None,canonical({'message_id':message}).decode(),'hash',time.time()+60,time.time()))
+            self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
+                (new_id(),message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))
+            binary=self.home/'.local/bin/agy';binary.unlink();binary.write_text('changed executable')
+            changed=SimpleNamespace(json=lambda:dict(self.owner.json(),executable=str(binary.resolve())))
+            with patch('nativepeers.antigravity.ancestry',return_value=[self.owner,changed]):
+                for kind in ['SessionStart','PreInvocation']:
+                    with self.subTest(kind=kind):
+                        with self.assertRaises(Exception) as error:observe(self.j,self.event,kind)
+                        self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+            self.assertEqual(self.j.all('SELECT * FROM peer_instances'),before)
+            self.assertIsNone(self.j.one("SELECT * FROM events WHERE kind='antigravity-hook-output-unconfirmed'"))
+            self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'SUBMITTED_UNCONFIRMED')
 
     def test_install_is_idempotent_and_uninstall_preserves_later_unrelated_edits(self):
         path=self.home/'.gemini/config/hooks.json';path.parent.mkdir(parents=True);path.write_text('{"existing":{"enabled":false}}')

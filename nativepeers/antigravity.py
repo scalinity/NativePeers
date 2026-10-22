@@ -101,6 +101,8 @@ def observe(journal,event,kind):
                 return {'decision':'deny','reason':'Tool is outside this NativePeers worker profile.'}
             return {'decision':'allow'}
         return {}
+    from .compatibility import verify
+    verify(journal,'antigravity',owner['executable'])
     home=native_home();registry=Registry(journal)
     transcript=Path(event['transcriptPath']).expanduser().resolve()
     require(transcript.is_relative_to(home.resolve()) and native in transcript.parts,
