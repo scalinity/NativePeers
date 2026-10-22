@@ -7,6 +7,7 @@ from pathlib import Path
 import selectors
 import stat
 import subprocess
+import tempfile
 import time
 
 from .errors import require, PeerError
@@ -66,32 +67,115 @@ def bounded_diff(cwd,args,limit,deadline):
 
 def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     deadline=time.monotonic()+timeout
+    delta={'worker_delta':b'','worker_delta_base':baseline.get('input_tree')}
     try:
         tracked=[p for p in git(cwd,'diff','--name-only',baseline['head'],'-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
         untracked=[p for p in git(cwd,'ls-files','--others','--exclude-standard','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
     except (OSError,subprocess.TimeoutExpired,PeerError):
-        return {'patch':b'','changed_files':[],'untracked_files':[],'file_count':None,'excluded_sensitive_or_symlink_files':[],
-                'patch_unavailable_reason':'File discovery failed or timed out; inspect the retained worktree.'}
-    excluded={p for p in tracked+untracked if sensitive(p) or (Path(cwd)/p).is_symlink()}
+        return dict(delta,patch=b'',changed_files=[],untracked_files=[],file_count=None,excluded_sensitive_or_symlink_files=[],
+                    patch_unavailable_reason='File discovery failed or timed out; inspect the retained worktree.',
+                    worker_delta_unavailable_reason='File discovery failed or timed out; inspect the retained worktree.')
+    input_paths=[]
+    if baseline.get('input_tree'):
+        try:
+            input_paths=[p for p in git(cwd,'diff','--no-ext-diff','--no-textconv','--name-only',baseline['head'],baseline['input_tree'],'-z',
+                                       timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
+            indexed=set(git(cwd,'ls-files','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0'))
+            # Explicit inputs remain part of the reconstruction even if a worker changes ignore rules.
+            untracked=list(dict.fromkeys(untracked+[p for p in input_paths if p not in indexed and (Path(cwd)/p).is_file()]))
+        except (OSError,subprocess.TimeoutExpired,PeerError):
+            delta['worker_delta_unavailable_reason']='Frozen input tree discovery failed or timed out; inspect the retained worktree.'
+    excluded={p for p in tracked+untracked+input_paths if sensitive(p) or (Path(cwd)/p).is_symlink()}
     selected=[p for p in tracked if p not in excluded]
-    result={'changed_files':tracked[:100],'untracked_files':untracked[:100],
-            'file_count':len(tracked)+len(untracked),'excluded_sensitive_or_symlink_files':sorted(excluded)[:100]}
+    result=dict(delta,changed_files=tracked[:100],untracked_files=untracked[:100],
+                file_count=len(tracked)+len(untracked),excluded_sensitive_or_symlink_files=sorted(excluded)[:100])
     commands=([ [baseline['head'],'--binary','--',*selected] ] if selected else [])
     commands.extend(['--no-index','--binary','--','/dev/null',relative] for relative in untracked if relative not in excluded)
     data=bytearray()
     for args in commands:
         try:piece,reason=bounded_diff(cwd,args,max_bytes-len(data),deadline)
         except OSError:piece,reason=None,'Git diff could not start; inspect the retained worktree.'
-        if reason:return dict(result,patch=b'',patch_unavailable_reason=reason)
+        if reason:
+            result['patch_unavailable_reason']=reason;data.clear();break
         data.extend(piece)
-    return dict(result,patch=bytes(data))
+    result['patch']=bytes(data)
+    if not baseline.get('input_tree'):
+        return dict(result,worker_delta_unavailable_reason='Frozen input tree is unavailable; inspect the reconstruction patch or retained worktree.')
+    if 'worker_delta_unavailable_reason' in result:return result
+    try:
+        paths=list(dict.fromkeys(p for p in tracked+untracked+input_paths if p not in excluded))
+        tree=_working_tree(cwd,baseline['head'],paths,deadline)
+        names=git(cwd,'diff','--no-ext-diff','--no-textconv','--name-only',baseline['input_tree'],tree,'-z',
+                  timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0')
+        paths=[p for p in names if p and p not in excluded and not sensitive(p) and not (Path(cwd)/p).is_symlink()]
+        if paths:
+            data,reason=bounded_diff(cwd,[baseline['input_tree'],tree,'--binary','--',*paths],max_bytes,deadline)
+            if reason:result['worker_delta_unavailable_reason']=reason
+            else:result['worker_delta']=bytes(data)
+    except (OSError,subprocess.TimeoutExpired,PeerError):
+        result['worker_delta_unavailable_reason']='Worker delta capture failed or timed out; inspect the retained worktree.'
+    return result
 
 
-def git(cwd,*args,input=None,check=True,timeout=None):
-    result=subprocess.run(['git','-C',str(cwd),*args],input=input,capture_output=True,timeout=timeout)
+def git(cwd,*args,input=None,stdin=None,env=None,check=True,timeout=None):
+    result=subprocess.run(['git','-C',str(cwd),*args],input=input,stdin=stdin,env=env,capture_output=True,timeout=timeout)
     if check and result.returncode:
         raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED',result.stderr.decode(errors='replace')[:800])
     return result
+
+
+@contextlib.contextmanager
+def _temporary_index(cwd,deadline):
+    directory=git(cwd,'rev-parse','--absolute-git-dir',timeout=max(.001,deadline-time.monotonic())).stdout.decode().strip()
+    with tempfile.TemporaryDirectory(prefix='npeer-index-',dir=directory) as temporary:
+        environment=dict(os.environ,GIT_INDEX_FILE=str(Path(temporary)/'index'))
+        def command(*args,**kwargs):
+            return git(cwd,*args,env=environment,timeout=max(.001,deadline-time.monotonic()),**kwargs)
+        yield command
+
+
+def _input_tree(cwd,frozen,selected):
+    # Reapply the exact frozen inputs to a private index, never the source index.
+    with _temporary_index(cwd,time.monotonic()+10) as command:
+        command('read-tree',frozen.baseline['head'])
+        if frozen.patch:command('apply','--binary','--cached',input=frozen.patch)
+        entries=bytearray()
+        for relative in selected:
+            data,mode=frozen.untracked[relative]
+            oid=command('hash-object','-w','--stdin','--no-filters',input=data).stdout.strip()
+            entries.extend((b'100755' if mode&0o111 else b'100644')+b' '+oid+b'\t'+os.fsencode(relative)+b'\0')
+        if entries:command('update-index','-z','--index-info',input=bytes(entries))
+        return command('write-tree').stdout.decode().strip()
+
+
+def _working_tree(cwd,head,paths,deadline):
+    # Hash through open descriptors, without clean filters or the worker's real index.
+    with _temporary_index(cwd,deadline) as command:
+        command('read-tree',head)
+        if paths:command('update-index','--force-remove','-z','--stdin',input=b''.join(os.fsencode(p)+b'\0' for p in paths))
+        entries=bytearray()
+        for relative in paths:
+            path=Path(cwd)/relative
+            require(not any(part.is_symlink() for part in (path,*path.parents)),
+                    'WORKSPACE_SNAPSHOT_REQUIRED','Symlinked files are excluded from worker deltas')
+            try:
+                if path.is_dir():
+                    require(not command('ls-tree',head,'--',relative).stdout.startswith(b'160000 '),
+                            'WORKSPACE_SNAPSHOT_REQUIRED','Changed submodules require inspection in the retained worktree')
+                    continue
+                fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
+            except (FileNotFoundError,NotADirectoryError):continue
+            with os.fdopen(fd,'rb') as stream:
+                before=os.fstat(stream.fileno())
+                require(stat.S_ISREG(before.st_mode),'WORKSPACE_SNAPSHOT_REQUIRED','Worker delta inputs must be regular files')
+                oid=command('hash-object','-w','--stdin','--no-filters',stdin=stream).stdout.strip()
+                after=os.fstat(stream.fileno())
+            require((before.st_mode,before.st_size,before.st_mtime_ns,before.st_ctime_ns)==
+                    (after.st_mode,after.st_size,after.st_mtime_ns,after.st_ctime_ns),
+                    'WORKSPACE_SNAPSHOT_REQUIRED','Working file changed during worker delta capture')
+            entries.extend((b'100755' if before.st_mode&0o111 else b'100644')+b' '+oid+b'\t'+os.fsencode(relative)+b'\0')
+        if entries:command('update-index','-z','--index-info',input=bytes(entries))
+        return command('write-tree').stdout.decode().strip()
 
 
 def _capture_untracked(root,selected):
@@ -208,5 +292,6 @@ def prepare(journal,cwd,worker_id,workspace,*,expected_baseline=None,frozen=None
         data,mode=frozen.untracked[relative]
         destination=directory/relative;destination.parent.mkdir(parents=True,exist_ok=True)
         destination.write_bytes(data);destination.chmod(mode)
+    baseline=dict(baseline,input_tree=_input_tree(directory,frozen,selected))
     validate_frozen(cwd,frozen)
     return str(directory),worker_id,baseline

@@ -38,7 +38,9 @@ class WorkspaceFreezeTests(unittest.TestCase):
         for worker,workspace in [('first',first),('second',second)]:
             target,_,baseline=prepare(self.journal,self.repo,worker,workspace,frozen=frozen)
             target=Path(target)
-            self.assertEqual(baseline,frozen.baseline)
+            self.assertEqual({k:v for k,v in baseline.items() if k!='input_tree'},frozen.baseline)
+            self.assertEqual(git(target,'show',baseline['input_tree']+':inputs/run').stdout,script.read_bytes())
+            self.assertEqual(bool(git(target,'ls-tree',baseline['input_tree'],'--','second.txt').stdout),worker=='second')
             self.assertEqual((target/'tracked.txt').read_text(),'unstaged\n')
             self.assertEqual((target/'inputs/run').read_bytes(),script.read_bytes())
             self.assertEqual(stat.S_IMODE((target/'inputs/run').stat().st_mode),0o751)

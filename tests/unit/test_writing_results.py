@@ -31,10 +31,10 @@ class WritingResultsTests(unittest.TestCase):
             baseline=snapshot(repo);worker=new_id()
             with patch('nativepeers.worktrees.ROOT',root/'project'):
                 directory,_,observed=prepare(journal,repo,worker,{'mode':'isolated-worktree'},expected_baseline=baseline)
-            work=Path(directory);self.assertEqual(work.parent,(repo/'.worktrees').resolve());self.assertEqual(observed,baseline)
+            work=Path(directory);self.assertEqual(work.parent,(repo/'.worktrees').resolve());self.assertEqual({k:v for k,v in observed.items() if k!='input_tree'},baseline)
             self.assertEqual((work/'existing.py').read_text(),'BASE = 2\n');self.assertFalse((work/'unrelated.txt').exists())
             (work/'created.py').write_text('def answer():\n    return 42\n');(work/'.env').write_text('PRIVATE_FIXTURE_DO_NOT_COPY=secret\n')
-            result=changes(work,baseline)
+            result=changes(work,observed)
             self.assertIn('created.py',result['untracked_files']);self.assertIn('.env',result['excluded_sensitive_or_symlink_files'])
             self.assertIn(b'def answer()',result['patch']);self.assertNotIn(b'PRIVATE_FIXTURE',result['patch'])
             copy=repo/'.worktrees/verify-patch';git(repo,'worktree','add','--detach',str(copy),baseline['head'])

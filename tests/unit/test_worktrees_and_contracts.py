@@ -12,7 +12,7 @@ class WorkspaceTests(unittest.TestCase):
    root=Path(d);repo=root/'repo';repo.mkdir();git(repo,'init','-q');(repo/'fixture.txt').write_text('baseline\n');git(repo,'add','fixture.txt');git(repo,'commit','-qm','Create fixture baseline')
    (repo/'fixture.txt').write_text('dirty\n');(repo/'chosen.txt').write_text('selected\n');(repo/'.env').write_text('fixture-secret-not-real\n');before=snapshot(repo);j=Journal(root/'state')
    target,_,baseline=prepare(j,repo,'fixture-worker',{'mode':'isolated-worktree','untracked_allowlist':['chosen.txt']})
-   self.assertEqual(snapshot(repo),before);self.assertEqual(Path(target,'fixture.txt').read_text(),'dirty\n');self.assertEqual(Path(target,'chosen.txt').read_text(),'selected\n');self.assertFalse(Path(target,'.env').exists());self.assertEqual(baseline,snapshot(repo,untracked_allowlist=['chosen.txt']))
+   self.assertEqual(snapshot(repo),before);self.assertEqual(Path(target,'fixture.txt').read_text(),'dirty\n');self.assertEqual(Path(target,'chosen.txt').read_text(),'selected\n');self.assertFalse(Path(target,'.env').exists());self.assertEqual({k:v for k,v in baseline.items() if k!='input_tree'},snapshot(repo,untracked_allowlist=['chosen.txt']))
    with self.assertRaises(PeerError):prepare(j,repo,'secret-worker',{'mode':'isolated-worktree','untracked_allowlist':['.env']})
    j.close()
  def test_spawn_examples_and_bad_types(self):

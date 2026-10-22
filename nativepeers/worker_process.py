@@ -174,13 +174,16 @@ class Worker:
         if self.row['worktree_id']:
             from .worktrees import git,changes
             from .models import ARTIFACT_MAX
-            baseline=self.lease['baseline'];captured=changes(self.row['cwd'],baseline);patch=captured.pop('patch')
+            baseline=self.lease['baseline'];captured=changes(self.row['cwd'],baseline);patch=captured.pop('patch');delta=captured.pop('worker_delta',b'')
+            record['changes'].update(worker_delta_artifact=None,worker_delta_empty=not delta and not captured.get('worker_delta_unavailable_reason'))
             record['changes'].update(captured)
             record['changes']['commit']=git(self.row['cwd'],'rev-parse','HEAD').stdout.decode().strip()
             record['changes']['baseline']=baseline
             if patch and len(patch)<=ARTIFACT_MAX:
                 record['changes']['patch_artifact']=Artifacts(self.journal).put(patch,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
             elif patch:record['changes']['patch_unavailable_reason']='Diff exceeds the local artifact limit; inspect the retained worktree.'
+            if delta:
+                record['changes']['worker_delta_artifact']=Artifacts(self.journal).put(delta,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
         artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='application/json')
         with self.journal.transaction() as db:
             db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
