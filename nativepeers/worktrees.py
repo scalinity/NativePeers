@@ -69,7 +69,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     deadline=time.monotonic()+timeout
     delta={'worker_delta':b'','worker_delta_base':baseline.get('input_tree')}
     try:
-        tracked=[p for p in git(cwd,'diff','--name-only',baseline['head'],'-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
+        tracked=[p for p in git(cwd,'diff','--no-renames','--name-only',baseline['head'],'-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
         untracked=[p for p in git(cwd,'ls-files','--others','--exclude-standard','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
     except (OSError,subprocess.TimeoutExpired,PeerError):
         return dict(delta,patch=b'',changed_files=[],untracked_files=[],file_count=None,excluded_sensitive_or_symlink_files=[],
@@ -78,7 +78,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     input_paths=[]
     if baseline.get('input_tree'):
         try:
-            input_paths=[p for p in git(cwd,'diff','--no-ext-diff','--no-textconv','--name-only',baseline['head'],baseline['input_tree'],'-z',
+            input_paths=[p for p in git(cwd,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['head'],baseline['input_tree'],'-z',
                                        timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
             indexed=set(git(cwd,'ls-files','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0'))
             # Explicit inputs remain part of the reconstruction even if a worker changes ignore rules.
@@ -105,7 +105,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     try:
         paths=list(dict.fromkeys(p for p in tracked+untracked+input_paths if p not in excluded))
         tree=_working_tree(cwd,baseline['head'],paths,deadline)
-        names=git(cwd,'diff','--no-ext-diff','--no-textconv','--name-only',baseline['input_tree'],tree,'-z',
+        names=git(cwd,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['input_tree'],tree,'-z',
                   timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0')
         paths=[p for p in names if p and p not in excluded and not sensitive(p) and not (Path(cwd)/p).is_symlink()]
         if paths:

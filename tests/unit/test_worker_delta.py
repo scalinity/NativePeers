@@ -31,7 +31,7 @@ class WorkerDeltaTests(unittest.TestCase):
         directory=self.repo/'.worktrees'/name
         git(self.repo,'worktree','add','--detach',str(directory),'HEAD')
         git(directory,'read-tree','--reset','-u',tree)
-        git(directory,'apply','--binary','--index',input=patch_bytes)
+        if patch_bytes:git(directory,'apply','--binary','--index',input=patch_bytes)
         return directory
 
     def test_noop_has_empty_delta_but_preserves_full_reconstruction(self):
@@ -68,6 +68,33 @@ class WorkerDeltaTests(unittest.TestCase):
             self.assertEqual((delta/name).read_bytes(),(work/name).read_bytes())
         self.assertEqual(stat.S_IMODE((delta/'new.bin').stat().st_mode)&0o111,0o111)
         self.assertEqual(self.index_bytes(work),worker_index);self.assertEqual(snapshot(self.repo),source_before)
+
+    def test_inherited_staged_rename_has_empty_delta_and_complete_reconstruction(self):
+        git(self.repo,'mv','edit.txt','renamed.txt')
+        source_before=snapshot(self.repo);work,baseline=self.prepare()
+        result=changes(work,baseline)
+        self.assertEqual(result['worker_delta'],b'')
+        self.assertNotIn('worker_delta_unavailable_reason',result)
+        for view,tree in [('patch',baseline['head']),('worker_delta',baseline['input_tree'])]:
+            replay=self.replay('rename-'+view,tree,result[view])
+            self.assertFalse((replay/'edit.txt').exists())
+            self.assertEqual((replay/'renamed.txt').read_bytes(),(work/'renamed.txt').read_bytes())
+        self.assertFalse((work/'edit.txt').exists());self.assertEqual(snapshot(self.repo),source_before)
+
+    def test_worker_staged_and_committed_renames_replay_both_patch_views(self):
+        for committed in (False,True):
+            with self.subTest(committed=committed):
+                suffix='committed' if committed else 'staged'
+                work,baseline=self.prepare(worker='rename-'+suffix)
+                git(work,'mv','edit.txt','renamed.txt')
+                if committed:git(work,'commit','-qm','Rename worker fixture')
+                worker_index=self.index_bytes(work);result=changes(work,baseline)
+                self.assertEqual(set(result['changed_files']),{'edit.txt','renamed.txt'})
+                for view,tree in [('patch',baseline['head']),('worker_delta',baseline['input_tree'])]:
+                    replay=self.replay(suffix+'-'+view,tree,result[view])
+                    self.assertFalse((replay/'edit.txt').exists())
+                    self.assertEqual((replay/'renamed.txt').read_bytes(),(work/'renamed.txt').read_bytes())
+                self.assertEqual(self.index_bytes(work),worker_index)
 
     def test_reverting_parent_edits_and_deleting_input_still_produces_delta(self):
         (self.repo/'edit.txt').write_text('parent dirty\n');(self.repo/'selected').write_text('selected input\n')
