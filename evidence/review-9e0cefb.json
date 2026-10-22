@@ -1,0 +1,99 @@
+{
+  "reviewed_commit": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
+  "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
+  "status": "IN_PROGRESS",
+  "todo": [
+    {
+      "id": "R1",
+      "description": "Transactional resume/enqueue phases",
+      "status": "TODO"
+    },
+    {
+      "id": "R2",
+      "description": "Definite resume launch failure settlement",
+      "status": "TODO"
+    },
+    {
+      "id": "R3",
+      "description": "Fresh Antigravity per-process readiness and evidence",
+      "status": "TODO"
+    },
+    {
+      "id": "R4",
+      "description": "Atomic terminal-wait result membership",
+      "status": "TODO"
+    },
+    {
+      "id": "R5",
+      "description": "Registered private roots in copy capture",
+      "status": "TODO"
+    },
+    {
+      "id": "R6",
+      "description": "Strict MCP object shape",
+      "status": "TODO"
+    },
+    {
+      "id": "H1",
+      "description": "Ancestor workspace hook/profile conflict readiness",
+      "status": "TODO"
+    },
+    {
+      "id": "I1",
+      "description": "Bounded result include-artifacts behavior",
+      "status": "TODO"
+    },
+    {
+      "id": "I2",
+      "description": "Historical native wording qualification",
+      "status": "TODO"
+    },
+    {
+      "id": "S1",
+      "description": "MCP acknowledgment and retained groups",
+      "status": "TODO"
+    },
+    {
+      "id": "S2",
+      "description": "Read-only spawn check",
+      "status": "TODO"
+    },
+    {
+      "id": "S3",
+      "description": "Worker delta application preview",
+      "status": "TODO"
+    },
+    {
+      "id": "S4",
+      "description": "Bounded older delivery observation",
+      "status": "TODO"
+    },
+    {
+      "id": "S5",
+      "description": "Retained workspace cleanup planner",
+      "status": "TODO"
+    },
+    {
+      "id": "V1",
+      "description": "Full offline and passive preservation verification",
+      "status": "TODO"
+    },
+    {
+      "id": "D1",
+      "description": "Installed conventions and final published evidence",
+      "status": "TODO"
+    }
+  ],
+  "tests": {
+    "offline": {
+      "status": "NOT_RUN"
+    },
+    "installed_passive": {
+      "status": "NOT_RUN"
+    },
+    "native": {
+      "status": "NOT_RUN",
+      "reason": "No new native model submissions; retained cumulative ceiling and time unchanged"
+    }
+  }
+}

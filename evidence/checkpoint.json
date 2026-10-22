@@ -127,40 +127,13 @@
     "retained_native_fixture_worktrees": 10,
     "unresolved_native_requests": []
   },
-  "current_protected_baseline": "evidence/private/pro-followup-20261022/protected-before.json",
+  "current_protected_baseline": "/Users/danny/Documents/Tools/NativePeers/evidence/private/review-9e0cefb-20261022/baseline.json",
   "current_review": {
-    "base_commit": "89d1d3bc7feb5bb30bf312a38cfbd5c8a5db84e1",
-    "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "completed": [
-      "F1",
-      "F2",
-      "F3",
-      "F4",
-      "F5",
-      "F6",
-      "F7",
-      "T1",
-      "E1",
-      "H1",
-      "S1",
-      "S2",
-      "S3",
-      "S4",
-      "S5",
-      "C1",
-      "V1",
-      "D1",
-      "F2B",
-      "F4B",
-      "S3B"
-    ],
-    "evidence": "evidence/pro-followup-review.json",
-    "last_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "last_completed": "S3B",
-    "native_batch": "PASS_SCOPED",
-    "reviewed_commit": "f81f5c897fed3de5bbb90bd0c1e8ae0183eed81a",
-    "state": "evidence/private/pro-followup-20261022/state.json",
-    "status": "COMPLETE; verification qualified"
+    "reviewed_commit": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
+    "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
+    "evidence": "evidence/review-9e0cefb.json",
+    "status": "IN_PROGRESS",
+    "completed": []
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
@@ -179,7 +152,8 @@
     "astra4": "evidence/astra4-review.json",
     "checkpoint": "https://github.com/scalinity/NativePeers/blob/89d1d3bc7feb5bb30bf312a38cfbd5c8a5db84e1/evidence/checkpoint.json",
     "pro": "evidence/pro-review.json",
-    "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints."
+    "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints.",
+    "pro_followup": "evidence/pro-followup-review.json"
   },
   "live_budget": {
     "active_seconds": 3524.3949735164642,
@@ -194,7 +168,7 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Use the installed verified workflows. Independent review uses the completed source snapshot pinned in the publication record. For further native acceptance, inspect the retained budget first; do not replay uncertain inputs or reset the active-time ceiling.",
+  "next_action": "Fix R1 completion phase allocation in one transaction in resume_worker and Group.enqueue; verify both interleavings",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -216,106 +190,17 @@
     "source_archive": "NativePeers-Source-9e0cefb.zip"
   },
   "schema_version": 2,
-  "stage": "Second independent review fully addressed; current verification qualified",
+  "stage": "Address every item from independent review 9e0cefb",
   "tests_current": {
-    "installed_passive": {
-      "global_claude_outside_owned_block_unchanged": true,
-      "owned_checks": "PRESENT",
-      "protected_config_and_auth_hashes_unchanged": true,
-      "second_install_operations": 0,
-      "status": "PASS"
+    "offline": {
+      "status": "NOT_RUN"
     },
-    "manager_and_naming": {
-      "scope": "Isolated fixture tests; no actual update/activation; concurrent documentation and smoke changes retained",
-      "status": "PASS",
-      "tests": 23
+    "installed_passive": {
+      "status": "NOT_RUN"
     },
     "native": {
-      "checks": [
-        {
-          "assertions": {
-            "01a1642d-b6c5-71f2-93ee-2e5be156fbf5_native_mcp": true,
-            "actual_parent_tool": true,
-            "all_completed": true,
-            "case_passed": true,
-            "current_source": true,
-            "distinct_native_ids": true,
-            "e62a4f92-3b15-44cf-8d6a-e73fc6a935e9_native_mcp": true,
-            "exact_parent": true,
-            "models": true,
-            "original_parent": true,
-            "original_parent_report": true,
-            "overlap": true,
-            "own_uuid_reported": true,
-            "wait_claim": true
-          },
-          "native_tool_events": {
-            "01a1642d-b6c5-71f2-93ee-2e5be156fbf5": {
-              "peer_inbox": "exec-6d8ea4e3-1632-4886-b186-d608fba193cf",
-              "task_status": "exec-3fc402f1-0413-415c-84fb-9145fda0e3fd"
-            },
-            "e62a4f92-3b15-44cf-8d6a-e73fc6a935e9": {
-              "peer_inbox": 9,
-              "task_status": 3
-            }
-          },
-          "parent_final_events": [
-            "01a1642d-9500-71c1-808e-162cb37ad412"
-          ],
-          "parent_native_id": "01a1642d-929b-7343-9a2b-37911b79fbe4",
-          "provider": "codex",
-          "status": "PASS",
-          "worker_native_ids": [
-            "01a1642d-b6c5-71f2-93ee-2e5be156fbf5",
-            "e62a4f92-3b15-44cf-8d6a-e73fc6a935e9"
-          ]
-        },
-        {
-          "assertions": {
-            "01a1642d-bbb9-7503-80a7-0f071ddf5580_native_mcp": true,
-            "actual_parent_tool": true,
-            "all_completed": true,
-            "case_passed": true,
-            "current_source": true,
-            "distinct_native_ids": true,
-            "exact_parent": true,
-            "models": true,
-            "original_parent": true,
-            "original_parent_report": true,
-            "own_uuid_reported": true,
-            "wait_claim": true
-          },
-          "native_tool_events": {
-            "01a1642d-bbb9-7503-80a7-0f071ddf5580": {
-              "peer_inbox": "exec-1403caca-5aeb-4609-b6f4-293942b7993a",
-              "task_status": "exec-de54b55f-44cd-4825-94e1-a595838cf296"
-            }
-          },
-          "parent_final_events": [
-            6
-          ],
-          "parent_native_id": "b59c232f-d769-49a5-8efd-5aa024d6d399",
-          "provider": "antigravity",
-          "status": "PASS",
-          "worker_native_ids": [
-            "01a1642d-bbb9-7503-80a7-0f071ddf5580"
-          ]
-        }
-      ],
-      "native_event_overlap_seconds": 10.13041090965271,
-      "remaining_acceptance": "Fresh Claude, new copy mode inference, failure-window/cancel/resume/push variants, dedicated Gemini sibling/active cancel, authenticated alternate homes and remaining original matrix not certified",
-      "status": "PASS_SCOPED",
-      "submitted_inputs": 5
-    },
-    "offline": {
-      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
-      "contract_tests": 65,
-      "independent_linux_execution": "NOT_RUN",
-      "python": "3.14.8",
-      "status": "PASS",
-      "subtests": 388,
-      "tests": 268,
-      "unit_tests": 203
+      "status": "NOT_RUN",
+      "reason": "No new native model submissions; retained cumulative ceiling and time unchanged"
     }
   },
   "transports": {
