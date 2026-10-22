@@ -38,7 +38,7 @@ class Router:
                     "APPROVAL_BLOCKED", "Worker has no grant to message that peer")
 
     async def send(self, caller, target, text, *, client_request_id=None, expect_reply=False,
-                   in_reply_to=None, kind=None, expires_seconds=1800, artifact_refs=()):
+                   in_reply_to=None, kind=None, expires_seconds=1800, artifact_refs=(),admission_deadline=None):
         text = bounded_text(text)
         from .policy import load
         local=load(self.journal)
@@ -51,7 +51,7 @@ class Router:
         existing = self.journal.one("SELECT * FROM send_requests WHERE caller_key=? AND client_request_id=?", (caller.key,request_id))
         if existing:
             require(existing["payload_sha256"] == digest, "IDEMPOTENCY_CONFLICT", "Request ID already has different content")
-            return await self.admit(existing["message_id"], request_id)
+            return await self.admit(existing["message_id"], request_id,admission_deadline=admission_deadline)
         reference = None
         if in_reply_to:
             row = self.journal.one("SELECT payload_json FROM messages WHERE message_id=?", (in_reply_to,))
@@ -100,9 +100,9 @@ class Router:
                     original_attempt=db.execute('SELECT attempt_id FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1',(in_reply_to,)).fetchone()
                     db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),in_reply_to,original_attempt['attempt_id'] if original_attempt else None,
                         'REPLY_RECORDED','explicit-bound-peer-reply',caller.key,None,canonical({'reply_message_id':message_id}).decode(),time.time()))
-        return await self.admit(message_id, request_id)
+        return await self.admit(message_id, request_id,admission_deadline=admission_deadline)
 
-    async def admit(self, message_id, request_id):
+    async def admit(self, message_id, request_id,*,admission_deadline=None):
         # Only durable, definitely unsubmitted intent is retryable. Never resolve its alias again.
         outcome = self.outcome(message_id)
         if outcome['state'] not in ('OUTBOX_COMMITTED', 'ADMISSION_DEFERRED'):
@@ -119,6 +119,7 @@ class Router:
                     attempt = db.execute('SELECT * FROM attempts WHERE attempt_id=?', (attempt_id,)).fetchone()
                     if attempt['state'] not in ('OUTBOX_COMMITTED', 'ADMISSION_DEFERRED'):
                         return dict(self.outcome(message_id), client_request_id=request_id)
+                    require(admission_deadline is None or time.time()<admission_deadline, 'EXPIRED_BEFORE_SUBMISSION', 'Controller lifetime ended before native admission')
                     peer = self.registry.verify(target, attempt['target_incarnation'])
                     require(time.time() < envelope['expires_at'], 'EXPIRED_BEFORE_SUBMISSION', 'Message expired before native admission')
                     adapter = self.adapters.get(attempt['transport'])

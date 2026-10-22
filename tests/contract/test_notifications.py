@@ -32,7 +32,7 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.j=Journal(Path(self.temp.name));self.addCleanup(self.j.close)
         parent=Registry(self.j).register('codex',Path(self.temp.name),new_id(),'test parent',identity(os.getpid()).json(),self.temp.name,{'kind':'fake'},owner_kind='test')
         self.parent=parent['handle'];self.id=new_id();self.worker=new_id();self.task=new_id()
-        policy={'initial_tasks':[self.task],'phases':{'1':[self.task]},'parent_owner':parent['owner'],'parent_incarnation':parent['incarnation_id'],'completion_mode':'push','workers':[self.worker]}
+        policy={'initial_tasks':[self.task],'phases':{'1':[self.task]},'parent_owner':parent['owner'],'parent_incarnation':parent['incarnation_id'],'completion_mode':'push','workers':[self.worker],'created_at':time.time(),'wall_time_seconds':60}
         self.j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(self.id,self.parent,canonical(policy).decode(),'RUNNING','{}'))
         self.j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(self.worker,self.id,None,'codex',new_id(),'test','gpt-6.1-sol',None,'xhigh',self.temp.name,None,'RUNNING',1,'{}'))
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(self.task,self.worker,None,None,'RUNNING',None,None,1,'{}'))
@@ -318,12 +318,13 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls,2);self.assertIsNone(self.group.shutdown_reason)
 
     async def test_running_monitor_honors_owned_resume_lifetime_renewal(self):
-        self.complete();self.group.policy.update(created_at=time.time()-20,wall_time_seconds=1,survive_parent=False,followup_grace_seconds=0)
+        self.complete();self.group.policy.update(created_at=time.time()-.9,wall_time_seconds=1,survive_parent=False,followup_grace_seconds=0)
         calls=0;followup=new_id()
         async def notify(generation):
             nonlocal calls
             calls+=1
             if calls==1:
+                await asyncio.sleep(.2)
                 # The resume connection reloads this same persisted policy on a live supervisor.
                 self.group.policy.update(created_at=time.time(),wall_time_seconds=10)
                 self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(self.group.policy).decode(),))
@@ -334,3 +335,24 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(calls,2);self.assertIsNone(self.group.shutdown_reason)
         restarted=Group(self.j,self.id)
         self.assertEqual(restarted.lifetime_deadline(),self.group.lifetime_deadline())
+
+    async def test_expired_completion_is_not_submitted_before_lifetime_check(self):
+        self.complete();self.group.policy.update(created_at=time.time()-2,wall_time_seconds=1,survive_parent=False,followup_grace_seconds=0)
+        with patch('nativepeers.core.Core') as core:
+            send=core.return_value.router.send=AsyncMock()
+            await self.group.notify();await self.group.monitor();send.assert_not_awaited()
+        self.assertEqual(self.group.shutdown_reason,'GROUP_DEADLINE_EXCEEDED')
+
+    async def test_completion_expiry_is_rechecked_after_recipient_lock(self):
+        from nativepeers.files import advisory_lock,sha256
+        self.complete();core=Core(self.j);calls=[]
+        async def deliver(peer,message):calls.append(message);return {'stage':'ACCEPTED_QUEUED'}
+        core.router.adapters['fake']=deliver
+        self.group.policy.update(created_at=time.time(),wall_time_seconds=.04)
+        lock=self.j.root/'locks'/(sha256(self.parent)+'.lock')
+        with patch('nativepeers.core.Core',return_value=core):
+            with advisory_lock(lock):
+                task=asyncio.create_task(self.group.notify());await asyncio.sleep(.08)
+            await asyncio.wait_for(task,1)
+        self.assertEqual(calls,[]);self.assertEqual(self.route()['state'],'RETAINED')
+        self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'EXPIRED_BEFORE_SUBMISSION')

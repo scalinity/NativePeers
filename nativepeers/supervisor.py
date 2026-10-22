@@ -295,6 +295,7 @@ class Group:
         finally:disconnected.cancel();self.changed.set()
 
     async def notify(self,generation=1):
+        if time.time()>=self.lifetime_deadline():return
         if not self.phase_done(generation):return
         with self.journal.transaction() as db:
             row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()
@@ -331,7 +332,7 @@ class Group:
                     except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
                     budget.admit(reservation)
                     self.journal.event(row['delivery_id'],'completion-budget-reserved',{'reservation':reservation})
-            receipt=await Core(self.journal).router.send(self.controller,self.row['parent_key'],text,kind='completion',client_request_id=row['delivery_id'])
+            receipt=await Core(self.journal).router.send(self.controller,self.row['parent_key'],text,kind='completion',client_request_id=row['delivery_id'],admission_deadline=self.lifetime_deadline())
             deferred=receipt['state'] in ('OUTBOX_COMMITTED','ADMISSION_DEFERRED')
             error=delivery_error(receipt)
             state=('UNCLAIMED' if deferred else 'PUSH_ACCEPTED' if receipt['state'] in ('INGESTED','ACCEPTED_QUEUED')
@@ -351,11 +352,13 @@ class Group:
 
     async def monitor(self):
         while True:
+            expired=time.time()>=self.lifetime_deadline()
             tasks=self.tasks();active=any(t['state'] not in TERMINAL for t in tasks)
             if self.initial_done():
                 state='COMPLETED' if all(t['state']=='COMPLETED' for t in tasks if t['task_id'] in self.policy['initial_tasks']) else 'PARTIAL'
                 self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(state,self.id))
-                for phase in self.phases():await self.notify(int(phase))
+                if not expired:
+                    for phase in self.phases():await self.notify(int(phase))
                 # Notification awaits can admit a successor; never start idle grace
                 # from the activity snapshot taken before that await.
                 active=any(t['state'] not in TERMINAL for t in self.tasks())
