@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS workers (worker_id TEXT PRIMARY KEY,group_id TEXT REF
 CREATE TABLE IF NOT EXISTS tasks (task_id TEXT PRIMARY KEY,worker_id TEXT NOT NULL REFERENCES workers(worker_id),
  request_message_id TEXT,native_turn_id TEXT,state TEXT NOT NULL,result_artifact_id TEXT,terminal_reason TEXT,
  generation INTEGER NOT NULL,task_json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS resume_requests (caller_key TEXT NOT NULL,client_request_id TEXT NOT NULL,
+ payload_sha256 TEXT NOT NULL,task_id TEXT NOT NULL REFERENCES tasks(task_id),response_json TEXT NOT NULL,
+ PRIMARY KEY(caller_key,client_request_id));
 CREATE TABLE IF NOT EXISTS events (sequence INTEGER PRIMARY KEY AUTOINCREMENT,subject_id TEXT NOT NULL,
  kind TEXT NOT NULL,payload_json TEXT NOT NULL,at REAL NOT NULL);
 CREATE TABLE IF NOT EXISTS artifacts (artifact_id TEXT PRIMARY KEY,sha256 TEXT NOT NULL,byte_size INTEGER NOT NULL,
