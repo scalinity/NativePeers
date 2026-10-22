@@ -25,14 +25,21 @@ async def group_call(journal,group_id,operation,payload,timeout=5):
             'OWNERSHIP_UNKNOWN','Unsafe group endpoint')
     wire=canonical({'operation':operation,'payload':payload,'token':manifest['token']})+b'\n'
     require(len(wire)<=PEER_FRAME,'PAYLOAD_TOO_LARGE','Group request exceeds 64 KiB')
-    reader,writer=await asyncio.wait_for(asyncio.open_unix_connection(str(endpoint),limit=CONTROL_RESPONSE+1),timeout)
+    writer=None
     try:
+        reader,writer=await asyncio.wait_for(asyncio.open_unix_connection(str(endpoint),limit=CONTROL_RESPONSE+1),timeout)
         writer.write(wire);await writer.drain()
         raw=await asyncio.wait_for(reader.readline(),timeout)
+        require(raw,'SUPERVISOR_LOST','Group connection closed before its response',may_have_received=operation not in ('hello','status','wait','result'))
         require(len(raw)<=CONTROL_RESPONSE,'PROTOCOL_ERROR','Group response exceeds 2 MiB')
         value=json.loads(raw)
         if not value.get('ok'):
             error=value['error'];raise PeerError(error['code'],error['message'],may_have_received=error.get('may_have_received',False))
         return value['data']
+    except (ConnectionError,asyncio.IncompleteReadError,TimeoutError) as error:
+        raise PeerError('SUPERVISOR_LOST','Group connection was lost before its response',may_have_received=operation not in ('hello','status','wait','result')) from error
     finally:
-        writer.close();await writer.wait_closed()
+        if writer is not None:
+            writer.close()
+            try:await writer.wait_closed()
+            except (ConnectionError,OSError):pass

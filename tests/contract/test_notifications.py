@@ -487,3 +487,55 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertTrue(all(r['waiter_id'] is None and r['mode']=='wait' for r in routes))
         await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':30,'on_timeout':'push'},Reader(True))
         self.assertEqual([r['mode'] for r in self.j.all('SELECT mode FROM completion_routes')],['push']*2)
+
+    async def test_established_wait_eof_or_abort_returns_committed_result_through_cli_and_mcp(self):
+        from nativepeers.cli import parser,dispatch
+        from nativepeers.files import atomic_json,private_directory
+        from nativepeers.mcp_server import Facade
+        from types import SimpleNamespace
+        endpoint=self.group.endpoint
+        for interface in ('cli','mcp'):
+            for close_mode in ('eof','abort'):
+                with self.subTest(interface=interface,close_mode=close_mode):
+                    self.j.db.execute("UPDATE tasks SET state='RUNNING',result_artifact_id=NULL")
+                    self.j.db.execute("UPDATE completion_routes SET state='UNCLAIMED',waiter_id=NULL")
+                    async def connection(reader,writer):
+                        await reader.readline();self.complete()
+                        if close_mode=='abort':writer.transport.abort()
+                        else:writer.close();await writer.wait_closed()
+                    server=await asyncio.start_unix_server(connection,path=str(endpoint));os.chmod(endpoint,0o600)
+                    atomic_json(self.j.root/'groups'/self.id/'owner.json',{'owner':self.group.owner,'endpoint':str(endpoint),'token':'test-token'})
+                    try:
+                        if interface=='cli':
+                            with patch('nativepeers.cli.bind_caller',return_value=self.group.parent):value=await dispatch(parser().parse_args(['wait',self.id,'--json']),self.j)
+                        else:
+                            facade=Facade(self.j,None)
+                            with patch.object(facade,'binding_state',return_value={'state':'BOUND','provider':'codex','grants':{}}),patch('nativepeers.mcp_server.bind_caller',return_value=self.group.parent):
+                                response=await facade.call(None,SimpleNamespace(name='task_wait',arguments={'handle':self.id}))
+                            self.assertFalse(response.is_error);value=json.loads(response.content[0].text)['data']
+                        self.assertTrue(value['ready']);self.assertTrue(value['notification_output_uncertain'])
+                        self.assertEqual(value['result']['results'][0]['summary'],'retained finding')
+                        await self.assert_no_phase_push()
+                    finally:server.close();await server.wait_closed();endpoint.unlink(missing_ok=True)
+
+    async def test_established_connection_loss_with_running_task_is_structured_and_never_retried(self):
+        from nativepeers.control import group_call
+        from nativepeers.errors import PeerError
+        from nativepeers.files import atomic_json
+        from types import SimpleNamespace
+        endpoint=self.group.endpoint
+        server=await asyncio.start_unix_server(lambda r,w:None,path=str(endpoint));os.chmod(endpoint,0o600)
+        atomic_json(self.j.root/'groups'/self.id/'owner.json',{'owner':self.group.owner,'endpoint':str(endpoint),'token':'test-token'})
+        try:
+            for operation in ('wait','enqueue','resume'):
+                writer=SimpleNamespace(write=lambda value:None,drain=AsyncMock(),close=lambda:None,wait_closed=AsyncMock())
+                reader=SimpleNamespace(readline=AsyncMock(side_effect=ConnectionResetError('fixture reset')))
+                with patch('nativepeers.control.asyncio.open_unix_connection',AsyncMock(return_value=(reader,writer))) as connect:
+                    with self.assertRaises(PeerError) as failure:
+                        if operation=='wait':await Delegation(self.j,Registry(self.j)).wait(self.group.parent,self.id)
+                        else:await group_call(self.j,self.id,operation,{})
+                    self.assertEqual(failure.exception.code,'SUPERVISOR_LOST')
+                    self.assertEqual(failure.exception.may_have_received,operation!='wait');connect.assert_awaited_once()
+            self.assertEqual(self.j.one('SELECT state FROM tasks')['state'],'RUNNING')
+            self.assertEqual(self.route()['state'],'UNCLAIMED')
+        finally:server.close();await server.wait_closed();endpoint.unlink(missing_ok=True)
