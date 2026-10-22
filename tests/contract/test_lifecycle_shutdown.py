@@ -121,6 +121,9 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
         snapshot=self.group.tasks();await self.group.close();self.assertEqual(self.group.tasks(),snapshot)
 
     async def test_abrupt_worker_death_keeps_submitted_task_uncertain(self):
+        # Keep the fake native provider alive after its controller closes stdin.
+        self.binary.write_text(FAKE_PROVIDER+'\nimport time\nwhile True: time.sleep(1)\n')
+        atomic_json(self.root/'compat/runtime.json',{'providers':{'codex':fingerprint(self.binary)}})
         await self.start(unconfirmed=True)
         child=self.group.children[self.worker]
         manifest=json.loads((self.root/'workers'/(self.worker+'.json')).read_text())
@@ -128,6 +131,8 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(signal_owned(child['owner'],signal.SIGKILL,group=True),child['owner'])
             await asyncio.wait_for(child['process'].wait(),5);await child['reader']
             first=self.j.one('SELECT * FROM tasks WHERE task_id=?',(self.first,))
+            self.assertFalse(matches(manifest['native_process']), 'Production cleanup must stop the orphan before fixture teardown')
+            self.assertEqual(self.j.one('SELECT state FROM workers')['state'],'RELEASED_RESUMABLE')
             self.assertEqual(first['state'],'INTERRUPTED')
             self.assertEqual(json.loads(first['terminal_reason'])['code'],'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS')
             self.assertEqual(self.j.one('SELECT state FROM tasks WHERE task_id=?',(self.successor,))['state'],'FAILED')

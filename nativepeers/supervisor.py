@@ -96,12 +96,14 @@ class Group:
             self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':str(error)[:1000]},child['row']['generation'])
         finally:
             if not child['ready'].done():child['ready'].set_exception(PeerError('WORKER_CRASHED','Worker exited before readiness'))
+            if not self.closing:
+                await self.release_worker(worker_id,expected=child)
             self.changed.set()
 
     def fail_worker(self,worker_id,error,generation=None):
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
         if generation is not None and row['generation']!=generation:return
-        self.journal.db.execute("UPDATE workers SET state='FAILED' WHERE worker_id=?",(worker_id,))
+        self.journal.db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if worker_id in self.children else 'FAILED',worker_id))
         for task in self.tasks():
             if task['worker_id']!=worker_id or task['state'] in TERMINAL:continue
             unstarted=task['state']=='QUEUED' and task['native_turn_id'] is None
@@ -119,23 +121,45 @@ class Group:
         try:await self.send_worker(worker_id,dict(operation='cancel',**({'reason':reason} if reason else {})))
         except (BrokenPipeError,ConnectionError):pass
 
-    async def release_worker(self,worker_id):
+    async def cleanup_native(self,worker_id,child):
+        path=self.journal.root/'workers'/(worker_id+'.json')
+        if not path.exists():return
+        manifest=json.loads(path.read_text())
+        row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
+        if not row or row['generation']!=child['row']['generation']:return
+        if manifest.get('worker_id')!=worker_id or manifest.get('generation')!=row['generation'] or manifest.get('native_id')!=row['native_id']:return
+        owner=manifest.get('native_process')
+        if not owner or not matches(owner):return
+        signal_owned(owner,signal.SIGTERM,group=True)
+        deadline=time.monotonic()+1
+        while matches(owner) and time.monotonic()<deadline:await asyncio.sleep(.02)
+        if matches(owner):signal_owned(owner,signal.SIGKILL,group=True)
+        deadline=time.monotonic()+2
+        while matches(owner) and time.monotonic()<deadline:await asyncio.sleep(.02)
+        require(not matches(owner),'OWNERSHIP_CONFLICT','Owned native provider did not stop; worker capacity remains reserved')
+        self.journal.event(worker_id,'orphan-provider-stopped',{'generation':row['generation'],'pid':owner['pid']})
+
+    async def release_worker(self,worker_id,*,expected=None):
         child=self.children[worker_id]
-        self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND state!='RELEASED_RESUMABLE'",(worker_id,))
+        if expected is not None and child is not expected:return
+        self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND generation=? AND state!='RELEASED_RESUMABLE'",(worker_id,child['row']['generation']))
         try:await self.send_worker(worker_id,dict(operation='release',**({'reason':self.shutdown_reason} if self.shutdown_reason else {})))
         except (BrokenPipeError,ConnectionError):pass
         if child.get('lease_fd') is not None:
             os.close(child['lease_fd']);child['lease_fd']=None
         try:await asyncio.wait_for(child['process'].wait(),22)
         except asyncio.TimeoutError:
-            manifest=self.journal.root/'workers'/(worker_id+'.json')
-            if manifest.exists():
-                value=json.loads(manifest.read_text())
-                if value.get('worker_id')==worker_id and value.get('generation')==child['row']['generation'] and value.get('native_process'):
-                    signal_owned(value['native_process'],signal.SIGTERM,group=True)
+            await self.cleanup_native(worker_id,child)
             signal_owned(child['owner'],signal.SIGTERM,group=True)
             try:await asyncio.wait_for(child['process'].wait(),5)
-            except asyncio.TimeoutError:signal_owned(child['owner'],signal.SIGKILL,group=True);await child['process'].wait()
+            except asyncio.TimeoutError:
+                signal_owned(child['owner'],signal.SIGKILL,group=True)
+                await asyncio.wait_for(child['process'].wait(),5)
+        # A dead controller returns immediately from wait; its separately grouped
+        # native process still needs exact, generation-fenced cleanup.
+        await self.cleanup_native(worker_id,child)
+        require(not matches(child['owner']),'OWNERSHIP_CONFLICT','Worker controller still owns its process')
+        self.journal.db.execute("UPDATE workers SET state=CASE WHEN native_id IS NULL THEN 'FAILED' ELSE 'RELEASED_RESUMABLE' END WHERE worker_id=? AND generation=?",(worker_id,child['row']['generation']))
 
     async def initialize(self):
         self.server=await asyncio.start_unix_server(self.connection,path=str(self.endpoint),limit=PEER_FRAME+1)
