@@ -385,3 +385,27 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(len(budget['outstanding_native_requests']),1 if disposition=='unknown' else 0)
                 if disposition!='unknown':self.assertIsNotNone(budget['active_intervals'][0]['end'])
                 core.router.adapters['fake'].assert_not_awaited()
+
+    async def test_idle_close_serializes_with_resume_reservation(self):
+        from nativepeers.files import async_advisory_lock
+        self.complete();self.group.policy.update(created_at=time.time(),wall_time_seconds=10,survive_parent=False,followup_grace_seconds=0)
+        self.group.finished_at=time.time()-20;self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED'")
+        successor=new_id()
+        async with async_advisory_lock(self.j.root/'locks'/(self.id+'.resume.lock')):
+            monitor=asyncio.create_task(self.group.monitor());await asyncio.sleep(.03)
+            self.assertFalse(monitor.done())
+            self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(successor,self.worker,None,None,'RUNNING',None,None,1,'{}'))
+            self.group.finished_at=None
+        await asyncio.sleep(.03);self.assertFalse(monitor.done());self.assertFalse(self.group.closing)
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(successor,));self.group.changed.set()
+        await asyncio.wait_for(monitor,2)
+        self.assertTrue(self.group.closing);self.assertEqual(self.j.one('SELECT state FROM groups')['state'],'RELEASING')
+
+    async def test_closing_supervisor_refuses_resume_before_new_worker_launch(self):
+        from types import SimpleNamespace
+        self.group.closing=True;output=[]
+        reader=SimpleNamespace(readline=AsyncMock(return_value=canonical({'token':self.group.token,'operation':'resume','payload':{'caller_key':self.parent}})+b'\n'))
+        writer=SimpleNamespace(write=output.append,drain=AsyncMock(),close=lambda:None,wait_closed=AsyncMock())
+        with patch.object(self.group,'start_worker',new_callable=AsyncMock) as start:
+            await self.group.connection(reader,writer);start.assert_not_awaited()
+        self.assertEqual(json.loads(output[0])['error']['code'],'SUPERVISOR_RELEASING')

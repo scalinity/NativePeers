@@ -1,5 +1,6 @@
 """Exact owned-history release/resume. No peer is adopted or resumed for delivery."""
 import json
+import asyncio
 from pathlib import Path
 import shlex
 import time
@@ -66,7 +67,7 @@ def resume_command(journal,caller,worker_id):
 async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
     require(completion_mode in (None,'push','wait'),'PROTOCOL_ERROR','Invalid resume completion mode')
     text=bounded_text(text);row,group=owned_worker(journal,caller,worker_id)
-    async with async_advisory_lock(journal.root/'locks'/(worker_id+'.resume.lock')):
+    async with async_advisory_lock(journal.root/'locks'/(group['group_id']+'.resume.lock')):
         row,group=owned_worker(journal,caller,worker_id);assert_released(journal,row)
         registry=Registry(journal);parent=registry.verify(caller.key,caller.incarnation)
         from .policy import load
@@ -80,6 +81,12 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
         require(profile in parent.get('policy',{}).get('profiles',['analysis']),'PERMISSION_CAPABILITY_UNKNOWN','Current parent does not retain the original permission ceiling')
         policy=json.loads(group['policy_json']);manifest_path=journal.root/'groups'/group['group_id']/'owner.json'
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else None
+        if group['state']=='RELEASING' and manifest:
+            # Idle shutdown claimed this lifetime before resume acquired the lock.
+            # No new task is reserved until that exact finite owner has exited.
+            deadline=time.monotonic()+30
+            while matches(manifest['owner']) and time.monotonic()<deadline:await asyncio.sleep(.03)
+            require(not matches(manifest['owner']),'OWNERSHIP_CONFLICT','Previous supervisor is still releasing; no resume input admitted')
         supervisor_alive=bool(manifest and matches(manifest['owner']))
         controller_generation=manifest['generation'] if supervisor_alive else policy.get('controller_generation',1)+1
         phases=policy.get('phases',{'1':policy['initial_tasks']});phase=max(int(n) for n in phases)+1;task_id=new_id()

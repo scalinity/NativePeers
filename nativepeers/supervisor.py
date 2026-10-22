@@ -15,7 +15,7 @@ from .caller import Caller
 from .control import runtime_root
 from .delegation import Delegation,TERMINAL,supervisor_environment
 from .errors import PeerError,require
-from .files import advisory_lock,atomic_json,canonical
+from .files import advisory_lock,async_advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
 from .notifications import claim_wait,wait_generation,wait_output,settle_deferred
@@ -191,6 +191,7 @@ class Group:
             elif op=='cancel':
                 value=await self.cancel(payload)
             elif op=='resume':
+                require(not self.closing,'SUPERVISOR_RELEASING','Group has begun releasing ownership')
                 require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Resume requires the owning parent')
                 self.policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(self.id,))['policy_json'])
                 row=self.journal.one("SELECT * FROM workers WHERE worker_id=? AND group_id=? AND state='RESERVED'",(payload['worker_id'],self.id))
@@ -368,6 +369,12 @@ class Group:
             deadline=self.lifetime_deadline()
             parent_gone=not matches(self.policy['parent_owner']) and not self.policy['survive_parent']
             if parent_gone or time.time()>deadline:
+                async with async_advisory_lock(self.journal.root/'locks'/(self.id+'.resume.lock')):
+                    deadline=self.lifetime_deadline()
+                    parent_gone=not matches(self.policy['parent_owner']) and not self.policy['survive_parent']
+                    if not parent_gone and time.time()<=deadline:continue
+                    self.closing=True
+                    self.journal.db.execute("UPDATE groups SET state='RELEASING' WHERE group_id=?",(self.id,))
                 self.shutdown_reason=self.shutdown_reason or ('PARENT_LOST' if parent_gone else 'GROUP_DEADLINE_EXCEEDED')
                 # The worker claims RUNNING before submitting native input. This compare-and-set
                 # prevents buffered successors from starting after the lifetime has ended.
@@ -377,7 +384,15 @@ class Group:
                 if time.time()>deadline+20 or parent_gone:
                     self.journal.event(self.id,'lifetime-ended',{'parent_gone':parent_gone,'deadline':deadline});break
             pending_push=self.journal.one("SELECT 1 FROM completion_routes WHERE group_id=? AND mode='push' AND state='UNCLAIMED' LIMIT 1",(self.id,))
-            if not active and self.finished_at is not None and not pending_push and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:break
+            if not active and self.finished_at is not None and not pending_push and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:
+                async with async_advisory_lock(self.journal.root/'locks'/(self.id+'.resume.lock')):
+                    # An owning parent reserves and hands off resume under this lock.
+                    # Recheck the journal after acquisition before announcing shutdown.
+                    if any(t['state'] not in TERMINAL for t in self.tasks()):
+                        self.finished_at=None;continue
+                    self.closing=True
+                    self.journal.db.execute("UPDATE groups SET state='RELEASING' WHERE group_id=?",(self.id,))
+                    break
             self.changed.clear()
             try:await asyncio.wait_for(self.changed.wait(),1)
             except asyncio.TimeoutError:pass
