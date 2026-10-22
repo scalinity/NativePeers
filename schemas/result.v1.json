@@ -44,6 +44,195 @@
       "items": {
         "type": "string"
       }
+    },
+    "findings": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "$ref": "#/$defs/finding"
+      }
+    },
+    "verification": {
+      "type": "object",
+      "properties": {
+        "tests_run": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/check"
+          }
+        },
+        "limitations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "changes": {
+      "type": "object",
+      "properties": {
+        "worktree": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "commit": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "patch_artifact": {
+          "$ref": "#/$defs/nullableString",
+          "description": "Reconstructs the final worker tree from baseline HEAD, including inherited dirty input."
+        },
+        "patch_unavailable_reason": {
+          "type": "string"
+        },
+        "worker_delta_artifact": {
+          "$ref": "#/$defs/nullableString",
+          "description": "Immutable patch containing only changes against the frozen materialized input."
+        },
+        "worker_delta_empty": {
+          "type": "boolean",
+          "description": "True when delta capture succeeded with no worker changes."
+        },
+        "worker_delta_base": {
+          "$ref": "#/$defs/nullableString",
+          "description": "Git tree of the frozen materialized input, also recorded as baseline.input_tree."
+        },
+        "worker_delta_unavailable_reason": {
+          "type": "string"
+        },
+        "changed_files": {
+          "$ref": "#/$defs/fileList"
+        },
+        "untracked_files": {
+          "$ref": "#/$defs/fileList"
+        },
+        "excluded_sensitive_or_symlink_files": {
+          "$ref": "#/$defs/fileList"
+        },
+        "file_count": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "baseline": {
+          "type": "object",
+          "properties": {
+            "input_tree": {
+              "type": "string",
+              "description": "Local Git tree object containing the frozen worker input."
+            },
+            "untracked_inputs": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "required": [
+                  "sha256",
+                  "mode"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "mode": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4095
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "reportText": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "finding": {
+      "type": "object",
+      "required": [
+        "severity",
+        "summary",
+        "source",
+        "independently_verified"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "enum": [
+            "critical",
+            "warning",
+            "info"
+          ]
+        },
+        "summary": {
+          "$ref": "#/$defs/reportText"
+        },
+        "file": {
+          "$ref": "#/$defs/reportText"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source": {
+          "const": "worker-reported"
+        },
+        "independently_verified": {
+          "const": false
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "required": [
+        "command",
+        "outcome",
+        "source",
+        "independently_verified"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "$ref": "#/$defs/reportText"
+        },
+        "outcome": {
+          "enum": [
+            "passed",
+            "failed",
+            "not_run"
+          ]
+        },
+        "details": {
+          "$ref": "#/$defs/reportText"
+        },
+        "source": {
+          "const": "worker-reported"
+        },
+        "independently_verified": {
+          "const": false
+        }
+      }
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "fileList": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   }
 }
