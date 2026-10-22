@@ -17,8 +17,9 @@ from nativepeers.supervisor import Group
 
 
 class Reader:
-    def __init__(self,disconnected=False):self.disconnected=disconnected
+    def __init__(self,disconnected=False,ready=None):self.disconnected=disconnected;self.ready=ready
     async def read(self,n):
+        if self.ready is not None:self.ready.set()
         if self.disconnected:return b''
         await asyncio.Future()
 
@@ -46,8 +47,9 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         policy['initial_tasks']=[self.task,second];policy['phases']={'1':[self.task,second]};self.group.policy=policy
         self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(policy).decode(),))
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(second,self.worker,None,None,'RUNNING',None,None,1,'{}'))
-        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.task,'timeout_ms':1000},Reader()))
-        await asyncio.sleep(.01)
+        ready=asyncio.Event()
+        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.task,'timeout_ms':1000},Reader(ready=ready)))
+        await asyncio.wait_for(ready.wait(),1)
         self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(self.task,));self.group.changed.set()
         result=await waiter
         self.assertTrue(result['ready']);self.assertEqual(self.route()['state'],'UNCLAIMED')
@@ -67,8 +69,9 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.route()['state'],'UNCLAIMED');self.assertEqual(self.route()['mode'],'wait')
 
     async def test_single_initial_task_wait_preserves_its_separate_batch_push(self):
-        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.task,'timeout_ms':1000},Reader()))
-        await asyncio.sleep(.01)
+        ready=asyncio.Event()
+        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.task,'timeout_ms':1000},Reader(ready=ready)))
+        await asyncio.wait_for(ready.wait(),1)
         self.assertEqual(self.route()['state'],'UNCLAIMED')
         self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(self.task,));self.group.changed.set()
         result=await waiter
