@@ -52,3 +52,13 @@ class GroupDiscoveryTests(unittest.TestCase):
         self.assertEqual(result['group_id'],group);self.assertTrue(result['results_available']);self.assertEqual(result['result_count'],1)
         from nativepeers.pagination import encode
         with self.assertRaises(PeerError):self.service.groups(self.caller,1,encode(['groups','someone-else'],1,2))
+
+    def test_group_cursor_numbers_fit_sqlite_and_boundary_ceiling_remains_usable(self):
+        from nativepeers.pagination import encode,SQLITE_MAX
+        for position,ceiling in [(1,10**100),(10**100,1),(True,1)]:
+            with self.subTest(position=position,ceiling=ceiling),self.assertRaises(PeerError) as error:
+                self.service.groups(self.caller,1,encode(['groups',self.caller.key],position,ceiling))
+            self.assertEqual(error.exception.code,'PROTOCOL_ERROR')
+        self.group()
+        page=self.service.groups(self.caller,1,encode(['groups',self.caller.key],SQLITE_MAX,SQLITE_MAX))
+        self.assertEqual(len(page['groups']),1)

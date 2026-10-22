@@ -229,11 +229,14 @@ class Delegation:
         from .pagination import encode,decode
         scope=['groups',caller.key]
         ceiling=self.journal.one('SELECT COALESCE(MAX(rowid),0) n FROM groups')['n']
-        position=ceiling+1
-        if cursor is not None:position,ceiling=decode(cursor,scope)
-        require(type(position) is int and 0<position<=ceiling+1,'PROTOCOL_ERROR','Invalid group position')
-        rows=self.journal.all('SELECT rowid AS page_id,* FROM groups WHERE parent_key=? AND rowid<=? AND rowid<? ORDER BY rowid DESC LIMIT ?',
-                              (caller.key,ceiling,position,limit+1))
+        params=[caller.key]
+        predicate=''
+        if cursor is not None:
+            position,ceiling=decode(cursor,scope)
+            require(type(position) is int and 0<position<=ceiling,'PROTOCOL_ERROR','Invalid group position')
+            predicate=' AND rowid<?';params.append(position)
+        params.extend([ceiling,limit+1])
+        rows=self.journal.all('SELECT rowid AS page_id,* FROM groups WHERE parent_key=?'+predicate+' AND rowid<=? ORDER BY rowid DESC LIMIT ?',params)
         groups=[]
         for row in rows[:limit]:
             workers=self.journal.all('SELECT worker_id,role_title,provider,native_id,state,generation FROM workers WHERE group_id=? ORDER BY worker_id',(row['group_id'],))

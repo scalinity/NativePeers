@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import time
 
 from .adapters.native_delivery import claude_inbox, codex_queue
@@ -168,13 +169,13 @@ class Router:
         require(caller.kind=="peer","CALLER_UNBOUND","Inbox requires a bound native session")
         require(type(limit) is int and 0<limit<=100 and type(unread) is bool,"PROTOCOL_ERROR","Invalid inbox limit or unread selection")
         predicate = " AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=messages.message_id AND r.stage='MODEL_REPORTED_PROCESSED')" if unread else ''
-        from .pagination import encode,decode
+        from .pagination import encode,decode,SQLITE_MAX
         scope=['inbox',caller.key,unread]
         ceiling=self.journal.one('SELECT COALESCE(MAX(rowid),0) n FROM messages')['n']
         params=[caller.key];position=None
         if cursor is not None:
             position,ceiling=decode(cursor,scope)
-            require(isinstance(position,list) and len(position)==2 and type(position[0]) in (int,float) and isinstance(position[1],str),
+            require(isinstance(position,list) and len(position)==2 and type(position[0]) in (int,float) and -SQLITE_MAX-1<=position[0]<=SQLITE_MAX and math.isfinite(position[0]) and isinstance(position[1],str) and len(position[1])<=512,
                     'PROTOCOL_ERROR','Invalid inbox cursor position')
             predicate+=' AND (created_at<? OR (created_at=? AND message_id<?))'
             params.extend([position[0],position[0],position[1]])

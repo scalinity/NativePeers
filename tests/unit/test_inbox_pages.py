@@ -1,4 +1,4 @@
-import json,os,tempfile,unittest
+import asyncio,base64,json,os,tempfile,unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -57,3 +57,25 @@ class InboxPageTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(page,await self.mcp(limit=1,paged=True))
         with self.assertRaises(PeerError):self.core.router.inbox(self.caller,1,True,cursor=page['next_cursor'])
         with self.assertRaises(PeerError):self.core.router.inbox(Caller('peer','someone',new_id()),1,cursor=page['next_cursor'])
+
+    async def test_oversized_or_nonfinite_cursors_are_structured_through_cli_and_mcp(self):
+        import io
+        from nativepeers.cli import main
+        from nativepeers.pagination import encode
+        fixtures=[([1,'message'],10**100),([10**100,'message'],0),([float('nan'),'message'],0),([float('inf'),'message'],0)]
+        for position,ceiling in fixtures:
+            with self.subTest(position=position,ceiling=ceiling):
+                cursor=base64.urlsafe_b64encode(json.dumps({'scope':['inbox',self.caller.key,False],'position':position,'ceiling':ceiling}).encode()).decode()
+                with self.assertRaises(PeerError) as error:self.core.router.inbox(self.caller,cursor=cursor)
+                self.assertEqual(error.exception.code,'PROTOCOL_ERROR')
+                output=io.StringIO()
+                def invoke():
+                    try:main()
+                    except SystemExit as exit:return exit.code
+                with patch('sys.argv',['npeer','inbox','--cursor',cursor,'--json']),patch.dict(os.environ,{'NPEER_HOME':str(self.j.root)}),patch('nativepeers.cli.bind_caller',return_value=self.caller),patch('sys.stdout',output):
+                    exit_code=await asyncio.to_thread(invoke)
+                self.assertNotEqual(exit_code,0);self.assertEqual(json.loads(output.getvalue())['error']['code'],'PROTOCOL_ERROR')
+                facade=Facade(self.j,None)
+                with patch.object(facade,'binding_state',return_value={'state':'BOUND','provider':'codex','grants':{}}),patch('nativepeers.mcp_server.bind_caller',return_value=self.caller):
+                    response=await facade.call(None,SimpleNamespace(name='peer_inbox',arguments={'cursor':cursor}))
+                self.assertTrue(response.is_error);self.assertEqual(json.loads(response.content[0].text)['error']['code'],'PROTOCOL_ERROR')
