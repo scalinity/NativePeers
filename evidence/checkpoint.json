@@ -118,14 +118,14 @@
   "current_review": {
     "evidence": "evidence/flash-fallback.json",
     "status": "COMPLETE: uncapped usage tracking; scoped native Flash fallback and readable original-parent return PASS",
-    "branch": "test/flash-fallback-native",
+    "branch": "main",
     "source_map_sha256": "e97d12268556bc9640d3a008078b88460f6cd6cba80cd0746231980fcbe60439",
-    "code_commit": null
+    "code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "branch": "test/flash-fallback-native",
-    "code_commit": null,
+    "branch": "main",
+    "code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -133,19 +133,8 @@
       "?? test_name_session.py"
     ],
     "base_commit": "74aa05ff63f694f543b23b9f80cd038278119af6",
-    "owned_uncommitted_changes": [
-      "nativepeers/budget.py",
-      "tests/unit/test_budget.py",
-      "tests/live/antigravity_paths.py",
-      "tests/live/flash_fallback.py",
-      "PROGRESS.md",
-      "docs/PROVIDER_FALLBACK.md",
-      "docs/VERIFICATION.md",
-      "evidence/live-budget.json",
-      "evidence/checkpoint.json",
-      "evidence/flash-fallback.json"
-    ],
-    "last_verified_publication": "74aa05ff63f694f543b23b9f80cd038278119af6"
+    "owned_uncommitted_changes": [],
+    "last_verified_publication": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
   },
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
@@ -186,7 +175,7 @@
     "sha256": "9239fbf36aae7043663b867b594627f8e11198cf8540aedf61f6f46c5cb9768e"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Commit and publish cap removal, current Flash verification and documentation; ready to address the new GPT-6 Pro report.",
+  "next_action": "Ready to address the new GPT-6 Pro report. No cumulative live-input/time cap; preserve usage tracking and use only explicitly selected available models.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -196,8 +185,10 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "status": "PENDING",
+    "status": "PUSHED",
     "repository": "https://github.com/scalinity/NativePeers",
+    "branch": "main",
+    "verified_remote_code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa",
     "source_zip_uploaded": false
   },
   "schema_version": 2,

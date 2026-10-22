@@ -211,8 +211,11 @@
     "private_capture_size": "under 2 MiB"
   },
   "publication": {
-    "status": "PENDING",
+    "status": "PUSHED",
     "repository": "https://github.com/scalinity/NativePeers",
+    "branch": "main",
+    "verified_remote_code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa",
     "source_zip_uploaded": false
-  }
+  },
+  "code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
 }
