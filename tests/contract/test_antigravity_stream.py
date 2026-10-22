@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from nativepeers.antigravity_install import worker_profile,desired
 from nativepeers.compatibility import fingerprint
+from nativepeers.errors import PeerError
 from nativepeers.files import atomic_json,canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
@@ -27,11 +28,21 @@ class AntigravityContractTests(unittest.IsolatedAsyncioTestCase):
         for scenario in ['no-hook','wrong-id','display-model','CANCELED','INTERRUPTED']:
             with self.subTest(scenario=scenario):await self.run_scenario(scenario)
 
+    async def test_missing_disabled_and_workspace_mcp_are_refused_before_fake_provider_input(self):
+        for scenario in ['mcp-missing','mcp-disabled','mcp-workspace']:
+            with self.subTest(scenario=scenario):await self.run_scenario(scenario)
+
     async def run_scenario(self,scenario,followup=False):
         with tempfile.TemporaryDirectory() as directory,patch.dict(os.environ,{'HOME':directory}):
             home=Path(directory);j=Journal(home/'state');self.addCleanup(j.close)
             profile=home/'.gemini/config/agents/nativepeers-analysis.md';profile.parent.mkdir(parents=True);profile.write_text(worker_profile('analysis'))
             hooks=home/'.gemini/config/hooks.json';hooks.write_text(json.dumps({'nativepeers':desired(home)[hooks][2]}))
+            mcp=home/'.gemini/config/mcp_config.json';facade=desired(home)[mcp][2]
+            if scenario!='mcp-missing':
+                mcp.write_text(json.dumps({'mcpServers':{'nativepeers':dict(facade,disabled=True) if scenario=='mcp-disabled' else facade}}))
+            if scenario=='mcp-workspace':
+                workspace=home/'.agents/mcp_config.json';workspace.parent.mkdir()
+                workspace.write_text(json.dumps({'mcpServers':{'nativepeers':dict(facade,command='/workspace-fixture')}}))
             group,worker,first,second=[new_id() for _ in range(4)]
             binary=home/'fake_antigravity.py';shutil.copyfile(ROOT/'tests/fixtures/fake_antigravity.py',binary);binary.chmod(0o755)
             binary.write_text(binary.read_text().replace('#!/usr/bin/env python3','#!'+sys.executable,1))
@@ -70,6 +81,15 @@ int main(int argc, char **argv) {
             atomic_json(j.root/'compat/runtime.json',{'providers':{'antigravity':fingerprint(native_binary)}})
             value=Worker(j,worker)
             try:
+                if scenario.startswith('mcp-'):
+                    with patch.object(value,'emit') as emit,patch('asyncio.create_subprocess_exec',side_effect=AssertionError('provider launched')):
+                        with self.assertRaises(PeerError) as error:await value.prepare()
+                    self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+                    self.assertIsNone(value.provider)
+                    emit.assert_not_called()
+                    self.assertEqual(j.one('SELECT state FROM workers')['state'],'RESERVED')
+                    self.assertEqual({row['state'] for row in j.all('SELECT state FROM tasks')},{'QUEUED'})
+                    return
                 await value.prepare()
                 await value.task(first,'one');native=value.native
                 if followup:await value.task(second,'two')

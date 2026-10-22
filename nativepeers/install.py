@@ -48,11 +48,18 @@ class Installer:
 
     def owned(self,handler,provider):return handler.get('type')=='command' and handler.get('command')==self.command_for(provider)
 
+    def desired_hooks(self,provider):
+        groups={}
+        for event in ['SessionStart','SessionEnd']+(['PreToolUse'] if provider=='claude' else []):
+            group={'hooks':[{'type':'command','command':self.command_for(provider),'timeout':3}]}
+            if event=='PreToolUse':group['matcher']='Bash'
+            groups[event]=group
+        return groups
+
     def merged(self,path,provider,remove=False):
         original=json.loads(path.read_text()) if path.exists() else {}
         result=json.loads(json.dumps(original));hooks=result.setdefault('hooks',{})
-        events=['SessionStart','SessionEnd']+(['PreToolUse'] if provider=='claude' else [])
-        for event in events:
+        for event,desired in self.desired_hooks(provider).items():
             groups=hooks.setdefault(event,[])
             if remove:
                 cleaned=[]
@@ -63,9 +70,7 @@ class Installer:
                 if cleaned:hooks[event]=cleaned
                 else:hooks.pop(event,None)
             elif not any(self.owned(h,provider) for g in groups for h in g.get('hooks',[])):
-                group={'hooks':[{'type':'command','command':self.command_for(provider),'timeout':3}]}
-                if event=='PreToolUse':group['matcher']='Bash'
-                groups.append(group)
+                groups.append(desired)
         if not hooks:result.pop('hooks',None)
         return original,result
 
@@ -213,3 +218,9 @@ class Installer:
 
 async def install(journal,dry_run=False):return await Installer(journal).install(dry_run)
 async def uninstall(journal,dry_run=False):return await Installer(journal).uninstall(dry_run)
+
+
+def readiness(journal):
+    """Inspect selected installation files without invoking or repairing providers."""
+    from .readiness import readiness as inspect
+    return inspect(journal)

@@ -108,8 +108,9 @@ async def dispatch(args,journal):
                 'next_action':'Read retained results; uncertain native input was not resubmitted.'}
     if name=='doctor':
         from .compatibility import diagnose
+        from .readiness import readiness
         require(not args.live,'BUDGET_EXHAUSTED','Live doctor never submits models automatically; use the explicit approved live harness and durable budget')
-        return dict(compatibility=diagnose(journal),registered_peers=core.registry.list(include_offline=True),
+        return dict(compatibility=diagnose(journal),integrations=readiness(journal),registered_peers=core.registry.list(include_offline=True),
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED','SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):

@@ -29,18 +29,64 @@ def worker_profile(profile):
 
 
 def verify_tool_gate(spec):
-    home=Path.home();path=home/'.gemini/config/hooks.json'
-    expected=desired(home)[path][2]
-    require(path.is_file() and json.loads(path.read_text()).get('nativepeers')==expected,
-            'PERMISSION_CAPABILITY_UNKNOWN','The required Antigravity NativePeers tool gate is missing or modified')
-    project=Path(spec['cwd'])/'.agents/hooks.json'
-    if project.exists():
-        override=json.loads(project.read_text()).get('nativepeers')
-        require(override is None or override==expected,'PERMISSION_CAPABILITY_UNKNOWN','Workspace overrides the owned Antigravity tool gate')
-    settings=home/'.gemini/antigravity-cli/settings.json'
-    if settings.exists():
-        override=json.loads(settings.read_text()).get('hooks',{}).get('nativepeers')
-        require(override is None or override==expected,'PERMISSION_CAPABILITY_UNKNOWN','Native settings override the owned Antigravity tool gate')
+    checks=hook_readiness(spec)+mcp_readiness(spec)
+    require(all(check['state']=='PRESENT' for check in checks),'PERMISSION_CAPABILITY_UNKNOWN',
+            'The Antigravity NativePeers tool gate or MCP facade is missing, disabled, modified or unresolved',details=checks)
+
+
+def hook_readiness(spec,*,home=None):
+    """Compare the owned hook block and the native override locations we check."""
+    home=home or Path.home();path=home/'.gemini/config/hooks.json'
+    expected=desired(home)[path][2];checks=[]
+    for target in (path,Path(spec['cwd'])/'.agents/hooks.json',home/'.gemini/antigravity-cli/settings.json'):
+        optional=target!=path
+        if optional and not target.exists():continue
+        try:
+            data=json.loads(target.read_text()) if target.exists() else {}
+            block=data.get('hooks',{}) if target.name=='settings.json' else data
+            current=block.get('nativepeers')
+            if optional and current is None:continue
+            state='MISSING' if current is None else 'PRESENT' if current==expected else 'MODIFIED'
+        except (OSError,ValueError,TypeError,AttributeError):state='UNKNOWN'
+        checks.append(dict(kind='hooks',path=str(target),state=state,native_effective_precedence='unknown'))
+    return checks
+
+
+def mcp_readiness(spec,*,home=None):
+    """Read owned MCP definitions; this does not resolve native runtime precedence."""
+    home=home or Path.home();path=home/'.gemini/config/mcp_config.json'
+    expected=desired(home)[path][2];checks=[]
+    # The installed CLI documents workspace customizations, but `agy mcp list`
+    # lists only global definitions. A conflicting workspace entry cannot prove
+    # the owned facade is available; do not guess which definition wins.
+    workspace=Path(spec['cwd']).resolve()
+    directories=[workspace]
+    for parent in workspace.parents:
+        if (directories[-1]/'.git').exists():break
+        directories.append(parent)
+    for target in [path,*(directory/'.agents/mcp_config.json' for directory in directories)]:
+        optional=target!=path
+        if optional and not target.exists():continue
+        state='MISSING';reason='Owned nativepeers MCP definition is absent'
+        try:
+            data=json.loads(target.read_text()) if target.exists() else {}
+            servers=data.get('mcpServers',{});current=servers.get('nativepeers')
+            if optional and 'nativepeers' not in servers:continue
+            if current is None and 'nativepeers' in servers:
+                state='UNKNOWN';reason='Owned MCP definition is not a server object'
+            elif current is not None:
+                current=dict(current)
+                disabled=current.pop('disabled',False)
+                state=('DISABLED' if disabled is True else 'UNKNOWN' if disabled is not False
+                       else 'PRESENT' if current==expected else 'MODIFIED')
+                reason=('Owned MCP definition matches' if state=='PRESENT' else
+                        'Native MCP configuration disables nativepeers' if state=='DISABLED' else
+                        'Owned MCP definition differs or restricts its tools')
+        except (OSError,ValueError,TypeError,AttributeError):
+            state='UNKNOWN';reason='MCP configuration could not be read as a server map'
+        checks.append(dict(kind='mcp_facade',path=str(target),state=state,reason=reason,
+                           native_effective_precedence='unknown'))
+    return checks
 
 
 def desired(home):
