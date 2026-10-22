@@ -1,16 +1,76 @@
+from contextlib import nullcontext
 import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+from nativepeers.compatibility import fingerprint, verify
 from nativepeers.errors import PeerError
-from nativepeers.files import private_directory
+from nativepeers.files import atomic_json, private_directory
 from nativepeers.install import Installer
 from nativepeers.journal import Journal
 
 
 class InstallTests(unittest.IsolatedAsyncioTestCase):
+    async def test_noop_install_refreshes_only_verified_receipts(self):
+        for scenario in ('missing', 'updated', 'unchanged', 'unverified'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);home=private_directory(root/'home');project=private_directory(root/'project')
+                journal=Journal(root/'state');self.addCleanup(journal.close)
+                providers={}
+                for provider in ('claude','codex'):
+                    skill=project/'integrations'/provider/'skills/nativepeers/SKILL.md'
+                    skill.parent.mkdir(parents=True);skill.write_text('fixture skill\n')
+                    executable=root/provider;executable.write_text('verified '+provider)
+                    providers[provider]={'executable':str(executable),'executable_sha256':fingerprint(executable)['sha256'],'version':'fixture'}
+                (project/'bin').mkdir()
+                for name in ('npeer','npeer-hook'):(project/'bin'/name).write_text('#!/bin/sh\n')
+                evidence=project/'evidence/capabilities.json';atomic_json(evidence,{'providers':providers})
+                with patch('nativepeers.install.ROOT',project):
+                    installer=Installer(journal,home=home,native=False);await installer.install()
+                    trusted={'fixture-start':'start-hash','fixture-end':'end-hash'}
+                    manifest=json.loads(installer.manifest.read_text());manifest['trusted_hooks']=trusted
+                    atomic_json(installer.manifest,manifest)
+                    installer.config.write_text(''.join('[hooks.state.'+key+']\ntrusted_hash="'+value+'"\n' for key,value in trusted.items()))
+                    expected={provider:dict(fingerprint(info['executable']),version=info['version']) for provider,info in providers.items()}
+                    third={'path':'fixture-agy','sha256':'retained','scope':'fixture'}
+                    receipt=journal.root/'compat/runtime.json'
+                    if scenario!='missing':atomic_json(receipt,{'schema_version':1,'providers':dict(expected,antigravity=third)})
+                    if scenario in ('updated','unverified'):
+                        Path(providers['claude']['executable']).write_text('updated claude executable')
+                        if scenario=='updated':
+                            providers['claude']['executable_sha256']=fingerprint(providers['claude']['executable'])['sha256']
+                            atomic_json(evidence,{'providers':providers})
+                    before={p:p.read_bytes() for p in [installer.manifest,installer.config,*installer.targets.values(),*installer.skills.values()]}
+                    receipt_before=receipt.read_bytes() if receipt.exists() else None
+                    backups=list((project/'backups').iterdir())
+                    installer.native=True
+                    with patch.object(installer,'lock',side_effect=nullcontext),patch.object(installer,'trust',new_callable=AsyncMock) as trust,\
+                         patch('nativepeers.install.AppServer',side_effect=AssertionError('must remain offline')):
+                        if scenario=='unverified':
+                            with self.assertRaises(PeerError) as error:await installer.install()
+                            self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+                            self.assertEqual(receipt.read_bytes(),receipt_before)
+                            with self.assertRaises(PeerError):verify(journal,'claude',providers['claude']['executable'])
+                            self.assertTrue(installer.plan(remove=True)['operations'])
+                        else:
+                            plan=await installer.install(dry_run=True)
+                            self.assertEqual([op['operation'] for op in plan['operations']],
+                                             [] if scenario=='unchanged' else ['refresh-verified-compatibility-receipt'])
+                            self.assertEqual(receipt.read_bytes() if receipt.exists() else None,receipt_before)
+                            result=await installer.install()
+                            self.assertEqual(result['changed'],scenario!='unchanged')
+                            for provider,info in providers.items():verify(journal,provider,info['executable'])
+                            if scenario!='missing':self.assertEqual(json.loads(receipt.read_text())['providers']['antigravity'],third)
+                            stable=receipt.read_bytes();modified=receipt.stat().st_mtime_ns
+                            self.assertFalse((await installer.install())['changed'])
+                            self.assertEqual(receipt.read_bytes(),stable)
+                            self.assertEqual(receipt.stat().st_mtime_ns,modified)
+                        trust.assert_not_awaited()
+                    self.assertEqual({p:p.read_bytes() for p in before},before)
+                    self.assertEqual(list((project/'backups').iterdir()),backups)
+
     async def test_reinstall_preserves_local_skill_edits_and_updates_unchanged_skills(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);home=private_directory(root/'home');journal=Journal(root/'state');self.addCleanup(journal.close)
