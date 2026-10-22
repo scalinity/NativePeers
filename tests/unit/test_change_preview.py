@@ -111,9 +111,10 @@ class PreviewTests(unittest.TestCase):
 
     def test_requires_verified_owning_parent_and_current_generation_result(self):
         worker,work,base=self.worker();self.result(worker,work,base)
-        for caller in (Caller('external-local','external'),Caller('peer','other','other'),
-                       Caller('peer',self.caller.key,self.caller.incarnation,{'worker_id':'other'})):
+        for caller in (Caller('external-local','external'),Caller('peer','other','other')):
             with self.subTest(caller=caller),self.assertRaises(PeerError):preview(self.j,caller,worker)
+        delegated=Caller('peer',self.caller.key,self.caller.incarnation,{'worker_id':'owning-delegated-parent','profiles':['analysis']})
+        self.assertEqual(preview(self.j,delegated,worker)['status'],'no_changes')
         self.j.db.execute('UPDATE workers SET generation=2 WHERE worker_id=?',(worker,))
         with self.assertRaises(PeerError):preview(self.j,self.caller,worker)
 

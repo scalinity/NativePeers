@@ -25,7 +25,7 @@ def _owned(journal,caller,worker_id):
     row=journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
     require(row,'PROTOCOL_ERROR','Unknown exact worker ID')
     group=journal.one('SELECT * FROM groups WHERE group_id=?',(row['group_id'],))
-    require(group and group['parent_key']==caller.key and not caller.grants.get('worker_id'),
+    require(group and group['parent_key']==caller.key,
             'APPROVAL_BLOCKED','Only the owning parent can inspect retained workspace changes')
     lease=json.loads(row['lease_json'])
     require(lease.get('parent_key')==caller.key,'OWNERSHIP_UNKNOWN','Worker lease parent differs from its group')
