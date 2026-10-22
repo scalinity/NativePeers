@@ -36,13 +36,25 @@ class Core:
         self.router.adapters['owned-worker']=owned
         self.delegation=Delegation(journal,self.registry)
 
+    async def status(self,caller,handle,*,refresh=False):
+        message=self.journal.one('SELECT * FROM messages WHERE message_id=?',(handle,))
+        if message:
+            require(caller.kind=='peer' and caller.key in (message['from_actor_key'],message['to_key']),
+                    'APPROVAL_BLOCKED','Message status is outside caller scope')
+            if refresh:
+                from .reconcile import observe
+                return await observe(self.journal,self.registry,self.router,handle)
+            return self.router.outcome(handle)
+        require(not refresh,'PROTOCOL_ERROR','Receipt refresh requires an exact message ID')
+        return self.delegation.status(caller,handle)
+
     async def tool(self,caller,name,args):
         if name=='peer_list':return self.registry.list(args.get('provider'))
         if name=='peer_send':return await self.router.send(caller,args['target'],args['text'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_inbox':return self.router.inbox(caller,args.get('limit',20))
         if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'])
-        if name=='task_status':return self.delegation.status(caller,args['handle'])
+        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False))
         if name=='task_result':return self.delegation.result(caller,args['handle'])
         if name=='task_wait':
             group=self.delegation.group(caller,args['handle'])

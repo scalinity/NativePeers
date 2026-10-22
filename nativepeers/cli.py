@@ -38,6 +38,7 @@ def parser():
     q=command('spawn');q.add_argument('--spec',type=Path,required=True)
     for name in ['status','result','wait','cancel']:
         q=command(name);q.add_argument('handle')
+        if name=='status':q.add_argument('--refresh',action='store_true')
         if name=='result':q.add_argument('--include-artifacts',action='store_true')
         if name=='wait':q.add_argument('--timeout-ms',type=int,default=30000);q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
@@ -74,12 +75,7 @@ async def dispatch(args,journal):
     if name=='inbox':return core.router.inbox(caller,args.limit,args.unread)
     if name=='ack':return core.router.ack(caller,args.message_id)
     if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)))
-    if name=='status':
-        message=journal.one('SELECT * FROM messages WHERE message_id=?',(args.handle,))
-        if message:
-            require(caller.kind=='peer' and caller.key in (message['from_actor_key'],message['to_key']),'APPROVAL_BLOCKED','Message status is outside caller scope')
-            return core.router.outcome(args.handle)
-        return core.delegation.status(caller,args.handle)
+    if name=='status':return await core.status(caller,args.handle,refresh=args.refresh)
     if name=='result':return core.delegation.result(caller,args.handle)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)

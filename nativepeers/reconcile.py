@@ -47,10 +47,14 @@ async def observe(journal,registry,router,message_id):
     if path is None or not path.exists():return unconfirmed()
     require(path.resolve().is_relative_to(home) and not path.is_symlink(),'OWNERSHIP_UNKNOWN','Native history path is outside its provider home')
     if provider=='antigravity':require(native in path.resolve().parts,'OWNERSHIP_UNKNOWN','Antigravity history path differs from its native UUID')
-    with path.open('rb') as stream:
-        stream.seek(0,2);size=stream.tell();start=max(0,size-1024*1024);stream.seek(start)
-        if start:stream.readline()
-        lines=stream.read(1024*1024).splitlines()
+    try:
+        with path.open('rb') as stream:
+            stream.seek(0,2);size=stream.tell();start=max(0,size-1024*1024);stream.seek(start)
+            if start:stream.readline()
+            lines=stream.read(1024*1024).splitlines()
+    except OSError as error:
+        outcome=unconfirmed();outcome['reconciliation']={'state':'UNCONFIRMED','reason':'Native history is unavailable','error':type(error).__name__}
+        return outcome
     wanted=json.loads(record['payload_json'])
     for line in lines:
         try:event=json.loads(line)

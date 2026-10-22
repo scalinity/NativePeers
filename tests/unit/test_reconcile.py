@@ -43,3 +43,28 @@ class ReconcileTests(unittest.IsolatedAsyncioTestCase):
    with path.open('a') as f:f.write(json.dumps({'type':'attachment','sessionId':native,'uuid':new_id(),'attachment':{'type':'queued_command','prompt':canonical(message).decode()}})+'\n')
    self.assertEqual((await observe(j,r,router,outcome['message_id']))['state'],'INGESTED')
    j.close()
+
+ async def test_public_refresh_is_scoped_observation_without_submission(self):
+  from unittest.mock import patch
+  from nativepeers.core import Core
+  from nativepeers.errors import PeerError
+  with tempfile.TemporaryDirectory() as d:
+   j=Journal(Path(d)/'state');self.addCleanup(j.close);core=Core(j);r=core.registry;home=Path(d)/'native';home.mkdir();native=new_id()
+   a=r.register('claude',home,new_id(),'a',identity(os.getpid()).json(),d,{'kind':'fake'},owner_kind='test')
+   b=r.register('claude',home,native,'b',identity(os.getpid()).json(),d,{'kind':'fake'},owner_kind='test');j.db.execute("UPDATE peer_instances SET status='live'")
+   path=home/'transcript.jsonl';b['native_transcript']=str(path);j.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE peer_key=?',(canonical(b).decode(),b['handle']))
+   calls=[]
+   async def delivery(*args):calls.append(1);return {'stage':'DELIVERY_UNKNOWN','evidence_kind':'fake'}
+   core.router.adapters['fake']=delivery;caller=Caller('peer',a['handle'],a['incarnation_id']);recipient=Caller('peer',b['handle'],b['incarnation_id'])
+   sent=await core.router.send(caller,'b','observe');handle=sent['message_id'];message=json.loads(j.one('SELECT payload_json FROM messages')['payload_json'])
+   for event in (None,{'type':'user','sessionId':new_id(),'message':{'content':canonical(message).decode()}}):
+    if event:path.write_text(json.dumps(event)+'\n')
+    result=await core.tool(caller,'task_status',{'handle':handle,'refresh':True});self.assertEqual(result['state'],'DELIVERY_UNKNOWN')
+   with patch('pathlib.Path.open',side_effect=PermissionError('fixture')):
+    result=await core.status(caller,handle,refresh=True)
+   self.assertEqual(result['state'],'DELIVERY_UNKNOWN');self.assertEqual(result['reconciliation']['error'],'PermissionError')
+   with self.assertRaises(PeerError):await core.status(Caller('peer','other','x'),handle,refresh=True)
+   path.write_text(json.dumps({'type':'user','sessionId':native,'uuid':new_id(),'message':{'content':canonical(message).decode()}})+'\n')
+   result=await core.status(recipient,handle,refresh=True);self.assertEqual(result['state'],'INGESTED')
+   self.assertEqual(len(calls),1)
+   for table in ('messages','send_requests','attempts'):self.assertEqual(j.one('SELECT COUNT(*) AS n FROM '+table)['n'],1)
