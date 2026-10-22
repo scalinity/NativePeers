@@ -3,7 +3,7 @@
   "active_owned_processes": [],
   "authorized_current_deltas": {
     "auth_and_provider_defaults": "No changes",
-    "current_review": "NativePeers global CLAUDE.md block plus three owned skill copies; native configs/auth/shell/package unchanged",
+    "current_review": "NativePeers global CLAUDE.md owned block plus three owned skills and own integration receipts; native configs/auth/shell/package unchanged",
     "global_claude_owned_block": "NativePeers section only; outside bytes unchanged; source docs/CLAUDE_CONVENTIONS.md; private original backups/astra4-20261022/CLAUDE-owned-block.md",
     "managed_package": "No activation or native patch",
     "native_test_trust": "Removed exact owned fixture entries under manager lock; original config bytes reconstructed"
@@ -127,7 +127,7 @@
     "retained_native_fixture_worktrees": 10,
     "unresolved_native_requests": []
   },
-  "current_protected_baseline": "/Users/danny/Documents/Tools/NativePeers/evidence/private/review-9e0cefb-20261022/baseline.json",
+  "current_protected_baseline": "evidence/private/review-9e0cefb-20261022/baseline.json",
   "current_review": {
     "reviewed_commit": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
     "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
@@ -147,15 +147,19 @@
       "S2",
       "S3",
       "S4",
-      "S5"
+      "S5",
+      "V1"
     ],
-    "last_completed": "S4"
+    "last_completed": "V1",
+    "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
+    "native_batch": "NOT_RUN",
+    "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "branch": "main",
     "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "commit": "03d7c6936e93b0cef931246470b823cfe5cbd593",
+    "commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -184,13 +188,17 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Continue remaining review TODO: V1, D1",
+  "next_action": "Continue remaining review TODO: D1",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
   },
   "outstanding_native_requests": [],
-  "owned_review_lanes": [],
+  "owned_review_lanes": [
+    ".worktrees/review9-provider",
+    ".worktrees/review9-workspace",
+    ".worktrees/review9-mcp"
+  ],
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
@@ -209,14 +217,36 @@
   "stage": "Address every item from independent review 9e0cefb",
   "tests_current": {
     "offline": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "tests": 334,
+      "unit_tests": 254,
+      "contract_tests": 80,
+      "subtests": 523,
+      "seconds": 119.49,
+      "python": "3.14.8",
+      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
+      "scope": "macOS installed Python environment; no new native model inputs"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s /Users/danny/Documents/Tools/CodexMCP -p test_*.py",
+      "scope": "Temporary isolated manager/naming fixtures; no actual package activation or update"
     },
     "installed_passive": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "compatibility": "All three executable fingerprints match installed receipts",
+      "owned_checks": "PRESENT",
+      "second_install_operations": 0,
+      "second_antigravity_install_operations": 0,
+      "global_claude_outside_owned_block_unchanged": true,
+      "protected_config_and_auth_hashes_unchanged": true,
+      "manager_worktree_unchanged": true
     },
     "native": {
       "status": "NOT_RUN",
-      "reason": "No new native model submissions; retained cumulative ceiling and time unchanged"
+      "submitted_inputs": 0,
+      "reason": "No fresh native acceptance after review fixes; cumulative ledger unchanged. Earlier native observations keep their source/runtime fingerprints."
     }
   },
   "transports": {

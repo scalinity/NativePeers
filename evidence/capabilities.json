@@ -8,7 +8,7 @@
     "Required LIVE-01 through LIVE-18 are not accepted by M1 evidence."
   ],
   "native_queue_decision": "use-native-queue; no Rust patch selected",
-  "overall_acceptance": "Qualified: current second-review offline and scoped Sol/Flash original-parent/MCP checks PASS; complete native matrix retains explicit unrun/blocked variants.",
+  "overall_acceptance": "Qualified: all review 9e0cefb corrections and suggestions verified offline; installed passive PASS; current-source native acceptance NOT_RUN",
   "providers": {
     "antigravity": {
       "auth_route": "Native Google sign-in, Google AI Pro; no credential extraction or API key substitution",
@@ -136,6 +136,40 @@
     },
     "review_fix_live": "PASS: both provider backends, task waits and queued/running cancellation with retained successors",
     "unit_and_contract": "268 tests and 388 subtests PASS; current scope in evidence/pro-followup-review.json",
-    "unit_and_contract_historical_review_fix": "60 passed and 16 subtests: 45 unit/property, 15 mock contracts"
+    "unit_and_contract_historical_review_fix": "60 passed and 16 subtests: 45 unit/property, 15 mock contracts",
+    "review_9e0cefb": {
+      "offline": {
+        "status": "PASS",
+        "tests": 334,
+        "unit_tests": 254,
+        "contract_tests": 80,
+        "subtests": 523,
+        "seconds": 119.49,
+        "python": "3.14.8",
+        "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
+        "scope": "macOS installed Python environment; no new native model inputs"
+      },
+      "manager_and_naming": {
+        "status": "PASS",
+        "tests": 23,
+        "command": ".venv/bin/python -m unittest discover -s /Users/danny/Documents/Tools/CodexMCP -p test_*.py",
+        "scope": "Temporary isolated manager/naming fixtures; no actual package activation or update"
+      },
+      "installed_passive": {
+        "status": "PASS",
+        "compatibility": "All three executable fingerprints match installed receipts",
+        "owned_checks": "PRESENT",
+        "second_install_operations": 0,
+        "second_antigravity_install_operations": 0,
+        "global_claude_outside_owned_block_unchanged": true,
+        "protected_config_and_auth_hashes_unchanged": true,
+        "manager_worktree_unchanged": true
+      },
+      "native": {
+        "status": "NOT_RUN",
+        "submitted_inputs": 0,
+        "reason": "No fresh native acceptance after review fixes; cumulative ledger unchanged. Earlier native observations keep their source/runtime fingerprints."
+      }
+    }
   }
 }

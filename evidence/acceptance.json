@@ -874,10 +874,18 @@
       },
       "scope": "Scoped Sol/Flash delegation, current-tool terminal waits, isolated editing, exact-history resume and original-Codex native queue push; not full Claude/core-matrix acceptance",
       "source_sha256": "cee40c924812b8e540b701b18b138d1ea48417339cb9fda02cb14846a2cb2acf"
+    },
+    "review_9e0cefb": {
+      "evidence": "evidence/review-9e0cefb.json",
+      "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
+      "offline": "PASS: 334 tests / 523 subtests",
+      "installed_passive": "PASS",
+      "live": "NOT_RUN after current changes",
+      "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832"
     }
   },
   "historical_acceptance_git_ref": "151d4e58f29bb0cf236f572e7eb3a71cc687218a:evidence/acceptance.json",
-  "overall": "Qualified: second-review fixes and added capabilities verified offline; current scoped Sol/Flash native returns/MCP PASS; full all-provider matrix not certified",
+  "overall": "Qualified: review 9e0cefb fixes and all suggestions verified offline; current-source native acceptance NOT_RUN; historical live evidence retains its fingerprints",
   "review_fix_code_commit": "625625082da45e7e856d3ff5bb3aeefcc1bde038",
   "review_fix_retest": {
     "completed_at": "2026-10-21T20:12:43.830168-04:00",
@@ -891,5 +899,5 @@
   },
   "review_fix_verification": "evidence/reviews/fix-verification.json",
   "schema_version": 1,
-  "updated_at": "2026-10-22T11:22:38.794565-04:00"
+  "updated_at": "2026-10-22T12:45:01.002287-04:00"
 }
