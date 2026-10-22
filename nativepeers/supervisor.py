@@ -18,7 +18,7 @@ from .errors import PeerError,require
 from .files import advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
-from .notifications import claim_wait,wait_generation,wait_output
+from .notifications import claim_wait,wait_generation,wait_output,settle_deferred
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,PYTHON
 from .registry import Registry
@@ -390,6 +390,8 @@ class Group:
         self.closing=True
         self.stop_queued()
         self.journal.db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND state='UNCLAIMED' AND mode='push'",(self.id,))
+        for route in self.journal.all("SELECT delivery_id FROM completion_routes WHERE group_id=? AND state='RETAINED'",(self.id,)):
+            settle_deferred(self.journal,self.id,route['delivery_id'])
         await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
         self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
         self.journal.event(self.id,'supervisor-released',{'owner':self.owner})

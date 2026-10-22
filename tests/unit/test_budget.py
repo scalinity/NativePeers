@@ -47,3 +47,12 @@ class BudgetTests(unittest.TestCase):
         self.clock=14;self.budget.settle(request,completed_at=13)
         self.assertEqual(self.read()['active_intervals'][0]['end'],13)
 
+
+    def test_definitely_unsubmitted_reservation_returns_capacity_and_closes_interval(self):
+        request=self.budget.reserve('deferred');self.budget.admit(request);self.clock=14
+        self.assertTrue(self.budget.release_unsubmitted(request))
+        self.assertFalse(self.budget.release_unsubmitted(request))
+        data=self.read();self.assertEqual(data['consumed_turns'],0);self.assertEqual(data['outstanding_native_requests'],[])
+        self.assertEqual(data['reservations'][0]['state'],'not_admitted')
+        self.assertIsNotNone(data['active_intervals'][0]['end'])
+        self.assertEqual(data['reserved_turns'],0)

@@ -1,5 +1,7 @@
 """Shared completion claims for supervised and retained-result waits."""
 import time
+import json
+from pathlib import Path
 
 
 def wait_generation(group_id,policy,handle):
@@ -19,5 +21,23 @@ def claim_wait(journal,group_id,generation,controller_generation,waiter,timeout)
 
 def wait_output(journal,group_id,generation,controller_generation,waiter):
     # Tool output can be lost after this point. Keep the claim rather than push a duplicate.
-    return bool(journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND state='WAIT_LEASED' AND waiter_id=? AND claimed_generation=?",
+    changed=bool(journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND state='WAIT_LEASED' AND waiter_id=? AND claimed_generation=?",
         (group_id,generation,waiter,controller_generation)).rowcount)
+    if changed:
+        row=journal.one('SELECT delivery_id FROM completion_routes WHERE group_id=? AND completion_generation=?',(group_id,generation))
+        settle_deferred(journal,group_id,row['delivery_id'])
+    return changed
+
+
+def settle_deferred(journal,group_id,delivery_id):
+    """Only an irreversibly retained/tool-owned, definitely unsubmitted notice."""
+    test=journal.root/'test-budget.json'
+    if not test.exists():return
+    attempt=journal.one("SELECT a.state FROM attempts a JOIN send_requests r USING(message_id) JOIN messages m USING(message_id) WHERE r.client_request_id=? AND json_extract(m.payload_json,'$.from.kind')='controller' AND json_extract(m.payload_json,'$.from.group_id')=?",(delivery_id,group_id))
+    if not attempt or attempt['state'] not in ('OUTBOX_COMMITTED','ADMISSION_DEFERRED'):return
+    event=journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='completion-budget-reserved' ORDER BY sequence DESC LIMIT 1",(delivery_id,))
+    if not event:return
+    from .budget import LiveBudget
+    spec=json.loads(test.read_text());reservation=json.loads(event['payload_json'])['reservation']
+    if LiveBudget(Path(spec['path'])).release_unsubmitted(reservation):
+        journal.event(delivery_id,'completion-budget-released',{'reservation':reservation,'reason':'definitely-unsubmitted-result-retained'})

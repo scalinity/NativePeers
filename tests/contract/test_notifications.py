@@ -356,3 +356,32 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.wait_for(task,1)
         self.assertEqual(calls,[]);self.assertEqual(self.route()['state'],'RETAINED')
         self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'EXPIRED_BEFORE_SUBMISSION')
+
+    async def test_deferred_reservation_settles_on_terminal_wait_or_shutdown_only(self):
+        from nativepeers.files import advisory_lock,async_advisory_lock,sha256,atomic_json
+        for disposition in ('wait','shutdown','unknown'):
+            with self.subTest(disposition=disposition):
+                self.j.db.execute('DELETE FROM send_requests');self.j.db.execute('DELETE FROM receipts');self.j.db.execute('DELETE FROM attempts');self.j.db.execute('DELETE FROM messages');self.j.db.execute('DELETE FROM events')
+                self.j.db.execute("UPDATE completion_routes SET state='UNCLAIMED'")
+                self.complete();core=Core(self.j);core.router.adapters['fake']=AsyncMock(return_value={'stage':'ACCEPTED_QUEUED'})
+                ledger=self.j.root/'budget.json';atomic_json(ledger,dict(active_intervals=[],ceiling={'active_seconds':60,'submitted_turns':1},reservations=[],reserved_turns=0,consumed_turns=0,outstanding_native_requests=[]))
+                atomic_json(self.j.root/'test-budget.json',{'path':str(ledger)})
+                lock=self.j.root/'locks'/(sha256(self.parent)+'.lock')
+                with patch('nativepeers.core.Core',return_value=core),advisory_lock(lock),patch('nativepeers.routing.async_advisory_lock',side_effect=lambda path:async_advisory_lock(path,.01)):
+                    await self.group.notify()
+                self.assertEqual(len(json.loads(ledger.read_text())['outstanding_native_requests']),1)
+                if disposition=='unknown':
+                    self.j.db.execute("UPDATE attempts SET state='DELIVERY_UNKNOWN'")
+                    from nativepeers.notifications import settle_deferred
+                    settle_deferred(self.j,self.id,self.route()['delivery_id'])
+                elif disposition=='wait':
+                    value=await Delegation(self.j,Registry(self.j)).wait(self.group.parent,self.id)
+                    self.assertTrue(value['notification_output_uncertain'])
+                else:
+                    self.group.server=type('Server',(),{'close':lambda s:None,'wait_closed':AsyncMock()})()
+                    await self.group.close()
+                budget=json.loads(ledger.read_text())
+                self.assertEqual(budget['consumed_turns'],1 if disposition=='unknown' else 0)
+                self.assertEqual(len(budget['outstanding_native_requests']),1 if disposition=='unknown' else 0)
+                if disposition!='unknown':self.assertIsNotNone(budget['active_intervals'][0]['end'])
+                core.router.adapters['fake'].assert_not_awaited()

@@ -75,3 +75,20 @@ class LiveBudget:
             data["active_seconds"] = sum((i.get("end") or time.time())-i["start"]
                                           for i in data["active_intervals"])
         self.change(operation)
+
+    def release_unsubmitted(self,reservation: str):
+        """Return a reservation only when the caller proved no native submission."""
+        def operation(data):
+            record=next(r for r in data['reservations'] if r['id']==reservation)
+            if record['state']=='not_admitted':return False
+            if record['state']!='admitted':return False
+            now=time.time();record.update(state='not_admitted',settled_at=now,observed_turns=0,observed_completed_at=now,reason='definite-pre-submission-retention')
+            data['outstanding_native_requests'].remove(reservation)
+            data['consumed_turns']-=record['count']
+            if not data['outstanding_native_requests']:
+                interval=data['active_intervals'][-1]
+                batch=set(interval.get('reservation_ids',[]))
+                interval['end']=max((r.get('observed_completed_at') or r.get('settled_at',now)) for r in data['reservations'] if not batch or r['id'] in batch)
+            data['active_seconds']=sum((i.get('end') or now)-i['start'] for i in data['active_intervals'])
+            return True
+        return self.change(operation)
