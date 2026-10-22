@@ -81,7 +81,7 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
         require(profile in parent.get('policy',{}).get('profiles',['analysis']),'PERMISSION_CAPABILITY_UNKNOWN','Current parent does not retain the original permission ceiling')
         policy=json.loads(group['policy_json']);manifest_path=journal.root/'groups'/group['group_id']/'owner.json'
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else None
-        if group['state']=='RELEASING' and manifest:
+        if manifest and (group['state']=='RELEASING' or manifest.get('released')):
             # Idle shutdown claimed this lifetime before resume acquired the lock.
             # No new task is reserved until that exact finite owner has exited.
             deadline=time.monotonic()+30

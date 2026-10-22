@@ -249,7 +249,15 @@ class Delegation:
                     claimed=wait_output(self.journal,group['group_id'],generation,controller_generation,waiter)
             return {'ready':True,'result':self.result(caller,handle),'notification_output_uncertain':claimed,
                     'notification_disposition':'tool-result-output-pending-observation' if claimed else 'retained-result-read'}
-        return await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
+        try:
+            return await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
+        except (PeerError,FileNotFoundError,ConnectionRefusedError) as error:
+            if isinstance(error,PeerError) and error.code!='SUPERVISOR_LOST':raise
+            latest=self.status(caller,handle)
+            selected=[t for t in latest['tasks'] if handle==group['group_id'] or t['task_id']==handle]
+            if selected and all(t['state'] in TERMINAL for t in selected):
+                return await self.wait(caller,handle,timeout_ms,on_timeout)
+            raise
 
     async def cancel(self,caller,handle,reason):
         group=self.group(caller,handle)

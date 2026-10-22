@@ -409,6 +409,9 @@ class Group:
             settle_deferred(self.journal,self.id,route['delivery_id'])
         await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
         self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
+        atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=True))
+        final='COMPLETED' if all(t['state']=='COMPLETED' for t in self.tasks()) else 'PARTIAL'
+        self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(final,self.id))
         self.journal.event(self.id,'supervisor-released',{'owner':self.owner})
 
 

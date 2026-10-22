@@ -409,3 +409,11 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(self.group,'start_worker',new_callable=AsyncMock) as start:
             await self.group.connection(reader,writer);start.assert_not_awaited()
         self.assertEqual(json.loads(output[0])['error']['code'],'SUPERVISOR_RELEASING')
+
+    async def test_wait_uses_terminal_result_when_supervisor_exits_during_connect(self):
+        async def departed(*args,**kwargs):
+            self.complete();raise FileNotFoundError('owned endpoint already removed')
+        with patch('nativepeers.delegation.group_call',side_effect=departed) as call:
+            result=await Delegation(self.j,Registry(self.j)).wait(self.group.parent,self.id)
+        self.assertTrue(result['ready']);self.assertTrue(result['notification_output_uncertain'])
+        self.assertEqual(result['result']['results'][0]['summary'],'retained finding');call.assert_awaited_once()
