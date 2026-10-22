@@ -102,16 +102,20 @@ def observe(journal,event,kind):
             return {'decision':'allow'}
         return {}
     home=native_home();registry=Registry(journal)
+    transcript=Path(event['transcriptPath']).expanduser().resolve()
+    require(transcript.is_relative_to(home.resolve()) and native in transcript.parts,
+            'OWNERSHIP_CONFLICT','Native transcript path differs from hook UUID/home')
+    workspaces=event.get('workspacePaths')
+    require(isinstance(workspaces,list) and workspaces and isinstance(workspaces[0],str) and Path(workspaces[0]).is_absolute(),
+            'PROTOCOL_ERROR','Native hook has no absolute workspace path')
     existing=[p for p in registry.list('antigravity') if p['owner']==owner and p['peer_key']['native_session_id']==native]
     if existing:peer=existing[0]
     else:
         from .policy import load
         policy=load(journal);names=summaries(native_id=native,home=home)
-        peer=registry.register('antigravity',home,native,names[0]['title'] if names else None,owner,event['workspacePaths'][0],
+        peer=registry.register('antigravity',home,native,names[0]['title'] if names else None,owner,workspaces[0],
             {'kind':'antigravity-native-hook'},policy={'can_spawn':True,'profiles':['analysis','workspace'],'max_depth':policy['max_depth'],
                 'max_concurrent_workers':policy['workers_per_group']},capabilities={'idle_wakeup':False,'bounded_wait':True})
-        transcript=Path(event['transcriptPath']).expanduser().resolve()
-        require(transcript.is_relative_to(home.resolve()) and native in transcript.parts,'OWNERSHIP_CONFLICT','Native transcript path differs from hook UUID/home')
         peer['native_transcript']=str(transcript)
         journal.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE incarnation_id=?',(canonical(peer).decode(),peer['incarnation_id']))
     if kind!='PreInvocation':return {'decision':'allow'} if kind=='PreToolUse' else {}

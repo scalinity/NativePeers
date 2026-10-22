@@ -84,6 +84,20 @@ class AntigravityTests(unittest.TestCase):
             self.assertEqual(observe(self.j,self.event,'PreInvocation'),{})
             self.assertEqual({r['state'] for r in self.j.all('SELECT state FROM attempts')},{'SUBMITTED_UNCONFIRMED'})
 
+    def test_rejected_hook_payload_cannot_replace_a_registered_peer(self):
+        with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
+             patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':''}):
+            observe(self.j,self.event,'SessionStart')
+            before=self.j.all('SELECT * FROM peer_instances')
+            bad_events=[dict(self.event,conversationId=new_id()),
+                        dict(self.event,transcriptPath=str(self.home/'outside.jsonl')),
+                        dict(self.event,workspacePaths=[])]
+            for event in bad_events:
+                with self.subTest(event=event):
+                    with self.assertRaises(Exception):observe(self.j,event,'SessionStart')
+                    self.assertEqual(self.j.all('SELECT * FROM peer_instances'),before)
+
     def test_install_is_idempotent_and_uninstall_preserves_later_unrelated_edits(self):
         path=self.home/'.gemini/config/hooks.json';path.parent.mkdir(parents=True);path.write_text('{"existing":{"enabled":false}}')
         install(self.j,home=self.home,verified_source=self.evidence)
