@@ -75,3 +75,5 @@ Inspect `changes.worktree`, `changes.patch_artifact`, changed/new file lists and
 ## Refresh an uncertain message
 
 Run `npeer status MESSAGE_ID --refresh --json` to observe the exact recipient history without resubmitting input. The bound sender or recipient may refresh; an unrelated peer cannot. The MCP equivalent is `task_status` with `{"handle":"MESSAGE_ID","refresh":true}`. A matching persisted native input advances ingestion evidence. Missing, unreadable or unmatched history remains unconfirmed; absence never proves non-delivery. Refresh creates no new message or submission attempt. Reuse the original request ID only for a definitely unsubmitted `ADMISSION_DEFERRED` retry; never replay an uncertain send with a fresh ID.
+
+`npeer doctor --json` passively compares each installed provider executable with its recorded compatibility fingerprint. A mismatch includes expected/current hashes, affected operations and the verification scope to renew. Doctor never approves an update, changes a receipt or launches inference. A matching executable alone does not renew source-dependent live acceptance.
