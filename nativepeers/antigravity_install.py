@@ -69,7 +69,7 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
                     'CAPABILITY_MISMATCH','Review the current Antigravity executable and record its scoped verification before installation')
             actual=dict(actual,version=expected['version'],scope='Scoped compatibility recorded in '+str(source))
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {'owned':{}}
-        recovered=bool(manifest.get('pending'))
+        recovered=bool(manifest.get('pending')) or manifest.get('state') in ('INSTALLING','UNINSTALLING')
         for pending in manifest.pop('pending',[]):
             path=Path(pending['path'])
             require(not path.is_symlink(),'OWNERSHIP_CONFLICT','Interrupted installation target is now a symlink')

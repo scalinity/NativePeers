@@ -152,6 +152,19 @@ class AntigravityTests(unittest.TestCase):
         self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
         self.assertFalse((self.home/'.gemini/config/hooks.json').exists())
 
+    def test_final_manifest_failure_recovers_install_and_uninstall_state(self):
+        manifest=self.j.root/'antigravity-install.json'
+        for remove,terminal in [(False,'INSTALLED'),(True,'UNINSTALLED')]:
+            with self.subTest(remove=remove):
+                def interrupt_final(path,value):
+                    if path==manifest and value.get('state')==terminal:raise OSError('fixture final manifest interruption')
+                    atomic_json(path,value)
+                with patch('nativepeers.antigravity_install.atomic_json',side_effect=interrupt_final):
+                    with self.assertRaises(OSError):install(self.j,home=self.home,verified_source=self.evidence,remove=remove)
+                self.assertEqual(json.loads(manifest.read_text())['pending'],[])
+                self.assertTrue(install(self.j,home=self.home,verified_source=self.evidence,remove=remove)['changed'])
+                self.assertEqual(json.loads(manifest.read_text())['state'],terminal)
+
     def test_interrupted_install_recovers_every_owned_target(self):
         for fail_at,after_write in [(2,False),(3,False),(2,True),(3,True)]:
             with self.subTest(fail_at=fail_at,after_write=after_write):
