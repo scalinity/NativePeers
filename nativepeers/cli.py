@@ -16,7 +16,7 @@ from .files import canonical
 from .journal import Journal
 from .models import CONTROL_RESPONSE,new_id
 from .process import matches
-from .receipts import RANK
+from .receipts import delivery_error
 
 
 def parser():
@@ -133,12 +133,8 @@ def main():
             exit_code=6
         if isinstance(value,dict) and value.get('state')=='WAIT_EXPIRED':exit_code=8
         if args.command in ('send','reply') and isinstance(value,dict):
-            state=value.get('state')
-            if state=='REJECTED' or state not in RANK:
-                info=json.loads((value.get('attempt') or {}).get('error_json') or '{}')
-                error=PeerError('PROVIDER_POLICY_REFUSED' if state=='REJECTED' else info.get('code',state or 'PROTOCOL_ERROR'),
-                    info.get('message','Native recipient rejected delivery' if state=='REJECTED' else 'Peer delivery failed before confirmed admission'),
-                    may_have_received=info.get('may_have_received',False),details=info.get('details'))
+            error=delivery_error(value)
+            if error:
                 response.update(ok=False,error=error.json());exit_code=error_exit(error)
     except PeerError as error:
         response=dict(schema_version=1,ok=False,data=None,error=error.json(),request_id=request_id)

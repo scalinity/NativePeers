@@ -13,6 +13,7 @@ from mcp.types import Tool, ListToolsResult, CallToolResult, TextContent
 
 from .errors import PeerError, require
 from .journal import Journal
+from .receipts import delivery_error
 from .registry import Registry
 from .caller import bind_caller
 
@@ -94,7 +95,8 @@ class Facade:
                     peer=Registry(self.journal).verify(caller.key,caller.incarnation)
                     value={'state':'BOUND','peer_key':caller.key,'native_session_id':peer['peer_key']['native_session_id'],'title':peer['title'],'worker_id':caller.grants.get('worker_id')}
                 else:value=await Core(self.journal).tool(caller,params.name,args)
-            response=dict(schema_version=1,ok=True,data=value,error=None)
+            error = delivery_error(value) if params.name in ('peer_send','peer_reply') else None
+            response=dict(schema_version=1,ok=error is None,data=value,error=error.json() if error else None)
         except PeerError as error:
             response=dict(schema_version=1,ok=False,data=None,error=error.json())
         return CallToolResult(content=[TextContent(type='text',text=json.dumps(response))],is_error=not response['ok'])
