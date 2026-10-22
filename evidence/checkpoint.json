@@ -204,10 +204,16 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
+    "all_tracked_blobs_modes_tree_verified": true,
+    "archive_sha256": "879aad13f1b5043490ff06e55e8f230c4bb19e81bcce873dd9fed501848b6e17",
     "branch": "main",
     "owned_fixes_pushed": true,
+    "prompt": "NativePeers-GPT-6-Pro-Review-9e0cefb.txt",
     "repository": "https://github.com/scalinity/NativePeers",
-    "review_packet": "evidence/followup-review.json"
+    "review_packet": "evidence/followup-review.json",
+    "review_snapshot": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
+    "review_tree": "d081ee831065565b92611444f7b885d657c23aa2",
+    "source_archive": "NativePeers-Source-9e0cefb.zip"
   },
   "schema_version": 2,
   "stage": "Second independent review fully addressed; current verification qualified",
