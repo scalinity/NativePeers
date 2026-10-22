@@ -15,7 +15,7 @@ from .artifacts import Artifacts
 from .errors import PeerError,require
 from .files import atomic_json,canonical
 from .journal import Journal
-from .launch import launch_environment
+from .launch import launch_environment,recorded_home,home_environment
 from .models import new_id
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
@@ -28,6 +28,8 @@ class Worker:
     def __init__(self,journal,worker_id):
         self.journal=journal;self.row=journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
         self.lease=json.loads(self.row['lease_json']);self.spec=self.lease['spec'];self.binding=Path(self.lease['binding'])
+        self.home=recorded_home(journal,self.row);self.lease['provider_home']=str(self.home)
+        journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),worker_id))
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
         self.provider=None;self.provider_identity=None;self.client=None;self.native=self.row['native_id'];self.turn=None
         self.stopping=False;self.shutdown_reason=None;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
@@ -65,11 +67,7 @@ class Worker:
         self.expected_native=native_id
         existing=json.loads(self.binding.read_text())
         if existing.get('state')=='BOUND':return
-        if self.row['provider']=='antigravity':
-            from .antigravity import native_home
-            home=native_home()
-        else:home=Path(os.getenv('CODEX_HOME' if self.row['provider']=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if self.row['provider']=='codex' else '.claude'))).resolve()
-        peer=Registry(self.journal).register(self.row['provider'],home,native_id,self.row['role_title'],self.owner,
+        peer=Registry(self.journal).register(self.row['provider'],self.home,native_id,self.row['role_title'],self.owner,
             self.row['cwd'],{'kind':'owned-worker','group_id':self.row['group_id'],'worker_id':self.row['worker_id']},
             owner_kind='owned-worker-controller',policy=self.lease['grants'])
         self.journal.db.execute('UPDATE workers SET peer_key=?,native_id=?,model_observed=? WHERE worker_id=?',
@@ -83,9 +81,9 @@ class Worker:
         if self.row['provider']=='codex':
             executable=Path(self.lease['executable']).resolve(strict=True)
             verify(self.journal,'codex',executable)
-            config=codex_config(self.journal,self.binding,self.spec['permission_profile'])
+            config=codex_config(self.journal,self.binding,self.spec['permission_profile'],home=self.home)
             self.client=AppServer(executable,config_arguments(config),cwd=Path(self.row['cwd']),
-                environment={'NPEER_HOME':str(self.journal.root),'NPEER_BOOTSTRAP':str(self.binding),'PYTHONPATH':str(ROOT)})
+                environment={**home_environment('codex',self.home),'NPEER_HOME':str(self.journal.root),'NPEER_BOOTSTRAP':str(self.binding),'PYTHONPATH':str(ROOT)})
             await self.client.start();self.provider=self.client.process;self.provider_identity=identity(self.provider.pid).json();self.manifest()
             catalog=(await self.client.call('model/list',{'includeHidden':True,'limit':100}))['data']
             model=next((m for m in catalog if m['model']==self.spec['model']),None)
@@ -125,7 +123,7 @@ class Worker:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'AUTH_REQUIRED','Installed Claude executable is unavailable')
             verify(self.journal,'claude',self.lease['executable'])
-            launch_environment('claude');claude_arguments(self.journal,self.binding,self.spec,self.expected_native)
+            launch_environment('claude');claude_arguments(self.journal,self.binding,self.spec,self.expected_native,home=self.home)
         self.journal.db.execute("UPDATE workers SET state='READY' WHERE worker_id=?",(self.row['worker_id'],))
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
 
@@ -245,8 +243,8 @@ class Worker:
                             text='\n'.join(final),native_turn_ids=[self.turn],error={'code':classify(error),'native_error':error} if error else None)
 
     async def claude_turn(self,text):
-        args=claude_arguments(self.journal,self.binding,self.spec,self.expected_native,resume=self.tasks_started>1 or self.lease.get('released_native',False))
-        env=launch_environment('claude');env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
+        args=claude_arguments(self.journal,self.binding,self.spec,self.expected_native,resume=self.tasks_started>1 or self.lease.get('released_native',False),home=self.home)
+        env=launch_environment('claude');env.update(home_environment('claude',self.home));env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
         self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*args,cwd=self.row['cwd'],env=env,
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
             start_new_session=True,close_fds=True,limit=8*1024*1024)

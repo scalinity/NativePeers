@@ -11,7 +11,7 @@ from nativepeers.supervisor import Group
 def fixture(j):
  group,worker,a,b,native=[new_id() for _ in range(5)]
  policy={'initial_tasks':[a],'parent_incarnation':new_id(),'phases':{'1':[a],'2':[b]}}
- lease={'spec':{'provider':'claude','model':'sonnet','max_task_turns':8,'wall_time_seconds':5},'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
+ lease={'provider_home':str(j.root.resolve()),'spec':{'provider':'claude','model':'sonnet','max_task_turns':8,'wall_time_seconds':5},'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
  j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent',canonical(policy).decode(),'RUNNING','{}'))
  j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,'peer','claude',native,'worker','sonnet',None,None,str(j.root),None,'RUNNING',1,canonical(lease).decode()))
  for task,state in [(a,'RUNNING'),(b,'QUEUED')]:j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,state,None,None,1,'{}'))
@@ -99,7 +99,7 @@ class CancellationTests(unittest.IsolatedAsyncioTestCase):
   with tempfile.TemporaryDirectory() as d:
    j=Journal(Path(d));group,worker,task,native=[new_id() for _ in range(4)]
    spec={'provider':'claude','model':'sonnet','max_task_turns':8,'wall_time_seconds':5,'permission_profile':'analysis'}
-   lease={'spec':spec,'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
+   lease={'provider_home':str(j.root.resolve()),'spec':spec,'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
    j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RUNNING','{}'))
    j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,'peer','claude',native,'owned worker','sonnet',None,None,d,None,'RUNNING',1,canonical(lease).decode()))
    j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,'QUEUED',None,None,1,'{}'))
@@ -118,7 +118,7 @@ class CancellationTests(unittest.IsolatedAsyncioTestCase):
   for error,expected in [(TimeoutError('wall time'),'TIMED_OUT'),(ProviderError('turn/start',{'message':'401 unauthorized'}),'FAILED')]:
    with tempfile.TemporaryDirectory() as d:
     j=Journal(Path(d));group,worker,task,native=[new_id() for _ in range(4)]
-    lease={'spec':{'provider':'codex','model':'gpt-6.1-sol','wall_time_seconds':1},'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
+    lease={'provider_home':str(j.root.resolve()),'spec':{'provider':'codex','model':'gpt-6.1-sol','wall_time_seconds':1},'binding':str(j.root/'bindings/test'),'parent_key':'parent'}
     j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RUNNING','{}'))
     j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,'peer','codex',native,'owned worker','gpt-6.1-sol',None,'xhigh',d,None,'RUNNING',1,canonical(lease).decode()))
     j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,'QUEUED',None,None,1,'{}'))

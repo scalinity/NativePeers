@@ -6,6 +6,7 @@ import tomllib
 import tomlkit
 
 from .errors import require
+from .launch import provider_home
 
 ROOT=Path(__file__).resolve().parent.parent
 PYTHON=ROOT/'.venv/bin/python'
@@ -16,9 +17,10 @@ def facade_config(journal,binding):
                 cwd=str(ROOT),env={'NPEER_HOME':str(journal.root),'PYTHONPATH':str(ROOT)},enabled=True)
 
 
-def codex_config(journal,binding,profile):
-    home=Path.home()/'.codex'
-    config=tomllib.loads((home/'config.toml').read_text())
+def codex_config(journal,binding,profile,*,home=None):
+    home=Path(home) if home is not None else provider_home('codex')
+    path=home/'config.toml'
+    config=tomllib.loads(path.read_text()) if path.exists() else {}
     policies={name:{'enabled':False} for name in config.get('mcp_servers',{})}
     policies.update({'codex_apps':{'enabled':False},'openai-api-key-local-confirmation':{'enabled':False}})
     return {'mcp_servers':{'nativepeers':dict(facade_config(journal,binding),default_tools_approval_mode='approve')},
@@ -40,8 +42,8 @@ def config_arguments(config):
     return args
 
 
-def claude_arguments(journal,binding,spec,native_id,*,resume=False):
-    settings_path=Path.home()/'.claude/settings.json'
+def claude_arguments(journal,binding,spec,native_id,*,resume=False,home=None):
+    settings_path=(Path(home) if home is not None else provider_home('claude'))/'settings.json'
     settings=json.loads(settings_path.read_text()) if settings_path.exists() else {}
     profile=spec.get('permission_profile','analysis')
     require(profile in ('analysis','workspace'),'PERMISSION_CAPABILITY_UNKNOWN','Trusted profile requires an explicit operator grant')

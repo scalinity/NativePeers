@@ -13,7 +13,7 @@ from .adapters.codex_app_server import AppServer
 from .control import group_call
 from .errors import PeerError,require
 from .files import async_advisory_lock,atomic_json,canonical,private_directory,sha256
-from .launch import launch_environment
+from .launch import launch_environment,provider_home,home_environment
 from .models import bounded_text,new_id,title
 from .notifications import claim_wait,wait_generation,wait_output
 from .process import matches
@@ -84,16 +84,18 @@ class Delegation:
             created_at=time.time(),parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'])
         budget_path=self.journal.root/'test-budget.json'
         test_budget=json.loads(budget_path.read_text()) if budget_path.exists() else {}
-        codex_config=tomllib.loads((Path.home()/'.codex/config.toml').read_text())
-        claude_settings=Path.home()/'.claude/settings.json';claude_config=json.loads(claude_settings.read_text()) if claude_settings.exists() else {}
+        homes={provider:provider_home(provider) for provider in {w['provider'] for w in workers}}
+        codex_settings=homes.get('codex',Path())/'config.toml'
+        codex_config=tomllib.loads(codex_settings.read_text()) if 'codex' in homes and codex_settings.exists() else {}
+        claude_settings=homes.get('claude',Path())/'settings.json';claude_config=json.loads(claude_settings.read_text()) if 'claude' in homes and claude_settings.exists() else {}
         agy_catalog={}
-        agy_settings=Path.home()/'.gemini/antigravity-cli/settings.json'
+        agy_settings=homes.get('antigravity',Path())/'settings.json'
         if any(w.get('provider')=='antigravity' for w in workers):
             from .antigravity import catalog
             agy_catalog=await catalog(Path.home()/'.local/bin/agy')
         catalog=None
         if any(w.get('provider')=='codex' for w in workers):
-            client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex')
+            client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment=home_environment('codex',homes['codex']))
             try:await client.start();catalog=(await client.call('model/list',{'includeHidden':True,'limit':100}))['data']
             finally:await client.close()
         prepared=[];batch_baseline=snapshot(parent['cwd'])
@@ -135,7 +137,7 @@ class Delegation:
                 can_spawn=depth<limits.get('max_depth',1),max_concurrent_workers=limits.get('max_concurrent_workers',4),
                 message_targets=[caller.key],allow_sibling_messages=policy['allow_sibling_messages'])
             executable=(Path.home()/{'claude':'.local/bin/claude','codex':'.local/share/codex-mcp-manager/current/bin/codex','antigravity':'.local/bin/agy'}[spec['provider']]).resolve(strict=True)
-            lease=dict(spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
+            lease=dict(provider_home=str(homes[spec['provider']]),spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
                 executable=str(executable),live_budget_file=test_budget.get('path'),live_tranche=test_budget.get('tranche','first_cross_provider_delegations'))
             prepared.append(dict(worker_id=worker_id,task_id=task_id,lease=lease,workspace=workspace))
             policy['workers'].append(worker_id);policy['initial_tasks'].append(task_id)

@@ -9,6 +9,7 @@ from .delegation import Delegation,TERMINAL
 from .errors import require
 from .files import async_advisory_lock,canonical
 from .models import bounded_text,new_id
+from .launch import recorded_home,home_environment
 from .process import matches
 from .registry import Registry
 
@@ -37,13 +38,13 @@ def assert_released(journal,row):
     require(manifest['worker_id']==row['worker_id'] and manifest['native_id']==row['native_id'],'OWNERSHIP_UNKNOWN','Owned process manifest differs from the native history')
     require(not matches(manifest['owner']) and (not manifest.get('native_process') or not matches(manifest['native_process'])),
             'OWNERSHIP_CONFLICT','Previous controller or provider writer is still alive')
+    home=recorded_home(journal,row)
     for peer in Registry(journal).list():
-        require(peer['peer_key']['native_session_id']!=row['native_id'] or peer['peer_key']['provider']!=row['provider'],
+        require(peer['peer_key']['native_session_id']!=row['native_id'] or peer['peer_key']['provider']!=row['provider'] or peer['home']!=str(home),
                 'OWNERSHIP_CONFLICT','A registered native runtime currently owns this history')
     if row['provider']=='claude':
         from .adapters.metadata import claude_sessions
-        peer=Registry(journal).get(row['peer_key'],live=False)
-        require(not any(s.get('sessionId')==row['native_id'] for s in claude_sessions(Path(peer['home']))),
+        require(not any(s.get('sessionId')==row['native_id'] for s in claude_sessions(home)),
                 'OWNERSHIP_CONFLICT','Claude native discovery reports an active writer for this history')
 
 
@@ -55,8 +56,10 @@ def resume_command(journal,caller,worker_id):
     if row['provider']=='codex' and row['effort_requested']:
         command+=['--config','model_reasoning_effort='+json.dumps(row['effort_requested'])]
     elif row['effort_requested']:command+=['--effort',row['effort_requested']]
-    return {'worker_id':worker_id,'native_id':row['native_id'],'cwd':row['cwd'],'native_argv':command,
-            'command':'cd '+shlex.quote(row['cwd'])+' && '+shlex.join(command),'launched':False,
+    environment=home_environment(row['provider'],recorded_home(journal,row))
+    prefix=''.join(key+'='+shlex.quote(value)+' ' for key,value in environment.items())
+    return {'worker_id':worker_id,'native_id':row['native_id'],'cwd':row['cwd'],'native_argv':command,'native_env':environment,
+            'command':'cd '+shlex.quote(row['cwd'])+' && '+prefix+shlex.join(command),'launched':False,
             'ownership_scope':'Verified released NativePeers writers and registered eligible local native runtimes; no private-backend takeover.'}
 
 
@@ -68,7 +71,7 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
         registry=Registry(journal);parent=registry.verify(caller.key,caller.incarnation)
         from .policy import load
         local=load(journal)
-        lease=json.loads(row['lease_json'])
+        lease=json.loads(row['lease_json']);lease['provider_home']=str(recorded_home(journal,row))
         require(lease['grants'].get('depth',1)<=local['max_depth'],'CAPACITY_UNAVAILABLE','Current local depth ceiling is lower than this worker grant')
         lease['spec']['max_task_turns']=min(lease['spec']['max_task_turns'],local['max_task_turns'])
         lease['spec']['wall_time_seconds']=min(lease['spec']['wall_time_seconds'],local['task_wall_seconds'])
