@@ -69,6 +69,18 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
                     'CAPABILITY_MISMATCH','Review the current Antigravity executable and record its scoped verification before installation')
             actual=dict(actual,version=expected['version'],scope='Scoped compatibility recorded in '+str(source))
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {'owned':{}}
+        recovered=bool(manifest.get('pending'))
+        for pending in manifest.pop('pending',[]):
+            path=Path(pending['path'])
+            require(not path.is_symlink(),'OWNERSHIP_CONFLICT','Interrupted installation target is now a symlink')
+            raw=path.read_bytes() if path.exists() else b''
+            if pending['kind']=='file':current=raw.decode() if path.exists() else None
+            else:
+                data=json.loads(raw) if raw.strip() else {}
+                current=(data.get('mcpServers',{}) if pending['kind']=='mcp' else data).get(pending['key'])
+            if current==(None if pending['remove'] else pending['value']):
+                if pending['remove']:manifest['owned'].pop(str(path),None)
+                else:manifest['owned'][str(path)]=pending['value']
         operations=[]
         for path,(kind,key,value) in desired(home).items():
             if remove and str(path) not in manifest['owned']:continue
@@ -96,6 +108,10 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
         if operations:
             backup=private_directory(ROOT/'backups'/('antigravity-install-'+str(time.time_ns())))
             atomic_json(backup/'owned-blocks.json',{'files':[{'path':str(p),'kind':kind,'before_sha256':expected,'before_owned':current} for p,expected,after,kind,value,current in operations]})
+            manifest.update(state='UNINSTALLING' if remove else 'INSTALLING',backup=str(backup),pending=[
+                {'path':str(p),'kind':kind,'key':'nativepeers','value':value,'remove':remove}
+                for p,expected,after,kind,value,current in operations])
+            atomic_json(manifest_path,manifest)
             for path,expected,after,kind,value,current in operations:
                 if after is None:
                     require(file_hash(path)==expected and not path.is_symlink(),'OWNERSHIP_CONFLICT','Antigravity file changed during uninstall')
@@ -103,7 +119,11 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
                 else:compare_write(path,after,expected)
                 if remove:manifest['owned'].pop(str(path),None)
                 else:manifest['owned'][str(path)]=value
-            manifest.update(state='UNINSTALLED' if remove else 'INSTALLED',backup=str(backup))
+                manifest['pending'].pop(0)
+                atomic_json(manifest_path,manifest)
+        if operations or recovered:
+            manifest.pop('pending',None)
+            manifest.update(state='UNINSTALLED' if remove else 'INSTALLED')
             atomic_json(manifest_path,manifest)
         compatibility_updated=False
         if not remove:
@@ -111,5 +131,5 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
             receipt=json.loads(receipt_path.read_text()) if receipt_path.exists() else {'schema_version':1,'providers':{}}
             if actual is not None and receipt['providers'].get('antigravity')!=actual:
                 receipt['providers']['antigravity']=actual;atomic_json(receipt_path,receipt);compatibility_updated=True
-        return dict(plan,installed=not remove,changed=bool(operations) or compatibility_updated,
+        return dict(plan,installed=not remove,changed=bool(operations) or recovered or compatibility_updated,
                     compatibility_updated=compatibility_updated,manifest=str(manifest_path))

@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 from nativepeers.antigravity import observe, resolve_name
 from nativepeers.antigravity_install import install, allowed_tools, desired
+from nativepeers.install import compare_write
 from nativepeers.files import canonical,atomic_json
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
@@ -97,6 +98,29 @@ class AntigravityTests(unittest.TestCase):
         with self.assertRaises(Exception) as error:install(self.j,home=self.home,verified_source=self.evidence)
         self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
         self.assertFalse((self.home/'.gemini/config/hooks.json').exists())
+
+    def test_interrupted_install_recovers_every_owned_target(self):
+        for fail_at,after_write in [(2,False),(3,False),(2,True),(3,True)]:
+            with self.subTest(fail_at=fail_at,after_write=after_write):
+                hooks=self.home/'.gemini/config/hooks.json';hooks.parent.mkdir(parents=True,exist_ok=True)
+                hooks.write_text('{"unrelated":{"enabled":false}}')
+                calls=0
+                def interrupted(*args):
+                    nonlocal calls
+                    calls+=1
+                    if calls==fail_at and not after_write:raise OSError('fixture interruption')
+                    compare_write(*args)
+                    if calls==fail_at and after_write:raise OSError('fixture interruption after write')
+                with patch('nativepeers.antigravity_install.compare_write',side_effect=interrupted):
+                    with self.assertRaises(OSError):install(self.j,home=self.home,verified_source=self.evidence)
+                value=json.loads(hooks.read_text());value['later']={'enabled':True};hooks.write_text(json.dumps(value))
+                install(self.j,home=self.home,verified_source=self.evidence)
+                manifest=json.loads((self.j.root/'antigravity-install.json').read_text())
+                self.assertEqual(set(manifest['owned']),{str(p) for p in desired(self.home)})
+                install(self.j,home=self.home,remove=True)
+                self.assertEqual(json.loads(hooks.read_text()),{'unrelated':{'enabled':False},'later':{'enabled':True}})
+                self.assertFalse((self.home/'.gemini/config/agents/nativepeers-analysis.md').exists())
+                self.assertNotIn('nativepeers',json.loads((self.home/'.gemini/config/mcp_config.json').read_text())['mcpServers'])
 
     def test_analysis_tool_gate_excludes_mutation_plugins_and_recursive_agents(self):
         self.assertTrue(allowed_tools('analysis','view_file'))
