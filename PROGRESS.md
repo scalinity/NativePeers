@@ -1,3 +1,11 @@
+# NativePeers current checkpoint
+
+The requested two-agent `gpt-6-astra`/`xhigh` review and all 12 address items are complete and pushed individually. Current code: `434ea56106da05ccf76d230988a15891578d5334`. Full offline verification: **107 tests and 63 subtests PASS**; protected manager/naming regressions: **23 PASS**. Current native caller and both installed dry-runs pass without provider configuration changes. [Findings and fixes](docs/ASTRA_REVIEW.md), [Claude conventions](docs/CLAUDE_CONVENTIONS.md).
+
+No new native model acceptance inputs were submitted: the ledger stays **95/98, 0 reserved, 0 unsettled**. Earlier live evidence is historical for its recorded fingerprints; post-fix live acceptance is NOT_RUN. All review agents are closed. Final nonsecret documentation, publication and Downloads handoff are being prepared; continue from `evidence/private/astra-review-20261022/state.json`.
+
+## Previous implementation checkpoint
+
 # NativePeers checkpoint
 
 NativePeers is installed at `/Users/danny/Documents/Tools/NativePeers`; `main` tracks the public `scalinity/NativePeers` repository. Native Codex queue remains selected. No Codex Rust patch, package activation, launcher rewrite or daemon change was made.

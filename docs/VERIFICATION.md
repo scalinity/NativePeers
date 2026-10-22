@@ -1,3 +1,13 @@
+# Current Astra review-fix verification
+
+Two parallel `gpt-6-astra`/`xhigh` reviewers found 2 critical issues, 8 warnings and 2 suggestions in the latest extension. All 12 were fixed and pushed, with focused tests and two downstream identity/installation recovery corrections. [Full findings and resolution](ASTRA_REVIEW.md).
+
+Current code commit: `434ea56106da05ccf76d230988a15891578d5334`. The final offline suite passed **107 tests and 63 subtests**; existing manager/naming regressions passed **23 tests**. Installed passive checks confirm the exact native caller, both no-op install dry-runs and unchanged protected configuration during those checks. Candidate update/compile messages in manager tests are mocks only.
+
+No new vendor-inference acceptance submissions were made during this address pass. The live ledger remains **95/98, zero reserved, zero unsettled**. Earlier native observations below retain their original source/runtime fingerprints; **current-source native acceptance after these fixes is NOT_RUN**. The full original acceptance matrix and old unrelated raw configuration drift remain qualified as recorded. Two normal Astra review agents were recorded separately and closed.
+
+## Earlier model/Antigravity extension record
+
 # Verification
 
 The model/Antigravity and implementation-worker extension passed its scoped native checks on Claude Code **2.1.308**, managed Codex **0.163.0** and official Antigravity CLI **1.4.5**. The original full acceptance suite remains qualified on its separately documented variants; this is not an unqualified complete-suite PASS.
