@@ -495,12 +495,13 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         from types import SimpleNamespace
         endpoint=self.group.endpoint
         for interface in ('cli','mcp'):
-            for close_mode in ('eof','abort'):
+            for close_mode in ('eof','abort','truncated'):
                 with self.subTest(interface=interface,close_mode=close_mode):
                     self.j.db.execute("UPDATE tasks SET state='RUNNING',result_artifact_id=NULL")
                     self.j.db.execute("UPDATE completion_routes SET state='UNCLAIMED',waiter_id=NULL")
                     async def connection(reader,writer):
                         await reader.readline();self.complete()
+                        if close_mode=='truncated':writer.write(b'{"ok":true,"data":');await writer.drain()
                         if close_mode=='abort':writer.transport.abort()
                         else:writer.close();await writer.wait_closed()
                     server=await asyncio.start_unix_server(connection,path=str(endpoint));os.chmod(endpoint,0o600)

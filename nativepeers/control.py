@@ -30,7 +30,7 @@ async def group_call(journal,group_id,operation,payload,timeout=5):
         reader,writer=await asyncio.wait_for(asyncio.open_unix_connection(str(endpoint),limit=CONTROL_RESPONSE+1),timeout)
         writer.write(wire);await writer.drain()
         raw=await asyncio.wait_for(reader.readline(),timeout)
-        require(raw,'SUPERVISOR_LOST','Group connection closed before its response',may_have_received=operation not in ('hello','status','wait','result'))
+        require(raw and raw.endswith(b'\n'),'SUPERVISOR_LOST','Group connection closed before a complete response',may_have_received=operation not in ('hello','status','wait','result'))
         require(len(raw)<=CONTROL_RESPONSE,'PROTOCOL_ERROR','Group response exceeds 2 MiB')
         value=json.loads(raw)
         if not value.get('ok'):
