@@ -6,7 +6,8 @@
     {
       "id": "R1",
       "description": "Transactional resume/enqueue phases",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 48 focused tests and 36 subtests; separate journal writers, real control socket, exact retries; tests/contract/test_phase_admission.py"
     },
     {
       "id": "R2",

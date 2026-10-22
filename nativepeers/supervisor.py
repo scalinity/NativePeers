@@ -267,10 +267,13 @@ class Group:
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],canonical({'text':canonical(message).decode(),'initial':False}).decode()))
             db.execute('UPDATE messages SET task_id=? WHERE message_id=?',(task_id,message['message_id']))
-            generation=max(int(n) for n in self.phases())+1
-            self.policy['phases']=dict(self.phases(),**{str(generation):[task_id]})
-            db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(self.policy).decode(),self.id))
+            policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0])
+            phases=policy.get('phases',{'1':policy['initial_tasks']})
+            generation=max(int(n) for n in phases)+1
+            policy['phases']=dict(phases,**{str(generation):[task_id]})
+            db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
             db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait','UNCLAIMED',None,None,new_id(),self.generation))
+        self.policy=policy
         await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':canonical(message).decode()})
         self.finished_at=None;self.changed.set()
         return {'stage':'ACCEPTED_QUEUED','evidence_kind':'controller-queue-admission','external_submission_id':task_id,'native_expiry_enforced':False}

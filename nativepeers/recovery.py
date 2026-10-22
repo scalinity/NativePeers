@@ -104,16 +104,21 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
             require(not matches(manifest['owner']),'OWNERSHIP_CONFLICT','Previous supervisor is still releasing; no resume input admitted')
         supervisor_alive=bool(manifest and matches(manifest['owner']))
         controller_generation=manifest['generation'] if supervisor_alive else policy.get('controller_generation',1)+1
-        phases=policy.get('phases',{'1':policy['initial_tasks']});phase=max(int(n) for n in phases)+1;task_id=new_id()
-        phases[str(phase)]=[task_id];policy.update(phases=phases,controller_generation=controller_generation,parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'],created_at=time.time())
+        task_id=new_id()
         lease.update(released_native=True,expires_at=time.time()+lease['spec']['wall_time_seconds']+600)
         lease['grants']['message_targets']=[caller.key]
-        response={'worker_id':worker_id,'task_id':task_id,'group_id':group['group_id'],'native_id':row['native_id'],
-                  'completion_generation':phase,'state':'QUEUED','client_request_id':request_id}
         with journal.transaction() as db:
             # Different groups have different resume locks but share the caller's ID space.
             raced=_resume_request(journal,caller,request_id,digest)
             if raced:return raced
+            # Enqueue uses a separate process/connection and does not take the
+            # resume lock. Allocate and merge against the current durable policy.
+            policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(group['group_id'],)).fetchone()[0])
+            phases=policy.get('phases',{'1':policy['initial_tasks']});phase=max(int(n) for n in phases)+1
+            phases[str(phase)]=[task_id]
+            policy.update(phases=phases,controller_generation=controller_generation,parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'],created_at=time.time())
+            response={'worker_id':worker_id,'task_id':task_id,'group_id':group['group_id'],'native_id':row['native_id'],
+                      'completion_generation':phase,'state':'QUEUED','client_request_id':request_id}
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
             require(active<local["workers_total"],'CAPACITY_UNAVAILABLE','No safe native worker slot is available')
             db.execute("UPDATE workers SET state='RESERVED',generation=generation+1,lease_json=? WHERE worker_id=? AND state='RELEASED_RESUMABLE'",(canonical(lease).decode(),worker_id))

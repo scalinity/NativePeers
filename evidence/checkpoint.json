@@ -133,13 +133,16 @@
     "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
     "evidence": "evidence/review-9e0cefb.json",
     "status": "IN_PROGRESS",
-    "completed": []
+    "completed": [
+      "R1"
+    ],
+    "last_completed": "R1"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "branch": "main",
     "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "commit": "cfff12d08d0e0e9861e83e91b9f56096d4d1986d",
+    "commit": "8bcd4e65079e96f01c7d9608d3cf2ff3f8c1519a",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -168,7 +171,7 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Fix R1 completion phase allocation in one transaction in resume_worker and Group.enqueue; verify both interleavings",
+  "next_action": "Continue remaining review TODO: R2, R3, R4, R5, R6, H1, I1, I2, S1, S2, S3, S4, S5, V1, D1",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
