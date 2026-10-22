@@ -145,15 +145,16 @@
       "I2",
       "S1",
       "S2",
-      "S3"
+      "S3",
+      "S5"
     ],
-    "last_completed": "S3"
+    "last_completed": "S5"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "branch": "main",
     "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "commit": "da5986813534b877d57cc644c331cacdaaf2641f",
+    "commit": "db69cd995e1f9360084053c46a4a263a4df2f70c",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -182,7 +183,7 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Continue remaining review TODO: S4, S5, V1, D1",
+  "next_action": "Continue remaining review TODO: S4, V1, D1",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"

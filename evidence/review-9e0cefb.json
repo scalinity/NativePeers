@@ -83,7 +83,8 @@
     {
       "id": "S5",
       "description": "Retained workspace cleanup planner",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 25 cleanup/preview tests and 4 subtests; real dead/live process and socket fixtures, CLI parent selection, unique-change/active/resume/unknown refusals; planner deletes nothing"
     },
     {
       "id": "V1",

@@ -46,6 +46,7 @@ def parser():
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
+    q=command('cleanup');q.add_argument('--plan',action='store_true',required=True);q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=20)
     q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144)
     q=command('resume-command');q.add_argument('worker_id')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
@@ -93,6 +94,14 @@ async def dispatch(args,journal):
     if name=='delta-preview':
         from .change_preview import preview
         return preview(journal,caller,args.worker_id,task_id=args.task_id)
+    if name=='cleanup':
+        from .cleanup import plan
+        require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Cleanup planning requires a verified parent')
+        core.registry.verify(caller.key,caller.incarnation)
+        require(1<=args.limit<=100,'PROTOCOL_ERROR','Cleanup selection limit must be 1 to 100')
+        workers=args.worker_id or [row['worker_id'] for row in journal.all("SELECT w.worker_id FROM workers w JOIN groups g USING(group_id) WHERE g.parent_key=? AND w.state='RELEASED_RESUMABLE' AND w.worktree_id IS NOT NULL ORDER BY w.rowid DESC LIMIT ?",(caller.key,args.limit))]
+        if not workers:return dict(planner_only=True,removed=False,recheck_required=True,candidates=[],instruction='No released owned writing workspaces in this bounded selection.')
+        return plan(journal,caller,workers)
     if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))
     if name in ('resume-worker','resume-command'):
         from .recovery import resume_command,resume_worker
