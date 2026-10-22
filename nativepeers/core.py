@@ -64,7 +64,7 @@ class Core:
         if name=='artifact_read':
             service=Artifacts(self.journal)
             try:return service.read(args['handle'],caller.key,args.get('offset',0),args.get('limit',262144))
-            except PeerError:
-                require(caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Artifact reader grant is absent')
+            except PeerError as error:
+                if error.code!='APPROVAL_BLOCKED' or not caller.grants.get('worker_id'):raise
                 return service.read(args['handle'],caller.grants['worker_id'],args.get('offset',0),args.get('limit',262144))
         require(False,'PROTOCOL_ERROR','Unknown NativePeers operation')

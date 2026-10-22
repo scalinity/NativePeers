@@ -83,6 +83,29 @@ class ArtifactsAndAuthority(unittest.TestCase):
             self.assertEqual(response['error']['code'],'PROTOCOL_ERROR')
             self.assertFalse(response['error']['may_have_received'])
 
+    def test_huge_offsets_return_protocol_errors_through_direct_peer_cli_and_mcp(self):
+        from types import SimpleNamespace
+        from nativepeers.mcp_server import Facade
+        caller=Caller('peer','direct-reader')
+        handle=Artifacts(self.j).put(b'page','direct-reader')
+        output=io.StringIO()
+        with patch('sys.argv',['npeer','artifact-read',handle,'--offset',str(10**100),'--json']),\
+             patch('nativepeers.cli.Journal',return_value=self.j),patch.object(self.j,'close'),\
+             patch('nativepeers.cli.bind_caller',return_value=caller),patch('sys.stdout',output),\
+             self.assertRaises(SystemExit) as raised:
+            main()
+        self.assertEqual(raised.exception.code,7)
+        responses=[json.loads(output.getvalue())]
+        facade=Facade(self.j,None)
+        with patch.object(facade,'binding_state',return_value={'state':'BOUND','grants':{}}),\
+             patch('nativepeers.mcp_server.bind_caller',return_value=caller):
+            result=asyncio.run(facade.call(None,SimpleNamespace(name='artifact_read',arguments={'handle':handle,'offset':10**100})))
+        self.assertTrue(result.is_error);responses.append(json.loads(result.content[0].text))
+        for response in responses:
+            self.assertFalse(response['ok']);self.assertIsNone(response['data'])
+            self.assertEqual(response['error']['code'],'PROTOCOL_ERROR')
+            self.assertFalse(response['error']['may_have_received'])
+
     def test_unbound_forged_metadata_never_becomes_human(self):
         with patch.dict(os.environ,{'CODEX_THREAD_ID':'00000000-0000-4000-8000-000000000001'},clear=True):
             with self.assertRaises(PeerError) as error:bind_caller(self.j,Registry(self.j))
