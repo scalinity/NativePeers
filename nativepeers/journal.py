@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS peer_instances (
  title TEXT, owner_kind TEXT NOT NULL, descriptor_json TEXT NOT NULL, status TEXT NOT NULL, last_seen REAL NOT NULL);
 CREATE INDEX IF NOT EXISTS peers_alias ON peer_instances(title,provider,status);
 CREATE INDEX IF NOT EXISTS peers_native ON peer_instances(native_id,home_id,status);
+CREATE INDEX IF NOT EXISTS peers_owner ON peer_instances(provider,pid,process_start,status);
 CREATE TABLE IF NOT EXISTS send_requests (caller_key TEXT,client_request_id TEXT,payload_sha256 TEXT NOT NULL,
  message_id TEXT NOT NULL,PRIMARY KEY(caller_key,client_request_id));
 CREATE TABLE IF NOT EXISTS messages (message_id TEXT PRIMARY KEY,exchange_id TEXT,from_actor_key TEXT NOT NULL,

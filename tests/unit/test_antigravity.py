@@ -136,6 +136,8 @@ class AntigravityTests(unittest.TestCase):
              patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','NPEER_BINDING':''}):
             observe(self.j,self.event,'SessionStart')
             facade=Facade(self.j,None)
+            plan=self.j.all("EXPLAIN QUERY PLAN SELECT descriptor_json FROM peer_instances WHERE provider=? AND pid=? AND process_start=? AND status='live'",('antigravity',self.owner.pid,self.owner.start))
+            self.assertTrue(any('peers_owner' in row['detail'] for row in plan))
             with patch('nativepeers.registry.Registry.list',side_effect=AssertionError('discovery called')), \
                  patch('nativepeers.antigravity.summaries',side_effect=AssertionError('native titles read')):
                 for _ in range(10):
