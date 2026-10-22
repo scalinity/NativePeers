@@ -186,7 +186,7 @@ def launch(provider):
     prepared=json.loads((RUN/'prepared.json').read_text());binary=Path(prepared['providers'][provider]['path'])
     assert fingerprint(binary)['sha256']==prepared['providers'][provider]['sha256']
     assert source()==prepared['source'],'Source changed after preparation'
-    command=f'{ROOT}/.venv/bin/python {ROOT}/tests/live/pro_review.py parent {provider}'
+    command=f'NPEER_PRO_REVIEW_RUN={RUN} {ROOT}/.venv/bin/python {ROOT}/tests/live/pro_review.py parent {provider}'
     prompt=f'''Authorized bounded NativePeers reliability test. Run this exact command ONCE through your native shell tool:
 {command}
 Allow this same tool process up to 480 seconds and collect its output if it runs in the background. It launches two native fixture workers and, for Codex, resumes one released Gemini history. Do not start vendor-native agents, retry commands, answer child tasks yourself or change configuration. After completion, report NP-PRO-{provider}-PARENT with the actual parent UUID, two child UUIDs, observed models, result 42 and actual assertion verdict. End your turn.'''
