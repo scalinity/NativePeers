@@ -82,11 +82,17 @@ async def parent(provider):
     caller=bind_caller(journal,core.registry,allow_external=False);peer=core.registry.verify(caller.key,caller.incarnation)
     assert peer['peer_key']['provider']==provider
     before=snapshot(FIXTURE,untracked_allowlist=['brief.txt']);editing=provider=='codex'
-    record={'at':stamp(),'provider':provider,'parent_native_id':peer['peer_key']['native_session_id'],'caller':caller.key,'source':source(),'groups':[]}
-    atomic_json(RUN/(provider+'-case.json'),record)
+    case_path=RUN/(provider+'-case.json')
+    prior=json.loads(case_path.read_text()) if case_path.exists() else None
+    if prior:
+        assert prior['caller']==caller.key and prior['source']==source(),'Continuation must keep the original caller and product source'
+    record=prior or {'at':stamp(),'provider':provider,'parent_native_id':peer['peer_key']['native_session_id'],'caller':caller.key,'source':source(),'groups':[]}
+    if record.get('error'):record.setdefault('prior_harness_errors',[]).append(record.pop('error'))
+    record.pop('status',None)
+    atomic_json(case_path,record)
     try:
         from nativepeers.artifacts import Artifacts
-        imported=Artifacts(journal).add_file(FIXTURE/'brief.txt',caller)
+        imported=None if record['groups'] else Artifacts(journal).add_file(FIXTURE/'brief.txt',caller)
         workers=[]
         for child in ('codex','antigravity'):
             task=('Read brief.txt and report its exact contents and product VALUE * 6. '
@@ -99,12 +105,19 @@ async def parent(provider):
             worker={'provider':child,'title':'NP Pro '+provider+' '+child,'task':task,'model':MODELS[child],
                     'permission_profile':'workspace' if editing else 'analysis',
                     'workspace':{'mode':'isolated-worktree','untracked_allowlist':['brief.txt']} if editing else {'mode':'inherit-read-only'},
-                    'context_refs':[imported['artifact_id']]}
+                    'context_refs':[imported['artifact_id']] if imported else []}
             if child=='codex':worker['reasoning_effort']='xhigh'
             workers.append(worker)
         spec={'schema_version':1,'client_request_id':'pro-'+provider+'-initial','workers':workers,'completion_mode':'wait',
               'limits':{'max_concurrent_workers':2,'max_depth':1,'wall_time_seconds':180,'max_task_turns_per_worker':6,'followup_grace_seconds':3}}
-        status=await core.delegation.spawn(caller,spec);group=status['group_id'];record['groups'].append(group);atomic_json(RUN/(provider+'-case.json'),record)
+        if record['groups']:
+            original=journal.one('SELECT policy_json FROM groups WHERE group_id=?',(record['groups'][0],))
+            spec=json.loads(original['policy_json'])['original_request']
+            lease=json.loads(journal.one('SELECT lease_json FROM workers WHERE group_id=? LIMIT 1',(record['groups'][0],))['lease_json'])
+            before={k:v for k,v in lease['baseline'].items() if k!='input_tree'} if editing else before
+        status=await core.delegation.spawn(caller,spec);group=status['group_id']
+        if group not in record['groups']:record['groups'].append(group)
+        atomic_json(case_path,record)
         # Local observation spends no additional model input. Exercise the public terminal fast path.
         async with asyncio.timeout(210):
             while any(t['state'] not in ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED') for t in core.delegation.status(caller,group)['tasks']):await asyncio.sleep(.1)
@@ -123,7 +136,7 @@ async def parent(provider):
             event=journal.one("SELECT at FROM events WHERE subject_id=? AND kind='native-task-started'",(result['task_id'],));starts.append(event['at'] if event else result['started_at'])
             if editing:
                 changes=result['changes'];assertions[child+'_delta']=bool(changes.get('worker_delta_artifact'))
-                code=Path(changes['worktree'])/('answer_'+child+'.py');namespace={};exec(compile(code.read_text(),str(code),'exec'),namespace);assertions[child+'_code']=namespace['answer']()==42
+                code=Path(changes['worktree'])/('answer_'+child+'.py');namespace={'__file__':str(code),'__name__':'nativepeers_fixture'};exec(compile(code.read_text(),str(code),'exec'),namespace);assertions[child+'_code']=namespace['answer']()==42
                 assertions[child+'_untracked_manifest']='brief.txt' in changes['baseline']['untracked_inputs']
         assertions['overlapping_native_tasks']=max(starts)<min(r['completed_at'] for r in results)
         record['assertions']=assertions
@@ -134,7 +147,7 @@ async def parent(provider):
                 while journal.one('SELECT state FROM workers WHERE worker_id=?',(row['worker_id'],))['state']!='RELEASED_RESUMABLE':await asyncio.sleep(.1)
                 while matches(json.loads((STATE/'workers'/(row['worker_id']+'.json')).read_text())['owner']):await asyncio.sleep(.1)
             from nativepeers.recovery import resume_worker
-            resumed=await resume_worker(journal,caller,row['worker_id'],'Read answer_antigravity.py. Return NP-PRO-RESUMED and 42; do not edit or launch other work.','wait')
+            resumed=record.get('resumed') or await resume_worker(journal,caller,row['worker_id'],'Read answer_antigravity.py. Return NP-PRO-RESUMED and 42; do not edit or launch other work.','wait')
             record['resumed']=resumed;atomic_json(RUN/(provider+'-case.json'),record)
             async with asyncio.timeout(210):
                 while True:
