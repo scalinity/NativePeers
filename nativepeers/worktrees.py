@@ -41,8 +41,8 @@ def worktree_parent(journal,root):
     return directory
 
 
-def bounded_diff(cwd,args,limit,deadline):
-    process=subprocess.Popen(['git','-C',str(cwd),'diff','--no-ext-diff','--no-textconv',*args],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+def bounded_diff(cwd,args,limit,deadline,*,options=()):
+    process=subprocess.Popen(['git','-C',str(cwd),*options,'diff','--no-ext-diff','--no-textconv',*args],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
     data=bytearray()
     try:
         with selectors.DefaultSelector() as selector:
@@ -69,7 +69,14 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     deadline=time.monotonic()+timeout
     delta={'worker_delta':b'','worker_delta_base':baseline.get('input_tree')}
     try:
-        tracked=[p for p in git(cwd,'diff','--no-renames','--name-only',baseline['head'],'-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
+        # Disable configured external filters even during Git's file discovery and patch capture.
+        filters=git(cwd,'config','--null','--name-only','--get-regexp',r'^filter\..*\.(clean|smudge|process|required)$',
+                    check=False,timeout=max(.001,deadline-time.monotonic()))
+        require(filters.returncode in (0,1),'WORKSPACE_SNAPSHOT_REQUIRED','Git filter configuration could not be read')
+        options=[]
+        for key in filters.stdout.decode().split('\0'):
+            if key:options.extend(['-c',key+'='+('false' if key.endswith('.required') else '')])
+        tracked=[p for p in git(cwd,*options,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['head'],'-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
         untracked=[p for p in git(cwd,'ls-files','--others','--exclude-standard','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
     except (OSError,subprocess.TimeoutExpired,PeerError):
         return dict(delta,patch=b'',changed_files=[],untracked_files=[],file_count=None,excluded_sensitive_or_symlink_files=[],
@@ -78,7 +85,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     input_paths=[]
     if baseline.get('input_tree'):
         try:
-            input_paths=[p for p in git(cwd,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['head'],baseline['input_tree'],'-z',
+            input_paths=[p for p in git(cwd,*options,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['head'],baseline['input_tree'],'-z',
                                        timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
             indexed=set(git(cwd,'ls-files','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0'))
             # Explicit inputs remain part of the reconstruction even if a worker changes ignore rules.
@@ -93,7 +100,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     commands.extend(['--no-index','--binary','--','/dev/null',relative] for relative in untracked if relative not in excluded)
     data=bytearray()
     for args in commands:
-        try:piece,reason=bounded_diff(cwd,args,max_bytes-len(data),deadline)
+        try:piece,reason=bounded_diff(cwd,args,max_bytes-len(data),deadline,options=options)
         except OSError:piece,reason=None,'Git diff could not start; inspect the retained worktree.'
         if reason:
             result['patch_unavailable_reason']=reason;data.clear();break
@@ -104,15 +111,17 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     if 'worker_delta_unavailable_reason' in result:return result
     try:
         paths=list(dict.fromkeys(p for p in tracked+untracked+input_paths if p not in excluded))
-        tree=_working_tree(cwd,baseline['head'],paths,deadline)
+        tree=_working_tree(cwd,baseline['head'],paths,deadline,tracked_paths=set(tracked)|indexed,options=options)
         names=git(cwd,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['input_tree'],tree,'-z',
                   timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0')
         paths=[p for p in names if p and p not in excluded and not sensitive(p) and not (Path(cwd)/p).is_symlink()]
         if paths:
-            data,reason=bounded_diff(cwd,[baseline['input_tree'],tree,'--binary','--',*paths],max_bytes,deadline)
+            data,reason=bounded_diff(cwd,[baseline['input_tree'],tree,'--binary','--',*paths],max_bytes,deadline,options=options)
             if reason:result['worker_delta_unavailable_reason']=reason
             else:result['worker_delta']=bytes(data)
-    except (OSError,subprocess.TimeoutExpired,PeerError):
+    except PeerError as error:
+        result['worker_delta_unavailable_reason']='Worker delta unavailable: '+error.message
+    except (OSError,subprocess.TimeoutExpired):
         result['worker_delta_unavailable_reason']='Worker delta capture failed or timed out; inspect the retained worktree.'
     return result
 
@@ -125,12 +134,12 @@ def git(cwd,*args,input=None,stdin=None,env=None,check=True,timeout=None):
 
 
 @contextlib.contextmanager
-def _temporary_index(cwd,deadline):
+def _temporary_index(cwd,deadline,*,options=()):
     directory=git(cwd,'rev-parse','--absolute-git-dir',timeout=max(.001,deadline-time.monotonic())).stdout.decode().strip()
     with tempfile.TemporaryDirectory(prefix='npeer-index-',dir=directory) as temporary:
         environment=dict(os.environ,GIT_INDEX_FILE=str(Path(temporary)/'index'))
         def command(*args,**kwargs):
-            return git(cwd,*args,env=environment,timeout=max(.001,deadline-time.monotonic()),**kwargs)
+            return git(cwd,*options,*args,env=environment,timeout=max(.001,deadline-time.monotonic()),**kwargs)
         yield command
 
 
@@ -148,10 +157,15 @@ def _input_tree(cwd,frozen,selected):
         return command('write-tree').stdout.decode().strip()
 
 
-def _working_tree(cwd,head,paths,deadline):
-    # Hash through open descriptors, without clean filters or the worker's real index.
-    with _temporary_index(cwd,deadline) as command:
+def _working_tree(cwd,head,paths,deadline,*,tracked_paths=(),options=()):
+    # Normalize tracked blobs with built-in Git attributes, never external filters or the real index.
+    with _temporary_index(cwd,deadline,options=options) as command:
         command('read-tree',head)
+        normalized=[p for p in paths if p in tracked_paths]
+        if normalized:
+            attributes=command('check-attr','-z','--stdin','filter',input=b''.join(os.fsencode(p)+b'\0' for p in normalized)).stdout.split(b'\0')
+            require(all(value in (b'unspecified',b'unset') for value in attributes[2::3]),
+                    'WORKSPACE_SNAPSHOT_REQUIRED','Custom Git filter normalization is unavailable without executing external filters; inspect the retained worktree.')
         if paths:command('update-index','--force-remove','-z','--stdin',input=b''.join(os.fsencode(p)+b'\0' for p in paths))
         entries=bytearray()
         for relative in paths:
@@ -168,7 +182,8 @@ def _working_tree(cwd,head,paths,deadline):
             with os.fdopen(fd,'rb') as stream:
                 before=os.fstat(stream.fileno())
                 require(stat.S_ISREG(before.st_mode),'WORKSPACE_SNAPSHOT_REQUIRED','Worker delta inputs must be regular files')
-                oid=command('hash-object','-w','--stdin','--no-filters',stdin=stream).stdout.strip()
+                conversion=['--path',relative] if relative in tracked_paths else ['--no-filters']
+                oid=command('hash-object','-w','--stdin',*conversion,stdin=stream).stdout.strip()
                 after=os.fstat(stream.fileno())
             require((before.st_mode,before.st_size,before.st_mtime_ns,before.st_ctime_ns)==
                     (after.st_mode,after.st_size,after.st_mtime_ns,after.st_ctime_ns),
