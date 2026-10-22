@@ -126,13 +126,7 @@ class Worker:
             self.journal.event(self.row['worker_id'],'effective-tool-profile',{'profile':self.spec['permission_profile'],
                 'servers':[{ 'name':s['name'],'tools':list(s['tools']),'runtime_status':s.get('runtimeStatus')} for s in inventory['data']],
                 'sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
-        elif self.row['provider']=='antigravity':
-            from .antigravity_install import worker_profile,verify_tool_gate
-            verify(self.journal,'antigravity',self.lease['executable'])
-            path=Path.home()/'.gemini/config/agents'/('nativepeers-'+self.spec['permission_profile']+'.md')
-            require(path.is_file() and path.read_text()==worker_profile(self.spec['permission_profile']),
-                    'PERMISSION_CAPABILITY_UNKNOWN','The Antigravity worker profile is missing or modified; run npeer install --antigravity')
-            verify_tool_gate(self.spec)
+        elif self.row['provider']=='antigravity':self.verify_antigravity()
         else:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'AUTH_REQUIRED','Installed Claude executable is unavailable')
@@ -304,10 +298,23 @@ class Worker:
         finally:
             if not drain.done():drain.cancel()
 
+    def verify_antigravity(self):
+        from .antigravity_install import worker_profile,verify_tool_gate
+        verify(self.journal,'antigravity',self.lease['executable'])
+        path=Path.home()/'.gemini/config/agents'/('nativepeers-'+self.spec['permission_profile']+'.md')
+        require(path.is_file() and path.read_text()==worker_profile(self.spec['permission_profile']),
+                'PERMISSION_CAPABILITY_UNKNOWN','The Antigravity worker profile is missing or modified; run npeer install --antigravity')
+        verify_tool_gate(self.spec)
+
     async def antigravity_turn(self,text):
         from .antigravity import arguments
+        require(not self.stopping,'USER_CANCELED','Worker is stopping')
         env=launch_environment('antigravity')
         env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
+        self.verify_antigravity()
+        # A serialized follow-up launches a fresh process. Prior observations,
+        # including those for the same worker/native UUID, cannot certify it.
+        launch_sequence=self.journal.one('SELECT COALESCE(MAX(sequence),0) AS sequence FROM events')['sequence']
         self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*arguments(self.spec,self.native),
             cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
@@ -335,11 +342,11 @@ class Worker:
                 if event.get('event')=='result':terminal=event['result']
             await self.provider.wait();await drain
             require(terminal is not None,'WORKER_CRASHED','Antigravity exited without a terminal result',details=errors.decode(errors='replace')[-1000:])
-            observed=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='native-hook-observed' AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC LIMIT 1",(self.row['worker_id'],self.native))
-            require(observed,'PERMISSION_CAPABILITY_UNKNOWN','No verified native Antigravity worker hook observed this conversation')
-            if observed:
-                model=json.loads(observed['payload_json']).get('model')
-                if model:self.bind(self.native,model=model)
+            observations=self.journal.all("SELECT payload_json FROM events WHERE subject_id=? AND kind='native-hook-observed' AND sequence>? AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC",(self.row['worker_id'],launch_sequence,self.native))
+            observed=next((payload for row in observations if (payload:=json.loads(row['payload_json'])).get('process')==self.provider_identity),None)
+            require(observed,'PERMISSION_CAPABILITY_UNKNOWN','No verified native Antigravity worker hook observed this turn process after launch')
+            model=observed.get('model')
+            if model:self.bind(self.native,model=model)
             status=terminal.get('status')
             self.journal.event(self.running_task,'provider-internal-rounds',{'num_turns':terminal.get('num_turns'),'counter_scope':'native conversation cumulative; worker inputs are counted separately'})
             return {'status':'completed' if status=='SUCCESS' and self.provider.returncode==0 else 'canceled' if status in ('CANCELED','INTERRUPTED') else 'failed',
