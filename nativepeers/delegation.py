@@ -11,7 +11,7 @@ import tomllib
 
 from .adapters.codex_app_server import AppServer
 from .control import group_call
-from .errors import PeerError,require
+from .errors import PeerError,SupervisorNotStarted,require
 from .files import async_advisory_lock,atomic_json,canonical,private_directory,sha256
 from .launch import launch_environment,provider_home,home_environment
 from .models import bounded_text,new_id,title
@@ -168,6 +168,7 @@ class Delegation:
                 db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker['worker_id'],group_id,None,spec['provider'],native_id,spec['title'],spec['model'],None,spec.get('reasoning_effort'),spec['cwd'],None,'RESERVED',1,canonical(worker['lease']).decode()))
                 db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(worker['task_id'],worker['worker_id'],None,None,'QUEUED',None,None,1,canonical({'text':spec['task'],'initial':True}).decode()))
         directory=private_directory(self.journal.root/'groups'/group_id)
+        launch_attempted=False
         try:
             batch_workspace=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline)
             for worker in prepared:
@@ -176,11 +177,12 @@ class Delegation:
                 self.journal.db.execute('UPDATE workers SET cwd=?,worktree_id=?,lease_json=? WHERE worker_id=?',(cwd,worktree_id,canonical(worker['lease']).decode(),worker['worker_id']))
             if any(w['workspace'].get('mode') in ('isolated-worktree','isolated-copy') for w in prepared):
                 await asyncio.to_thread(validate_frozen,parent['cwd'],batch_workspace)
+            launch_attempted=True
             await self.ensure_supervisor(group_id)
         except Exception as error:
             self.journal.event(group_id,'startup-error',{'type':type(error).__name__,'message':str(error)[:1000]})
             # A readiness timeout is uncertain; never launch another supervisor from this path.
-            if not (directory/'owner.json').exists():
+            if not launch_attempted or isinstance(error,SupervisorNotStarted):
                 self.journal.db.execute("UPDATE groups SET state='FAILED' WHERE group_id=?",(group_id,))
                 self.journal.db.execute("UPDATE workers SET state='FAILED' WHERE group_id=?",(group_id,))
                 self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='STARTUP_FAILED_BEFORE_SUBMISSION' WHERE state='QUEUED' AND native_turn_id IS NULL AND worker_id IN (SELECT worker_id FROM workers WHERE group_id=?)",(group_id,))
@@ -197,9 +199,12 @@ class Delegation:
                 return
             log=open(directory/'supervisor.log','ab',buffering=0);os.chmod(log.name,0o600)
             try:
-                process=subprocess.Popen([str(PYTHON),'-m','nativepeers.supervisor','--group-id',group_id],
-                    cwd=ROOT,env=supervisor_environment(self.journal),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
-                    start_new_session=True,close_fds=True)
+                try:
+                    process=subprocess.Popen([str(PYTHON),'-m','nativepeers.supervisor','--group-id',group_id],
+                        cwd=ROOT,env=supervisor_environment(self.journal),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
+                        start_new_session=True,close_fds=True)
+                except OSError as error:
+                    raise SupervisorNotStarted(group_id,error) from error
             finally:log.close()
             deadline=time.monotonic()+8
             while not manifest.exists() and time.monotonic()<deadline:

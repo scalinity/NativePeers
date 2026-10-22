@@ -13,3 +13,10 @@ class PeerError(Exception):
 def require(condition, code, message, **kwargs):
     if not condition:
         raise PeerError(code, message, **kwargs)
+
+
+class SupervisorNotStarted(PeerError):
+    """Process creation itself failed; no supervisor could have admitted input."""
+    def __init__(self, group_id, error):
+        super().__init__('SUPERVISOR_LOST','Supervisor process creation failed before startup',
+                         details={'group_id':group_id,'supervisor_started':False,'cause':type(error).__name__})

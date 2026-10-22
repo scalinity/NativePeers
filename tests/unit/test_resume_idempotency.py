@@ -16,6 +16,9 @@ from nativepeers.journal import Journal
 from nativepeers.models import new_id
 from nativepeers.process import identity
 from nativepeers.recovery import resume_worker
+from nativepeers.recovery import assert_released, resume_command, reconcile_owned
+from nativepeers.delegation import Delegation
+from nativepeers.registry import Registry
 
 
 class ResumeIdempotencyTests(unittest.IsolatedAsyncioTestCase):
@@ -30,6 +33,7 @@ class ResumeIdempotencyTests(unittest.IsolatedAsyncioTestCase):
                        'policy': {'profiles': ['analysis']}}
         self.released = self.enterContext(patch('nativepeers.recovery.assert_released'))
         self.verify = self.enterContext(patch('nativepeers.recovery.Registry.verify', return_value=self.parent))
+        self.real_start=Delegation.ensure_supervisor
         self.start = self.enterContext(patch('nativepeers.recovery.Delegation.ensure_supervisor', new_callable=AsyncMock))
         self.control = self.enterContext(patch('nativepeers.recovery.group_call', new_callable=AsyncMock))
         self.enterContext(patch('asyncio.create_subprocess_exec', side_effect=AssertionError('Native launch forbidden')))
@@ -121,7 +125,37 @@ class ResumeIdempotencyTests(unittest.IsolatedAsyncioTestCase):
         retry = await self.resume()
         self.assertEqual(retry, json.loads(request['response_json']))
         self.assertEqual(self.journal.one('SELECT COUNT(*) AS n FROM tasks')['n'], 1)
+        self.assertEqual(self.journal.one('SELECT state FROM workers')['state'],'RESERVED')
         self.start.assert_awaited_once()
+
+    async def test_definite_process_creation_failure_releases_reserved_resume_and_retains_retry(self):
+        row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(self.worker,))
+        # Keep a real prior-generation manifest, as normal released histories do.
+        owner=dict(self.parent['owner'],pid=99999999,pgid=99999999)
+        atomic_json(self.journal.root/'workers'/(self.worker+'.json'),
+                    {'worker_id':self.worker,'generation':1,'native_id':row['native_id'],'owner':owner,'native_process':None})
+        atomic_json(self.journal.root/'groups'/row['group_id']/'owner.json',{'owner':owner,'generation':1})
+        self.journal.db.execute("UPDATE workers SET provider='codex' WHERE worker_id=?",(self.worker,))
+        self.released.side_effect=assert_released
+        async def launch(group_id):return await self.real_start(Delegation(self.journal,Registry(self.journal)),group_id)
+        self.start.side_effect=launch
+        with patch('nativepeers.delegation.subprocess.Popen',side_effect=FileNotFoundError('fixture executable missing')) as popen:
+            with self.assertRaises(PeerError) as error:await self.resume()
+            self.assertEqual(error.exception.code,'SUPERVISOR_LOST')
+            task_id=error.exception.details['task_id']
+            retry=await self.resume()
+            self.assertEqual((retry['task_id'],retry['state']),(task_id,'FAILED'))
+            popen.assert_called_once()
+        self.assertEqual(self.journal.one('SELECT state,generation FROM workers'),{'state':'RELEASED_RESUMABLE','generation':2})
+        self.assertEqual(self.journal.one("SELECT COUNT(*) n FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')")['n'],0)
+        self.assertEqual(reconcile_owned(self.journal,self.caller,row['group_id']),[])
+        manual=resume_command(self.journal,self.caller,self.worker)
+        self.assertEqual(manual['native_id'],row['native_id'])
+        self.start.side_effect=None
+        fresh=await self.resume('new-operation')
+        self.assertNotEqual(fresh['task_id'],task_id)
+        self.assertEqual(self.journal.one('SELECT generation FROM workers')['generation'],3)
+        self.assertEqual((await self.resume())['task_id'],task_id)
 
     async def test_reusing_id_with_changed_worker_text_or_completion_rejects(self):
         other = self.add_worker()

@@ -7,7 +7,7 @@ import time
 
 from .control import group_call
 from .delegation import Delegation,TERMINAL
-from .errors import require
+from .errors import SupervisorNotStarted,require
 from .files import async_advisory_lock,canonical,sha256
 from .models import bounded_text,new_id
 from .launch import recorded_home,home_environment
@@ -130,7 +130,20 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
             await group_call(journal,group['group_id'],'resume',{'caller_key':caller.key,'worker_id':worker_id,'task_id':task_id,'text':text},timeout=35)
         else:
             if manifest_path.exists():manifest_path.rename(manifest_path.with_name('owner.generation-'+str(manifest['generation'])+'.json'))
-            await Delegation(journal,registry).ensure_supervisor(group['group_id'])
+            try:
+                await Delegation(journal,registry).ensure_supervisor(group['group_id'])
+            except SupervisorNotStarted as error:
+                # This positive process-creation failure is stronger than a
+                # missing manifest. The resume admission lock is still held.
+                with journal.transaction() as db:
+                    changed=db.execute("UPDATE tasks SET state='FAILED',terminal_reason='SUPERVISOR_LAUNCH_FAILED_BEFORE_START' WHERE task_id=? AND generation=? AND state='QUEUED' AND native_turn_id IS NULL",(task_id,row['generation']+1)).rowcount
+                    if changed:
+                        db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=? AND state='RESERVED'",(worker_id,row['generation']+1))
+                        db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state='UNCLAIMED'",(group['group_id'],phase))
+                        db.execute("UPDATE groups SET state='FAILED' WHERE group_id=?",(group['group_id'],))
+                journal.event(task_id,'resume-not-launched',error.json())
+                error.details.update(task_id=task_id,worker_id=worker_id,client_request_id=request_id)
+                raise
         return response
 
 

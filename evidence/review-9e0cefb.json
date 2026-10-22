@@ -12,7 +12,8 @@
     {
       "id": "R2",
       "description": "Definite resume launch failure settlement",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 16 focused tests and 15 subtests; real prior-generation manifests and production launch method with definite Popen failure; unknown startup stays reserved"
     },
     {
       "id": "R3",
