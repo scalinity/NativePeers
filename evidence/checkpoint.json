@@ -114,7 +114,7 @@
     "native_histories_retained": true,
     "total_review_fixture_worktrees_removed": 4,
     "usage_intelligence": {
-      "branch": "feat/usage-intelligence; remove after main fast-forward",
+      "branch": "Merged feature branch removed locally and remotely; no open PR",
       "codegraph": "Existing local index retained and synced; ignored",
       "owned_probe_processes_remaining": 0,
       "private_backups_retained": true,
@@ -152,6 +152,7 @@
     "name": "usage-intelligence",
     "native_inference_submitted": 0,
     "next_action": "Await independent Pro review; no pending feature implementation or native model work.",
+    "publication": "Code and verification merged/pushed to main; temporary feature branch removed.",
     "publication_checks": "36 tests / 19 subtests PASS",
     "review_archive": {
       "commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
@@ -170,7 +171,7 @@
     "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
     "branch": "main",
     "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
-    "last_verified_publication": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+    "last_verified_publication": "6d62637515d4e8951fea5e8571eb6acc18d75525",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -237,10 +238,11 @@
   "publication": {
     "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
-    "scope": "Product code commit verified on origin feature ref before final verification publication; main fast-forward is checked at close-out.",
+    "scope": "Product and verification commits confirmed on origin/main; publishing metadata commits are descendants of this verified revision.",
     "source_zip_uploaded": false,
     "status": "PUSHED",
-    "verified_remote_code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212"
+    "verified_remote_code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+    "verified_remote_commit": "6d62637515d4e8951fea5e8571eb6acc18d75525"
   },
   "schema_version": 2,
   "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -308,5 +310,5 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-22T18:59:11.685995-04:00"
+  "updated_at": "2026-10-22T19:02:35.358075-04:00"
 }
