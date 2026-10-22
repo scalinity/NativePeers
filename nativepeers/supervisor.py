@@ -164,6 +164,7 @@ class Group:
         new_lease=dict(lease,provider_home=candidate['provider_home'],executable=candidate['executable'],spec=spec,binding=str(binding),
                       grants=dict(lease['grants'],worker_id=worker_id),fallback_candidates=lease['fallback_candidates'][index+1:])
         new_lease.pop('released_native',None)
+        new_lease.pop('verified_runtime',None)
         # One logical task/phase; a replacement is a different native history and worker.
         with self.journal.transaction() as db:
             current=db.execute('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],)).fetchone()

@@ -93,9 +93,11 @@ class Worker:
 
     async def prepare(self):
         self.bootstrap()
+        actual=verify(self.journal,self.row['provider'],self.lease['executable'],worker_id=self.row['worker_id'])
+        self.lease['verified_runtime']=actual
+        self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),self.row['worker_id']))
         if self.row['provider']=='codex':
             executable=Path(self.lease['executable']).resolve(strict=True)
-            verify(self.journal,'codex',executable)
             config=codex_config(self.journal,self.binding,self.spec['permission_profile'],home=self.home)
             self.client=AppServer(executable,config_arguments(config),cwd=Path(self.row['cwd']),
                 environment={**home_environment('codex',self.home),'NPEER_HOME':str(self.journal.root),'NPEER_BOOTSTRAP':str(self.binding),'PYTHONPATH':str(ROOT)})
@@ -131,7 +133,6 @@ class Worker:
         else:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'AUTH_REQUIRED','Installed Claude executable is unavailable')
-            verify(self.journal,'claude',self.lease['executable'])
             launch_environment('claude');claude_arguments(self.journal,self.binding,self.spec,self.expected_native,home=self.home)
         self.journal.db.execute("UPDATE workers SET state='READY' WHERE worker_id=?",(self.row['worker_id'],))
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
@@ -347,7 +348,7 @@ class Worker:
 
     def verify_antigravity(self):
         from .antigravity_install import verify_worker_ready
-        verify_worker_ready(self.journal,self.spec,self.lease['executable'])
+        verify_worker_ready(self.journal,self.spec,self.lease['executable'],worker_id=self.row['worker_id'])
 
     async def antigravity_turn(self,text):
         from .antigravity import arguments

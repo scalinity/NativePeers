@@ -45,3 +45,49 @@ class CompatibilityReceiptTests(unittest.TestCase):
             self.assertEqual(result[1]['error'],'FileNotFoundError')
             self.assertEqual((journal.root/'compat/runtime.json').read_bytes(),before)
             self.assertEqual(journal.all('SELECT * FROM receipts'),[])
+
+    def test_retained_runtime_is_scoped_to_preexisting_verified_leases_and_revocable(self):
+        from nativepeers.compatibility import revoke
+        from nativepeers.errors import PeerError
+        from nativepeers.files import canonical
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();j=Journal(root/'state');self.addCleanup(j.close)
+            old=root/'codex-v1';old.write_text('verified old package');new=root/'codex-v2';new.write_text('verified new package')
+            claude=root/'claude';claude.write_text('unchanged')
+            approved=dict(fingerprint(old),version='old',scope='focused native seam approval')
+            atomic_json(j.root/'compat/runtime.json',{'providers':{'codex':approved}})
+            j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',('group','parent','{}','COMPLETED','{}'))
+            def worker(name,pinned):
+                lease={'executable':str(old),'verified_runtime':pinned} if pinned else {'executable':str(old)}
+                j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(name,'group',None,'codex',name,name,'model','model',None,str(root),None,'RELEASED_RESUMABLE',1,canonical(lease).decode()))
+            worker('owned-old',fingerprint(old));worker('unverified-old',None)
+            source=root/'verified.json';source.write_text(json.dumps({'providers':{p:{'executable':str(f),'executable_sha256':fingerprint(f)['sha256'],'version':'new'} for p,f in [('claude',claude),('codex',new)]}}))
+            record_verified(j,source)
+            self.assertEqual(verify(j,'codex',new)['path'],str(new))
+            self.assertEqual(verify(j,'codex',old,worker_id='owned-old')['path'],str(old))
+            worker('later-copy',fingerprint(old))
+            for worker_id in (None,'unverified-old','later-copy'):
+                with self.subTest(worker=worker_id),self.assertRaises(PeerError):verify(j,'codex',old,worker_id=worker_id)
+            # A lease cannot silently migrate to the newly approved package.
+            with self.assertRaises(PeerError):verify(j,'codex',new,worker_id='owned-old')
+            result=revoke(j,'codex',approved['sha256']);self.assertTrue(result['current_approval_unchanged'])
+            record_verified(j,source)  # no-op refresh cannot undo revocation
+            with self.assertRaises(PeerError):verify(j,'codex',old,worker_id='owned-old')
+            self.assertEqual(verify(j,'codex',new)['path'],str(new))
+            old.write_text('tampered old bytes')
+            with self.assertRaises(PeerError):verify(j,'codex',old,worker_id='owned-old')
+
+    def test_public_revocation_refuses_worker_authority(self):
+        import asyncio
+        from unittest.mock import patch
+        from nativepeers.caller import Caller
+        from nativepeers.cli import parser,dispatch
+        from nativepeers.errors import PeerError
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);j=Journal(root/'state');self.addCleanup(j.close)
+            digest='a'*64
+            atomic_json(j.root/'compat/runtime.json',{'providers':{},'retained':{'codex':{digest:{'fingerprint':{},'workers':['old-worker'],'revoked':False}}}})
+            args=parser().parse_args(['runtime-revoke','--provider','codex','--sha256',digest])
+            with patch('nativepeers.cli.bind_caller',return_value=Caller('peer','worker',grants={'worker_id':'worker'})),self.assertRaises(PeerError):asyncio.run(dispatch(args,j))
+            with patch('nativepeers.cli.bind_caller',return_value=Caller('external-local','local')):
+                self.assertTrue(asyncio.run(dispatch(args,j))['revoked'])

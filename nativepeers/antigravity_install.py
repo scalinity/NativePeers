@@ -34,9 +34,9 @@ def verify_tool_gate(spec):
             'The Antigravity NativePeers profile, tool gate or MCP facade is missing, disabled, modified or unresolved',details=checks)
 
 
-def verify_worker_ready(journal,spec,executable):
+def verify_worker_ready(journal,spec,executable,*,worker_id=None):
     """Read-only admission check; never bootstrap, repair or launch a provider."""
-    verify(journal,'antigravity',executable)
+    verify(journal,'antigravity',executable,worker_id=worker_id)
     verify_tool_gate(spec)
 
 
@@ -216,6 +216,7 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
             receipt_path=journal.root/'compat/runtime.json'
             receipt=json.loads(receipt_path.read_text()) if receipt_path.exists() else {'schema_version':1,'providers':{}}
             if actual is not None and receipt['providers'].get('antigravity')!=actual:
-                receipt['providers']['antigravity']=actual;atomic_json(receipt_path,receipt);compatibility_updated=True
+                from .compatibility import update_verified
+                update_verified(journal,{'antigravity':actual});compatibility_updated=True
         return dict(plan,installed=not remove,changed=bool(operations) or recovered or compatibility_updated,
                     compatibility_updated=compatibility_updated,manifest=str(manifest_path))

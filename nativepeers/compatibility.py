@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from .errors import require
-from .files import atomic_json
+from .files import advisory_lock,atomic_json
 
 _cache={}
 
@@ -16,25 +16,67 @@ def fingerprint(path):
     return {'path':str(path),'sha256':_cache[key],'size':info.st_size}
 
 
-def verify(journal,provider,executable):
+def verify(journal,provider,executable,*,worker_id=None):
     receipt=journal.root/'compat/runtime.json'
     require(receipt.exists(),'CAPABILITY_MISMATCH','Native compatibility has not been installed or verified for this state root')
-    expected=json.loads(receipt.read_text())['providers'].get(provider)
+    document=json.loads(receipt.read_text());expected=document['providers'].get(provider)
     require(expected,'CAPABILITY_MISMATCH','Provider has no installed compatibility receipt')
     actual=fingerprint(executable)
-    require(actual['sha256']==expected['sha256'],'CAPABILITY_MISMATCH','Native executable changed; passive compatibility review is required before this operation')
+    pinned=None
+    if worker_id:
+        row=journal.one('SELECT provider,lease_json FROM workers WHERE worker_id=?',(worker_id,))
+        require(row and row['provider']==provider,'CAPABILITY_MISMATCH','Runtime lease does not match this provider')
+        pinned=json.loads(row['lease_json']).get('verified_runtime')
+        require(pinned is None or all(pinned.get(k)==actual[k] for k in ('path','sha256','size')),
+                'CAPABILITY_MISMATCH','The worker\'s verified executable no longer matches its pinned runtime')
+    retained=document.get('retained',{}).get(provider,{}).get(actual['sha256'],{})
+    old_allowed=bool(pinned and not retained.get('revoked') and worker_id in retained.get('workers',[])
+                     and all(retained.get('fingerprint',{}).get(k)==actual[k] for k in ('path','sha256','size')))
+    require(actual['sha256']==expected['sha256'] or old_allowed,'CAPABILITY_MISMATCH','Native executable changed; passive compatibility review is required before this operation')
     return actual
+
+
+def update_verified(journal,replacements):
+    """Retire only explicit approvals, scoped to leases already verified with them."""
+    receipt=journal.root/'compat/runtime.json'
+    with advisory_lock(journal.root/'locks/runtime.lock'):
+        document=json.loads(receipt.read_text()) if receipt.exists() else {'schema_version':1,'providers':{}}
+        for provider,actual in replacements.items():
+            old=document['providers'].get(provider)
+            if old and old['sha256']!=actual['sha256']:
+                workers=[]
+                for row in journal.all('SELECT worker_id,lease_json FROM workers WHERE provider=?',(provider,)):
+                    pinned=json.loads(row['lease_json']).get('verified_runtime',{})
+                    if all(pinned.get(k)==old.get(k) for k in ('path','sha256','size')):workers.append(row['worker_id'])
+                history=document.setdefault('retained',{}).setdefault(provider,{})
+                prior=history.get(old['sha256'],{})
+                history[old['sha256']]={'fingerprint':old,'workers':sorted(set(workers+prior.get('workers',[]))),
+                                       'revoked':prior.get('revoked',False)}
+            document['providers'][provider]=actual
+        atomic_json(receipt,document)
+
+
+def revoke(journal,provider,digest):
+    require(isinstance(digest,str) and len(digest)==64 and all(c in '0123456789abcdef' for c in digest),
+            'PROTOCOL_ERROR','Supply an exact SHA-256 fingerprint')
+    receipt=journal.root/'compat/runtime.json'
+    with advisory_lock(journal.root/'locks/runtime.lock'):
+        document=json.loads(receipt.read_text())
+        retained=document.get('retained',{}).get(provider,{}).get(digest)
+        require(retained,'PROTOCOL_ERROR','No retained runtime approval has this provider/fingerprint')
+        retained['revoked']=True;atomic_json(receipt,document)
+    return {'provider':provider,'sha256':digest,'revoked':True,'current_approval_unchanged':True}
 
 
 def record_verified(journal,source):
     value=json.loads(Path(source).read_text())
     receipt=journal.root/'compat/runtime.json'
-    providers=json.loads(receipt.read_text())['providers'] if receipt.exists() else {}
+    providers={}
     for provider in ('claude','codex'):
         info=value['providers'][provider];actual=fingerprint(info['executable'])
         require(info.get('executable_sha256')==actual['sha256'],'CAPABILITY_MISMATCH','Current binary differs from the executable integration evidence')
         providers[provider]=dict(actual,version=info['version'])
-    atomic_json(journal.root/'compat/runtime.json',{'providers':providers,'schema_version':1})
+    update_verified(journal,providers)
 
 
 def diagnose(journal, executables=None):

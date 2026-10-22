@@ -51,6 +51,7 @@ def parser():
     q=command('resume-command');q.add_argument('worker_id')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
+    q=command('runtime-revoke');q.add_argument('--provider',choices=['claude','codex','antigravity'],required=True);q.add_argument('--sha256',required=True)
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
         q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true')
@@ -67,7 +68,7 @@ async def dispatch(args,journal):
     core=Core(journal)
     try:caller=bind_caller(journal,core.registry)
     except PeerError:
-        if args.command not in ('list','resolve','doctor','install','uninstall'):raise
+        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke'):raise
         caller=Caller('external-local','external-local')
     name=args.command
     if name=='whoami':return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants)
@@ -119,6 +120,10 @@ async def dispatch(args,journal):
         lifecycle=reconcile_owned(journal,caller,group['group_id'],dry_run=args.dry_run)
         return {'group_id':group['group_id'],'workers':workers,'message_observations':observations,'lifecycle':lifecycle,'replayed':False,
                 'next_action':'Read retained results; uncertain native input was not resubmitted.'}
+    if name=='runtime-revoke':
+        require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot change retained runtime approvals')
+        from .compatibility import revoke
+        return revoke(journal,args.provider,args.sha256)
     if name=='doctor':
         from .compatibility import diagnose
         from .readiness import readiness

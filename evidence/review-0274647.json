@@ -31,7 +31,8 @@
       "verification": "47 discovery/MCP/notification tests and 48 subtests PASS. Additive active/queued counts, initial completion, latest phase, deadline and current-generation native activity preserve group state and notification claims; late stale-generation activity is excluded."
     },
     "RUNTIMES": {
-      "status": "PENDING"
+      "status": "FIXED",
+      "verification": "31 provider/bootstrap/install/home/fallback tests and 25 subtests PASS, plus public revocation regression PASS. Only exact preexisting verified lease IDs retain an explicitly approved old executable; altered/unknown/unrelated/revoked runtimes fail, replacements clear the prior provider fingerprint, and new work selects the current executable."
     },
     "GIT_PRIVATE": {
       "status": "PENDING"
@@ -64,15 +65,15 @@
     "nativepeers/adapters/metadata.py": "f2c3c9409ef5f033d742e7cafd669a8f56489f283cad06a01cd8fdef99f93260",
     "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
     "nativepeers/antigravity.py": "00b84c23ab6242d5ff6e584dbc9424c58ca14464157b8921e29b09b8013f8f3e",
-    "nativepeers/antigravity_install.py": "f36ee1eae92a2eafa5fa1f8e23e0dfd90111ff0e0c6082dc3b17959f81de3f5b",
+    "nativepeers/antigravity_install.py": "cea8051d2a7cf573e55a3fd7ee6fcdbd87f4d3d4c168a93819c86e7c44015c82",
     "nativepeers/artifacts.py": "4161379e5d874c668c2e62eb0147565cfec0a67ed253e47dbc9cce8e95e53a40",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
     "nativepeers/caller.py": "e856fd6fcf4041aa5af4bece74948cf98cbb87c4ddf431220dbe561522d199ae",
     "nativepeers/change_preview.py": "3ded04e7a5d14fc1baea4cca5de844d429772f559448c6a60a28848412257422",
     "nativepeers/claude_stream.py": "ff459549ca6322027623cfe0840492b0be2df1fb423062d4359661b70b79d5c1",
     "nativepeers/cleanup.py": "683faa73f76b48dac6909d4c1c24ee209c17cd8940da896dfd887e9a8403e342",
-    "nativepeers/cli.py": "b3abbb621e021f4715e59c8f8aab363af14ce49ec60cc35ac20aba56d5a3163f",
-    "nativepeers/compatibility.py": "0439f19f292517c91143a2587107aff36aef5cb82e993aa2fc52ce02c5326ad1",
+    "nativepeers/cli.py": "8e7b3e827649c35ef9bbc0378928495097a30e68c063bb8992b633a2bcc09ffe",
+    "nativepeers/compatibility.py": "8501618584cf7dcc4ec3d0e124a3fb37d116becf66235f89277d391f062efff9",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "09a71592355b768a94dfa56a1c49d114111c9e2c049d9516414e40619a056dfe",
     "nativepeers/delegation.py": "ad5c1dd4f0e042e11391759da84ba48b1328a08430f8dab5ce8fc348940f2098",
@@ -100,10 +101,10 @@
     "nativepeers/recovery.py": "1f14fcdb73e66fe6266dc91062859f18f6812d2c87a1c401ff604b934b387fcc",
     "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
     "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
-    "nativepeers/supervisor.py": "e3118fc5aada89ef09f9eb62027fb3e27248c4f2aeb6cdba076932d685427d50",
-    "nativepeers/worker_process.py": "b3a15dd6d576f3b3c8e85ffbbe3c1a99a2cb5450944dbc4e466854d05289579b",
+    "nativepeers/supervisor.py": "484546e1ff0892ede8f5906c7a97b8804d55012b4be1faf5adbcabc045f654b8",
+    "nativepeers/worker_process.py": "b2315a04211ed1d6e293252c26b516811e1e5e094d63feaef8c4218e5b9415c9",
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
     "nativepeers/worktrees.py": "1953fcc7479f6b1838c7b45af246432734e6f9f7dfc9ca081e0f097f1fc836ac"
   },
-  "source_map_sha256": "1bf139085f0dc7cece9bc782e7024b7ee944c4b6e3a46660742d988406de36f4"
+  "source_map_sha256": "6fd06fd3177a483ac19004853c611b0274eaca2b44bb526144716cdc1b1499e6"
 }
