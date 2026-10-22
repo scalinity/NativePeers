@@ -8,4 +8,4 @@ Authoritative record: `evidence/pro-followup-review.json`; itemized report: `doc
 
 Durable live budget: **148 consumed, 0 reserved, 3524.394974 / 3600 active seconds, no outstanding requests**. All owned native test processes exited. Fresh Claude inference and other unexercised native variants remain qualified in the report. Do not replay historical unknown inputs or reset the ledger.
 
-Remaining close-out: remove completed owned implementation lanes after retaining their commits; publish a pinned review prompt/source archive. No additional native input is needed for this close-out.
+All four owned implementation worktrees and local branches are removed, with their commits retained on main. Current code, conventions and verification are published. The independent review prompt/source archive pins this completed snapshot through `evidence/followup-review.json`. No additional native input is needed for this review close-out.

@@ -1,6 +1,27 @@
 {
   "at": "2026-10-22T11:22:38.794565-04:00",
+  "cleanup": {
+    "active_owned_native_processes": [],
+    "fixture_cwd_retained": "evidence/private/pro-followup-20261022/native/fixture",
+    "history_retained_on_main": true,
+    "implementation_lanes_removed": 4,
+    "local_lane_branches_removed": 4,
+    "private_task_state": "evidence/private/pro-followup-20261022/state.json",
+    "regenerable_fixture_backups_removed": 16
+  },
   "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
+  "cross_check": {
+    "additional_findings": [
+      "F2B",
+      "F4B",
+      "S3B"
+    ],
+    "independent_slices": [
+      "Lifecycle/completion",
+      "Artifacts/discovery/inbox"
+    ],
+    "resolved_by_followup_inspection": true
+  },
   "dependencies": {
     "hypothesis": "6.170.5",
     "mcp": "2.3.0",
@@ -43,8 +64,8 @@
     "D1": {
       "conventions_commit": "74abc55",
       "scope": "Conventions and final review package",
-      "status": "IN_PROGRESS",
-      "verification": "Owned global block and all three skills installed; outside bytes unchanged; both installers second run no-op; final pinned review package pending"
+      "status": "DONE",
+      "verification": "Conventions installed, source skills validated, current verification report published; final read-only review package follows the completed snapshot"
     },
     "E1": {
       "commit": "916a89d06689cfcc88881a4e7d5bf40fc408a439",

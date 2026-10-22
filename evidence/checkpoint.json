@@ -112,6 +112,15 @@
   "capabilities": "evidence/capabilities.json",
   "cleanup": {
     "active_owned_processes": [],
+    "current_review": {
+      "active_owned_native_processes": [],
+      "fixture_cwd_retained": "evidence/private/pro-followup-20261022/native/fixture",
+      "history_retained_on_main": true,
+      "implementation_lanes_removed": 4,
+      "local_lane_branches_removed": 4,
+      "private_task_state": "evidence/private/pro-followup-20261022/state.json",
+      "regenerable_fixture_backups_removed": 16
+    },
     "implementation_worktrees_removed": 3,
     "manifest": "evidence/private/astra4-20261022/closeout.json",
     "reason": "Exact owned native test histories retain their cwd; unique fixture changes are checksum-backed up",
@@ -140,6 +149,7 @@
       "S5",
       "C1",
       "V1",
+      "D1",
       "F2B",
       "F4B",
       "S3B"
@@ -150,13 +160,13 @@
     "native_batch": "PASS_SCOPED",
     "reviewed_commit": "f81f5c897fed3de5bbb90bd0c1e8ae0183eed81a",
     "state": "evidence/private/pro-followup-20261022/state.json",
-    "status": "IMPLEMENTED; verification qualified"
+    "status": "COMPLETE; verification qualified"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "branch": "main",
     "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "commit": "3af0dc70fe7918d35a6b486d698dc4621dbda1b4",
+    "commit": "cfff12d08d0e0e9861e83e91b9f56096d4d1986d",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -184,22 +194,23 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Finish owned lane cleanup and pinned review package; no new model tests required for this close-out",
+  "next_action": "Use the installed verified workflows. Independent review uses the completed source snapshot pinned in the publication record. For further native acceptance, inspect the retained budget first; do not replay uncertain inputs or reset the active-time ceiling.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
   },
   "outstanding_native_requests": [],
-  "owned_review_lanes": [
-    ".worktrees/pro2-caller",
-    ".worktrees/pro2-install",
-    ".worktrees/pro2-model",
-    ".worktrees/pro2-workspaces"
-  ],
+  "owned_review_lanes": [],
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
+  "publication": {
+    "branch": "main",
+    "owned_fixes_pushed": true,
+    "repository": "https://github.com/scalinity/NativePeers",
+    "review_packet": "evidence/followup-review.json"
+  },
   "schema_version": 2,
-  "stage": "All second-review items implemented; final publication and cleanup",
+  "stage": "Second independent review fully addressed; current verification qualified",
   "tests_current": {
     "installed_passive": {
       "global_claude_outside_owned_block_unchanged": true,
