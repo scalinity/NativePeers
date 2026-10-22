@@ -56,6 +56,28 @@ class AntigravityTests(unittest.TestCase):
             self.assertEqual(self.j.one('SELECT incarnation_id FROM peer_instances')['incarnation_id'],peer['incarnation_id'])
             self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'SUBMITTED_UNCONFIRMED')
 
+    def test_hook_advances_past_ten_previously_emitted_messages(self):
+        with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
+             patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':''}):
+            observe(self.j,self.event,'SessionStart')
+            peer=self.j.one('SELECT peer_key,incarnation_id FROM peer_instances')
+            messages=[]
+            for index in range(11):
+                message=new_id();messages.append(message)
+                payload={'message_id':message,'body':{'text':'message '+str(index)}}
+                self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,new_id(),'sender',peer['peer_key'],None,None,canonical(payload).decode(),'hash',time.time()+60,index))
+                self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
+                    (new_id(),message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))
+            first=observe(self.j,self.event,'PreInvocation')['injectSteps'][0]['ephemeralMessage']
+            self.assertTrue(all(message in first for message in messages[:10]))
+            self.assertNotIn(messages[10],first)
+            second=observe(self.j,self.event,'PreInvocation')['injectSteps'][0]['ephemeralMessage']
+            self.assertIn(messages[10],second)
+            self.assertFalse(any(message in second for message in messages[:10]))
+            self.assertEqual(observe(self.j,self.event,'PreInvocation'),{})
+            self.assertEqual({r['state'] for r in self.j.all('SELECT state FROM attempts')},{'SUBMITTED_UNCONFIRMED'})
+
     def test_install_is_idempotent_and_uninstall_preserves_later_unrelated_edits(self):
         path=self.home/'.gemini/config/hooks.json';path.parent.mkdir(parents=True);path.write_text('{"existing":{"enabled":false}}')
         install(self.j,home=self.home,verified_source=self.evidence)

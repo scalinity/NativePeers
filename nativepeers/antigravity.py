@@ -109,10 +109,9 @@ def observe(journal,event,kind):
     if kind!='PreInvocation':return {'decision':'allow'} if kind=='PreToolUse' else {}
     messages=[];size=0
     with journal.transaction():
-        pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' ORDER BY m.created_at LIMIT 10",
+        pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind='antigravity-hook-output-unconfirmed') ORDER BY m.created_at LIMIT 10",
                             (peer['handle'],peer['incarnation_id'],time.time()))
         for row in pending:
-            if journal.one("SELECT sequence FROM events WHERE subject_id=? AND kind='antigravity-hook-output-unconfirmed'",(row['message_id'],)):continue
             value=json.loads(row['payload_json']);size+=len(canonical(value))
             if size>65536:break
             messages.append(value)
