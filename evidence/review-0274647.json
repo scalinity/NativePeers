@@ -55,7 +55,8 @@
       "seconds": 164.94,
       "command": ".venv/bin/python -m pytest -q",
       "source_frozen_during_run": true,
-      "scope": "Full locked offline unit/property/contract suite; native checks reported separately"
+      "scope": "Full locked offline unit/property/contract suite; native checks reported separately",
+      "python": "3.14.8"
     },
     "native": {
       "status": "PASS",
@@ -119,7 +120,42 @@
       "new_inputs_final_batch": 5,
       "new_inputs_this_review": 10,
       "source_frozen_during_run": true,
-      "capture": "Private, ignored native streams and journals retained locally"
+      "capture": "Private, ignored native streams and journals retained locally",
+      "workers": [
+        {
+          "mode": "wait",
+          "task_id": "843f5bf6-f583-40f5-be91-120953702f51",
+          "native_id": "1aacc1bb-ff91-4a44-8f76-28d53b821396",
+          "provider": "antigravity",
+          "model_requested": "gemini-3.8-flash-medium",
+          "model_observed": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempt_count": 2,
+          "fixture_primary": "fake Claude quota; no real Claude inference"
+        },
+        {
+          "mode": "push",
+          "task_id": "deb708a9-e730-467a-a5e4-602ffcbec9dc",
+          "native_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
+          "provider": "antigravity",
+          "model_requested": "gemini-3.8-flash-medium",
+          "model_observed": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempt_count": 2,
+          "fixture_primary": "fake Claude quota; no real Claude inference"
+        },
+        {
+          "mode": "resume",
+          "task_id": "e2df381e-fc76-4189-a464-37c8f6a5868f",
+          "native_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
+          "provider": "antigravity",
+          "model_requested": "gemini-3.8-flash-medium",
+          "model_observed": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempt_count": 1,
+          "fixture_primary": null
+        }
+      ]
     },
     "focused": {
       "status": "PASS",
@@ -285,9 +321,10 @@
   },
   "publication": {
     "repository": "https://github.com/scalinity/NativePeers",
-    "branch": "fix/pro-0274647",
-    "status": "Individual fix commits pushed; final verification metadata pending",
-    "source_zip_uploaded": false
+    "branch": "main",
+    "status": "PUSHED",
+    "source_zip_uploaded": false,
+    "verified_remote_commit": "f3a35170692c08440a794527a546c5153f8dcc83"
   },
   "at": "2026-10-22T16:57:22.656422-04:00",
   "providers": {
@@ -306,5 +343,6 @@
       "executable": "~/.local/bin/agy",
       "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554"
     }
-  }
+  },
+  "verification_commit": "f3a35170692c08440a794527a546c5153f8dcc83"
 }

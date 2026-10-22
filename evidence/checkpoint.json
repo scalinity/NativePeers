@@ -112,17 +112,17 @@
     "final_batch_cleanup": "Two final fixture worktrees/branches removed after checksum preservation; seven recorded final owner identities exited",
     "total_review_fixture_worktrees_removed": 4
   },
-  "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
+  "current_protected_baseline": "evidence/private/review-0274647/protected-before-install.json",
   "current_review": {
     "evidence": "evidence/review-0274647.json",
     "status": "COMPLETE: all review defects and suggestions fixed; offline and scoped Flash native PASS; Codex raw-config attribution BLOCKED",
-    "branch": "fix/pro-0274647",
+    "branch": "main",
     "source_map_sha256": "ad9132c5789f0ff639c3abdf99a8b6f7fd62a3c3f17d6febdcf6267267d065fc",
     "code_commit": "f421295a7d6b4c7cef010a391a3533e805cab466"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "branch": "fix/pro-0274647",
+    "branch": "main",
     "code_commit": "f421295a7d6b4c7cef010a391a3533e805cab466",
     "manager_preexisting_changes": [
       " M codex-launcher",
@@ -131,10 +131,8 @@
       "?? test_name_session.py"
     ],
     "base_commit": "a987587e517fd8b1f32e913ac321731d6d300203",
-    "owned_uncommitted_changes": [
-      "Final review documentation, owned instruction sources, acceptance harness, fixture adjustment, source/evidence cross-references"
-    ],
-    "last_verified_publication": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
+    "owned_uncommitted_changes": [],
+    "last_verified_publication": "f3a35170692c08440a794527a546c5153f8dcc83"
   },
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
@@ -175,7 +173,7 @@
     "sha256": "98ae8d7bf55a18435a220d5792b2ea7897efb3e5a80f59543a6ce22f188a5b35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Commit/push final verification, fast-forward main, remove the merged review branch, verify remote HEAD, and save the next independent-review prompt.",
+  "next_action": "No implementation work remains from review 0274647. Read the next independent review against the published pin; retain separate historical/native scopes and do not overwrite concurrent Codex config edits.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -186,9 +184,10 @@
   "protected_files": "evidence/protected-files.json",
   "publication": {
     "repository": "https://github.com/scalinity/NativePeers",
-    "branch": "fix/pro-0274647",
-    "status": "Individual fix commits pushed; final verification metadata pending",
-    "source_zip_uploaded": false
+    "branch": "main",
+    "status": "PUSHED",
+    "source_zip_uploaded": false,
+    "verified_remote_commit": "f3a35170692c08440a794527a546c5153f8dcc83"
   },
   "schema_version": 2,
   "stage": "COMPLETE: all review defects and suggestions fixed; offline and scoped Flash native PASS; Codex raw-config attribution BLOCKED",
@@ -200,7 +199,8 @@
       "seconds": 164.94,
       "command": ".venv/bin/python -m pytest -q",
       "source_frozen_during_run": true,
-      "scope": "Full locked offline unit/property/contract suite; native checks reported separately"
+      "scope": "Full locked offline unit/property/contract suite; native checks reported separately",
+      "python": "3.14.8"
     },
     "native": {
       "status": "PASS",
@@ -264,7 +264,42 @@
       "new_inputs_final_batch": 5,
       "new_inputs_this_review": 10,
       "source_frozen_during_run": true,
-      "capture": "Private, ignored native streams and journals retained locally"
+      "capture": "Private, ignored native streams and journals retained locally",
+      "workers": [
+        {
+          "mode": "wait",
+          "task_id": "843f5bf6-f583-40f5-be91-120953702f51",
+          "native_id": "1aacc1bb-ff91-4a44-8f76-28d53b821396",
+          "provider": "antigravity",
+          "model_requested": "gemini-3.8-flash-medium",
+          "model_observed": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempt_count": 2,
+          "fixture_primary": "fake Claude quota; no real Claude inference"
+        },
+        {
+          "mode": "push",
+          "task_id": "deb708a9-e730-467a-a5e4-602ffcbec9dc",
+          "native_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
+          "provider": "antigravity",
+          "model_requested": "gemini-3.8-flash-medium",
+          "model_observed": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempt_count": 2,
+          "fixture_primary": "fake Claude quota; no real Claude inference"
+        },
+        {
+          "mode": "resume",
+          "task_id": "e2df381e-fc76-4189-a464-37c8f6a5868f",
+          "native_id": "89cd7d8a-5871-4879-abb9-fac02fbcc757",
+          "provider": "antigravity",
+          "model_requested": "gemini-3.8-flash-medium",
+          "model_observed": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempt_count": 1,
+          "fixture_primary": null
+        }
+      ]
     },
     "focused": {
       "status": "PASS",
