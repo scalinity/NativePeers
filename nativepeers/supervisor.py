@@ -22,6 +22,7 @@ from .notifications import claim_wait,wait_generation,wait_output
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,PYTHON
 from .registry import Registry
+from .receipts import delivery_error
 
 
 class Group:
@@ -299,17 +300,27 @@ class Group:
             if test.exists():
                 from .budget import LiveBudget
                 spec=json.loads(test.read_text());budget=LiveBudget(Path(spec['path']))
-                try:reservation=budget.reserve('parent completion '+self.id,tranche=spec.get('tranche','first_cross_provider_delegations'))
-                except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
-                budget.admit(reservation)
+                prior=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='completion-budget-reserved' ORDER BY sequence LIMIT 1",(row['delivery_id'],))
+                if prior:reservation=json.loads(prior['payload_json'])['reservation']
+                else:
+                    try:reservation=budget.reserve('parent completion '+self.id,tranche=spec.get('tranche','first_cross_provider_delegations'))
+                    except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
+                    budget.admit(reservation)
+                    self.journal.event(row['delivery_id'],'completion-budget-reserved',{'reservation':reservation})
             receipt=await Core(self.journal).router.send(self.controller,self.row['parent_key'],text,kind='completion',client_request_id=row['delivery_id'])
-            state='PUSH_ACCEPTED' if receipt['state'] in ('INGESTED','ACCEPTED_QUEUED') else ('HELD' if receipt['state']=='HELD' else 'NOTIFICATION_UNKNOWN')
+            deferred=receipt['state'] in ('OUTBOX_COMMITTED','ADMISSION_DEFERRED')
+            error=delivery_error(receipt)
+            state=('UNCLAIMED' if deferred else 'PUSH_ACCEPTED' if receipt['state'] in ('INGESTED','ACCEPTED_QUEUED')
+                   else 'HELD' if receipt['state']=='HELD' else 'RETAINED' if error else 'NOTIFICATION_UNKNOWN')
             self.journal.db.execute('UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?',(state,self.id,generation,self.generation))
-            self.journal.event(self.id,'parent-completion-submitted',{'receipt':receipt,'live_reservation':reservation})
+            event='parent-completion-deferred' if deferred else 'parent-completion-retained' if error else 'parent-completion-submitted'
+            self.journal.event(self.id,event,{'receipt':receipt,'live_reservation':reservation})
+            if error and not deferred and budget and reservation:budget.settle(reservation,observed_turns=0)
             # Accepted/uncertain model work remains reserved until the live collector observes it.
         except PeerError as error:
             self.journal.db.execute("UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?",('NOTIFICATION_UNKNOWN' if error.may_have_received else 'RETAINED',self.id,generation,self.generation))
             self.journal.event(self.id,'parent-completion-retained',error.json())
+            if not error.may_have_received and budget and reservation:budget.settle(reservation,observed_turns=0)
 
     async def monitor(self):
         deadline=self.policy['created_at']+self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
@@ -330,7 +341,8 @@ class Group:
                 if not active:break
                 if time.time()>deadline+20 or parent_gone:
                     self.journal.event(self.id,'lifetime-ended',{'parent_gone':parent_gone,'deadline':deadline});break
-            if self.finished_at and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:break
+            pending_push=self.journal.one("SELECT 1 FROM completion_routes WHERE group_id=? AND mode='push' AND state='UNCLAIMED' LIMIT 1",(self.id,))
+            if self.finished_at and not pending_push and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:break
             self.changed.clear()
             try:await asyncio.wait_for(self.changed.wait(),1)
             except asyncio.TimeoutError:pass
@@ -342,6 +354,7 @@ class Group:
     async def close(self):
         self.closing=True
         self.stop_queued()
+        self.journal.db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND state='UNCLAIMED' AND mode='push'",(self.id,))
         await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
         self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
         self.journal.event(self.id,'supervisor-released',{'owner':self.owner})

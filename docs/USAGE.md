@@ -91,3 +91,5 @@ npeer artifact-add --file /absolute/path/design-brief.txt --max-bytes 1048576 --
 ```
 
 The bound CLI imports one regular file and returns its immutable `artifact_id`, digest and size. The default/hard ceiling is 10 MiB; `--max-bytes` narrows it. Add the returned handle to selected workers' `context_refs`; other workers do not gain access. The command rejects directories, symlinks, private provider state, known credential paths and native transcripts. Select an appropriate nonsecret brief deliberately: the importer does not infer secrets from prose. Workers can import only from their registered cwd. No recursive import or new MCP file-reading tool is exposed. Source changes after a successful import do not change the artifact.
+
+A completion notice deferred before native admission retains the same delivery ID and retries within the supervisor's finite group lifetime. Short idle grace does not abandon that known unsubmitted notice. Definite refusals retain the result; accepted or uncertain submissions are not replayed. If the lifetime ends first, the notice is retained for result reads. Verification-budget retries reuse one reservation for that delivery.

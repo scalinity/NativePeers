@@ -114,6 +114,48 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         with patch('nativepeers.core.Core',FakeCore):await asyncio.gather(*[self.group.notify() for _ in range(5)])
         self.assertEqual(calls,[delivery]);self.assertEqual(self.route()['delivery_id'],delivery);self.assertEqual(self.route()['state'],'PUSH_ACCEPTED')
 
+    async def test_deferred_completion_retries_original_intent_and_budget_once(self):
+        from nativepeers.files import advisory_lock,async_advisory_lock,sha256,atomic_json
+        from nativepeers.budget import LiveBudget
+        self.complete();calls=[];core=Core(self.j)
+        async def deliver(peer,message):calls.append(message['message_id']);return {'stage':'ACCEPTED_QUEUED','evidence_kind':'fixture'}
+        core.router.adapters['fake']=deliver
+        ledger=self.j.root/'budget.json'
+        atomic_json(ledger,dict(active_intervals=[],ceiling={'active_seconds':3600,'submitted_turns':4},reservations=[],reserved_turns=0,consumed_turns=0,outstanding_native_requests=[]))
+        atomic_json(self.j.root/'test-budget.json',{'path':str(ledger)})
+        lock=self.j.root/'locks'/(sha256(self.parent)+'.lock')
+        with patch('nativepeers.core.Core',return_value=core):
+            with advisory_lock(lock),patch('nativepeers.routing.async_advisory_lock',side_effect=lambda path:async_advisory_lock(path,.02)):
+                await self.group.notify()
+            self.assertEqual(self.route()['state'],'UNCLAIMED');self.assertEqual(calls,[])
+            self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'ADMISSION_DEFERRED')
+            await asyncio.gather(self.group.notify(),self.group.notify())
+        self.assertEqual(self.route()['state'],'PUSH_ACCEPTED');self.assertEqual(len(calls),1)
+        self.assertEqual(self.j.one('SELECT COUNT(*) AS n FROM messages')['n'],1)
+        budget=json.loads(ledger.read_text());self.assertEqual(budget['consumed_turns'],1);self.assertEqual(len(budget['reservations']),1)
+        self.assertEqual(len(self.j.all("SELECT * FROM events WHERE kind='parent-completion-submitted'")),1)
+        self.assertEqual(len(self.j.all("SELECT * FROM events WHERE kind='parent-completion-deferred'")),1)
+
+    async def test_unknown_completion_never_rearmed_and_definite_failure_retained(self):
+        self.complete()
+        for state,expected in [('DELIVERY_UNKNOWN','NOTIFICATION_UNKNOWN'),('REJECTED','RETAINED'),('TARGET_GONE','RETAINED')]:
+            with self.subTest(state=state):
+                self.j.db.execute("UPDATE completion_routes SET state='UNCLAIMED'")
+                with patch('nativepeers.core.Core') as fake:
+                    send=fake.return_value.router.send=AsyncMock(return_value={'state':state})
+                    await self.group.notify();await self.group.notify();send.assert_awaited_once()
+                self.assertEqual(self.route()['state'],expected)
+
+    async def test_idle_grace_does_not_abandon_a_definitely_unsubmitted_completion(self):
+        self.complete();self.group.policy.update(created_at=time.time(),wall_time_seconds=5,survive_parent=False,followup_grace_seconds=1)
+        self.group.finished_at=time.time()-2;count=0
+        async def notify(generation):
+            nonlocal count
+            count+=1
+            if count==2:self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED'")
+        with patch.object(self.group,'notify',side_effect=notify):await asyncio.wait_for(self.group.monitor(),3)
+        self.assertEqual(count,2)
+
     async def test_multibyte_and_escaped_completion_summaries_fit_the_final_body(self):
         tasks=[self.task]+[new_id() for _ in range(3)];self.group.policy['phases']={'1':tasks}
         for task in tasks[1:]:self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,self.worker,None,None,'COMPLETED',None,None,1,'{}'))
