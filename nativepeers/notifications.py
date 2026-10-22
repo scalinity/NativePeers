@@ -4,19 +4,24 @@ import json
 from pathlib import Path
 
 
-def wait_generation(group_id,policy,handle):
+def wait_generations(group_id,policy,handle):
     phases=policy.get('phases',{'1':policy['initial_tasks']})
-    if handle==group_id:return max(int(n) for n in phases)
+    if handle==group_id:return sorted(int(n) for n in phases)
     # Initial task reads leave the batch route available, even for a one-task batch.
-    return next((int(n) for n,tasks in phases.items() if int(n)!=1 and tasks==[handle]),None)
+    return [int(n) for n,tasks in phases.items() if int(n)!=1 and tasks==[handle]]
 
 
 def claim_wait(journal,group_id,generation,controller_generation,waiter,timeout):
     if generation is None:return False
     now=time.time()
     with journal.transaction() as db:
-        return bool(db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=? AND (state='UNCLAIMED' OR (state='WAIT_LEASED' AND lease_deadline<?))",
-            (waiter,now+timeout+1,controller_generation,group_id,generation,now)).rowcount)
+        return bool(db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=? AND (state='UNCLAIMED' OR (state='WAIT_LEASED' AND (lease_deadline<? OR (waiter_id=? AND claimed_generation=?))))",
+            (waiter,now+timeout+1,controller_generation,group_id,generation,now,waiter,controller_generation)).rowcount)
+
+
+def release_wait(journal,group_id,controller_generation,waiter,mode):
+    journal.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode=?,waiter_id=NULL,lease_deadline=NULL WHERE group_id=? AND state='WAIT_LEASED' AND waiter_id=? AND claimed_generation=?",
+        ('push' if mode=='push' else 'wait',group_id,waiter,controller_generation))
 
 
 def wait_output(journal,group_id,generation,controller_generation,waiter):

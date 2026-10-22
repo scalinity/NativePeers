@@ -18,7 +18,7 @@ from .errors import PeerError,require
 from .files import advisory_lock,async_advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
-from .notifications import claim_wait,wait_generation,wait_output,settle_deferred
+from .notifications import claim_wait,wait_generations,wait_output,release_wait,settle_deferred
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,PYTHON
 from .registry import Registry
@@ -275,28 +275,29 @@ class Group:
         timeout=payload.get('timeout_ms',30000)/1000;require(0<timeout<=30,'PROTOCOL_ERROR','Wait exceeds 30 seconds')
         mode=payload.get('on_timeout') or ('push' if self.policy['completion_mode']=='push' else 'retain')
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
-        waiter=new_id();generation=wait_generation(self.id,self.policy,payload['handle'])
-        owns_notification=generation is not None
-        claimed=claim_wait(self.journal,self.id,generation,self.generation,waiter,timeout)
-        deadline=time.monotonic()+timeout
+        waiter=new_id();deadline=time.monotonic()+timeout;output=False
         disconnected=asyncio.create_task(reader.read(1))
         try:
-            while not self.target_done(payload['handle']):
-                remaining=deadline-time.monotonic()
+            while True:
+                # A group read includes every phase. Enqueue/resume can add phases
+                # while the waiter is suspended, so extend the claim before output.
+                generations=wait_generations(self.id,self.policy,payload['handle'])
+                remaining=max(0,deadline-time.monotonic())
+                claimed=[g for g in generations if claim_wait(self.journal,self.id,g,self.generation,waiter,remaining)]
+                if self.target_done(payload['handle']) and not disconnected.done():
+                    emitted=[wait_output(self.journal,self.id,g,self.generation,waiter) for g in claimed]
+                    output=True;uncertain=any(emitted)
+                    return {'ready':True,'result':Delegation(self.journal,Registry(self.journal)).result(self.parent,payload['handle']),
+                            'notification_output_uncertain':uncertain,'notification_disposition':('tool-result-output-pending-observation' if uncertain else 'retained-result-read') if generations else 'batch-notification-unchanged'}
                 if remaining<=0 or disconnected.done():break
                 changed=asyncio.create_task(self.changed.wait())
                 try:await asyncio.wait([changed,disconnected],timeout=remaining,return_when=asyncio.FIRST_COMPLETED)
                 finally:changed.cancel()
                 self.changed.clear()
-            if self.target_done(payload['handle']) and not disconnected.done():
-                if claimed:
-                    claimed=wait_output(self.journal,self.id,generation,self.generation,waiter)
-                return {'ready':True,'result':Delegation(self.journal,Registry(self.journal)).result(self.parent,payload['handle']),
-                        'notification_output_uncertain':claimed,'notification_disposition':('tool-result-output-pending-observation' if claimed else 'retained-result-read') if owns_notification else 'batch-notification-unchanged'}
-            if claimed:
-                self.journal.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode=?,waiter_id=NULL,lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",('push' if mode=='push' else 'wait',self.id,generation,waiter,self.generation))
-            return {'ready':False,'state':'WAIT_EXPIRED','notification_disposition':mode if owns_notification else 'batch-notification-unchanged'}
-        finally:disconnected.cancel();self.changed.set()
+            return {'ready':False,'state':'WAIT_EXPIRED','notification_disposition':mode if generations else 'batch-notification-unchanged'}
+        finally:
+            if not output:release_wait(self.journal,self.id,self.generation,waiter,mode)
+            disconnected.cancel();self.changed.set()
 
     async def notify(self,generation=1):
         if time.time()>=self.lifetime_deadline():return

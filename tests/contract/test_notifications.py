@@ -417,3 +417,73 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             result=await Delegation(self.j,Registry(self.j)).wait(self.group.parent,self.id)
         self.assertTrue(result['ready']);self.assertTrue(result['notification_output_uncertain'])
         self.assertEqual(result['result']['results'][0]['summary'],'retained finding');call.assert_awaited_once()
+
+    async def followup(self):
+        worker=Registry(self.j).register('codex',self.j.root,new_id(),'followup target',identity(os.getpid()).json(),str(self.j.root),
+            {'kind':'owned-worker','group_id':self.id,'worker_id':self.worker},owner_kind='test')
+        self.j.db.execute('UPDATE workers SET peer_key=? WHERE worker_id=?',(worker['handle'],self.worker))
+        core=Core(self.j)
+        async def enqueue(peer,message):return await self.group.enqueue({'worker_id':self.worker,'message':message})
+        core.router.adapters['owned-worker']=enqueue
+        with patch.object(self.group,'send_worker',new_callable=AsyncMock):
+            receipt=await core.router.send(self.group.parent,worker['handle'],'followup input',client_request_id=new_id())
+        self.assertEqual(receipt['state'],'ACCEPTED_QUEUED')
+        return self.j.one('SELECT task_id FROM messages WHERE message_id=?',(receipt['message_id'],))['task_id']
+
+    async def assert_no_phase_push(self):
+        with patch('nativepeers.core.Core') as fake:
+            send=fake.return_value.router.send=AsyncMock()
+            for phase in self.group.phases():await self.group.notify(int(phase))
+            send.assert_not_awaited()
+
+    async def test_terminal_cli_and_mcp_group_wait_claim_every_returned_phase(self):
+        from nativepeers.cli import parser,dispatch
+        from nativepeers.mcp_server import Facade
+        from types import SimpleNamespace
+        self.complete();followup=await self.followup();self.complete(followup)
+        for interface in ('cli','mcp'):
+            with self.subTest(interface=interface):
+                self.j.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode='push',waiter_id=NULL")
+                if interface=='cli':
+                    with patch('nativepeers.cli.bind_caller',return_value=self.group.parent):
+                        value=await dispatch(parser().parse_args(['wait',self.id,'--json']),self.j)
+                else:
+                    facade=Facade(self.j,None)
+                    with patch.object(facade,'binding_state',return_value={'state':'BOUND','provider':'codex','grants':{}}),patch('nativepeers.mcp_server.bind_caller',return_value=self.group.parent):
+                        response=await facade.call(None,SimpleNamespace(name='task_wait',arguments={'handle':self.id}))
+                    self.assertFalse(response.is_error);value=json.loads(response.content[0].text)['data']
+                self.assertEqual({r['task_id'] for r in value['result']['results']},{self.task,followup})
+                self.assertEqual([r['state'] for r in self.j.all('SELECT state FROM completion_routes')],['NOTIFICATION_UNKNOWN']*2)
+                await self.assert_no_phase_push()
+
+    async def test_live_group_wait_claims_a_phase_added_while_waiting(self):
+        ready=asyncio.Event()
+        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':1000},Reader(ready=ready)))
+        await asyncio.wait_for(ready.wait(),1)
+        followup=await self.followup()
+        self.complete();self.complete(followup);self.group.changed.set()
+        value=await asyncio.wait_for(waiter,2)
+        self.assertEqual(len(value['result']['results']),2)
+        self.assertEqual([r['state'] for r in self.j.all('SELECT state FROM completion_routes')],['NOTIFICATION_UNKNOWN']*2)
+        await self.assert_no_phase_push()
+
+    async def test_multi_phase_wait_releases_all_claims_before_output(self):
+        await self.followup()
+        for disposition in ('timeout','disconnect','cancel'):
+            with self.subTest(disposition=disposition):
+                ready=asyncio.Event()
+                class LiveReader(asyncio.StreamReader):
+                    async def read(self,n):ready.set();return await super().read(n)
+                reader=LiveReader()
+                waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':30,'on_timeout':'retain'},reader))
+                await asyncio.wait_for(ready.wait(),1)
+                self.assertEqual([r['state'] for r in self.j.all('SELECT state FROM completion_routes')],['WAIT_LEASED']*2)
+                if disposition=='disconnect':
+                    reader.feed_eof()
+                if disposition=='cancel':waiter.cancel()
+                await asyncio.gather(waiter,return_exceptions=True)
+                routes=self.j.all('SELECT * FROM completion_routes')
+                self.assertEqual([r['state'] for r in routes],['UNCLAIMED']*2)
+                self.assertTrue(all(r['waiter_id'] is None and r['mode']=='wait' for r in routes))
+        await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':30,'on_timeout':'push'},Reader(True))
+        self.assertEqual([r['mode'] for r in self.j.all('SELECT mode FROM completion_routes')],['push']*2)
