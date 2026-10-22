@@ -186,6 +186,9 @@ class FallbackTests(unittest.IsolatedAsyncioTestCase):
         for scenario in ('edit','directory','output','unknown','timeout'):
             with self.subTest(scenario=scenario):
                 request=self.request(editing=True);request['client_request_id']=scenario
+                # Each case deliberately reaches an already-admitted fake turn.
+                # Prior cases in this home have recorded a real-shaped refusal.
+                request['workers'][0]['quota_policy']='warn'
                 worker,task,_=await self.setup_worker(request)
                 error=failure()
                 if scenario in ('unknown','output'):error['execution']['definitive_no_execution']=False

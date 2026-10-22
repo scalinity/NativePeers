@@ -1,0 +1,6 @@
+{
+  "task_type": "architecture",
+  "complexity": "demanding",
+  "quality": "demanding",
+  "independent_from_vendor": "openai"
+}

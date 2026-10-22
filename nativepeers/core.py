@@ -50,6 +50,11 @@ class Core:
         return self.delegation.status(caller,handle)
 
     async def tool(self,caller,name,args):
+        if name=='usage_status':
+            require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Usage MCP reads require a verified native caller')
+            self.registry.verify(caller.key,caller.incarnation)
+            from .usage.service import Usage
+            return await Usage(self.journal).status(caller,**args)
         if name=='peer_list':return self.registry.list(args.get('provider'))
         if name=='peer_send':return await self.router.send(caller,args['target'],args['text'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])

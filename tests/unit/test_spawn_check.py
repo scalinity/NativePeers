@@ -42,6 +42,54 @@ class SpawnCheckTests(unittest.IsolatedAsyncioTestCase):
 
     def request(self):return {'client_request_id':'same-check-and-spawn','workers':[{'provider':'claude','title':'check worker','task':'focused fixture'}]}
 
+    async def test_quota_preflight_is_read_only_and_exact_dispatch_respects_override(self):
+        from nativepeers.usage import store
+        from nativepeers.usage.normalize import pool
+        from nativepeers.worker_process import Worker
+        from unittest.mock import Mock
+        store.record(self.j,'claude',self.home/'.claude',dict(source='fixture-native',pools=[pool('weekly',used=100,models=['*'])],models=[]))
+        before=self.j.all('SELECT * FROM usage_observations');request=self.request()
+        plan=await self.delegation.spawn(self.caller,request,check=True)
+        self.assertFalse(plan['ready']);self.assertEqual(plan['quota_blocked'][0]['state'],'EXHAUSTED')
+        self.assertEqual(self.j.all('SELECT * FROM usage_observations'),before)
+        admitted=await self.delegation.spawn(self.caller,request)
+        worker=Worker(self.j,admitted['workers'][0]['worker_id']);worker.emit=Mock();worker.bootstrap()
+        worker.claude_turn=AsyncMock(return_value={'status':'completed','text':'exact fake result','native_turn_ids':[]})
+        task=self.j.one('SELECT task_id FROM tasks WHERE worker_id=?',(worker.row['worker_id'],))['task_id']
+        await worker.task(task,'fixture');worker.claude_turn.assert_not_awaited()
+        record=self.delegation.result(self.caller,admitted['group_id'])['results'][0]
+        self.assertEqual(record['error']['code'],'QUOTA_EXHAUSTED');self.assertFalse(record['error']['may_have_received'])
+        retried=await self.delegation.spawn(self.caller,request)
+        self.assertEqual(retried['group_id'],admitted['group_id'])
+        request['client_request_id']='explicit-override';request['workers'][0]['quota_policy']='warn'
+        # Inline fake controllers share the test parent's PID. Their normal
+        # owner cleanup also marks this fixture-only parent row offline.
+        self.j.db.execute("UPDATE peer_instances SET status='live' WHERE peer_key=?",(self.caller.key,))
+        override=await self.delegation.spawn(self.caller,request)
+        worker=Worker(self.j,override['workers'][0]['worker_id']);worker.emit=Mock();worker.bootstrap()
+        worker.claude_turn=AsyncMock(return_value={'status':'completed','text':'exact fake result','native_turn_ids':[]})
+        task=self.j.one('SELECT task_id FROM tasks WHERE worker_id=?',(worker.row['worker_id'],))['task_id']
+        await worker.task(task,'fixture');worker.claude_turn.assert_awaited_once()
+        self.assertEqual(worker.spec['model'],'sonnet')
+
+    async def test_shared_pool_advisory_and_atomic_explicit_local_ceiling(self):
+        import asyncio
+        from nativepeers.usage import store
+        from nativepeers.usage.normalize import pool
+        store.record(self.j,'claude',self.home/'.claude',dict(source='fixture-native',pools=[pool('shared',used=50,models=['*'])],models=[]))
+        request=self.request();request['workers']=[dict(request['workers'][0],title='worker '+str(n)) for n in range(3)]
+        plan=await self.delegation.spawn(self.caller,request,check=True)
+        self.assertTrue(plan['ready']);self.assertEqual(plan['usage']['shared_pools'][0]['proposed_workers'],3)
+        atomic_json(self.j.root/'policy.json',{'usage':{'pool_concurrency':{'claude:shared':2}}})
+        plan=await self.delegation.spawn(self.caller,request,check=True)
+        self.assertFalse(plan['ready']);self.assertTrue(plan['pool_concurrency_blocked'])
+        request['workers']=request['workers'][:2]
+        a=dict(request,client_request_id='concurrent-a');b=dict(request,client_request_id='concurrent-b')
+        results=await asyncio.gather(self.delegation.spawn(self.caller,a),self.delegation.spawn(self.caller,b),return_exceptions=True)
+        self.assertEqual(sum(isinstance(r,dict) for r in results),1)
+        self.assertEqual([r.code for r in results if isinstance(r,PeerError)],['CAPACITY_UNAVAILABLE'])
+        self.assertEqual(self.j.one('SELECT COUNT(*) n FROM workers')['n'],2)
+
     def rows(self):return {table:self.j.all('SELECT * FROM '+table+' ORDER BY rowid') for table in ('groups','workers','tasks','completion_routes','spawn_requests','events','artifacts')}
 
     async def test_public_check_matches_actual_spawn_without_reservations_or_files(self):

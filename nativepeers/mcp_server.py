@@ -24,7 +24,9 @@ def object_schema(properties, required=()):
 
 STRING={'type':'string'}
 SPAWN_SCHEMA=json.loads((Path(__file__).resolve().parent.parent/'schemas/spawn.v1.json').read_text())
+REQUIREMENTS_SCHEMA=json.loads((Path(__file__).resolve().parent.parent/'schemas/requirements.v1.json').read_text())
 TOOLS={
+ 'usage_status':('Read native quota pools, freshness and local task consumption; optionally refresh metadata or request explained recommendations. No inference, account mutation or model substitution.',object_schema({'provider':{'enum':['claude','codex','antigravity']},'model':STRING,'home_label':STRING,'refresh':{'type':'boolean'},'requirements':REQUIREMENTS_SCHEMA,'preference':{'enum':['quality-first','balanced','quota-preserving','fast','exact-model-only']}})),
  'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
  'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
@@ -69,7 +71,7 @@ class Facade:
         state=self.binding_state()
         if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity'):return ['task_status']
         granted=state.get('grants',{})
-        names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read']
+        names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read','usage_status']
         if granted.get('can_spawn'):names += ['worker_spawn','worker_resume','task_cancel']
         return names
 

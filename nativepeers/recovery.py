@@ -121,6 +121,8 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
                       'completion_generation':phase,'state':'QUEUED','client_request_id':request_id}
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
             require(active<local["workers_total"],'CAPACITY_UNAVAILABLE','No safe native worker slot is available')
+            from .usage.service import Usage
+            Usage(journal).admit_local_demand(lease,worker_id=worker_id)
             db.execute("UPDATE workers SET state='RESERVED',generation=generation+1,lease_json=? WHERE worker_id=? AND state='RELEASED_RESUMABLE'",(canonical(lease).decode(),worker_id))
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,None,None,'QUEUED',None,None,row['generation']+1,canonical({'text':text,'initial':False}).decode()))
             db.execute('UPDATE groups SET state=?,policy_json=? WHERE group_id=?',('RESERVED',canonical(policy).decode(),group['group_id']))

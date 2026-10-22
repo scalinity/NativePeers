@@ -57,11 +57,31 @@ CREATE TABLE IF NOT EXISTS artifacts (artifact_id TEXT PRIMARY KEY,sha256 TEXT N
  media_type TEXT NOT NULL,relative_path TEXT NOT NULL,owner_key TEXT NOT NULL,allowed_readers_json TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS leases (lease_id TEXT PRIMARY KEY,owner_key TEXT NOT NULL,scope_json TEXT NOT NULL,
  expires_at REAL NOT NULL,revoked_at REAL);
+CREATE TABLE IF NOT EXISTS usage_observations (observation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+ provider TEXT NOT NULL,home TEXT NOT NULL,scope TEXT NOT NULL,kind TEXT NOT NULL,
+ observed_at REAL NOT NULL,payload_json TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS usage_scope ON usage_observations(provider,home,scope,observation_id);
+CREATE TABLE IF NOT EXISTS task_usage (task_id TEXT NOT NULL,attempt_index INTEGER NOT NULL,
+ worker_id TEXT NOT NULL,provider TEXT NOT NULL,home TEXT NOT NULL,model TEXT NOT NULL,
+ effort TEXT,started_at REAL NOT NULL,completed_at REAL NOT NULL,payload_json TEXT NOT NULL,
+ PRIMARY KEY(task_id,attempt_index));
 PRAGMA user_version=1;
 """
 
 
 class Journal:
+    @classmethod
+    def existing(cls, root, *, timeout=.05):
+        """Short telemetry writes to an already installed schema; never initialize at startup."""
+        root=Path(root).resolve();database=root/'journal.sqlite3'
+        if not database.is_file() or database.is_symlink():raise PermissionError('Usage journal is not installed')
+        self=cls.__new__(cls);self.root=root
+        self.db=sqlite3.connect(database.as_uri()+'?mode=rw',uri=True,timeout=timeout,isolation_level=None)
+        self.db.row_factory=sqlite3.Row
+        self.db.execute('PRAGMA busy_timeout='+str(int(timeout*1000)))
+        self.host_id=json.loads((root/'host.json').read_text())['host_id']
+        return self
+
     def __init__(self, root: Path | None = None):
         self.root = private_directory(root or Path(os.getenv("NPEER_HOME", Path.home()/".local/state/nativepeers")))
         for name in ("peers", "bindings", "workers", "artifacts", "locks", "groups", "compat"):

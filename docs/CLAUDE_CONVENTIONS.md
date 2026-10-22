@@ -42,4 +42,14 @@ Group discovery/status includes `progress`: active and queued task counts, initi
 
 A verified immutable runtime can remain approved only for exact preexisting leases that recorded it before an explicit approval update. New work selects the current executable; unknown, changed and revoked runtimes fail. To revoke a retained approval deliberately, use `npeer runtime-revoke --provider codex --sha256 EXACT_HASH --json`; this does not alter the current approval or manager activation. `CLEANUP_UNCERTAIN` reports bounded teardown without proof of output-pipe EOF; do not assume an unverified descendant was killed or replay uncertain input.
 
+
+
+Usage intelligence is available with `npeer usage --json` and bound MCP `usage_status`. Use `npeer usage --refresh --json` before planning a quota-sensitive batch; this uses supported native metadata and cached status-line observations, never inference. Inspect every applicable pool, source age, coverage and unknown membership. Claude/Antigravity telemetry may remain unknown or stale until normal native activity emits it; do not automate `/usage` as a prompt or keystroke. Catalog presence is not entitlement, and account quota is not the NativePeers-local token ledger.
+
+`spawn --check` reads cached quota and reports exact selections, shared-pool demand, blockers and qualified estimates without changing usage state. Fresh definitive applicable exhaustion stops task input by default, while unknown/stale data is advisory. Set a worker's `quota_policy:"warn"` only when intentionally attempting its exact requested model despite the warning. No model is silently replaced. Only configured clean-attempt fallbacks are authorized; accepted/uncertain work is never replayed. Optional local pool ceilings do not reserve vendor capacity.
+
+For explainable recommendations, pass task `requirements` and use `usage --recommend --requirements /absolute/requirements.json --preference quality-first|balanced|quota-preserving|fast|exact-model-only`. Recommendations preserve exact models/defaults and need attributed capability/quality preferences; insufficient evidence returns no confident recommendation. A required independent reviewer must be from an established different vendor, including when a model is hosted through Antigravity. Local task estimates and account-pace forecasts are separately labeled and may be unknown. See `docs/USAGE_INTELLIGENCE.md` and the examples under `/Users/danny/Documents/Tools/NativePeers`.
+
+Owned status-line capture is installed with `npeer install --usage --json` and inspected passively with `npeer doctor --json`. Preserve existing displays and disabled settings. A status-line-only runtime verification does not approve a changed binary for worker/inbox operations. No permanent polling, provider credit redemption, account change or paid calibration turn is needed.
+
 <!-- NATIVEPEERS_END -->

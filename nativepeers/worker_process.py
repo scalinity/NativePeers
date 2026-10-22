@@ -152,11 +152,21 @@ class Worker:
         reservation=None
         budget=None
         clean_input=None
+        usage_assessment=None
         try:
             if self.row['worktree_id'] and self.lease.get('fallback_candidates'):
                 from .fallback import workspace_image,image_digest
                 try:clean_input=image_digest(await asyncio.to_thread(workspace_image,self.row['cwd']))
                 except (PeerError,OSError):pass
+            try:
+                from .usage.service import Usage
+                intelligence=Usage(self.journal)
+                # Collection is task-driven, outside transactions and native startup.
+                if self.row['provider']=='codex':await intelligence.refresh('codex',self.home)
+                usage_assessment=intelligence.guard(self.row['provider'],self.home,self.spec)
+            except PeerError as usage_error:
+                if usage_error.code=='QUOTA_EXHAUSTED':raise
+            except Exception:pass
             if self.lease.get('live_budget_file'):
                 from .budget import LiveBudget
                 budget=LiveBudget(Path(self.lease['live_budget_file']))
@@ -175,6 +185,8 @@ class Worker:
             code=classify(error.error) if isinstance(error,ProviderError) else 'BUDGET_EXHAUSTED' if isinstance(error,TimeoutError) else 'WORKER_CRASHED'
             result={'status':'canceled' if self.stopping else 'timed_out' if isinstance(error,TimeoutError) else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':code,'message':str(error)[:1000]},'native_turn_ids':[self.turn] if self.turn else []}
             result['error']['may_have_received']=self.input_submitted or result['error'].get('may_have_received',False)
+            if isinstance(error,PeerError) and isinstance(error.details,dict) and error.details.get('execution'):
+                result['error']['execution']=error.details['execution']
             if self.stopping and self.shutdown_reason not in (None,'USER_CANCELED'):
                 result.update(status='interrupted',error={'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':self.shutdown_reason})
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
@@ -191,6 +203,7 @@ class Worker:
             verification={'tests_run':checks,'limitations':report_limits+['Worker-supplied checks are not independently verified.','Reasoning effort independently echoed by inference: unverified.']},
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
+        record['usage_intelligence']={'at_admission':usage_assessment,'account_usage_is_local_task_usage':False}
         if self.row['worktree_id']:
             from .worktrees import git,changes
             from .models import ARTIFACT_MAX
@@ -208,6 +221,15 @@ class Worker:
         from .fallback import remember_limit,workspace_image,image_digest
         error=result.get('error') or {}
         remember_limit(self.journal,self.row,self.home,error)
+        # Observability cannot discard an otherwise retained task result.
+        try:
+            from .usage.store import native_error
+            from .usage.forecast import record_task
+            native_error(self.journal,self.row,self.home,error)
+            record_task(self.journal,self.row,self.spec,record,task_spec.get('attempt_index',0),self.home,
+                before=usage_assessment.get('observation_id') if usage_assessment else None)
+        except Exception as observation_error:
+            record['verification']['limitations'].append('Local usage observation unavailable: '+type(observation_error).__name__)
         eligible=(result['status']=='failed' and error.get('code') in ('QUOTA_EXHAUSTED','AUTH_REQUIRED')
                   and error.get('execution',{}).get('definitive_no_execution') and not self.stopping and not scoped_cancel)
         workspace_clean=not self.row['worktree_id']
@@ -273,11 +295,20 @@ class Worker:
             'model':self.spec['model'],'effort':self.spec.get('reasoning_effort'),'approvalPolicy':'never'})
         self.turn=response['turn']['id'];self.ingested();self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
         if self.canceling_task==self.running_task:await self.interrupt()
-        items={}
+        items={};usage=None
         while True:
             event=await asyncio.wait_for(self.client.next_event(),self.spec.get('wall_time_seconds',1800))
             params=event.get('params',{});method=event.get('method')
+            if method=='account/rateLimits/updated':
+                try:
+                    from .usage.events import codex_update
+                    codex_update(self.journal,self.home,params,self.lease.get('verified_runtime'))
+                except Exception:pass
+                continue
             if params.get('threadId')!=self.native:continue
+            if method=='thread/tokenUsage/updated' and params.get('turnId')==self.turn:
+                from .usage.events import codex_tokens
+                usage=codex_tokens(params)
             if method=='item/completed' and params.get('turnId')==self.turn:
                 item=params['item']
                 if item.get('type')=='agentMessage':items[item['id']]=item
@@ -289,7 +320,7 @@ class Worker:
                 require(final or terminal['status']!='completed','PROTOCOL_ERROR','Terminal native turn has no final assistant result')
                 error=terminal.get('error')
                 return dict(status={'completed':'completed','interrupted':'canceled','failed':'failed'}.get(terminal['status'],'failed'),
-                            text='\n'.join(final),native_turn_ids=[self.turn],error={'code':classify(error),'native_error':error} if error else None)
+                            text='\n'.join(final),native_turn_ids=[self.turn],usage=usage,error={'code':classify(error),'native_error':error} if error else None)
 
     async def claude_turn(self,text):
         self.check_submission()

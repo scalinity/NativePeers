@@ -174,12 +174,15 @@ class Group:
                       grants=dict(lease['grants'],worker_id=worker_id),fallback_candidates=lease['fallback_candidates'][index+1:])
         new_lease.pop('released_native',None)
         new_lease.pop('verified_runtime',None)
+        new_lease.pop('usage_demand',None)
         # One logical task/phase; a replacement is a different native history and worker.
         with self.journal.transaction() as db:
             current=db.execute('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],)).fetchone()
             require(current['state']=='FALLBACK_PENDING','USER_CANCELED','Fallback was canceled during preflight')
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
             require(active<load(self.journal)['workers_total'],'CAPACITY_UNAVAILABLE','No released capacity is available for the explicit fallback')
+            from .usage.service import Usage
+            Usage(self.journal).admit_local_demand(new_lease)
             db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker_id,self.id,None,candidate['provider'],None,old['role_title'],candidate['model'],None,None,old['cwd'],None,'RESERVED',1,canonical(new_lease).decode()))
             task_spec['attempt_index']=latest['attempt_index']+1
             db.execute("UPDATE tasks SET worker_id=?,generation=1,state='QUEUED',native_turn_id=NULL,result_artifact_id=NULL,terminal_reason=NULL,task_json=? WHERE task_id=?",(worker_id,canonical(task_spec).decode(),task['task_id']))
@@ -382,6 +385,10 @@ class Group:
         with self.journal.transaction() as db:
             count=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND state='QUEUED'",(worker_id,)).fetchone()[0]
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')
+            from .usage.service import Usage
+            lease=json.loads(row['lease_json'])
+            Usage(self.journal).admit_local_demand(lease,worker_id=worker_id)
+            db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(lease).decode(),worker_id))
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],canonical({'text':input_text,'initial':False}).decode()))
             db.execute('UPDATE messages SET task_id=? WHERE message_id=?',(task_id,message['message_id']))
             policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0])

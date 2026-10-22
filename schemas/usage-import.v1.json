@@ -1,0 +1,24 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"NativePeers explicit usage snapshot v1",
+  "type":"object","additionalProperties":false,
+  "required":["schema_version","provider","observed_at","pools"],
+  "properties":{
+    "schema_version":{"const":1},
+    "provider":{"enum":["claude","codex","antigravity"]},
+    "home_label":{"type":"string","maxLength":128},
+    "observed_at":{"type":"number","minimum":0},
+    "models":{"type":"array","maxItems":64,"items":{"type":"string","minLength":1,"maxLength":512}},
+    "pools":{"type":"array","maxItems":64,"items":{
+      "type":"object","additionalProperties":false,"required":["pool_id"],
+      "properties":{
+        "pool_id":{"type":"string","minLength":1,"maxLength":256},
+        "kind":{"enum":["shared","provider-wide","model-specific","family-specific","credits","temporary-rate-limit","other"]},
+        "used":{"type":"number","minimum":0},"remaining":{"type":"number","minimum":0},"total":{"type":"number","minimum":0},
+        "unit":{"type":"string","maxLength":64},"resets_at":{"type":"number","minimum":0},
+        "window_seconds":{"type":"number","minimum":0},"resolution":{"type":"number","minimum":0},
+        "models":{"type":"array","maxItems":64,"items":{"type":"string","maxLength":512}}
+      }
+    }}
+  }
+}

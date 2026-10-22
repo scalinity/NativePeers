@@ -1,0 +1,21 @@
+{
+  "usage": {
+    "freshness_seconds": 120,
+    "provider_freshness": {"codex": 120, "claude": 120, "antigravity": 120},
+    "low_remaining_percent": 20,
+    "critical_remaining_percent": 5,
+    "reset_warning_seconds": 900,
+    "models": [
+      {
+        "provider": "codex",
+        "model": "gpt-6.1-sol",
+        "source": "Illustrative local preference; replace with the actual selection/verification source before use.",
+        "quality": {"implementation": "standard", "review": "standard"},
+        "vendor": "openai",
+        "priority": 1
+      }
+    ],
+    "pool_memberships": [],
+    "pool_concurrency": {}
+  }
+}

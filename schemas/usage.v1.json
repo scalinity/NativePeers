@@ -1,0 +1,22 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"NativePeers usage status v1",
+  "type":"object",
+  "required":["schema_version","providers","inference_submitted","quota_reserved","local_usage"],
+  "properties":{
+    "schema_version":{"const":1},
+    "inference_submitted":{"const":false},
+    "quota_reserved":{"const":false},
+    "providers":{"type":"array","maxItems":3,"items":{
+      "type":"object","required":["provider","home","state","source","pools","models","confidence"],
+      "properties":{
+        "provider":{"enum":["claude","codex","antigravity"]},
+        "home":{"type":"string"},"source":{"type":"string"},"confidence":{"type":"string"},
+        "state":{"enum":["AVAILABLE","LIMITED","EXHAUSTED","UNKNOWN","STALE","AUTH_REQUIRED","MODEL_UNAVAILABLE","CAPABILITY_MISMATCH"]},
+        "pools":{"type":"array","maxItems":512,"items":{"type":"object","required":["pool_id","state","unit","field_basis","membership","freshness"]}},
+        "models":{"type":"array","maxItems":64,"items":{"type":"object","required":["model","state","pool_ids","reasons"]}}
+      }
+    }},
+    "local_usage":{"type":"object"},"recommendations":{"type":"object"}
+  }
+}

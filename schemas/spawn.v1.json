@@ -116,6 +116,78 @@
                 }
               }
             }
+          },
+          "requirements": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "title": "NativePeers task requirements v1",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "task_type": {
+                "enum": [
+                  "implementation",
+                  "architecture",
+                  "debugging",
+                  "research",
+                  "review",
+                  "documentation",
+                  "transformation"
+                ]
+              },
+              "complexity": {
+                "enum": [
+                  "routine",
+                  "standard",
+                  "demanding"
+                ]
+              },
+              "quality": {
+                "enum": [
+                  "routine",
+                  "standard",
+                  "demanding"
+                ]
+              },
+              "context_tokens": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "required_tools": {
+                "type": "array",
+                "maxItems": 16,
+                "items": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "modalities": {
+                "type": "array",
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "maxLength": 128
+                }
+              },
+              "reasoning_effort": {
+                "type": "string",
+                "maxLength": 32
+              },
+              "independent_from_vendor": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "model": {
+                "type": "string",
+                "maxLength": 512
+              }
+            }
+          },
+          "quota_policy": {
+            "enum": [
+              "respect-known-limits",
+              "warn"
+            ],
+            "description": "Fresh known exhaustion stops submission by default. warn explicitly attempts the exact choice anyway; it never changes the model or permissions."
           }
         },
         "additionalProperties": false

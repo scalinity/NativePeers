@@ -157,6 +157,10 @@
     "fallback": {
       "type": "object",
       "description": "Primary failure, explicit fallback reason and actual final selection."
+    },
+    "usage_intelligence": {
+      "type": "object",
+      "description": "Relevant quota assessment at admission, separate from NativePeers-owned task usage."
     }
   },
   "$defs": {

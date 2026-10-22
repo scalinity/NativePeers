@@ -110,6 +110,29 @@ class AckGroupsFacadeTests(unittest.IsolatedAsyncioTestCase):
             (attempt, message, self.caller.incarnation, 'fake', state, time.time()))
         return message
 
+    async def test_usage_status_cli_parity_is_bound_read_only_and_analysis_accessible(self):
+        from unittest.mock import patch
+        from nativepeers.usage import store
+        from nativepeers.usage.normalize import pool
+        with patch('pathlib.Path.home',return_value=self.root/'home'):
+            store.record(self.journal,'codex',self.root/'provider',dict(source='fixture-native',route='subscription',
+                models=[{'model':'exact'}],pools=[pool('short',used=25,models=['exact'])]))
+        before=self.journal.all('SELECT * FROM usage_observations')
+        async with self.session() as session:
+            self.assertIn('usage_status',{t.name for t in (await session.list_tools()).tools})
+            mcp=await self.mcp(session,'usage_status',{'provider':'codex','model':'exact'})
+            cli=await self.cli('usage','--provider','codex','--model','exact')
+            for view in (mcp,cli):
+                self.assertEqual(view['providers'][0]['pools'][0]['remaining'],75)
+                self.assertEqual(view['providers'][0]['models'][0]['model'],'exact')
+                self.assertFalse(view['inference_submitted'])
+            await self.mcp(session,'usage_status',{'provider':'codex','pools':[]},error='PROTOCOL_ERROR')
+            self.assertTrue(allowed_tools('analysis','call_mcp_tool',{'ServerName':'nativepeers','ToolName':'usage_status'}))
+        self.assertEqual(self.journal.all('SELECT * FROM usage_observations'),before)
+        atomic_json(self.binding,dict(self.lease,state='RESERVED_UNBOUND',provider='claude'))
+        async with self.session() as session:
+            await self.mcp(session,'usage_status',{},error='CALLER_NOT_READY')
+
     def group(self, parent=None, route='UNCLAIMED', result=None):
         group, worker, task = new_id(), new_id(), new_id()
         parent = parent or self.caller.key

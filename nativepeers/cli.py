@@ -25,6 +25,10 @@ def parser():
     def command(name):
         child=subs.add_parser(name);child.add_argument('--json',action='store_true',default=argparse.SUPPRESS);return child
     command('whoami')
+    q=command('usage');q.add_argument('--provider',choices=['claude','codex','antigravity']);q.add_argument('--model');q.add_argument('--home-label')
+    q.add_argument('--refresh',action='store_true');q.add_argument('--details',action='store_true');q.add_argument('--recommend',action='store_true')
+    q.add_argument('--requirements',type=Path);q.add_argument('--preference',choices=['quality-first','balanced','quota-preserving','fast','exact-model-only'],default='balanced')
+    q=command('usage-import');q.add_argument('--file',type=Path,required=True)
     q=command('list');q.add_argument('--provider',choices=['claude','codex','antigravity']);q.add_argument('--include-offline',action='store_true')
     q=command('resolve');q.add_argument('--to',required=True)
     q=command('groups');q.add_argument('--mine',action='store_true',required=True);q.add_argument('--limit',type=int,default=20);q.add_argument('--cursor')
@@ -54,7 +58,7 @@ def parser():
     q=command('runtime-revoke');q.add_argument('--provider',choices=['claude','codex','antigravity'],required=True);q.add_argument('--sha256',required=True)
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
-        q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true')
+        q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true');q.add_argument('--usage',action='store_true')
     return p
 
 
@@ -68,10 +72,19 @@ async def dispatch(args,journal):
     core=Core(journal)
     try:caller=bind_caller(journal,core.registry)
     except PeerError:
-        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke'):raise
+        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','usage','usage-import'):raise
         caller=Caller('external-local','external-local')
     name=args.command
     if name=='whoami':return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants)
+    if name=='usage':
+        from .usage.service import Usage
+        require(not args.requirements or args.recommend,'PROTOCOL_ERROR','Task requirements require --recommend')
+        requirements=json.loads(read_file(args.requirements)) if args.requirements else {} if args.recommend else None
+        return await Usage(journal).status(caller,provider=args.provider,model=args.model,home_label=args.home_label,
+            refresh=args.refresh,requirements=requirements,preference=args.preference)
+    if name=='usage-import':
+        from .usage.import_snapshot import import_snapshot
+        return import_snapshot(journal,caller,json.loads(read_file(args.file)))
     if name=='list':return core.registry.list(args.provider,args.include_offline)
     if name=='resolve':return core.registry.resolve(args.to)
     if name in ('send','reply'):
@@ -127,11 +140,17 @@ async def dispatch(args,journal):
     if name=='doctor':
         from .compatibility import diagnose
         from .readiness import readiness
+        from .usage.install import readiness as usage_readiness
         require(not args.live,'BUDGET_EXHAUSTED','Live doctor never submits models automatically; use the explicit approved live harness and durable budget')
-        return dict(compatibility=diagnose(journal),integrations=readiness(journal),registered_peers=core.registry.list(include_offline=True),
+        return dict(compatibility=diagnose(journal),integrations=readiness(journal),usage_collection=usage_readiness(journal),registered_peers=core.registry.list(include_offline=True),
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED','SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):
+        if getattr(args,'usage',False):
+            require(not args.antigravity,'PROTOCOL_ERROR','Choose --usage or --antigravity')
+            require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot install usage collection')
+            from .usage.install import install as usage_install
+            return usage_install(journal,remove=name=='uninstall',dry_run=args.dry_run)
         if args.antigravity:
             from .antigravity_install import install as install_antigravity
             return install_antigravity(journal,dry_run=args.dry_run,remove=name=='uninstall')
@@ -172,7 +191,10 @@ def main():
     raw=canonical(response)
     if len(raw)>CONTROL_RESPONSE:
         raw=canonical(dict(schema_version=1,ok=False,data=None,error={'code':'PAYLOAD_TOO_LARGE','message':'Result exceeds 2 MiB; request an artifact page'},request_id=request_id));exit_code=2
-    print(raw.decode(),flush=True)
+    if args.command=='usage' and not args.json and response['ok']:
+        from .usage.service import format_summary
+        print(format_summary(response['data'],args.details),flush=True)
+    else:print(raw.decode(),flush=True)
     raise SystemExit(exit_code)
 
 

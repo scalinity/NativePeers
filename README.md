@@ -54,4 +54,6 @@ The [current review corrections and capabilities](docs/PRO_FOLLOWUP_REVIEW.md) r
 
 A [copy-ready GPT-6 Pro review prompt](docs/GPT6_PRO_REVIEW_PROMPT.txt) pins the complete code/review snapshot for an independent capability and gap review.
 
-Explicit Claude worker fallback to an exact Gemini selection is documented in [Provider errors and fallback](docs/PROVIDER_FALLBACK.md), with a ready-to-tailor [spawn example](examples/claude-gemini-fallback.json). Native chat notices show readable results and exact references; structured records remain available through the CLI/MCP. Current native inference for this extension is blocked by the retained test ceiling; offline and catalog evidence are listed separately.
+Explicit Claude worker fallback to an exact Gemini selection is documented in [Provider errors and fallback](docs/PROVIDER_FALLBACK.md), with a ready-to-tailor [spawn example](examples/claude-gemini-fallback.json). Native chat notices show readable results and exact references; structured records remain available through the CLI/MCP. Current inference acceptance remains scoped to its recorded source/runtime; the cumulative test ceilings were removed and usage history is retained.
+
+Native [usage intelligence](docs/USAGE_INTELLIGENCE.md) adds `npeer usage`, bound `usage_status`, multi-pool quota assessment, shared-pool planning, explicit model-preserving quota policy and separately attributed task estimates. Collectors never submit inference or change account/billing settings.

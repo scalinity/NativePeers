@@ -158,6 +158,21 @@ class Delegation:
             policy['workers'].append(worker_id);policy['initial_tasks'].append(task_id)
         policy['phases']={'1':policy['initial_tasks']}
         policy['controller_generation']=1
+        from .usage.service import Usage
+        intelligence=Usage(self.journal)
+        if not check:
+            # Reuse the already-read signed-in catalog. It does not renew quota
+            # freshness and never turns metadata work into a second CLI launch.
+            if agy_catalog:
+                from .usage import store
+                store.record(self.journal,'antigravity',homes['antigravity'],dict(source='antigravity-models',source_version=1,
+                    models=[dict(model=k,display_name=v,support='NATIVE_CATALOG',capability_source='native-model-catalog',entitlement='UNVERIFIED') for k,v in list(agy_catalog.items())[:64]]),kind='catalog')
+            if 'codex' in homes:await intelligence.refresh('codex',homes['codex'])
+        quota=intelligence.batch(prepared)
+        for worker,assessment in zip(prepared,quota['workers']):
+            worker['lease']['usage_at_spawn']=assessment
+            worker['lease']['usage_demand']=[sha256([assessment['provider'],assessment['home'],assessment['scope'],p['pool_id']]) for p in assessment['pools']]
+        policy['usage_at_spawn']=quota
         active=self.journal.one("SELECT COUNT(*) AS count FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')")['count']
         if check:
             # The shared normalization above does no reservation or materialization.
@@ -186,7 +201,9 @@ class Delegation:
                     alternatives.append(alternative)
                 planned.append(dict(spec,workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable'],fallbacks=alternatives))
             frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
-            return dict(state='CHECKED',read_only=True,ready=not failures and active+len(prepared)<=local['workers_total'],
+            quota_blocked=[item for item,worker in zip(quota['workers'],prepared) if item['blockable'] and worker['lease']['spec'].get('quota_policy','respect-known-limits')!='warn']
+            pool_blocked=[d for d in quota['demands'] if d['ceiling'] is not None and d['active_workers']+d['proposed_workers']>d['ceiling']]
+            return dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
                 workers=planned,baseline=frozen.baseline,failures=failures,
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
                 native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
@@ -207,6 +224,10 @@ class Delegation:
                 return dict(self.status(caller,raced['group_id']),client_request_id=request_id)
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
             require(active+len(prepared)<=local['workers_total'],'CAPACITY_UNAVAILABLE','Eight worker slots are occupied; no model work was submitted')
+            # Optional local pool ceilings reserve only local demand, never vendor quota.
+            for demand in intelligence.batch(prepared)['demands']:
+                require(demand['ceiling'] is None or demand['active_workers']+demand['proposed_workers']<=demand['ceiling'],
+                    'CAPACITY_UNAVAILABLE','Configured local quota-pool concurrency ceiling reached',details=demand)
             db.execute('INSERT INTO spawn_requests VALUES(?,?,?,?)',(caller.key,request_id,digest,group_id))
             db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group_id,caller.key,canonical(policy).decode(),'RESERVED','{}'))
             db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'UNCLAIMED',None,None,new_id(),1))
@@ -279,6 +300,7 @@ class Delegation:
             result['notifications']=[]
         from .fallback import result_details
         for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
+        result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn')
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         return result
 
