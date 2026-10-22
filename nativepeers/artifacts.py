@@ -106,6 +106,7 @@ class Artifacts:
         require(row is not None, "PROTOCOL_ERROR", "Unknown artifact handle")
         require(caller == row["owner_key"] or caller in json.loads(row["allowed_readers_json"]),
                 "APPROVAL_BLOCKED", "Artifact is outside caller's reader grant")
+        require(offset <= row["byte_size"], "PROTOCOL_ERROR", "Artifact offset exceeds stored size")
         require(row["relative_path"] == handle and handle.startswith("art_"), "PROTOCOL_ERROR", "Invalid stored artifact path")
         fd = os.open(self.journal.root/"artifacts"/handle, os.O_RDONLY | os.O_NOFOLLOW)
         with os.fdopen(fd, "rb") as f:

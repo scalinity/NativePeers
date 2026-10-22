@@ -45,6 +45,44 @@ class ArtifactsAndAuthority(unittest.TestCase):
         path.unlink();path.symlink_to('/etc/hosts')
         with self.assertRaises(OSError):artifacts.read(handle,'owner')
 
+    def test_offsets_are_bounded_by_stored_size_after_reader_authorization(self):
+        artifacts=Artifacts(self.j);handle=artifacts.put(b'page','owner',['reader'])
+        for offset,expected in ((0,b'page'),(3,b'e'),(4,b'')):
+            with self.subTest(offset=offset):
+                page=artifacts.read(handle,'reader',offset=offset)
+                self.assertEqual(page['offset'],offset);self.assertEqual(page['bytes_read'],len(expected))
+                self.assertEqual(base64.b64decode(page['data_base64']),expected);self.assertIsNone(page['next_offset'])
+        for offset in (5,10**100):
+            for reader,code in (('reader','PROTOCOL_ERROR'),('stranger','APPROVAL_BLOCKED')):
+                with self.subTest(offset=offset,reader=reader):
+                    with patch('nativepeers.artifacts.os.open',side_effect=AssertionError('Invalid page reached file API')),self.assertRaises(PeerError) as error:
+                        artifacts.read(handle,reader,offset=offset)
+                    self.assertEqual(error.exception.code,code)
+        empty=artifacts.put(b'','owner');self.assertEqual(artifacts.read(empty,'owner',offset=0)['bytes_read'],0)
+
+    def test_huge_offsets_return_protocol_errors_through_worker_cli_and_mcp(self):
+        from types import SimpleNamespace
+        from nativepeers.mcp_server import Facade
+        caller=Caller('peer','worker-native',grants={'worker_id':'worker-fixture'})
+        handle=Artifacts(self.j).put(b'page','worker-fixture')
+        output=io.StringIO()
+        with patch('sys.argv',['npeer','artifact-read',handle,'--offset',str(10**100),'--json']),\
+             patch('nativepeers.cli.Journal',return_value=self.j),patch.object(self.j,'close'),\
+             patch('nativepeers.cli.bind_caller',return_value=caller),patch('sys.stdout',output),\
+             self.assertRaises(SystemExit) as raised:
+            main()
+        self.assertEqual(raised.exception.code,7)
+        responses=[json.loads(output.getvalue())]
+        facade=Facade(self.j,None)
+        with patch.object(facade,'binding_state',return_value={'state':'BOUND','grants':{}}),\
+             patch('nativepeers.mcp_server.bind_caller',return_value=caller):
+            result=asyncio.run(facade.call(None,SimpleNamespace(name='artifact_read',arguments={'handle':handle,'offset':10**100})))
+        self.assertTrue(result.is_error);responses.append(json.loads(result.content[0].text))
+        for response in responses:
+            self.assertFalse(response['ok']);self.assertIsNone(response['data'])
+            self.assertEqual(response['error']['code'],'PROTOCOL_ERROR')
+            self.assertFalse(response['error']['may_have_received'])
+
     def test_unbound_forged_metadata_never_becomes_human(self):
         with patch.dict(os.environ,{'CODEX_THREAD_ID':'00000000-0000-4000-8000-000000000001'},clear=True):
             with self.assertRaises(PeerError) as error:bind_caller(self.j,Registry(self.j))
