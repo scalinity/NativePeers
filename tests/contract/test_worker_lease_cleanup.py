@@ -9,10 +9,12 @@ from nativepeers.worker_process import run
 
 
 class WorkerLeaseCleanupTests(unittest.IsolatedAsyncioTestCase):
-    async def test_lease_loss_during_startup_has_one_uncancelled_cleanup(self):
+    async def test_lease_loss_during_startup_with_full_queue_has_one_uncancelled_cleanup(self):
         counts={'close_started':0,'close_finished':0}
         class FakeWorker:
-            def __init__(self,*args):self.queue=asyncio.Queue();self.stopping=False
+            def __init__(self,*args):
+                self.queue=asyncio.Queue(maxsize=1);self.queue.put_nowait('buffered task')
+                self.stopping=False;self.shutdown_reason=None
             async def prepare(self):await asyncio.sleep(10)
             async def interrupt(self):pass
             async def close(self):

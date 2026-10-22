@@ -30,7 +30,7 @@ class Worker:
         self.lease=json.loads(self.row['lease_json']);self.spec=self.lease['spec'];self.binding=Path(self.lease['binding'])
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
         self.provider=None;self.provider_identity=None;self.client=None;self.native=self.row['native_id'];self.turn=None
-        self.stopping=False;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
+        self.stopping=False;self.shutdown_reason=None;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
         self.canceling_task=None;self.turn_task=None
         self.expected_native=self.native;self.model_observed=self.row['model_observed']
 
@@ -156,10 +156,12 @@ class Worker:
             await self.interrupt()
             code=classify(error.error) if isinstance(error,ProviderError) else 'BUDGET_EXHAUSTED' if isinstance(error,TimeoutError) else 'WORKER_CRASHED'
             result={'status':'canceled' if self.stopping else 'timed_out' if isinstance(error,TimeoutError) else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':code,'message':str(error)[:1000]},'native_turn_ids':[self.turn] if self.turn else []}
+            if self.stopping and self.shutdown_reason not in (None,'USER_CANCELED'):
+                result.update(status='interrupted',error={'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':self.shutdown_reason})
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
         scoped_cancel=self.canceling_task==task_id and not self.stopping
         if (self.stopping or scoped_cancel) and result['status'] in ('failed','canceled'):
-            result['status']='canceled';result['error']={'code':'USER_CANCELED','native_error':result.get('error')}
+            result['status']='canceled';result['error']={'code':self.shutdown_reason or 'USER_CANCELED','native_error':result.get('error')}
         row=self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))
         record=dict(schema_version=1,group_id=self.row['group_id'],task_id=task_id,
             worker={'provider':self.row['provider'],'native_session_id':self.native,'title':self.row['role_title'],'peer_key':row['peer_key']},
@@ -354,7 +356,10 @@ class Worker:
 
     async def close(self):
         self.stopping=True;await self.close_provider()
-        self.journal.db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=?",(self.row['worker_id'],))
+        from .recovery import settle_stopped_tasks
+        with self.journal.transaction() as db:
+            settle_stopped_tasks(db,self.row['worker_id'],self.row['generation'],self.shutdown_reason or 'WORKER_RELEASED')
+            db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=?",(self.row['worker_id'],self.row['generation']))
         self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE pid=? AND process_start=?",(self.owner['pid'],self.owner['start']))
         self.emit('released',native_id=self.native)
 
@@ -366,14 +371,19 @@ async def run(worker_id,lease_fd):
         while line:=await asyncio.to_thread(sys.stdin.buffer.readline,65537):
             require(len(line)<=65536,'PAYLOAD_TOO_LARGE','Worker control request too large')
             event=json.loads(line)
-            if event['operation']=='cancel':worker.stopping=True;await worker.interrupt()
+            if event['operation']=='cancel':
+                worker.shutdown_reason=event.get('reason','USER_CANCELED');worker.stopping=True;await worker.interrupt()
             elif event['operation']=='cancel-task':await worker.cancel_task(event['task_id'])
-            elif event['operation']=='release':worker.stopping=True;await worker.queue.put(None);return
+            elif event['operation']=='release':
+                worker.shutdown_reason=worker.shutdown_reason or event.get('reason','WORKER_RELEASED')
+                worker.stopping=True;await worker.queue.put(None);return
             elif event['operation']=='task':await worker.queue.put(event)
+        worker.shutdown_reason=worker.shutdown_reason or 'CONTROL_STREAM_CLOSED'
         worker.stopping=True;await worker.interrupt();await worker.queue.put(None)
     async def lease():
         await asyncio.to_thread(os.read,lease_fd,1);os.close(lease_fd)
-        worker.stopping=True;await worker.interrupt();await worker.queue.put(None)
+        worker.shutdown_reason=worker.shutdown_reason or 'SUPERVISOR_LEASE_LOST'
+        worker.stopping=True;await worker.interrupt()
         main_task.cancel()
     readers=[]
     try:

@@ -30,7 +30,7 @@ class Group:
         self.policy=json.loads(self.row['policy_json']);self.owner=identity(os.getpid()).json()
         self.generation=self.policy.get('controller_generation',1);self.token=secrets.token_hex(32)
         self.endpoint=runtime_root()/('g-'+group_id[:24]+'.sock')
-        self.children={};self.changed=asyncio.Event();self.closing=False;self.finished_at=None
+        self.children={};self.changed=asyncio.Event();self.closing=False;self.finished_at=None;self.shutdown_reason=None
         self.controller=Caller('controller','controller:'+group_id+':'+str(self.generation),grants={'group_id':group_id,'generation':self.generation,'parent_key':self.row['parent_key']})
         self.parent=Caller('peer',self.row['parent_key'],self.policy['parent_incarnation'])
 
@@ -73,6 +73,12 @@ class Group:
         child={'process':process,'owner':identity(process.pid).json(),'lease_fd':write_fd,'ready':asyncio.get_running_loop().create_future(),'row':row}
         self.children[row['worker_id']]=child;child['reader']=asyncio.create_task(self.read_worker(row['worker_id']))
         await asyncio.wait_for(asyncio.shield(child['ready']),30)
+        # macOS Python may exec its application binary during startup. Pin the ready
+        # controller, retaining the exact birth identity used for the child we launched.
+        ready_owner=identity(process.pid).json()
+        require(all(ready_owner[k]==child['owner'][k] for k in ('pid','pgid','uid','start')),
+                'OWNERSHIP_UNKNOWN','Worker identity changed before readiness')
+        child['owner']=ready_owner
 
     async def read_worker(self,worker_id):
         child=self.children[worker_id]
@@ -100,22 +106,25 @@ class Group:
         self.journal.db.execute("UPDATE workers SET state='FAILED' WHERE worker_id=?",(worker_id,))
         for task in self.tasks():
             if task['worker_id']!=worker_id or task['state'] in TERMINAL:continue
+            unstarted=task['state']=='QUEUED' and task['native_turn_id'] is None
+            task_error=error if unstarted else {'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':error}
+            state='FAILED' if unstarted else 'INTERRUPTED'
             record=dict(schema_version=1,group_id=self.id,task_id=task['task_id'],worker={'provider':row['provider'],
-                'native_session_id':row['native_id'],'title':row['role_title'],'peer_key':row['peer_key']},status='failed',summary='',error=error,
+                'native_session_id':row['native_id'],'title':row['role_title'],'peer_key':row['peer_key']},status=state.lower(),summary='',error=task_error,
                 model_requested=row['model_requested'],model_observed=row['model_observed'],native_turn_ids=[],started_at=None,completed_at=time.time())
             artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or worker_id,[self.row['parent_key']],media_type='application/json')
-            self.journal.db.execute("UPDATE tasks SET state='FAILED',result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=?",(artifact,json.dumps(error),task['task_id'],row['generation']))
+            self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",(state,artifact,json.dumps(task_error),task['task_id'],row['generation']))
         self.changed.set()
 
-    async def cancel_worker(self,worker_id):
+    async def cancel_worker(self,worker_id,reason=None):
         if worker_id not in self.children:return
-        try:await self.send_worker(worker_id,{'operation':'cancel'})
+        try:await self.send_worker(worker_id,dict(operation='cancel',**({'reason':reason} if reason else {})))
         except (BrokenPipeError,ConnectionError):pass
 
     async def release_worker(self,worker_id):
         child=self.children[worker_id]
         self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND state!='RELEASED_RESUMABLE'",(worker_id,))
-        try:await self.send_worker(worker_id,{'operation':'release'})
+        try:await self.send_worker(worker_id,dict(operation='release',**({'reason':self.shutdown_reason} if self.shutdown_reason else {})))
         except (BrokenPipeError,ConnectionError):pass
         if child.get('lease_fd') is not None:
             os.close(child['lease_fd']);child['lease_fd']=None
@@ -213,6 +222,7 @@ class Group:
         self.changed.set()
 
     async def enqueue(self,payload):
+        require(not self.closing and not self.shutdown_reason,'TARGET_OFFLINE','Group controller is shutting down')
         message=payload['message'];worker_id=payload['worker_id']
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=? AND group_id=?',(worker_id,self.id))
         require(row and row['peer_key']==message['to']['peer_key'],'TARGET_REBOUND','Worker identity differs from the recorded recipient')
@@ -320,7 +330,11 @@ class Group:
                 if not active and self.finished_at is None:self.finished_at=time.time()
             parent_gone=not matches(self.policy['parent_owner']) and not self.policy['survive_parent']
             if parent_gone or time.time()>deadline:
-                await asyncio.gather(*[self.cancel_worker(w) for w in self.children])
+                self.shutdown_reason=self.shutdown_reason or ('PARENT_LOST' if parent_gone else 'GROUP_DEADLINE_EXCEEDED')
+                # The worker claims RUNNING before submitting native input. This compare-and-set
+                # prevents buffered successors from starting after the lifetime has ended.
+                self.stop_queued()
+                await asyncio.gather(*[self.cancel_worker(w,self.shutdown_reason) for w in self.children])
                 if not active:break
                 if time.time()>deadline+20 or parent_gone:
                     self.journal.event(self.id,'lifetime-ended',{'parent_gone':parent_gone,'deadline':deadline});break
@@ -329,8 +343,13 @@ class Group:
             try:await asyncio.wait_for(self.changed.wait(),1)
             except asyncio.TimeoutError:pass
 
+    def stop_queued(self):
+        self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason=? WHERE state='QUEUED' AND native_turn_id IS NULL AND EXISTS (SELECT 1 FROM workers w WHERE w.worker_id=tasks.worker_id AND w.group_id=? AND w.generation=tasks.generation)",
+                                (self.shutdown_reason or 'SUPERVISOR_RELEASED',self.id))
+
     async def close(self):
         self.closing=True
+        self.stop_queued()
         await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
         self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
         self.journal.event(self.id,'supervisor-released',{'owner':self.owner})

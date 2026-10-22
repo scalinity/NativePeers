@@ -5,7 +5,7 @@ import shlex
 import time
 
 from .control import group_call
-from .delegation import Delegation
+from .delegation import Delegation,TERMINAL
 from .errors import require
 from .files import async_advisory_lock,canonical
 from .models import bounded_text,new_id
@@ -19,6 +19,14 @@ def owned_worker(journal,caller,worker_id):
     group=journal.one('SELECT * FROM groups WHERE group_id=?',(row['group_id'],))
     require(caller.kind=='peer' and caller.key==group['parent_key'],'APPROVAL_BLOCKED','Only the owning parent can reclaim this worker')
     return row,group
+
+
+def settle_stopped_tasks(db,worker_id,generation,reason):
+    """Call only after the owned writer has stopped; never infer a submitted result."""
+    db.execute("UPDATE tasks SET state='CANCELED',terminal_reason=? WHERE worker_id=? AND generation=? AND state='QUEUED' AND native_turn_id IS NULL",
+               (reason,worker_id,generation))
+    db.execute("UPDATE tasks SET state='INTERRUPTED',terminal_reason='DELIVERY_UNKNOWN_AFTER_OWNER_LOSS' WHERE worker_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",
+               (worker_id,generation))
 
 
 def assert_released(journal,row):
@@ -98,16 +106,17 @@ def reconcile_owned(journal,caller,group_id,*,dry_run=False):
     if owner_path.exists() and matches(json.loads(owner_path.read_text())['owner']):return []
     changes=[]
     for row in journal.all('SELECT * FROM workers WHERE group_id=?',(group_id,)):
-        if row['state']=='RELEASED_RESUMABLE':continue
+        unfinished=journal.all('SELECT state FROM tasks WHERE worker_id=? AND generation=?',(row['worker_id'],row['generation']))
+        if row['state']=='RELEASED_RESUMABLE' and all(t['state'] in TERMINAL for t in unfinished):continue
         path=journal.root/'workers'/(row['worker_id']+'.json')
         if not path.exists():continue
         manifest=json.loads(path.read_text())
         if manifest.get('worker_id')!=row['worker_id'] or manifest.get('generation')!=row['generation'] or manifest.get('native_id')!=row['native_id']:continue
         if matches(manifest['owner']) or (manifest.get('native_process') and matches(manifest['native_process'])):continue
-        changes.append({'worker_id':row['worker_id'],'state':'RELEASED_RESUMABLE','uncertain_tasks':'INTERRUPTED; no native input replayed'})
+        changes.append({'worker_id':row['worker_id'],'state':'RELEASED_RESUMABLE','unstarted_tasks':'CANCELED: OWNER_LOST_BEFORE_START','uncertain_tasks':'INTERRUPTED; no native input replayed'})
         if not dry_run:
             with journal.transaction() as db:
-                db.execute("UPDATE tasks SET state='INTERRUPTED',terminal_reason='DELIVERY_UNKNOWN_AFTER_OWNER_LOSS' WHERE worker_id=? AND state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED')",(row['worker_id'],))
+                settle_stopped_tasks(db,row['worker_id'],row['generation'],'OWNER_LOST_BEFORE_START')
                 db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=?",(row['worker_id'],row['generation']))
                 db.execute("UPDATE peer_instances SET status='offline' WHERE peer_key=?",(row['peer_key'],))
             journal.event(row['worker_id'],'dead-owner-reconciled',changes[-1])
