@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 import time
 
-from .compatibility import fingerprint
+from .compatibility import fingerprint, verify
 from .errors import require
 from .files import advisory_lock, atomic_json, private_directory
 from .install import compare_write, file_hash
@@ -29,26 +29,67 @@ def worker_profile(profile):
 
 
 def verify_tool_gate(spec):
-    checks=hook_readiness(spec)+mcp_readiness(spec)
+    checks=profile_readiness(spec)+hook_readiness(spec)+mcp_readiness(spec)
     require(all(check['state']=='PRESENT' for check in checks),'PERMISSION_CAPABILITY_UNKNOWN',
-            'The Antigravity NativePeers tool gate or MCP facade is missing, disabled, modified or unresolved',details=checks)
+            'The Antigravity NativePeers profile, tool gate or MCP facade is missing, disabled, modified or unresolved',details=checks)
+
+
+def verify_worker_ready(journal,spec,executable):
+    """Read-only admission check; never bootstrap, repair or launch a provider."""
+    verify(journal,'antigravity',executable)
+    verify_tool_gate(spec)
+
+
+def workspace_directories(spec):
+    """Inspect the launch directory through the nearest Git root, inclusively."""
+    workspace=Path(spec['cwd']).resolve();directories=[workspace]
+    for parent in workspace.parents:
+        if (directories[-1]/'.git').exists():break
+        directories.append(parent)
+    return directories
+
+
+def profile_readiness(spec,*,home=None):
+    """Compare same-name profiles without guessing which native source wins.
+
+    Both documented layouts: https://antigravity.google/docs/subagents/
+    """
+    home=home or Path.home();checks=[]
+    profiles=[spec['permission_profile']] if 'permission_profile' in spec else ['analysis','workspace']
+    for profile in profiles:
+        name='nativepeers-'+profile;expected=worker_profile(profile)
+        path=home/'.gemini/config/agents'/(name+'.md')
+        targets=[path,home/'.gemini/config/agents'/name/'agent.md']
+        targets.extend(target for directory in workspace_directories(spec) for target in
+                       (directory/'.agents/agents'/(name+'.md'),directory/'.agents/agents'/name/'agent.md'))
+        for target in targets:
+            if target!=path and not (target.exists() or target.is_symlink()):continue
+            try:state='MISSING' if not target.exists() else 'PRESENT' if target.read_text()==expected else 'MODIFIED'
+            except (OSError,UnicodeError):state='UNKNOWN'
+            checks.append(dict(kind='profile',path=str(target),state=state,
+                reason='Owned worker profile matches' if state=='PRESENT' else 'Owned worker profile is absent, differs or could not be read',
+                native_effective_precedence='unknown'))
+    return checks
 
 
 def hook_readiness(spec,*,home=None):
     """Compare the owned hook block and the native override locations we check."""
     home=home or Path.home();path=home/'.gemini/config/hooks.json'
     expected=desired(home)[path][2];checks=[]
-    for target in (path,Path(spec['cwd'])/'.agents/hooks.json',home/'.gemini/antigravity-cli/settings.json'):
+    for target in (path,*(directory/'.agents/hooks.json' for directory in workspace_directories(spec)),home/'.gemini/antigravity-cli/settings.json'):
         optional=target!=path
         if optional and not target.exists():continue
         try:
             data=json.loads(target.read_text()) if target.exists() else {}
             block=data.get('hooks',{}) if target.name=='settings.json' else data
             current=block.get('nativepeers')
-            if optional and current is None:continue
-            state='MISSING' if current is None else 'PRESENT' if current==expected else 'MODIFIED'
+            if optional and 'nativepeers' not in block:continue
+            state=('MISSING' if 'nativepeers' not in block else 'PRESENT' if current==expected else
+                   'DISABLED' if isinstance(current,dict) and current.get('enabled') is False else 'MODIFIED')
         except (OSError,ValueError,TypeError,AttributeError):state='UNKNOWN'
-        checks.append(dict(kind='hooks',path=str(target),state=state,native_effective_precedence='unknown'))
+        checks.append(dict(kind='hooks',path=str(target),state=state,
+            reason='Owned hook definition matches' if state=='PRESENT' else 'Owned hook definition is absent, disabled, differs or could not be read',
+            native_effective_precedence='unknown'))
     return checks
 
 
@@ -59,12 +100,7 @@ def mcp_readiness(spec,*,home=None):
     # The installed CLI documents workspace customizations, but `agy mcp list`
     # lists only global definitions. A conflicting workspace entry cannot prove
     # the owned facade is available; do not guess which definition wins.
-    workspace=Path(spec['cwd']).resolve()
-    directories=[workspace]
-    for parent in workspace.parents:
-        if (directories[-1]/'.git').exists():break
-        directories.append(parent)
-    for target in [path,*(directory/'.agents/mcp_config.json' for directory in directories)]:
+    for target in [path,*(directory/'.agents/mcp_config.json' for directory in workspace_directories(spec))]:
         optional=target!=path
         if optional and not target.exists():continue
         state='MISSING';reason='Owned nativepeers MCP definition is absent'

@@ -41,7 +41,8 @@
     {
       "id": "H1",
       "description": "Ancestor workspace hook/profile conflict readiness",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 20 provider/readiness tests and 95 subtests; ancestor/root conflicting hooks and both same-name profile layouts rejected; actual native precedence remains unknown"
     },
     {
       "id": "I1",
