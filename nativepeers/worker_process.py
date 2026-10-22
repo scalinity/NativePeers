@@ -259,8 +259,14 @@ class Worker:
             peer=Registry(self.journal).get(self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))['peer_key'])
             router.record(task['request_message_id'],outcome['attempt']['attempt_id'],{'stage':'INGESTED','evidence_kind':'owned-native-turn-start','native_turn_id':self.turn},peer)
 
+    def check_submission(self):
+        canceled=self.stopping or self.canceling_task is not None and self.canceling_task==self.running_task
+        if canceled and self.provider and not self.client and self.provider.stdin:
+            self.provider.stdin.close()
+        require(not canceled,'USER_CANCELED','Task canceled before native input submission')
+
     async def codex_turn(self,text):
-        require(not self.stopping,'USER_CANCELED','Worker is stopping')
+        self.check_submission()
         self.input_submitted=True
         response=await self.client.call('turn/start',{'threadId':self.native,'input':[{'type':'text','text':text}],
             'model':self.spec['model'],'effort':self.spec.get('reasoning_effort'),'approvalPolicy':'never'})
@@ -285,6 +291,7 @@ class Worker:
                             text='\n'.join(final),native_turn_ids=[self.turn],error={'code':classify(error),'native_error':error} if error else None)
 
     async def claude_turn(self,text):
+        self.check_submission()
         from .fallback import scope_limit
         suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
         if suppressed:return dict(status='failed',text=suppressed['message'],error=suppressed,native_turn_ids=[])
@@ -294,6 +301,7 @@ class Worker:
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
             start_new_session=True,close_fds=True,limit=8*1024*1024)
         self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        self.check_submission()
         suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
         if suppressed:
             self.provider.stdin.close();await self.close_provider()
@@ -343,7 +351,7 @@ class Worker:
 
     async def antigravity_turn(self,text):
         from .antigravity import arguments
-        require(not self.stopping,'USER_CANCELED','Worker is stopping')
+        self.check_submission()
         env=launch_environment('antigravity')
         env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
         self.verify_antigravity()
@@ -354,6 +362,7 @@ class Worker:
             cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
         self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        self.check_submission()
         self.input_submitted=True
         self.provider.stdin.write(canonical({'event':'user','message':{'content':text}})+b'\n')
         await self.provider.stdin.drain();self.provider.stdin.close()

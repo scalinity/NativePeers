@@ -116,15 +116,14 @@
   },
   "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
   "current_review": {
-    "evidence": "evidence/flash-fallback.json",
-    "status": "COMPLETE: uncapped usage tracking; scoped native Flash fallback and readable original-parent return PASS",
-    "branch": "main",
-    "source_map_sha256": "e97d12268556bc9640d3a008078b88460f6cd6cba80cd0746231980fcbe60439",
-    "code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
+    "evidence": "evidence/review-0274647.json",
+    "status": "IN_PROGRESS",
+    "branch": "fix/pro-0274647",
+    "source_map_sha256": "6e22cc88e66c4e23601fbf5381f3080eb4dde72ec7fded17bd886ac05d03d422"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "branch": "main",
+    "branch": "fix/pro-0274647",
     "code_commit": "a3f1a39b30221203a2435aed8f9b1b43bed73daa",
     "manager_preexisting_changes": [
       " M codex-launcher",
@@ -132,8 +131,10 @@
       "?? patches/session-naming-native.patch",
       "?? test_name_session.py"
     ],
-    "base_commit": "74aa05ff63f694f543b23b9f80cd038278119af6",
-    "owned_uncommitted_changes": [],
+    "base_commit": "a987587e517fd8b1f32e913ac321731d6d300203",
+    "owned_uncommitted_changes": [
+      "Review 0274647 corrections, tests, docs and checkpoint"
+    ],
     "last_verified_publication": "a3f1a39b30221203a2435aed8f9b1b43bed73daa"
   },
   "historical_records": {
@@ -175,7 +176,7 @@
     "sha256": "9239fbf36aae7043663b867b594627f8e11198cf8540aedf61f6f46c5cb9768e"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Ready to address the new GPT-6 Pro report. No cumulative live-input/time cap; preserve usage tracking and use only explicitly selected available models.",
+  "next_action": "Next pending review item: N2",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -192,103 +193,18 @@
     "source_zip_uploaded": false
   },
   "schema_version": 2,
-  "stage": "COMPLETE: scoped native Flash fallback/readable return and full offline checks PASS",
+  "stage": "Addressing all review 0274647 defects and suggestions",
   "tests_current": {
     "offline": {
-      "status": "PASS",
-      "tests": 356,
-      "subtests": 545,
-      "seconds": 121.21,
-      "command": ".venv/bin/python -m pytest -q",
-      "python": "3.14.8",
-      "source_frozen_during_run": true,
-      "scope": "Full offline unit/property/contract suite; native acceptance recorded separately"
-    },
-    "manager_and_naming": {
-      "status": "PASS",
-      "tests": 23,
-      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py",
-      "scope": "isolated manager/naming fixtures; no package activation"
-    },
-    "installed_passive": {
-      "status": "PASS",
-      "provider_fingerprints_match": true,
-      "owned_integrations_present": true,
-      "protected_files_unchanged": 8,
-      "entrypoint_uses_checkout": true,
-      "global_configuration_writes": 0
+      "status": "NOT_RUN"
     },
     "native": {
+      "status": "NOT_RUN",
+      "scope": "No native inference yet in this address pass"
+    },
+    "focused": {
       "status": "PASS",
-      "scope": "Simulated clean Claude quota to two real Gemini Flash tasks; editing/wait and readable hook return to original native Flash parent",
-      "model": "gemini-3.8-flash-medium",
-      "checks": {
-        "helper_pass": true,
-        "parent_succeeded": true,
-        "readable_completion_observed": true,
-        "same_parent": true
-      },
-      "parent_native_id": "1fa276a1-b717-4a37-826b-30467b5d460c",
-      "successful_runs": [
-        {
-          "mode": "wait",
-          "group_id": "1687c309-48b3-4aed-8fef-e3e98808555d",
-          "task_id": "4839e7ce-77b2-41a0-ad6e-cfd96cf86d48",
-          "native_worker_id": "9b4dfaf3-dc44-41ff-bb99-40df3334ea90",
-          "provider": "antigravity",
-          "requested_model": "gemini-3.8-flash-medium",
-          "observed_model": "gemini-3.8-flash-medium",
-          "status": "completed",
-          "retained_attempts": 2,
-          "primary_fixture": "deterministic fake Claude quota; no real Claude invocation",
-          "checks": {
-            "completed": true,
-            "distinct_native_ids": true,
-            "flash_observed": true,
-            "flash_requested": true,
-            "independent_check": true,
-            "isolated_directory": true,
-            "nonce_in_worker_result": true,
-            "old_controller_exited": true,
-            "old_native_exited": true,
-            "original_parent_wait": true,
-            "parent_distinct": true,
-            "primary_quota": true,
-            "reconstruction_patch": true,
-            "source_preserved": true,
-            "two_retained_attempts": true,
-            "wait_claimed": true,
-            "worker_delta": true
-          }
-        },
-        {
-          "mode": "push",
-          "group_id": "9591d77a-d3a8-428e-83c4-6b3f6e173b9e",
-          "task_id": "7cc77626-f968-4297-b8a4-d39fa9642af2",
-          "native_worker_id": "7cefd7a1-5571-4ec3-8775-c9cf1b9fab5e",
-          "provider": "antigravity",
-          "requested_model": "gemini-3.8-flash-medium",
-          "observed_model": "gemini-3.8-flash-medium",
-          "status": "completed",
-          "retained_attempts": 2,
-          "primary_fixture": "deterministic fake Claude quota; no real Claude invocation",
-          "checks": {
-            "completed": true,
-            "distinct_native_ids": true,
-            "flash_observed": true,
-            "flash_requested": true,
-            "nonce_in_worker_result": true,
-            "old_controller_exited": true,
-            "old_native_exited": true,
-            "original_parent_target": true,
-            "parent_distinct": true,
-            "primary_quota": true,
-            "readable_frame": true,
-            "source_preserved": true,
-            "two_retained_attempts": true
-          }
-        }
-      ]
+      "scope": "Item-specific offline regressions; full suite and native acceptance recorded separately"
     }
   },
   "transports": {
