@@ -44,7 +44,8 @@
     {
       "id": "I1",
       "description": "Bounded result include-artifacts behavior",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 42 focused tests and 45 subtests; CLI/MCP artifact option parity, 16x16KiB pages, next offsets, reader refusal and unchanged notifications"
     },
     {
       "id": "I2",

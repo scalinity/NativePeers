@@ -249,9 +249,26 @@ class Delegation:
             groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results'])))
         return {'groups':groups,'next_cursor':encode(scope,rows[limit-1]['page_id'],ceiling) if len(rows)>limit else None}
 
-    def result(self,caller,handle):
+    def result(self,caller,handle,*,include_artifacts=False):
         status=self.status(caller,handle);policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(status['group_id'],))['policy_json'])
-        return self._render_result(status,policy,handle)
+        value=self._render_result(status,policy,handle)
+        if include_artifacts:
+            from .artifacts import Artifacts
+            handles=[]
+            for result in value['results']:
+                handles.extend([result['result_artifact_id'],*result.get('artifacts',[])])
+                changes=result.get('changes',{})
+                handles.extend(changes.get(key) for key in ('patch_artifact','worker_delta_artifact'))
+            handles=list(dict.fromkeys(h for h in handles if isinstance(h,str)))
+            pages=[]
+            for artifact in handles[:16]:
+                try:page=Artifacts(self.journal).read(artifact,caller.key,0,16384)
+                except PeerError as error:
+                    if error.code!='APPROVAL_BLOCKED' or not caller.grants.get('worker_id'):raise
+                    page=Artifacts(self.journal).read(artifact,caller.grants['worker_id'],0,16384)
+                pages.append(page)
+            value.update(artifact_pages=pages,artifact_pages_limit=16,artifact_page_bytes=16384,artifact_handles_omitted=max(0,len(handles)-16))
+        return value
 
     def _render_result(self,status,policy,handle):
         # Only render the captured membership; concurrent admission belongs to a

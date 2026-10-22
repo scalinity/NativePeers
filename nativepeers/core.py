@@ -57,7 +57,7 @@ class Core:
         if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'])
         if name=='task_groups':return self.delegation.groups(caller,args.get('limit',20),args.get('cursor'))
         if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False))
-        if name=='task_result':return self.delegation.result(caller,args['handle'])
+        if name=='task_result':return self.delegation.result(caller,args['handle'],include_artifacts=args.get('include_artifacts',False))
         if name=='task_wait':
             group=self.delegation.group(caller,args['handle'])
             require(not caller.grants.get('worker_id') or group['parent_key']==caller.key,'CAPACITY_UNAVAILABLE','A worker cannot wait for its own containing group to finish')

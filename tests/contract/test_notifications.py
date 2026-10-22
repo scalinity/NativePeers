@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock,patch
 from nativepeers.artifacts import Artifacts
 from nativepeers.core import Core
 from nativepeers.delegation import Delegation
+from nativepeers.errors import PeerError
 from nativepeers.files import canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
@@ -194,6 +195,35 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             send.assert_not_awaited()
         self.assertEqual(self.route()['delivery_id'],delivery);self.assertEqual(self.group.tasks(),tasks)
         self.assertEqual((self.j.root/'artifacts'/artifact).read_bytes(),content)
+
+    async def test_public_result_artifact_option_returns_bounded_authorized_pages(self):
+        import base64
+        from nativepeers.cli import parser,dispatch
+        from nativepeers.mcp_server import Facade
+        from types import SimpleNamespace
+        artifact=self.complete()
+        handles=[Artifacts(self.j).put(bytes([index])*20000,self.worker,[self.parent]) for index in range(18)]
+        raw=json.loads((self.j.root/'artifacts'/artifact).read_text());raw['artifacts']=handles
+        replacement=Artifacts(self.j).put(canonical(raw),self.worker,[self.parent],media_type='application/json')
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(replacement,self.task))
+        before=self.route()
+        with patch('nativepeers.cli.bind_caller',return_value=self.group.parent):
+            ordinary=await dispatch(parser().parse_args(['result',self.id]),self.j)
+            value=await dispatch(parser().parse_args(['result',self.id,'--include-artifacts']),self.j)
+        self.assertNotIn('artifact_pages',ordinary)
+        pages=value['artifact_pages'];self.assertEqual(len(pages),16);self.assertEqual(value['artifact_handles_omitted'],3)
+        self.assertLessEqual(sum(len(base64.b64decode(page['data_base64'])) for page in pages),262144)
+        self.assertTrue(any(page['next_offset']==16384 for page in pages))
+        facade=Facade(self.j,None)
+        with patch.object(facade,'binding_state',return_value={'state':'BOUND','provider':'codex','grants':{}}),patch('nativepeers.mcp_server.bind_caller',return_value=self.group.parent):
+            response=await facade.call(None,SimpleNamespace(name='task_result',arguments={'handle':self.id,'include_artifacts':True}))
+        self.assertFalse(response.is_error);self.assertEqual(json.loads(response.content[0].text)['data'],value)
+        self.assertEqual(self.route(),before)
+        secret=Artifacts(self.j).put(b'not granted','different-parent')
+        raw['artifacts']=[secret];replacement=Artifacts(self.j).put(canonical(raw),self.worker,[self.parent],media_type='application/json')
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(replacement,self.task))
+        with self.assertRaises(PeerError) as error:Delegation(self.j,Registry(self.j)).result(self.group.parent,self.id,include_artifacts=True)
+        self.assertEqual(error.exception.code,'APPROVAL_BLOCKED')
 
     async def test_public_terminal_initial_task_wait_preserves_separate_batch_push(self):
         self.complete();core=Core(self.j)

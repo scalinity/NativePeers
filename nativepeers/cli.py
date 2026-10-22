@@ -80,7 +80,7 @@ async def dispatch(args,journal):
     if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
     if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)))
     if name=='status':return await core.status(caller,args.handle,refresh=args.refresh)
-    if name=='result':return core.delegation.result(caller,args.handle)
+    if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)
     if name=='artifact-add':
