@@ -51,7 +51,7 @@ class Router:
         existing = self.journal.one("SELECT * FROM send_requests WHERE caller_key=? AND client_request_id=?", (caller.key,request_id))
         if existing:
             require(existing["payload_sha256"] == digest, "IDEMPOTENCY_CONFLICT", "Request ID already has different content")
-            return dict(self.outcome(existing["message_id"]), client_request_id=request_id)
+            return await self.admit(existing["message_id"], request_id)
         reference = None
         if in_reply_to:
             row = self.journal.one("SELECT payload_json FROM messages WHERE message_id=?", (in_reply_to,))
@@ -87,33 +87,72 @@ class Router:
             raced = db.execute("SELECT * FROM send_requests WHERE caller_key=? AND client_request_id=?",(caller.key,request_id)).fetchone()
             if raced:
                 require(raced["payload_sha256"]==digest,"IDEMPOTENCY_CONFLICT","Concurrent request has different content")
-                return dict(self.outcome(raced["message_id"]),client_request_id=request_id)
-            if expect_reply:
-                pending=db.execute("SELECT COUNT(*) FROM messages WHERE to_key=? AND expires_at>? AND json_extract(payload_json,'$.expect_reply')=1 AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.in_reply_to=messages.message_id)",(peer["handle"],now)).fetchone()[0]
-                require(pending<local["pending_messages"],"CAPACITY_UNAVAILABLE","Recipient has 32 pending requests")
-            for ref in artifact_refs:Artifacts(self.journal).grant(ref,caller.key,[peer["handle"]])
-            db.execute("INSERT INTO send_requests VALUES(?,?,?,?)",(caller.key,request_id,digest,message_id))
-            db.execute("INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)",(message_id,envelope["exchange_id"],caller.key,peer["handle"],in_reply_to,None,canonical(envelope).decode(),sha256(envelope),now+expiry,now))
-            db.execute("INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)",(attempt_id,message_id,peer["incarnation_id"],transport,"OUTBOX_COMMITTED",now))
-            if reference:
-                original_attempt=db.execute('SELECT attempt_id FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1',(in_reply_to,)).fetchone()
-                db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),in_reply_to,original_attempt['attempt_id'] if original_attempt else None,
-                    'REPLY_RECORDED','explicit-bound-peer-reply',caller.key,None,canonical({'reply_message_id':message_id}).decode(),time.time()))
-        async with async_advisory_lock(self.journal.root/"locks"/(sha256(peer["handle"])+".lock")):
-            try:
-                peer=self.registry.verify(peer["handle"],peer["incarnation_id"])
-                require(time.time()<envelope["expires_at"],"EXPIRED_BEFORE_SUBMISSION","Message expired before native admission")
-                adapter=self.adapters.get(transport)
-                require(adapter is not None,"UNSUPPORTED_TRANSPORT","Transport is not validated")
-                self.journal.db.execute("UPDATE attempts SET state='SUBMITTING' WHERE attempt_id=?",(attempt_id,))
-                receipt=await adapter(peer,envelope)
-                self.record(message_id,attempt_id,receipt,peer)
-            except BaseException as exception:
-                uncertain = not isinstance(exception,PeerError) or exception.may_have_received
-                state="DELIVERY_UNKNOWN" if uncertain else exception.code
-                self.journal.db.execute("UPDATE attempts SET state=?,ended_at=?,error_json=? WHERE attempt_id=?",(state,time.time(),canonical(exception.json() if isinstance(exception,PeerError) else {"code":"DELIVERY_UNKNOWN","message":type(exception).__name__}).decode(),attempt_id))
-                if not isinstance(exception,Exception):raise
-        return dict(self.outcome(message_id),client_request_id=request_id)
+                message_id = raced["message_id"]
+            else:
+                if expect_reply:
+                    pending=db.execute("SELECT COUNT(*) FROM messages WHERE to_key=? AND expires_at>? AND json_extract(payload_json,'$.expect_reply')=1 AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.in_reply_to=messages.message_id)",(peer["handle"],now)).fetchone()[0]
+                    require(pending<local["pending_messages"],"CAPACITY_UNAVAILABLE","Recipient has 32 pending requests")
+                for ref in artifact_refs:Artifacts(self.journal).grant(ref,caller.key,[peer["handle"]])
+                db.execute("INSERT INTO send_requests VALUES(?,?,?,?)",(caller.key,request_id,digest,message_id))
+                db.execute("INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)",(message_id,envelope["exchange_id"],caller.key,peer["handle"],in_reply_to,None,canonical(envelope).decode(),sha256(envelope),now+expiry,now))
+                db.execute("INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)",(attempt_id,message_id,peer["incarnation_id"],transport,"OUTBOX_COMMITTED",now))
+                if reference:
+                    original_attempt=db.execute('SELECT attempt_id FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1',(in_reply_to,)).fetchone()
+                    db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),in_reply_to,original_attempt['attempt_id'] if original_attempt else None,
+                        'REPLY_RECORDED','explicit-bound-peer-reply',caller.key,None,canonical({'reply_message_id':message_id}).decode(),time.time()))
+        return await self.admit(message_id, request_id)
+
+    async def admit(self, message_id, request_id):
+        # Only durable, definitely unsubmitted intent is retryable. Never resolve its alias again.
+        outcome = self.outcome(message_id)
+        if outcome['state'] not in ('OUTBOX_COMMITTED', 'ADMISSION_DEFERRED'):
+            return dict(outcome, client_request_id=request_id)
+        message = self.journal.one('SELECT payload_json FROM messages WHERE message_id=?', (message_id,))
+        envelope = json.loads(message['payload_json'])
+        target = outcome['target']
+        attempt_id = outcome['attempt']['attempt_id']
+        submitted = False
+        try:
+            async with async_advisory_lock(self.journal.root/"locks"/(sha256(target)+".lock")):
+                # Another exact-ID retry may have won while this invocation waited.
+                with self.journal.transaction() as db:
+                    attempt = db.execute('SELECT * FROM attempts WHERE attempt_id=?', (attempt_id,)).fetchone()
+                    if attempt['state'] not in ('OUTBOX_COMMITTED', 'ADMISSION_DEFERRED'):
+                        return dict(self.outcome(message_id), client_request_id=request_id)
+                    peer = self.registry.verify(target, attempt['target_incarnation'])
+                    require(time.time() < envelope['expires_at'], 'EXPIRED_BEFORE_SUBMISSION', 'Message expired before native admission')
+                    adapter = self.adapters.get(attempt['transport'])
+                    require(adapter is not None, 'UNSUPPORTED_TRANSPORT', 'Transport is not validated')
+                    db.execute("UPDATE attempts SET state='SUBMITTING',error_json=NULL,ended_at=NULL WHERE attempt_id=?", (attempt_id,))
+                submitted = True
+                try:
+                    receipt = await adapter(peer, envelope)
+                    self.record(message_id, attempt_id, receipt, peer)
+                except BaseException as exception:
+                    self.admission_error(attempt_id, exception, submitted=True)
+                    if not isinstance(exception, Exception):raise
+        except BaseException as exception:
+            # A lock deadline is a definite pre-submission failure. Keep the same intent retryable.
+            if not submitted:
+                self.admission_error(attempt_id, exception, submitted=False)
+            if not isinstance(exception, Exception):raise
+        return dict(self.outcome(message_id), client_request_id=request_id)
+
+    def admission_error(self, attempt_id, exception, *, submitted):
+        uncertain = submitted and (not isinstance(exception, PeerError) or exception.may_have_received)
+        if uncertain:
+            error = exception if isinstance(exception, PeerError) else PeerError('DELIVERY_UNKNOWN', type(exception).__name__, may_have_received=True)
+            state = 'DELIVERY_UNKNOWN'
+        elif isinstance(exception, PeerError):
+            error = exception
+            state = exception.code
+        else:
+            state = 'ADMISSION_DEFERRED'
+            error = PeerError(state, 'Native admission has not started; retry the same client request ID', details={'cause':type(exception).__name__})
+        # A contender's timeout cannot overwrite an attempt another invocation has submitted.
+        condition = " AND state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED')" if not submitted else ''
+        self.journal.db.execute('UPDATE attempts SET state=?,ended_at=?,error_json=? WHERE attempt_id=?'+condition,
+            (state,time.time(),canonical(error.json()).decode(),attempt_id))
 
     def record(self,message_id,attempt_id,receipt,peer):
         with self.journal.transaction() as db:

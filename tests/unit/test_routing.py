@@ -63,6 +63,42 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         rows=await asyncio.gather(*[self.router.send(self.ca,'b','same',client_request_id='concurrent') for _ in range(8)])
         self.assertEqual(len({r['message_id'] for r in rows}),1);self.assertEqual(len(self.admissions),1)
 
+    async def test_lock_timeout_retries_exact_intent_once(self):
+        from unittest.mock import patch
+        from nativepeers.files import advisory_lock, async_advisory_lock, sha256
+        lock = self.journal.root/'locks'/(sha256(self.b['handle'])+'.lock')
+        with advisory_lock(lock), patch('nativepeers.routing.async_advisory_lock', side_effect=lambda path: async_advisory_lock(path, .03)):
+            deferred = await self.router.send(self.ca, 'b', 'contended', client_request_id='lock-retry')
+        self.assertEqual(deferred['state'], 'ADMISSION_DEFERRED')
+        self.assertFalse(json.loads(deferred['attempt']['error_json'])['may_have_received'])
+        self.assertEqual(self.admissions, [])
+        # Mutable aliases are not consulted when retrying the committed intent.
+        with patch.object(self.registry, 'resolve', side_effect=AssertionError('alias re-resolved')):
+            outcomes = await asyncio.gather(*[self.router.send(self.ca, 'b', 'contended', client_request_id='lock-retry') for _ in range(8)])
+        self.assertEqual({row['message_id'] for row in outcomes}, {deferred['message_id']})
+        self.assertEqual(len(self.admissions), 1)
+        self.assertEqual(self.journal.one('SELECT COUNT(*) AS n FROM messages')['n'], 1)
+        self.assertEqual(self.journal.one('SELECT COUNT(*) AS n FROM attempts')['n'], 1)
+
+    async def test_unsubmitted_retry_revalidates_original_incarnation_and_expiry(self):
+        from unittest.mock import patch
+        from nativepeers.files import advisory_lock, async_advisory_lock, sha256
+        for stale in ('incarnation', 'expiry'):
+            with self.subTest(stale=stale):
+                lock = self.journal.root/'locks'/(sha256(self.b['handle'])+'.lock')
+                with advisory_lock(lock), patch('nativepeers.routing.async_advisory_lock', side_effect=lambda path: async_advisory_lock(path, .03)):
+                    first = await self.router.send(self.ca, 'b', stale, client_request_id=stale)
+                if stale == 'incarnation':
+                    self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE peer_key=?", (self.b['handle'],))
+                    self.peer('b', self.b['peer_key']['native_session_id'], os.getpid())
+                else:
+                    row=self.journal.one('SELECT payload_json FROM messages WHERE message_id=?',(first['message_id'],))
+                    payload=json.loads(row['payload_json']);payload['expires_at']=0
+                    self.journal.db.execute('UPDATE messages SET payload_json=? WHERE message_id=?',(json.dumps(payload),first['message_id']))
+                result=await self.router.send(self.ca,'b',stale,client_request_id=stale)
+                self.assertNotIn(result['state'], ('ACCEPTED_QUEUED','SUBMITTING','DELIVERY_UNKNOWN'))
+                self.assertEqual(len(self.admissions),0)
+
     async def test_parallel_recipient_admission(self):
         await asyncio.gather(*[self.router.send(self.ca,'b',str(i)) for i in range(3)])
         self.assertEqual(len(self.admissions),3)
