@@ -1,3 +1,9 @@
+# Second Pro review verification
+
+Current product correction code: `7ad2d553affd62bdef6cf24b14d801b387542c8f`. **268 offline tests and 388 subtests PASS**, **23 manager/naming fixture tests PASS**, installed owned-integration/idempotency/preservation checks PASS. A five-input Sol/Flash batch proves original-parent returns and actual bound status plus paged/unread inbox MCP calls for three distinct native workers. The mixed two-worker native intervals overlap by 10.130 seconds. All owned writers exited; cumulative ledger: 148 inputs, 0 reserved, 3524.394974/3600 active seconds, no outstanding requests.
+
+All review defects, proposed conveniences and the non-Git copy path are implemented. Fresh Claude inference remains BLOCKED by its reported usage limit; new copy-mode native writing, failure-window/cancel/resume/push variants and the full original matrix remain explicitly unaccepted. See [the itemized resolution and limits](PRO_FOLLOWUP_REVIEW.md), [current fingerprints/results](../evidence/pro-followup-review.json), and [the consolidated checkpoint](../evidence/checkpoint.json). Later sections are historical and do not override this scope.
+
 # Four-agent review verification
 
 Current correction code: `7b3a6f7398ea46f48ea9151b1a7c262a53f40cad`. Full offline suite: **203 tests and 252 subtests PASS**. Manager/naming fixtures: **23 PASS**. The final-source Sol/Flash run proves original-parent waits, overlapping separate native workers, isolated edits and both patch views, successful native artifact consumption, exact owned Gemini history resume, and native queue return to the original Codex UUID. See [ASTRA4_REVIEW.md](ASTRA4_REVIEW.md) and [astra4-review.json](../evidence/astra4-review.json).

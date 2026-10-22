@@ -1,113 +1,338 @@
 {
-  "schema_version": 1,
-  "reviewed_commit": "f81f5c897fed3de5bbb90bd0c1e8ae0183eed81a",
-  "status": "IN_PROGRESS",
-  "report": "docs/PRO_FOLLOWUP_REVIEW.md",
+  "at": "2026-10-22T11:22:38.794565-04:00",
+  "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
+  "dependencies": {
+    "hypothesis": "6.170.5",
+    "mcp": "2.3.0",
+    "pytest": "9.1.1",
+    "tomlkit": "0.15.2"
+  },
+  "dependency_sha256": {
+    "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
+    "schemas/result.v1.json": "f8183e84097e20cb1109de0383f65ebf1b80921e61ae5d581dd08c48e1ba9c5b",
+    "schemas/spawn.v1.json": "5ad385d3490c1eba19fe99bc1c36ad3661215402e18dbbd6a96a96d13e287bff",
+    "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
+  },
+  "executables": {
+    "antigravity": {
+      "executable": "/Users/danny/.local/bin/agy",
+      "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554"
+    },
+    "claude": {
+      "executable": "/Users/danny/.local/share/claude/versions/2.1.308",
+      "sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37"
+    },
+    "codex": {
+      "executable": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.163.0-8f85dd9c6933-1792479166735424000/bin/codex",
+      "sha256": "e844deb6c905536f43775e3b85de1140f052d7c21a65c086150b765b25a16c1c"
+    }
+  },
+  "execution_head": "3af0dc70fe7918d35a6b486d698dc4621dbda1b4",
+  "installed_versions": {
+    "antigravity": "1.4.5",
+    "claude": "2.1.308",
+    "codex": "0.163.0"
+  },
   "items": {
-    "F1": {
+    "C1": {
+      "commit": "01455faecd5bba3cd22be13e86474dd1dba4c93f",
+      "scope": "Non-Git isolated editing and implementation worker documentation",
       "status": "DONE",
-      "scope": "Generation-fenced cancellation",
+      "verification": "25 workspace tests with 71 subtests plus 2 public-spawn real-controller copy/result regressions passed"
+    },
+    "D1": {
+      "conventions_commit": "74abc55",
+      "scope": "Conventions and final review package",
+      "status": "IN_PROGRESS",
+      "verification": "Owned global block and all three skills installed; outside bytes unchanged; both installers second run no-op; final pinned review package pending"
+    },
+    "E1": {
+      "commit": "916a89d06689cfcc88881a4e7d5bf40fc408a439",
+      "scope": "Consistent current checkpoint",
+      "status": "DONE",
+      "verification": "Checkpoint consistency regression passed; canonical hashes and retained budget match"
+    },
+    "F1": {
       "commit": "b7f1a85830860e7e76c3c539d9cbf072c0b57aac",
+      "scope": "Generation-fenced cancellation",
+      "status": "DONE",
       "verification": "13 cancellation and real-process lifecycle tests passed"
     },
     "F2": {
-      "status": "TODO",
-      "scope": "Ambient owned caller and hook identity"
+      "commit": "99f2a3d77f4332994aafb568df28e5ec7f616d69",
+      "scope": "Ambient owned caller and hook identity",
+      "status": "DONE",
+      "verification": "32 CLI MCP hook ancestry and bootstrap tests; 51 subtests passed with real compiled native-shaped process trees"
+    },
+    "F2B": {
+      "commit": "a6ebf27dc090036ccd8c84cc669c0dd3f6527c07",
+      "scope": "Keep early MCP bootstrap inactive until native process verification",
+      "status": "DONE",
+      "verification": "8 compiled ancestry and official SDK bootstrap tests with 25 subtests passed; early list-tools remains inactive"
     },
     "F3": {
-      "status": "DONE",
-      "scope": "Multi-phase wait ownership",
       "commit": "e4c70d766f5ae6519e635c8a8490a6c838294f53",
+      "scope": "Multi-phase wait ownership",
+      "status": "DONE",
       "verification": "32 notification tests and 17 subtests passed including CLI MCP dynamic phases and disconnect"
     },
     "F4": {
-      "status": "DONE",
-      "scope": "Established wait connection loss",
       "commit": "afafdafbdec5aac21893d18af6adfe1635ccdd2d",
+      "scope": "Established wait connection loss",
+      "status": "DONE",
       "verification": "34 notification tests and 21 subtests passed including real socket EOF and abort through CLI and MCP"
     },
-    "F5": {
+    "F4B": {
+      "commit": "94550a731cde5141d215588145ffcd23e395761a",
+      "scope": "Recover terminal wait after a truncated socket frame",
       "status": "DONE",
-      "scope": "Pre-admission batch cleanup",
+      "verification": "34 notification tests and 23 subtests passed; real EOF abort and partial-frame cases through CLI/MCP"
+    },
+    "F5": {
       "commit": "2558ddbaf38e2a5ab6fb63bca8edb299a64be353",
+      "scope": "Pre-admission batch cleanup",
+      "status": "DONE",
       "verification": "14 lifecycle and cancellation tests passed; mixed preflight submits zero tasks and corrected generation starts immediately"
     },
     "F6": {
-      "status": "TODO",
-      "scope": "Installer provider home"
+      "commit": "bd6167948574663936f3a1d377e78740642d51f5",
+      "scope": "Installer provider home",
+      "status": "DONE",
+      "verification": "7 install/uninstall tests and 9 subtests passed including conflicting ambient CODEX_HOME and structured missing-layer error"
     },
     "F7": {
-      "status": "DONE",
-      "scope": "Claude context-window selection",
       "commit": "07b8cef0cd4cb8b1f3dcb88f9472ad6463c86967",
+      "scope": "Claude context-window selection",
+      "status": "DONE",
       "verification": "23 model lifecycle cancellation and real selected-home launch/resume tests; 26 subtests passed"
     },
-    "T1": {
-      "status": "TODO",
-      "scope": "Git-filter portable fault injection"
-    },
-    "E1": {
-      "status": "TODO",
-      "scope": "Consistent current checkpoint"
-    },
     "H1": {
-      "status": "TODO",
-      "scope": "Antigravity effective MCP readiness"
+      "commit": "561fcf33205b07f482ba77fdccbe9d0c86e3acd7",
+      "scope": "Antigravity effective MCP readiness",
+      "status": "DONE",
+      "verification": "Installed passive global MCP listing enabled; disabled:true behavior verified in temporary native home; workspace runtime precedence remains explicitly unknown; fake startup rejects conflicting/restricted definitions before input"
     },
     "S1": {
-      "status": "DONE",
-      "scope": "Retained parent group discovery",
       "commit": "e687e90fc5946104ddd2b41a9db539a71fe14295",
+      "scope": "Retained parent group discovery",
+      "status": "DONE",
       "verification": "2 parent-filtered stable-pagination discovery tests passed without changing completion ownership"
     },
     "S2": {
-      "status": "DONE",
-      "scope": "Artifact export",
       "commit": "b008310141c53ab0f7526fae72eb256eff90ec8b",
-      "verification": "7 export and writing-result tests passed; 28 artifact tests and 48 subtests passed"
+      "scope": "Artifact export",
+      "status": "DONE",
+      "verification": "6 export and writing-result tests with 3 subtests; 28 artifact tests with 48 subtests passed"
     },
     "S3": {
-      "status": "DONE",
-      "scope": "Unread and paginated MCP inbox",
       "commit": "f7ea2157aac40d887162dfd50cb4b89724e0e04a",
+      "scope": "Unread and paginated MCP inbox",
+      "status": "DONE",
       "verification": "20 routing and inbox tests with 18 subtests passed including unread behind 110 acknowledgments and equal timestamps"
     },
+    "S3B": {
+      "commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
+      "scope": "Reject oversized and nonfinite journal cursor numbers",
+      "status": "DONE",
+      "verification": "7 inbox and group tests with 7 subtests passed; oversized and nonfinite cursor failures structured through CLI/MCP"
+    },
     "S4": {
-      "status": "TODO",
-      "scope": "Passive owned integration readiness"
+      "commit": "561fcf33205b07f482ba77fdccbe9d0c86e3acd7",
+      "scope": "Passive owned integration readiness",
+      "status": "DONE",
+      "verification": "17 readiness installer and fake-stream tests; 29 subtests passed; doctor now includes passive owned integration checks"
     },
     "S5": {
-      "status": "DONE",
-      "scope": "Idempotent resume",
       "commit": "d8c42b3897675331159b6449b7758cc8c68c19e2",
+      "scope": "Idempotent resume",
+      "status": "DONE",
       "verification": "23 resume CLI idempotency lifecycle and real-controller tests; 18 subtests passed"
     },
-    "C1": {
-      "status": "TODO",
-      "scope": "Non-Git isolated editing and implementation worker documentation"
+    "T1": {
+      "commit": "ab051d4867cd20fb11a7e914aa46d7ac1c009b0b",
+      "scope": "Git-filter portable fault injection",
+      "status": "DONE",
+      "verification": "14 delta tests and 2 subtests passed; fault-injection test also passed with an added temporary global Git filter"
     },
     "V1": {
-      "status": "TODO",
-      "scope": "Affected offline, passive and bounded native verification"
-    },
-    "D1": {
-      "status": "TODO",
-      "scope": "Conventions and final review package"
+      "scope": "Affected offline, passive and bounded native verification",
+      "status": "DONE",
+      "verification": "268 tests/388 subtests; manager23; passive install checks; five native Sol/Flash inputs, both original parents and all three MCP workers PASS; scope qualifications retained"
     }
   },
+  "limitations": [
+    "Fresh Claude inference BLOCKED by reported usage limit; suffix identity/preservation verified offline.",
+    "AGY conflicting-workspace effective agent-turn precedence unknown; static conflict refuses admission.",
+    "Non-Git copy mode provider inference NOT_RUN; actual fake-provider controllers and result patches PASS.",
+    "No unqualified unattended/all-provider acceptance verdict."
+  ],
+  "live_budget": {
+    "active_seconds": 3524.3949735164642,
+    "ceiling": {
+      "active_seconds": 3600,
+      "concurrent_owned_workers": 8,
+      "submitted_turns": 148
+    },
+    "consumed_turns": 148,
+    "outstanding_native_requests": [],
+    "reserved_turns": 0
+  },
+  "native_queue": "Native route retained; no Rust patch selected; no new queue-push test in this batch",
+  "owned_processes_exited": true,
+  "preservation": {
+    "global_claude_outside_owned_block_unchanged": true,
+    "manager_concurrent_edits": "Additional documentation/smoke changes observed and preserved; actor not established; no NativePeers writes to that checkout",
+    "protected_native_config_auth_shell_executables_unchanged": true,
+    "status": "PASS within stated scope"
+  },
+  "report": "docs/PRO_FOLLOWUP_REVIEW.md",
+  "reviewed_commit": "f81f5c897fed3de5bbb90bd0c1e8ae0183eed81a",
+  "schema_version": 1,
+  "source_map_sha256": "a917299b82db1cfeef4a2b8070896847efa190dbc2ad20539cf58bbec8f6a940",
+  "source_sha256": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "ef11680aa44c38dc2e66b4ea3dff4a87b7328a921f38abfc7bdbb2d1e2f4cc61",
+    "nativepeers/adapters/metadata.py": "f2c3c9409ef5f033d742e7cafd669a8f56489f283cad06a01cd8fdef99f93260",
+    "nativepeers/adapters/native_delivery.py": "b76be145421d5269b90289c8f1491a2ec0bbd9022f59df5543dfe9d3b03acb9d",
+    "nativepeers/antigravity.py": "1a5286d0ac9381447f7f61cc2c432085513d4792a03e58da670d20348bdaf467",
+    "nativepeers/antigravity_install.py": "19272a6f108964aa5fe6854e15c09709a97a542d30240b7f89e66883f6375f31",
+    "nativepeers/artifacts.py": "4161379e5d874c668c2e62eb0147565cfec0a67ed253e47dbc9cce8e95e53a40",
+    "nativepeers/budget.py": "b64ddb5a42f3e9276e5945e097473289c201895e00e6fe6b3f4f74207f8f9ea6",
+    "nativepeers/caller.py": "e856fd6fcf4041aa5af4bece74948cf98cbb87c4ddf431220dbe561522d199ae",
+    "nativepeers/cli.py": "852cf239a3a62873afb2074db82bafdd40b270b904e6a3d011586c83ec3c956f",
+    "nativepeers/compatibility.py": "0439f19f292517c91143a2587107aff36aef5cb82e993aa2fc52ce02c5326ad1",
+    "nativepeers/control.py": "c995adf790984d5457ad836dd3b8f7f675c84aeb6571fb3a2153e89f5429f24d",
+    "nativepeers/core.py": "2c68ae25162975d40fef66a09209a3b68187d70996b4551426d54172a02d14a1",
+    "nativepeers/delegation.py": "59f4745ab1a7d92ac3bb7ab248b95805161dddee78445641d91faa54e6407356",
+    "nativepeers/errors.py": "bd16a7557f562c4e27af5e03cd015f697f53518b03f1f7a45220aa9ad845551a",
+    "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
+    "nativepeers/hooks.py": "456ba4f1cc9da27e0601fea9319180f56f8ff24bcbfa608090016c6a4b6fe421",
+    "nativepeers/install.py": "4e8a318d945df33702c90279c17935f0c2e49747f38d9d39b94addbd2c8c1290",
+    "nativepeers/isolated_copy.py": "02f7b5d7d02ed57b0cdbdbf023acd81a7f6d8b5a207e1ee42bfd6eaabd01bb9c",
+    "nativepeers/journal.py": "2cae523b9ac80f91cc48883ecbd8ed5e604913663ebe7786245af35c71bf7d9b",
+    "nativepeers/launch.py": "06da9e1accaacb41e61af2d963762a8344688e81801066064e0d18a1dfd20dba",
+    "nativepeers/mcp_server.py": "0699f002589e81492e27ea38cec64bdca9610ec8dca2435dd81ab42a6eb96746",
+    "nativepeers/models.py": "440f0e4ed691e399df5a07a5b7aac451f135f1c4e5e9763a1506a7e55bf60087",
+    "nativepeers/notifications.py": "b8b3a98c1dc938e8ebb0f8155985dfc4725c900b24e49435e1a75c8b3cc4f78c",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "289602df261419717d3302d613f3771590868ffae3b7c7543c8a84ba2659b5d9",
+    "nativepeers/process.py": "f1a75356a7a3d753c88263e7f7d6dd90e49ed3a0f239ec44d686528e26d2caeb",
+    "nativepeers/profiles.py": "5b9a8bdca866a240c7875dcc0bdd3148fc7101b88dc2c832760b68f7a6982111",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "e78b8b5b71c91debe4b18ef3ebb41da52d635ba3b1aee7de76a448eb57944b35",
+    "nativepeers/readiness.py": "3933be08f55fe8ca94789604bd8ee1bfbc4f4a640c83a6c62915797499ac2ac9",
+    "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
+    "nativepeers/reconcile.py": "b1d00ad3f511b2062bccd2f0b31cbcc96a700783b484bea4c426eb7186403de6",
+    "nativepeers/recovery.py": "e271186855e2c571c87ee02116b02f0154f1dff716f1ee5c4854a79d69f9317c",
+    "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
+    "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
+    "nativepeers/supervisor.py": "1f168d628bd78e903f0bc033b900be6fa532b4308dd6e75a4d9c66786d07f796",
+    "nativepeers/worker_process.py": "dc0d0b361188fe7501e45711cae0a8dd98bcfaf4b3540cb7cdbcb0fee8e0c9b9",
+    "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
+    "nativepeers/worktrees.py": "6a0fb25863533680173a7a0bb1dbda3aefc8dde6809a51690412adcc8f544087"
+  },
+  "status": "Implementation complete; current offline and scoped Sol/Flash native verification PASS; full native matrix qualified",
   "tests": {
-    "offline": {
-      "status": "IN_PROGRESS"
+    "installed_passive": {
+      "global_claude_outside_owned_block_unchanged": true,
+      "owned_checks": "PRESENT",
+      "protected_config_and_auth_hashes_unchanged": true,
+      "second_install_operations": 0,
+      "status": "PASS"
     },
     "manager_and_naming": {
-      "status": "NOT_RUN"
-    },
-    "installed_passive": {
-      "status": "NOT_RUN"
+      "scope": "Isolated fixture tests; no actual update/activation; concurrent documentation and smoke changes retained",
+      "status": "PASS",
+      "tests": 23
     },
     "native": {
-      "status": "NOT_RUN",
-      "reason": "Current changes have not received new model acceptance; historical Astra4 observations retain their old fingerprints."
+      "checks": [
+        {
+          "assertions": {
+            "01a1642d-b6c5-71f2-93ee-2e5be156fbf5_native_mcp": true,
+            "actual_parent_tool": true,
+            "all_completed": true,
+            "case_passed": true,
+            "current_source": true,
+            "distinct_native_ids": true,
+            "e62a4f92-3b15-44cf-8d6a-e73fc6a935e9_native_mcp": true,
+            "exact_parent": true,
+            "models": true,
+            "original_parent": true,
+            "original_parent_report": true,
+            "overlap": true,
+            "own_uuid_reported": true,
+            "wait_claim": true
+          },
+          "native_tool_events": {
+            "01a1642d-b6c5-71f2-93ee-2e5be156fbf5": {
+              "peer_inbox": "exec-6d8ea4e3-1632-4886-b186-d608fba193cf",
+              "task_status": "exec-3fc402f1-0413-415c-84fb-9145fda0e3fd"
+            },
+            "e62a4f92-3b15-44cf-8d6a-e73fc6a935e9": {
+              "peer_inbox": 9,
+              "task_status": 3
+            }
+          },
+          "parent_final_events": [
+            "01a1642d-9500-71c1-808e-162cb37ad412"
+          ],
+          "parent_native_id": "01a1642d-929b-7343-9a2b-37911b79fbe4",
+          "provider": "codex",
+          "status": "PASS",
+          "worker_native_ids": [
+            "01a1642d-b6c5-71f2-93ee-2e5be156fbf5",
+            "e62a4f92-3b15-44cf-8d6a-e73fc6a935e9"
+          ]
+        },
+        {
+          "assertions": {
+            "01a1642d-bbb9-7503-80a7-0f071ddf5580_native_mcp": true,
+            "actual_parent_tool": true,
+            "all_completed": true,
+            "case_passed": true,
+            "current_source": true,
+            "distinct_native_ids": true,
+            "exact_parent": true,
+            "models": true,
+            "original_parent": true,
+            "original_parent_report": true,
+            "own_uuid_reported": true,
+            "wait_claim": true
+          },
+          "native_tool_events": {
+            "01a1642d-bbb9-7503-80a7-0f071ddf5580": {
+              "peer_inbox": "exec-1403caca-5aeb-4609-b6f4-293942b7993a",
+              "task_status": "exec-de54b55f-44cd-4825-94e1-a595838cf296"
+            }
+          },
+          "parent_final_events": [
+            6
+          ],
+          "parent_native_id": "b59c232f-d769-49a5-8efd-5aa024d6d399",
+          "provider": "antigravity",
+          "status": "PASS",
+          "worker_native_ids": [
+            "01a1642d-bbb9-7503-80a7-0f071ddf5580"
+          ]
+        }
+      ],
+      "native_event_overlap_seconds": 10.13041090965271,
+      "remaining_acceptance": "Fresh Claude, new copy mode inference, failure-window/cancel/resume/push variants, dedicated Gemini sibling/active cancel, authenticated alternate homes and remaining original matrix not certified",
+      "status": "PASS_SCOPED",
+      "submitted_inputs": 5
+    },
+    "offline": {
+      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
+      "contract_tests": 65,
+      "independent_linux_execution": "NOT_RUN",
+      "python": "3.14.8",
+      "status": "PASS",
+      "subtests": 388,
+      "tests": 268,
+      "unit_tests": 203
     }
   }
 }
