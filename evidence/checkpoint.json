@@ -3,7 +3,7 @@
   "active_owned_processes": [],
   "authorized_current_deltas": {
     "auth_and_provider_defaults": "No changes",
-    "current_review": "NativePeers global CLAUDE.md owned block plus three owned skills and own integration receipts; native configs/auth/shell/package unchanged",
+    "current_review": "NativePeers code/docs/tests, three owned skills, owned global CLAUDE.md block, and own integration receipts only; all auth/native settings/shell/package hashes preserved",
     "global_claude_owned_block": "NativePeers section only; outside bytes unchanged; source docs/CLAUDE_CONVENTIONS.md; private original backups/astra4-20261022/CLAUDE-owned-block.md",
     "managed_package": "No activation or native patch",
     "native_test_trust": "Removed exact owned fixture entries under manager lock; original config bytes reconstructed"
@@ -85,8 +85,8 @@
       "reason": "Strict H/T3 absence/unreachability isolation NOT_RUN; unrelated services remain untouched."
     },
     {
-      "check": "EXT-PROTECTED-RAW",
-      "reason": "Concurrent global Claude settings drift and current native node_repl definition retained; no further configuration writes until exact current ownership/delta reconciliation. See private protected-final.json."
+      "check": "FALLBACK-NATIVE",
+      "reason": "The retained live allowance is exhausted at 148/148. Fresh Gemini fallback inference and native readable-frame ingestion/presentation are NOT_RUN. No Claude retry was submitted."
     }
   ],
   "canonical_documents": {
@@ -126,39 +126,23 @@
     "retained_native_fixture_worktrees": 10,
     "unresolved_native_requests": []
   },
-  "current_protected_baseline": "evidence/private/review-9e0cefb-20261022/baseline.json",
+  "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
   "current_review": {
-    "reviewed_commit": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
-    "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
-    "evidence": "evidence/review-9e0cefb.json",
-    "status": "COMPLETE: every review item implemented; offline/passive PASS; current-source native NOT_RUN",
+    "evidence": "evidence/provider-fallback.json",
+    "status": "COMPLETE: implementation installed; offline/passive PASS; new native inference BLOCKED by existing allowance",
+    "branch": "feat/provider-fallback",
     "completed": [
-      "R1",
-      "R2",
-      "R3",
-      "R4",
-      "R5",
-      "R6",
-      "H1",
-      "I1",
-      "I2",
-      "S1",
-      "S2",
-      "S3",
-      "S4",
-      "S5",
-      "V1",
-      "D1"
+      "provider-diagnostics",
+      "readable-notices",
+      "explicit-fallback",
+      "focused-contracts",
+      "installation-docs-closeout"
     ],
-    "last_completed": "D1",
-    "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
-    "native_batch": "NOT_RUN",
-    "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
-    "last_commit": "b7baf43cb26820b6494655cb38d6fff8b0c79b42"
+    "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "branch": "main",
+    "branch": "feat/provider-fallback",
     "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
     "commit": "b7baf43cb26820b6494655cb38d6fff8b0c79b42",
     "manager_preexisting_changes": [
@@ -166,7 +150,9 @@
       "?? name_session.py",
       "?? patches/session-naming-native.patch",
       "?? test_name_session.py"
-    ]
+    ],
+    "base_commit": "acd6782f4cea8f5a5bcc61bcba6018ed8b77a747",
+    "owned_uncommitted_changes": "Provider fallback implementation, focused tests, presentation, docs, examples and owned integration sources"
   },
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
@@ -174,7 +160,8 @@
     "checkpoint": "https://github.com/scalinity/NativePeers/blob/89d1d3bc7feb5bb30bf312a38cfbd5c8a5db84e1/evidence/checkpoint.json",
     "pro": "evidence/pro-review.json",
     "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints.",
-    "pro_followup": "evidence/pro-followup-review.json"
+    "pro_followup": "evidence/pro-followup-review.json",
+    "review_9e0cefb": "evidence/review-9e0cefb.json"
   },
   "live_budget": {
     "active_seconds": 3524.3949735164642,
@@ -189,7 +176,7 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Read docs/REVIEW_9E0CEFB.md and use the installed commands. Further native acceptance must retain the ledger and existing active-time ceiling; no uncertain input may be replayed.",
+  "next_action": "Commit and push the installed fallback implementation and source-frozen offline/passive verification; retain the exhausted native allowance and do not replay incident tasks.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -215,39 +202,41 @@
     "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt"
   },
   "schema_version": 2,
-  "stage": "Review 9e0cefb fully addressed; native verification qualified",
+  "stage": "Provider diagnostics, explicit Claude-to-Gemini fallback and readable native notices",
   "tests_current": {
     "offline": {
       "status": "PASS",
-      "tests": 334,
-      "unit_tests": 254,
-      "contract_tests": 80,
-      "subtests": 523,
-      "seconds": 119.49,
+      "tests": 354,
+      "subtests": 545,
+      "seconds": 152.53,
+      "command": ".venv/bin/python -m pytest -q",
       "python": "3.14.8",
-      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
-      "scope": "macOS installed Python environment; no new native model inputs"
+      "source_frozen_during_run": true,
+      "scope": "Unit/contract tests including real isolated controller processes with fake native providers; zero new model inputs"
     },
     "manager_and_naming": {
       "status": "PASS",
       "tests": 23,
-      "command": ".venv/bin/python -m unittest discover -s /Users/danny/Documents/Tools/CodexMCP -p test_*.py",
-      "scope": "Temporary isolated manager/naming fixtures; no actual package activation or update"
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
+      "scope": "Isolated fixtures only; actual managed package was not activated or updated"
     },
     "installed_passive": {
       "status": "PASS",
-      "compatibility": "All three executable fingerprints match installed receipts",
+      "provider_executable_hashes_match_receipts": true,
       "owned_checks": "PRESENT",
-      "second_install_operations": 0,
-      "second_antigravity_install_operations": 0,
-      "global_claude_outside_owned_block_unchanged": true,
-      "protected_config_and_auth_hashes_unchanged": true,
-      "manager_worktree_unchanged": true
+      "skills_match_sources": true,
+      "second_installs_operations": [
+        0,
+        0
+      ],
+      "CLAUDE_outside_owned_block_unchanged": true,
+      "protected_auth_native_config_shell_unchanged": true,
+      "entrypoint_uses_project": true
     },
     "native": {
-      "status": "NOT_RUN",
+      "status": "BLOCKED",
       "submitted_inputs": 0,
-      "reason": "No fresh native acceptance after review fixes; cumulative ledger unchanged. Earlier native observations keep their source/runtime fingerprints."
+      "reason": "The retained live allowance is exhausted at 148/148. Fresh Gemini fallback inference and native readable-frame ingestion/presentation are NOT_RUN. No Claude retry was submitted."
     }
   },
   "transports": {
@@ -255,5 +244,11 @@
     "codex_inbox_patch": "NOT_SELECTED",
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
-  "uncertain_submissions": []
+  "uncertain_submissions": [],
+  "historical_blockers": [
+    {
+      "check": "EXT-PROTECTED-RAW",
+      "reason": "Concurrent global Claude settings drift and current native node_repl definition retained; no further configuration writes until exact current ownership/delta reconciliation. See private protected-final.json."
+    }
+  ]
 }

@@ -172,9 +172,10 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
             def __init__(s,j):s.router=FakeRouter()
         with patch('nativepeers.core.Core',FakeCore),patch('nativepeers.delegation.Delegation.result',return_value={'results':results}):await self.group.notify()
         self.assertEqual(self.route()['state'],'PUSH_ACCEPTED');self.assertLessEqual(len(bodies[0].encode()),INLINE_BODY)
-        sent=json.loads(bodies[0].split('\n',1)[1]);self.assertEqual(len(sent),4)
-        for expected,actual in zip(results,sent):
-            self.assertEqual(actual['native_session_id'],expected['worker']['native_session_id']);self.assertEqual(actual['result_artifact_id'],expected['result_artifact_id']);self.assertTrue(actual['summary_truncated'])
+        self.assertEqual(bodies[0].count(' · COMPLETED'),4)
+        for expected in results:
+            self.assertIn(expected['worker']['native_session_id'],bodies[0]);self.assertIn(expected['result_artifact_id'],bodies[0])
+        self.assertIn('[Summary shortened; full text is retained.]',bodies[0])
 
     async def test_public_terminal_group_wait_claims_once_without_supervisor_or_later_push(self):
         artifact=self.complete();core=Core(self.j);tasks=self.group.tasks()

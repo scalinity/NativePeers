@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "client_request_id": "codex-two-claude-explicit-gemini-fallback-1",
+  "completion_mode": "push",
+  "failure_policy": "collect-all",
+  "workers": [
+    {
+      "provider": "claude",
+      "title": "NativePeers Numbers",
+      "task": "Independently analyze the fixture numbers and report your finding.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      },
+      "context_refs": [],
+      "result_format": "nativepeers.result.v1",
+      "model": "opus",
+      "fallbacks": [
+        {
+          "provider": "antigravity",
+          "model": "gemini-4-argon-high"
+        }
+      ]
+    },
+    {
+      "provider": "claude",
+      "title": "NativePeers Review",
+      "task": "Independently review the fixture and report one useful finding.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      },
+      "context_refs": [],
+      "result_format": "nativepeers.result.v1",
+      "model": "sonnet",
+      "fallbacks": [
+        {
+          "provider": "antigravity",
+          "model": "gemini-4-argon-high"
+        }
+      ]
+    }
+  ],
+  "limits": {
+    "max_concurrent_workers": 2,
+    "max_depth": 1,
+    "wall_time_seconds": 1800,
+    "max_task_turns_per_worker": 8
+  },
+  "allow_sibling_messages": false
+}

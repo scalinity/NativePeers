@@ -149,6 +149,14 @@
           }
         }
       }
+    },
+    "attempts": {
+      "type": "array",
+      "description": "Attributed immutable native attempts for this one logical task."
+    },
+    "fallback": {
+      "type": "object",
+      "description": "Primary failure, explicit fallback reason and actual final selection."
     }
   },
   "$defs": {

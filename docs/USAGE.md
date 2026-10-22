@@ -143,3 +143,9 @@ npeer status MESSAGE_ID --refresh --scan-cursor CURSOR --scan-max-bytes 1048576 
 ```
 
 MCP `task_status` accepts `refresh:true`, `scan_cursor` and `scan_max_bytes`. Every continuation requires the same authorized sender/recipient and exact message. The total read cap, including identity guards, is 4 MiB per call. Cursors retain the original EOF and validate path/native/message identity plus file guards; appends are supported, detected replacement/truncation/edits invalidate the cursor. Bounded guards cannot certify all unsampled bytes during concurrent growth. Only complete exact native input envelopes advance receipts; missing history or a window without a match remains inconclusive. No new send or attempt is created.
+
+## Explicit Claude-to-Gemini fallback
+
+Set a Claude worker's `fallbacks` to `[{"provider":"antigravity","model":"gemini-4-argon-high"}]` when that exact alternative is authorized for the existing task. Tailor `examples/claude-gemini-fallback.json`; the normal `spawn --check`, CLI spawn and bound MCP `worker_spawn` share this schema. Only a confirmed clean quota/auth failure may advance. Original budgets, frozen inputs and one logical completion remain in force; partial or uncertain work is retained without replay. Read [Provider errors and explicit fallback](PROVIDER_FALLBACK.md) for a complete example, attempt attribution and the native verification boundary.
+
+Native chat input now shows readable outcomes and references. Full structured envelopes stay in the journal and are available to authorized senders/recipients through `status MESSAGE_ID --json`; full results use `result GROUP_ID --json`. Queued/held/unknown receipts retain their existing meaning.

@@ -93,6 +93,29 @@
           },
           "result_format": {
             "const": "nativepeers.result.v1"
+          },
+          "fallbacks": {
+            "type": "array",
+            "maxItems": 3,
+            "description": "Ordered explicit Gemini alternatives for a Claude task. Only confirmed no-execution quota/auth failures may advance; budgets and frozen inputs are retained.",
+            "items": {
+              "type": "object",
+              "required": [
+                "provider",
+                "model"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "provider": {
+                  "const": "antigravity"
+                },
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                }
+              }
+            }
           }
         },
         "additionalProperties": false

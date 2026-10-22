@@ -56,7 +56,7 @@ class AntigravityTests(unittest.TestCase):
             descriptor=json.loads(self.j.one('SELECT descriptor_json FROM peer_instances')['descriptor_json'])
             self.assertTrue(descriptor['policy']['can_spawn'])
             peer=self.j.one('SELECT peer_key,incarnation_id FROM peer_instances')
-            message,attempt=new_id(),new_id();payload={'message_id':message,'from':{'kind':'peer'},'body':{'text':'fixture question'}}
+            message,attempt=new_id(),new_id();payload={'message_id':message,'exchange_id':new_id(),'from':{'kind':'peer','peer_key':'sender'},'body':{'text':'fixture question'}}
             self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,new_id(),'sender',peer['peer_key'],None,None,canonical(payload).decode(),'hash',time.time()+60,time.time()))
             self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
                               (attempt,message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))
@@ -75,7 +75,7 @@ class AntigravityTests(unittest.TestCase):
             messages=[]
             for index in range(11):
                 message=new_id();messages.append(message)
-                payload={'message_id':message,'body':{'text':'message '+str(index)}}
+                payload={'message_id':message,'exchange_id':new_id(),'from':{'kind':'peer','peer_key':'sender'},'body':{'text':'message '+str(index)}}
                 self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,new_id(),'sender',peer['peer_key'],None,None,canonical(payload).decode(),'hash',time.time()+60,index))
                 self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
                     (new_id(),message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))
@@ -238,7 +238,7 @@ class AntigravityTests(unittest.TestCase):
             observe(self.j,self.event,'SessionStart');peer=self.j.one('SELECT peer_key,incarnation_id FROM peer_instances')
             messages=[]
             for index in range(3):
-                message=new_id();messages.append(message);payload={'message_id':message,'body':{'text':'x'*33000}}
+                message=new_id();messages.append(message);payload={'message_id':message,'exchange_id':new_id(),'from':{'kind':'peer','peer_key':'sender'},'body':{'text':'x'*33000}}
                 self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,new_id(),'sender',peer['peer_key'],None,None,canonical(payload).decode(),'hash',time.time()+(-1 if index==0 else 60),index))
                 self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
                     (new_id(),message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))

@@ -172,7 +172,8 @@ async def observe(journal,registry,router,message_id,*,cursor=None,max_bytes=104
             if event.get('type')!='USER_INPUT' or any(event.get(key,native)!=native for key in ('conversation_id','conversationId','sessionId')):continue
             content=event.get('content');event_id=event.get('step_index')
         else:continue
-        try:matching=any(canonical(frame)==canonical(wanted) for text in texts(content) for frame in frames(text))
+        from .presentation import matches as readable_match
+        try:matching=any(readable_match(text,wanted) or any(canonical(frame)==canonical(wanted) for frame in frames(text)) for text in texts(content))
         except (ValueError,RecursionError):continue
         if matching:
             outcome=router.outcome(message_id)

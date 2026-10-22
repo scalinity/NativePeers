@@ -84,15 +84,18 @@ class Delegation:
             created_at=time.time(),parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'])
         budget_path=self.journal.root/'test-budget.json'
         test_budget=json.loads(budget_path.read_text()) if budget_path.exists() else {}
-        homes={provider:provider_home(provider) for provider in {w['provider'] for w in workers}}
+        homes={provider:provider_home(provider) for provider in {w['provider'] for w in workers}|{f['provider'] for w in workers for f in w.get('fallbacks',[])}}
         codex_settings=homes.get('codex',Path())/'config.toml'
         codex_config=tomllib.loads(codex_settings.read_text()) if 'codex' in homes and codex_settings.exists() else {}
         claude_settings=homes.get('claude',Path())/'settings.json';claude_config=json.loads(claude_settings.read_text()) if 'claude' in homes and claude_settings.exists() else {}
-        agy_catalog={}
+        agy_catalog={};agy_catalog_error=None
         agy_settings=homes.get('antigravity',Path())/'settings.json'
-        if any(w.get('provider')=='antigravity' for w in workers):
+        if 'antigravity' in homes:
             from .antigravity import catalog
-            agy_catalog=await catalog(Path.home()/'.local/bin/agy')
+            try:agy_catalog=await catalog(Path.home()/'.local/bin/agy')
+            except (PeerError,OSError) as error:
+                if any(w['provider']=='antigravity' for w in workers):raise
+                agy_catalog_error=error.json() if isinstance(error,PeerError) else {'code':'MODEL_UNAVAILABLE','message':'Antigravity native catalog is unavailable: '+type(error).__name__}
         catalog=None
         if any(w.get('provider')=='codex' for w in workers):
             client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment=home_environment('codex',homes['codex']))
@@ -139,6 +142,18 @@ class Delegation:
             executable=(Path.home()/{'claude':'.local/bin/claude','codex':'.local/share/codex-mcp-manager/current/bin/codex','antigravity':'.local/bin/agy'}[spec['provider']]).resolve(strict=True)
             lease=dict(provider_home=str(homes[spec['provider']]),spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
                 executable=str(executable),live_budget_file=test_budget.get('path'),live_tranche=test_budget.get('tranche','first_cross_provider_delegations'))
+            fallbacks=spec.get('fallbacks',[])
+            require(not fallbacks or spec['provider']=='claude','PROTOCOL_ERROR','Explicit Gemini fallback is supported for Claude worker tasks')
+            require(len({(f['provider'],f['model']) for f in fallbacks})==len(fallbacks),'PROTOCOL_ERROR','Fallback choices must be distinct')
+            lease['fallback_candidates']=[]
+            for fallback in fallbacks:
+                selected=dict(fallback,provider_home=str(homes['antigravity']))
+                path=Path.home()/'.local/bin/agy'
+                selected['executable']=str(path.resolve())
+                if fallback['model'] not in agy_catalog:
+                    selected['unavailable']=agy_catalog_error or {'code':'MODEL_UNAVAILABLE','message':'Exact fallback model is absent from the signed-in Antigravity catalog.'}
+                else:selected['model_display_name']=agy_catalog[fallback['model']]
+                lease['fallback_candidates'].append(selected)
             prepared.append(dict(worker_id=worker_id,task_id=task_id,lease=lease,workspace=workspace))
             policy['workers'].append(worker_id);policy['initial_tasks'].append(task_id)
         policy['phases']={'1':policy['initial_tasks']}
@@ -160,7 +175,16 @@ class Delegation:
                     elif provider=='claude':claude_arguments(self.journal,Path(lease['binding']),spec,new_id(),home=Path(lease['provider_home']))
                     else:codex_config(self.journal,Path(lease['binding']),spec['permission_profile'],home=Path(lease['provider_home']))
                 except PeerError as error:failures.append(dict(provider=provider,title=spec['title'],error=error.json()))
-                planned.append(dict(spec,workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable']))
+                alternatives=[]
+                for candidate in lease.get('fallback_candidates',[]):
+                    alternative=dict(candidate)
+                    try:
+                        if candidate.get('unavailable'):raise PeerError(candidate['unavailable']['code'],candidate['unavailable']['message'])
+                        from .antigravity_install import verify_worker_ready
+                        verify_worker_ready(self.journal,dict(spec,provider='antigravity',model=candidate['model']),candidate['executable'])
+                    except PeerError as error:alternative['unavailable']=error.json()
+                    alternatives.append(alternative)
+                planned.append(dict(spec,workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable'],fallbacks=alternatives))
             frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
             return dict(state='CHECKED',read_only=True,ready=not failures and active+len(prepared)<=local['workers_total'],
                 workers=planned,baseline=frozen.baseline,failures=failures,
@@ -250,6 +274,8 @@ class Delegation:
             result['workers']=[w for w in result['workers'] if w['worker_id']==worker]
             result['tasks']=[t for t in result['tasks'] if t['worker_id']==worker]
             result['notifications']=[]
+        from .fallback import result_details
+        for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
         return result
 
     def groups(self,caller,limit=20,cursor=None):
@@ -306,6 +332,20 @@ class Delegation:
                 result=json.loads((self.journal.root/'artifacts'/artifact['relative_path']).read_text())
                 raw=result['summary'].encode();result['summary']=raw[:12288].decode(errors='ignore');result['summary_truncated']=len(raw)>12288
                 result['result_artifact_id']=task['result_artifact_id'];result['initial_task']=task['task_id'] in policy['initial_tasks'];results.append(result)
+                from .fallback import result_details
+                result.update(result_details(self.journal,task['task_id']))
+            elif task['state'] in TERMINAL-{'COMPLETED'}:
+                # Never-started cancellation/recovery can have no model result.
+                # Render its retained disposition, not an invented model answer.
+                worker=next(w for w in status['workers'] if w['worker_id']==task['worker_id'])
+                reason=task['terminal_reason'] or task['state']
+                result=dict(task_id=task['task_id'],status=task['state'].lower(),summary='No final model result. '+reason,
+                    worker={'provider':worker['provider'],'native_session_id':worker['native_id'],'title':worker['role_title']},
+                    model_requested=worker['model_requested'],model_observed=worker['model_observed'],
+                    result_artifact_id=None,initial_task=task['task_id'] in policy['initial_tasks'],retained_disposition=True,
+                    error={'code':reason,'may_have_received':task['state']=='INTERRUPTED'})
+                from .fallback import result_details
+                result.update(result_details(self.journal,task['task_id']));results.append(result)
         return dict(status,results=results)
 
     def terminal_wait(self,caller,handle,timeout_ms,*,waiter=None,controller_generation=None):

@@ -85,6 +85,24 @@ class ReceiptWindowTests(unittest.IsolatedAsyncioTestCase):
     async def scan(self, **kwargs):
         return await observe(self.journal, self.registry, self.router, self.message_id, **kwargs)
 
+    async def test_readable_native_input_reconciles_exactly_and_keeps_legacy_support(self):
+        from nativepeers.presentation import render
+        for provider in ('claude','codex','antigravity'):
+            for altered in (False,True):
+                with self.subTest(provider=provider,altered=altered):
+                    self.configure(provider)
+                    event=json.loads(self.event())
+                    message=dict(self.message)
+                    if altered:message['body']={'text':'different input'}
+                    text=render(message)
+                    if provider=='claude':event['message']['content']=text
+                    elif provider=='codex':event['payload']['content']=[{'type':'input_text','text':text}]
+                    else:event['content']=text
+                    self.path.write_bytes((self.header() if provider=='codex' else b'')+canonical(event)+b'\n')
+                    outcome=await self.scan()
+                    self.assertEqual(outcome['state'],'DELIVERY_UNKNOWN' if altered else 'INGESTED')
+                    self.delivery.assert_not_awaited()
+
     def counts(self):
         return {table: self.journal.all('SELECT * FROM ' + table)
                 for table in ('messages', 'send_requests', 'completion_routes', 'events')}, self.journal.all('SELECT attempt_id FROM attempts')

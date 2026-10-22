@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS workers (worker_id TEXT PRIMARY KEY,group_id TEXT REF
 CREATE TABLE IF NOT EXISTS tasks (task_id TEXT PRIMARY KEY,worker_id TEXT NOT NULL REFERENCES workers(worker_id),
  request_message_id TEXT,native_turn_id TEXT,state TEXT NOT NULL,result_artifact_id TEXT,terminal_reason TEXT,
  generation INTEGER NOT NULL,task_json TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS task_attempts (task_id TEXT NOT NULL REFERENCES tasks(task_id),attempt_index INTEGER NOT NULL,
+ worker_id TEXT NOT NULL REFERENCES workers(worker_id),state TEXT NOT NULL,result_artifact_id TEXT NOT NULL,
+ PRIMARY KEY(task_id,attempt_index));
+CREATE TABLE IF NOT EXISTS group_provider_limits (group_id TEXT NOT NULL REFERENCES groups(group_id),provider TEXT NOT NULL,
+ provider_home TEXT NOT NULL,error_json TEXT NOT NULL,PRIMARY KEY(group_id,provider,provider_home));
 CREATE TABLE IF NOT EXISTS resume_requests (caller_key TEXT NOT NULL,client_request_id TEXT NOT NULL,
  payload_sha256 TEXT NOT NULL,task_id TEXT NOT NULL REFERENCES tasks(task_id),response_json TEXT NOT NULL,
  PRIMARY KEY(caller_key,client_request_id));

@@ -53,3 +53,5 @@ NativePeers also implements changes: tailor [the three-provider implementation e
 The [current review corrections and capabilities](docs/PRO_FOLLOWUP_REVIEW.md) record every item from the independent follow-up review and the current verification boundaries. The [earlier Astra review](docs/ASTRA_REVIEW.md) retains its paired-review history and original scope. The [installed Claude conventions](docs/CLAUDE_CONVENTIONS.md) explain when and how to delegate implementation, review and integration.
 
 A [copy-ready GPT-6 Pro review prompt](docs/GPT6_PRO_REVIEW_PROMPT.txt) pins the complete code/review snapshot for an independent capability and gap review.
+
+Explicit Claude worker fallback to an exact Gemini selection is documented in [Provider errors and fallback](docs/PROVIDER_FALLBACK.md), with a ready-to-tailor [spawn example](examples/claude-gemini-fallback.json). Native chat notices show readable results and exact references; structured records remain available through the CLI/MCP. Current native inference for this extension is blocked by the retained test ceiling; offline and catalog evidence are listed separately.

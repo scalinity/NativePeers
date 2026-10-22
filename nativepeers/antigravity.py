@@ -118,18 +118,20 @@ def observe(journal,event,kind):
         peer['native_transcript']=str(transcript)
         journal.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE incarnation_id=?',(canonical(peer).decode(),peer['incarnation_id']))
     if kind!='PreInvocation':return {'decision':'allow'} if kind=='PreToolUse' else {}
-    messages=[];size=0
+    from .presentation import render
+    messages=[]
     with journal.transaction():
         pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind='antigravity-hook-output-unconfirmed') ORDER BY m.created_at LIMIT 10",
                             (peer['handle'],peer['incarnation_id'],time.time()))
         for row in pending:
-            value=json.loads(row['payload_json']);size+=len(canonical(value))
-            if size>65536:break
+            value=render(json.loads(row['payload_json']))
+            content='\n\n'.join([*messages,value])
+            if len(canonical({'injectSteps':[{'ephemeralMessage':content}]}))>65536:break
             messages.append(value)
             journal.event(row['message_id'],'antigravity-hook-output-unconfirmed',{'attempt_id':row['attempt_id'],'native_id':native,'invocation':event.get('invocationNum')})
     if not messages:return {}
     # Peer provenance stays explicit; this is not an injected human instruction or a processing receipt.
-    return {'injectSteps':[{'ephemeralMessage':'NativePeers peer/controller messages; preserve sender provenance and native permissions. Reply only to peer messages using their message_id. Do not reply to controller notices.\n'+canonical(messages).decode()}]}
+    return {'injectSteps':[{'ephemeralMessage':'\n\n'.join(messages)}]}
 
 
 def main():

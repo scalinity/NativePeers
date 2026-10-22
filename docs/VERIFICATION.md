@@ -1,3 +1,9 @@
+# Provider fallback and readable notices verification
+
+Current source map: `08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c` (47 Python files). **354 tests / 545 subtests PASS**, **23 manager/naming fixture tests PASS**, installed passive compatibility/readiness/preservation PASS, and both second installs zero-operation. See [feature behavior and limits](PROVIDER_FALLBACK.md) and [current fingerprints/results](../evidence/provider-fallback.json).
+
+The signed-in native catalog contains exact `gemini-4-argon-high`; this is metadata, not inference entitlement. Retained incident histories establish synthetic authentication failures incorrectly masked as model mismatches; quota is separately reproduced with fake streams. No new model input was submitted: ledger 148/148, zero reserved, 3524.394974/3600 active seconds, no outstanding requests. **Fresh native fallback and readable-frame acceptance are NOT_RUN/BLOCKED by the existing ceiling.** The real-controller tests use fake native providers. They do not certify native policy, auth repair or all-provider unattended reliability. Older sections below retain their historical source/runtime scope.
+
 # Review 9e0cefb verification
 
 Current product corrections: `5554b3aa2ce474b17f04275bf166067dff42a8d1`, source map `5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832` (44 Python files). **334 offline tests / 523 subtests PASS** (254 unit / 80 contract), **23 manager/naming fixture tests PASS**, and installed compatibility/owned readiness/idempotency/preservation checks **PASS**. All six defects, the workspace coverage concern, both discrepancies and all five capability suggestions are addressed. See [resolutions and remaining limits](REVIEW_9E0CEFB.md) and [current results/fingerprints](../evidence/review-9e0cefb.json).

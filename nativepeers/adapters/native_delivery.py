@@ -13,6 +13,7 @@ from ..files import canonical
 from ..launch import launch_environment
 from ..models import PEER_FRAME, new_id
 from ..process import identity,signal_owned
+from ..presentation import render
 
 QUEUE_STOP_GRACE=2
 
@@ -32,7 +33,7 @@ async def codex_queue(peer, message):
     env = launch_environment("codex")
     env["CODEX_HOME"] = peer["home"]
     process = await asyncio.create_subprocess_exec(str(executable), "queue", "--thread",
-        peer["peer_key"]["native_session_id"], "--message", canonical(message).decode(),
+        peer["peer_key"]["native_session_id"], "--message", render(message),
         env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True)
     try:owner=identity(process.pid).json()
@@ -80,7 +81,7 @@ def _claude_deliver(peer, message):
         listener.listen(4); listener.settimeout(1.5)
         frame = dict(msgV=1, msg_id=message["message_id"], type="user", priority="next",
                      session_id=peer["peer_key"]["native_session_id"],
-                     message=dict(role="user", content=canonical(message).decode()),
+                     message=dict(role="user", content=render(message)),
                      **{"from":"uds:"+str(receipt_path)})
         wire = canonical(frame)+b"\n"
         require(len(wire) <= PEER_FRAME, "PAYLOAD_TOO_LARGE", "Native delivery wrapper exceeds 64 KiB")

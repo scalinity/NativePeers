@@ -47,6 +47,7 @@ class Worker:
         self.stopping=False;self.shutdown_reason=None;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
         self.canceling_task=None;self.turn_task=None
         self.expected_native=self.native;self.model_observed=self.row['model_observed']
+        self.fallback_pending=False;self.input_submitted=False
 
     def emit(self,event,**payload):
         print(canonical(dict(event=event,worker_id=self.row['worker_id'],generation=self.row['generation'],**payload)).decode(),flush=True)
@@ -140,19 +141,29 @@ class Worker:
         if not claimed:return
         self.tasks_started+=1
         require(self.tasks_started<=self.spec.get('max_task_turns',8),'BUDGET_EXHAUSTED','Worker task-turn limit reached')
-        self.running_task=task_id;started=time.time();self.turn=None
+        self.running_task=task_id;started=time.time();self.turn=None;self.input_submitted=False
+        task_row=self.journal.one('SELECT task_json FROM tasks WHERE task_id=?',(task_id,))
+        task_spec=json.loads(task_row['task_json']);deadline=task_spec.setdefault('deadline',started+self.spec.get('wall_time_seconds',1800))
+        task_spec.setdefault('input_text',text)
+        self.journal.db.execute('UPDATE tasks SET task_json=? WHERE task_id=?',(canonical(task_spec).decode(),task_id))
         text='NativePeers assigned worker title: '+self.row['role_title']+'. Provider: '+self.row['provider']+'.\n'+text+PROMPT
         self.journal.db.execute("UPDATE workers SET state='RUNNING' WHERE worker_id=?",(self.row['worker_id'],))
         reservation=None
         budget=None
+        clean_input=None
         try:
+            if self.row['worktree_id'] and self.lease.get('fallback_candidates'):
+                from .fallback import workspace_image,image_digest
+                try:clean_input=image_digest(await asyncio.to_thread(workspace_image,self.row['cwd']))
+                except (PeerError,OSError):pass
             if self.lease.get('live_budget_file'):
                 from .budget import LiveBudget
                 budget=LiveBudget(Path(self.lease['live_budget_file']))
                 try:reservation=budget.reserve('worker '+self.row['worker_id']+' task '+task_id,tranche=self.lease.get('live_tranche','first_cross_provider_delegations'))
                 except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
                 budget.admit(reservation)
-            async with asyncio.timeout(self.spec.get('wall_time_seconds',1800)):
+            require(time.time()<deadline,'BUDGET_EXHAUSTED','The original logical-task deadline has elapsed')
+            async with asyncio.timeout(deadline-time.time()):
                 turn={'codex':self.codex_turn,'claude':self.claude_turn,'antigravity':self.antigravity_turn}[self.row['provider']]
                 self.turn_task=asyncio.create_task(turn(text))
                 result=await self.turn_task
@@ -162,6 +173,7 @@ class Worker:
             await self.interrupt()
             code=classify(error.error) if isinstance(error,ProviderError) else 'BUDGET_EXHAUSTED' if isinstance(error,TimeoutError) else 'WORKER_CRASHED'
             result={'status':'canceled' if self.stopping else 'timed_out' if isinstance(error,TimeoutError) else 'failed','text':'','error':error.json() if isinstance(error,PeerError) else {'code':code,'message':str(error)[:1000]},'native_turn_ids':[self.turn] if self.turn else []}
+            result['error']['may_have_received']=self.input_submitted or result['error'].get('may_have_received',False)
             if self.stopping and self.shutdown_reason not in (None,'USER_CANCELED'):
                 result.update(status='interrupted',error={'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':self.shutdown_reason})
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
@@ -174,7 +186,7 @@ class Worker:
             worker={'provider':self.row['provider'],'native_session_id':self.native,'title':self.row['role_title'],'peer_key':row['peer_key']},
             model_requested=self.row['model_requested'],model_observed=self.model_observed,
             reasoning_effort_requested=self.spec.get('reasoning_effort'),reasoning_effort_observed=None,
-            status=result['status'],summary=result.get('text',''),findings=findings,artifacts=[],
+            status=result['status'],summary=result.get('text') or (result.get('error') or {}).get('message') or (result.get('error') or {}).get('code') or 'No final text was returned.',findings=findings,artifacts=[],
             verification={'tests_run':checks,'limitations':report_limits+['Worker-supplied checks are not independently verified.','Reasoning effort independently echoed by inference: unverified.']},
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
@@ -192,13 +204,29 @@ class Worker:
             if delta:
                 record['changes']['worker_delta_artifact']=Artifacts(self.journal).put(delta,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
                 self.journal.event(record['changes']['worker_delta_artifact'],'worker-delta-artifact',{'input_tree':captured['worker_delta_base']})
+        from .fallback import remember_limit,workspace_image,image_digest
+        error=result.get('error') or {}
+        remember_limit(self.journal,self.row,self.home,error)
+        eligible=(result['status']=='failed' and error.get('code') in ('QUOTA_EXHAUSTED','AUTH_REQUIRED')
+                  and error.get('execution',{}).get('definitive_no_execution') and not self.stopping and not scoped_cancel)
+        workspace_clean=not self.row['worktree_id']
+        if eligible and self.row['worktree_id'] and clean_input:
+            try:workspace_clean=clean_input==image_digest(await asyncio.to_thread(workspace_image,self.row['cwd'])) and record['changes'].get('worker_delta_empty',False) and not record['changes'].get('excluded_sensitive_or_symlink_files')
+            except (OSError,PeerError):workspace_clean=False
+        record['fallback_eligibility']={'definitive_no_execution':bool(eligible),'workspace_unchanged':workspace_clean,
+            'input_digest':clean_input,'remaining_task_turns':self.spec.get('max_task_turns',8)-self.tasks_started}
+        pending=eligible and workspace_clean and bool(self.lease.get('fallback_candidates'))
+        if eligible and not workspace_clean:
+            record['summary']+=' Fallback was not attempted: unchanged frozen workspace input could not be established.'
         artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='application/json')
         with self.journal.transaction() as db:
+            db.execute('INSERT INTO task_attempts VALUES(?,?,?,?,?)',(task_id,task_spec.get('attempt_index',0),self.row['worker_id'],result['status'].upper(),artifact))
             db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
-                (result['status'].upper(),artifact,self.turn,json.dumps(result.get('error')),task_id,self.row['generation']))
+                ('FALLBACK_PENDING' if pending else result['status'].upper(),None if pending else artifact,self.turn,json.dumps(result.get('error')),task_id,self.row['generation']))
+            if pending:self.retire_after_task=True;self.fallback_pending=True
             db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if self.retire_after_task else 'IDLE_GRACE',self.row['worker_id']))
         self.journal.event(task_id,'native-task-terminal',record)
-        self.running_task=None;self.emit('task_terminal',task_id=task_id,artifact_id=artifact,status=result['status'])
+        self.running_task=None;self.emit('fallback_pending' if pending else 'task_terminal',task_id=task_id,artifact_id=artifact,status=result['status'])
         self.turn_task=None
         if scoped_cancel:
             await self.close_provider()
@@ -233,6 +261,7 @@ class Worker:
 
     async def codex_turn(self,text):
         require(not self.stopping,'USER_CANCELED','Worker is stopping')
+        self.input_submitted=True
         response=await self.client.call('turn/start',{'threadId':self.native,'input':[{'type':'text','text':text}],
             'model':self.spec['model'],'effort':self.spec.get('reasoning_effort'),'approvalPolicy':'never'})
         self.turn=response['turn']['id'];self.ingested();self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
@@ -256,22 +285,33 @@ class Worker:
                             text='\n'.join(final),native_turn_ids=[self.turn],error={'code':classify(error),'native_error':error} if error else None)
 
     async def claude_turn(self,text):
+        from .fallback import scope_limit
+        suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
+        if suppressed:return dict(status='failed',text=suppressed['message'],error=suppressed,native_turn_ids=[])
         args=claude_arguments(self.journal,self.binding,self.spec,self.expected_native,resume=self.tasks_started>1 or self.lease.get('released_native',False),home=self.home)
         env=launch_environment('claude');env.update(home_environment('claude',self.home));env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
         self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*args,cwd=self.row['cwd'],env=env,
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
             start_new_session=True,close_fds=True,limit=8*1024*1024)
         self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
+        if suppressed:
+            self.provider.stdin.close();await self.close_provider()
+            return dict(status='failed',text=suppressed['message'],error=suppressed,native_turn_ids=[])
+        self.input_submitted=True
         self.provider.stdin.write(text.encode());await self.provider.stdin.drain();self.provider.stdin.close()
         if self.canceling_task==self.running_task:await self.interrupt()
         errors=bytearray()
         async def stderr():
             while chunk:=await self.provider.stderr.read(4096):
                 errors.extend(chunk);del errors[:-65536]
-        drain=asyncio.create_task(stderr());terminal=None;assistant_rounds=0
+        from .claude_stream import Evidence
+        evidence=Evidence()
+        drain=asyncio.create_task(stderr());terminal=None
         try:
             while line:=await self.provider.stdout.readline():
                 event=json.loads(line)
+                synthetic=evidence.observe(event)
                 emitted=event.get('session_id')
                 if emitted:require(emitted==self.expected_native,'OWNERSHIP_CONFLICT','Claude emitted another native ID')
                 if event.get('type')=='system' and event.get('subtype')=='init':
@@ -285,16 +325,15 @@ class Worker:
                     self.ingested()
                     self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
                 if event.get('type')=='assistant':
-                    assistant_rounds+=1
-                    if event.get('message',{}).get('model'):
+                    if not synthetic and event.get('message',{}).get('model'):
                         self.bind(event['session_id'],model=event['message']['model'])
                 if event.get('type')=='result':terminal=event
             await self.provider.wait();await drain
-            require(terminal is not None,'WORKER_CRASHED','Claude exited without a terminal result')
-            self.journal.event(self.running_task,'provider-internal-rounds',{'assistant_events':assistant_rounds,'num_turns':terminal.get('num_turns')})
-            return dict(status='completed' if terminal.get('subtype')=='success' and not terminal.get('is_error') and self.provider.returncode==0 else 'failed',
-                        text=terminal.get('result',''),native_turn_ids=[self.turn] if self.turn else [],
-                        error=None if terminal.get('subtype')=='success' else {'code':classify(terminal),'subtype':terminal.get('subtype'),'errors':terminal.get('errors',[])},usage=terminal.get('usage'))
+            require(terminal is not None or evidence.synthetic,'WORKER_CRASHED','Claude exited without a terminal result')
+            self.journal.event(self.running_task,'provider-internal-rounds',{'assistant_events':evidence.rounds,'num_turns':(terminal or {}).get('num_turns')})
+            error=evidence.failure(terminal,self.provider.returncode)
+            return dict(status='failed' if error else 'completed',text=terminal.get('result','') if not error else error['message'],
+                        native_turn_ids=[self.turn] if self.turn else [],error=error,usage=(terminal or {}).get('usage'))
         finally:
             if not drain.done():drain.cancel()
 
@@ -315,6 +354,7 @@ class Worker:
             cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
         self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        self.input_submitted=True
         self.provider.stdin.write(canonical({'event':'user','message':{'content':text}})+b'\n')
         await self.provider.stdin.drain();self.provider.stdin.close()
         errors=bytearray()
@@ -377,7 +417,12 @@ class Worker:
         self.stopping=True;await self.close_provider()
         from .recovery import settle_stopped_tasks
         with self.journal.transaction() as db:
-            settle_stopped_tasks(db,self.row['worker_id'],self.row['generation'],self.shutdown_reason or 'WORKER_RELEASED')
+            if not self.fallback_pending or self.shutdown_reason not in (None,'WORKER_RELEASED'):
+                settle_stopped_tasks(db,self.row['worker_id'],self.row['generation'],self.shutdown_reason or 'WORKER_RELEASED')
+            else:
+                # A clean handoff protects only its logical task, never queued
+                # peer follow-ups pinned to the old native identity.
+                db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='WORKER_REPLACED_BEFORE_START' WHERE worker_id=? AND generation=? AND state='QUEUED'",(self.row['worker_id'],self.row['generation']))
             db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=?",(self.row['worker_id'],self.row['generation']))
         self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE pid=? AND process_start=?",(self.owner['pid'],self.owner['start']))
         self.emit('released',native_id=self.native)

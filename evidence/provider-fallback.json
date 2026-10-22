@@ -1,0 +1,225 @@
+{
+  "status": "COMPLETE: implementation installed; offline/passive PASS; new native inference BLOCKED by existing allowance",
+  "incident": "Retained native diagnostics confirm synthetic authentication_failed errors masked as model mismatch. Quota behavior will be verified separately with fake streams. Raw evidence remains private.",
+  "todo": [
+    {
+      "id": "provider-diagnostics",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "readable-notices",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "explicit-fallback",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "focused-contracts",
+      "status": "COMPLETE"
+    },
+    {
+      "id": "installation-docs-closeout",
+      "status": "COMPLETE"
+    }
+  ],
+  "tests": {
+    "offline": {
+      "status": "PASS",
+      "tests": 354,
+      "subtests": 545,
+      "seconds": 152.53,
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8",
+      "source_frozen_during_run": true,
+      "scope": "Unit/contract tests including real isolated controller processes with fake native providers; zero new model inputs"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
+      "scope": "Isolated fixtures only; actual managed package was not activated or updated"
+    },
+    "installed_passive": {
+      "status": "PASS",
+      "provider_executable_hashes_match_receipts": true,
+      "owned_checks": "PRESENT",
+      "skills_match_sources": true,
+      "second_installs_operations": [
+        0,
+        0
+      ],
+      "CLAUDE_outside_owned_block_unchanged": true,
+      "protected_auth_native_config_shell_unchanged": true,
+      "entrypoint_uses_project": true
+    },
+    "native": {
+      "status": "BLOCKED",
+      "submitted_inputs": 0,
+      "reason": "The retained live allowance is exhausted at 148/148. Fresh Gemini fallback inference and native readable-frame ingestion/presentation are NOT_RUN. No Claude retry was submitted."
+    }
+  },
+  "catalog": {
+    "provider": "antigravity",
+    "model": "gemini-4-argon-high",
+    "status": "PASS",
+    "scope": "Signed-in agy models metadata; not inference/entitlement proof"
+  },
+  "base_commit": "acd6782f4cea8f5a5bcc61bcba6018ed8b77a747",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "ef11680aa44c38dc2e66b4ea3dff4a87b7328a921f38abfc7bdbb2d1e2f4cc61",
+    "nativepeers/adapters/metadata.py": "f2c3c9409ef5f033d742e7cafd669a8f56489f283cad06a01cd8fdef99f93260",
+    "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
+    "nativepeers/antigravity.py": "00b84c23ab6242d5ff6e584dbc9424c58ca14464157b8921e29b09b8013f8f3e",
+    "nativepeers/antigravity_install.py": "f36ee1eae92a2eafa5fa1f8e23e0dfd90111ff0e0c6082dc3b17959f81de3f5b",
+    "nativepeers/artifacts.py": "4161379e5d874c668c2e62eb0147565cfec0a67ed253e47dbc9cce8e95e53a40",
+    "nativepeers/budget.py": "b64ddb5a42f3e9276e5945e097473289c201895e00e6fe6b3f4f74207f8f9ea6",
+    "nativepeers/caller.py": "e856fd6fcf4041aa5af4bece74948cf98cbb87c4ddf431220dbe561522d199ae",
+    "nativepeers/change_preview.py": "60755291113be3da04eef1b089e50b36adcae35bd8427005ec547a05eb188a4b",
+    "nativepeers/claude_stream.py": "ff459549ca6322027623cfe0840492b0be2df1fb423062d4359661b70b79d5c1",
+    "nativepeers/cleanup.py": "683faa73f76b48dac6909d4c1c24ee209c17cd8940da896dfd887e9a8403e342",
+    "nativepeers/cli.py": "b3abbb621e021f4715e59c8f8aab363af14ce49ec60cc35ac20aba56d5a3163f",
+    "nativepeers/compatibility.py": "0439f19f292517c91143a2587107aff36aef5cb82e993aa2fc52ce02c5326ad1",
+    "nativepeers/control.py": "c995adf790984d5457ad836dd3b8f7f675c84aeb6571fb3a2153e89f5429f24d",
+    "nativepeers/core.py": "6f73dae77b17fd695bca274dba0ef3070ec94839eb1c88074a8f17632cd545c8",
+    "nativepeers/delegation.py": "9753f04e731fb898276f921de114bb62b46eb2b312bcd147d3a07eeb9189f17c",
+    "nativepeers/errors.py": "8391998802bac132516aeea664748804d3b91bf735dc62b2a7d8761399d42da2",
+    "nativepeers/fallback.py": "790e40c19e9b4c96b092f41a2ec5d265fe29a9778802f9fe6ca6ef149595019b",
+    "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
+    "nativepeers/hooks.py": "456ba4f1cc9da27e0601fea9319180f56f8ff24bcbfa608090016c6a4b6fe421",
+    "nativepeers/install.py": "4e8a318d945df33702c90279c17935f0c2e49747f38d9d39b94addbd2c8c1290",
+    "nativepeers/isolated_copy.py": "99148c3315084323861165f20bfc18398ebad5fdb8d105942c1949f6a406b256",
+    "nativepeers/journal.py": "9d586d9aff0c3df1dd2d292fee8eb7e745b8a48eabbf36cd53d0ea8c330e8d49",
+    "nativepeers/launch.py": "06da9e1accaacb41e61af2d963762a8344688e81801066064e0d18a1dfd20dba",
+    "nativepeers/mcp_server.py": "da7c1b1be07f7ecd83e34aff667897fbaa72fb3da29c36a4b1963370fec717ae",
+    "nativepeers/models.py": "440f0e4ed691e399df5a07a5b7aac451f135f1c4e5e9763a1506a7e55bf60087",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "289602df261419717d3302d613f3771590868ffae3b7c7543c8a84ba2659b5d9",
+    "nativepeers/presentation.py": "dea4b873f78d0002d3b0bf9ee6c5807cdd221739be8cb6b609458b2869ea0e80",
+    "nativepeers/process.py": "f1a75356a7a3d753c88263e7f7d6dd90e49ed3a0f239ec44d686528e26d2caeb",
+    "nativepeers/profiles.py": "5b9a8bdca866a240c7875dcc0bdd3148fc7101b88dc2c832760b68f7a6982111",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "1ddb864d4706de2819dd48d07d0ca775d9bfa92084c7b90365da90074dc52f40",
+    "nativepeers/readiness.py": "29273e47c7dcb0190db33fe8a81032f4cd657fdec1e68fb840819ddd422b995c",
+    "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
+    "nativepeers/reconcile.py": "71ef7f185cb6ba9a7aafa4c93ac8d51e988feb06a649ed47ae744e0e0b8776a9",
+    "nativepeers/recovery.py": "1f14fcdb73e66fe6266dc91062859f18f6812d2c87a1c401ff604b934b387fcc",
+    "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
+    "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
+    "nativepeers/supervisor.py": "9c19611ac38027270f48191da9a3ec2b43ad36eb65f63391706e8ce203032cc5",
+    "nativepeers/worker_process.py": "44674462e037fe64544092d0e47f3e56ac9b8907899a5d4e525fd3806f0c444b",
+    "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
+    "nativepeers/worktrees.py": "081cc2bbf259eede2c08fc9710a60a12c97b1c5c6e2ebc69cc5894b8900d5fb8"
+  },
+  "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c",
+  "canonical_documents": {
+    "docs/IMPLEMENTATION.md": "615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb8160e",
+    "docs/REVIEW.md": "625e8ec453a673e1c616bc359cdba269741e721f685031389ddc65586d2778e1",
+    "docs/KICKOFF_PROMPT.md": "18de5e0d3230bba5bab4a380108c3a8cd420d4ddc281936e4104d89138841141"
+  },
+  "providers": {
+    "claude": {
+      "path": "~/.local/share/claude/versions/2.1.308",
+      "sha256": "ca923c86ac84b30574a82331a05b6e066c27477a926ceaffe46a845a33e4dd37",
+      "size": 274675680,
+      "version": "2.1.308",
+      "scope": "Current executable hash matches its installed receipt; no new inference"
+    },
+    "codex": {
+      "path": "~/.local/share/codex-mcp-manager/releases/rust-v0.163.0-cd98f25eded9-1792683766158703000/bin/codex",
+      "sha256": "f7c396eaa492543208a028ec4337d494a2a20082bb3479d5a639a714d2c86a37",
+      "size": 285409112,
+      "version": "0.163.0",
+      "scope": "Current executable hash matches its installed receipt; no new inference"
+    },
+    "antigravity": {
+      "path": "~/.local/bin/agy",
+      "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
+      "size": 188472992,
+      "version": "1.4.5",
+      "scope": "Current executable hash matches its installed receipt; no new inference"
+    }
+  },
+  "checks": {
+    "synthetic_quota_and_auth_diagnostics": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "genuine_model_mismatch_refused": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "no_fallback_exact_behavior": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "confirmed_clean_fallback_once": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "uncertain_output_tools_usage_and_edits_no_replay": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "ordered_unavailable_choices_and_failed_final_summary": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "same_batch_provider_home_suppression": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "original_deadline_turns_identity_and_completion_claims": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "frozen_git_and_non_git_editing_attribution": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "CLI_MCP_schema_and_status_parity": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "readable_notices_and_exact_legacy_compatible_reconciliation": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "owned_installation_preservation_and_idempotency": {
+      "status": "PASS",
+      "scope": "offline fixtures"
+    },
+    "synthetic_native_recovery_and_terminal_output_boundary": {
+      "status": "PASS",
+      "scope": "offline stream fixtures"
+    },
+    "native_UUID_digits_not_HTTP_status": {
+      "status": "PASS",
+      "scope": "deterministic UUID fixture and explicit 401/429 statuses"
+    }
+  },
+  "limits": {
+    "consumed_turns": 148,
+    "reserved_turns": 0,
+    "active_seconds": 3524.3949735164642,
+    "outstanding_native_requests": []
+  },
+  "limitations": [
+    "The incident histories establish authentication_failed, not quota; quota is separately reproduced with fake streams.",
+    "Fallback is opt-in for Claude to exact Antigravity candidates, on proven clean terminal quota/auth failure only.",
+    "Catalog presence is not inference entitlement.",
+    "Older long-lived supervisors/facades keep loaded code/schema until their normal lifecycle ends; new groups and CLI invocations use this implementation.",
+    "No incident tasks were replayed and no LectureLive files were modified.",
+    "Existing native acceptance gaps retain their historical scope; this is not an all-provider unattended reliability PASS.",
+    "New notices use readable frames; already-queued incident payloads and retained histories were not rewritten."
+  ],
+  "publication": {
+    "status": "PENDING",
+    "repository": "https://github.com/scalinity/NativePeers",
+    "source_zip_uploaded": false
+  }
+}

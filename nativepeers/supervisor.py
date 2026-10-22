@@ -33,6 +33,7 @@ class Group:
         self.generation=self.policy.get('controller_generation',1);self.token=secrets.token_hex(32)
         self.endpoint=runtime_root()/('g-'+group_id[:24]+'.sock')
         self.children={};self.changed=asyncio.Event();self.closing=False;self.finished_at=None;self.shutdown_reason=None
+        self.handoffs=set()
         self.controller=Caller('controller','controller:'+group_id+':'+str(self.generation),grants={'group_id':group_id,'generation':self.generation,'parent_key':self.row['parent_key']})
         self.parent=Caller('peer',self.row['parent_key'],self.policy['parent_incarnation'])
 
@@ -91,14 +92,103 @@ class Group:
                     if not child['ready'].done():child['ready'].set_exception(PeerError('WORKER_CRASHED',str(event['error'])))
                     self.fail_worker(worker_id,event['error'],child['row']['generation'])
                 if event['event']=='task_terminal':self.changed.set()
-            if not self.closing and any(t['worker_id']==worker_id and t['state'] not in TERMINAL for t in self.tasks()):self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':'Owned worker closed its control stream'},child['row']['generation'])
+            if not self.closing and any(t['worker_id']==worker_id and t['state'] not in TERMINAL|{'FALLBACK_PENDING'} for t in self.tasks()):self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':'Owned worker closed its control stream'},child['row']['generation'])
         except Exception as error:
             self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':str(error)[:1000]},child['row']['generation'])
         finally:
             if not child['ready'].done():child['ready'].set_exception(PeerError('WORKER_CRASHED','Worker exited before readiness'))
             if not self.closing:
                 await self.release_worker(worker_id,expected=child)
+                pending=self.journal.all("SELECT * FROM tasks WHERE worker_id=? AND generation=? AND state='FALLBACK_PENDING'",(worker_id,child['row']['generation']))
+                for task in pending:
+                    handler=asyncio.current_task();self.handoffs.add(handler)
+                    try:await self.advance_fallback(task)
+                    except Exception as error:
+                        self.finish_fallback(task,{'code':error.code if isinstance(error,PeerError) else 'FALLBACK_FAILED','message':str(error)[:1000]})
+                    finally:self.handoffs.discard(handler)
             self.changed.set()
+
+    def finish_fallback(self,task,error):
+        """Settle a clean handoff failure without losing the original diagnostic."""
+        if self.journal.one('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],))['state']!='FALLBACK_PENDING':return
+        from .fallback import attempts
+        history=attempts(self.journal,task['task_id'])
+        if not history:return
+        last=history[-1]
+        artifact=self.journal.one('SELECT relative_path FROM artifacts WHERE artifact_id=?',(last['result_artifact_id'],))
+        record=json.loads((self.journal.root/'artifacts'/artifact['relative_path']).read_text())
+        record['summary']+=' Fallback not completed: '+error['message']
+        record['fallback_failure']=error
+        result=Artifacts(self.journal).put(canonical(record),last['worker_id'],[self.row['parent_key']],media_type='application/json')
+        self.journal.db.execute("UPDATE tasks SET state='FAILED',result_artifact_id=?,terminal_reason=? WHERE task_id=? AND state='FALLBACK_PENDING'",
+                                (result,canonical(error).decode(),task['task_id']))
+        self.changed.set()
+
+    async def advance_fallback(self,task):
+        """Run only after exact old writers exited. Never replay unknown input."""
+        from .fallback import attempts,clone_workspace
+        from .policy import load
+        from .antigravity_install import verify_worker_ready
+        old=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(task['worker_id'],))
+        require(old['state']=='RELEASED_RESUMABLE','OWNERSHIP_CONFLICT','Original writer has not released its native history')
+        lease=json.loads(old['lease_json']);history=attempts(self.journal,task['task_id']);latest=history[-1]
+        artifact=self.journal.one('SELECT relative_path FROM artifacts WHERE artifact_id=?',(latest['result_artifact_id'],))
+        record=json.loads((self.journal.root/'artifacts'/artifact['relative_path']).read_text());proof=record['fallback_eligibility']
+        require(proof['definitive_no_execution'] and proof['workspace_unchanged'],'FALLBACK_UNSAFE','The original attempt did not establish a clean fallback boundary')
+        task_spec=json.loads(task['task_json']);choices=task_spec.setdefault('fallback_choices',[])
+        require(not self.closing and self.journal.one('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],))['state']=='FALLBACK_PENDING',
+                'USER_CANCELED','Fallback handoff was canceled')
+        require(time.time()<min(task_spec['deadline'],self.lifetime_deadline()),'BUDGET_EXHAUSTED','Original task/group deadline elapsed before fallback')
+        require(proof['remaining_task_turns']>0,'BUDGET_EXHAUSTED','Original task-turn limit leaves no fallback attempt')
+        candidate=None
+        for index,value in enumerate(lease.get('fallback_candidates',[])):
+            item=dict(value);choice={'provider':item['provider'],'model':item['model']}
+            try:
+                require(not item.get('unavailable'),(item.get('unavailable') or {}).get('code','MODEL_UNAVAILABLE'),(item.get('unavailable') or {}).get('message','Fallback unavailable'))
+                spec=dict(lease['spec'],provider=item['provider'],model=item['model'],model_display_name=item['model_display_name'])
+                spec.pop('reasoning_effort',None)
+                verify_worker_ready(self.journal,spec,item['executable'])
+                candidate=item;choice['state']='SELECTED';choices.append(choice);break
+            except (PeerError,OSError) as error:
+                choice.update(state='UNAVAILABLE',error=error.json() if isinstance(error,PeerError) else {'code':'MODEL_UNAVAILABLE','message':str(error)[:1000]})
+                choices.append(choice)
+        self.journal.db.execute('UPDATE tasks SET task_json=? WHERE task_id=?',(canonical(task_spec).decode(),task['task_id']))
+        require(candidate,'FALLBACK_UNAVAILABLE','Every explicit fallback choice is unavailable: '+('; '.join(c['model']+': '+(c.get('error') or {}).get('message','unavailable') for c in choices))[:1800])
+        worker_id=new_id();binding=self.journal.root/'bindings'/new_id()
+        spec.update(max_task_turns=proof['remaining_task_turns'],wall_time_seconds=max(1,int(task_spec['deadline']-time.time())))
+        new_lease=dict(lease,provider_home=candidate['provider_home'],executable=candidate['executable'],spec=spec,binding=str(binding),
+                      grants=dict(lease['grants'],worker_id=worker_id),fallback_candidates=lease['fallback_candidates'][index+1:])
+        new_lease.pop('released_native',None)
+        # One logical task/phase; a replacement is a different native history and worker.
+        with self.journal.transaction() as db:
+            current=db.execute('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],)).fetchone()
+            require(current['state']=='FALLBACK_PENDING','USER_CANCELED','Fallback was canceled during preflight')
+            active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
+            require(active<load(self.journal)['workers_total'],'CAPACITY_UNAVAILABLE','No released capacity is available for the explicit fallback')
+            db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker_id,self.id,None,candidate['provider'],None,old['role_title'],candidate['model'],None,None,old['cwd'],None,'RESERVED',1,canonical(new_lease).decode()))
+            task_spec['attempt_index']=latest['attempt_index']+1
+            db.execute("UPDATE tasks SET worker_id=?,generation=1,state='QUEUED',native_turn_id=NULL,result_artifact_id=NULL,terminal_reason=NULL,task_json=? WHERE task_id=?",(worker_id,canonical(task_spec).decode(),task['task_id']))
+            policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0]);policy['workers'].append(worker_id)
+            db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
+        self.policy=policy
+        try:
+            if old['worktree_id']:
+                cwd,worktree,baseline=await asyncio.to_thread(clone_workspace,self.journal,old,worker_id,proof['input_digest'])
+                spec['cwd']=cwd;new_lease['baseline']=baseline
+                self.journal.db.execute('UPDATE workers SET cwd=?,worktree_id=?,lease_json=? WHERE worker_id=?',(cwd,worktree,canonical(new_lease).decode(),worker_id))
+            from .artifacts import Artifacts
+            for ref in spec.get('context_refs',[]):Artifacts(self.journal).grant(ref,self.row['parent_key'],[worker_id])
+            replacement=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
+            require(not self.closing and time.time()<min(task_spec['deadline'],self.lifetime_deadline()),'BUDGET_EXHAUSTED','Original lifetime ended during fallback preparation')
+            await self.start_worker(replacement)
+            require(not self.closing and self.journal.one('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],))['state']=='QUEUED','USER_CANCELED','Fallback was canceled during readiness')
+            self.journal.event(task['task_id'],'fallback-admitted',{'worker_id':worker_id,'provider':candidate['provider'],'model':candidate['model'],'from_worker_id':old['worker_id']})
+            await self.send_worker(worker_id,{'operation':'task','task_id':task['task_id'],'text':task_spec.get('input_text',task_spec['text'])})
+        except Exception as error:
+            self.fail_worker(worker_id,error.json() if isinstance(error,PeerError) else {'code':'FALLBACK_FAILED','message':str(error)[:1000]},1)
+            if worker_id in self.children:await self.release_worker(worker_id,expected=self.children[worker_id])
+            raise
+        self.finished_at=None;self.changed.set()
 
     def fail_worker(self,worker_id,error,generation=None):
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
@@ -110,10 +200,11 @@ class Group:
             task_error=error if unstarted else {'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':error}
             state='FAILED' if unstarted else 'INTERRUPTED'
             record=dict(schema_version=1,group_id=self.id,task_id=task['task_id'],worker={'provider':row['provider'],
-                'native_session_id':row['native_id'],'title':row['role_title'],'peer_key':row['peer_key']},status=state.lower(),summary='',error=task_error,
+                'native_session_id':row['native_id'],'title':row['role_title'],'peer_key':row['peer_key']},status=state.lower(),summary=task_error.get('message') or task_error['code'],error=task_error,
                 model_requested=row['model_requested'],model_observed=row['model_observed'],native_turn_ids=[],started_at=None,completed_at=time.time())
             artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or worker_id,[self.row['parent_key']],media_type='application/json')
-            self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",(state,artifact,json.dumps(task_error),task['task_id'],row['generation']))
+            changed=self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",(state,artifact,json.dumps(task_error),task['task_id'],row['generation'])).rowcount
+            if changed:self.journal.db.execute('INSERT OR IGNORE INTO task_attempts VALUES(?,?,?,?,?)',(task['task_id'],json.loads(task['task_json']).get('attempt_index',0),worker_id,state,artifact))
         self.changed.set()
 
     async def cancel_worker(self,worker_id,reason=None,*,expected=None):
@@ -228,12 +319,12 @@ class Group:
             tasks=self.tasks();scoped=next((t for t in tasks if t['task_id']==handle),None)
             require(handle==self.id or scoped,'PROTOCOL_ERROR','Unknown task handle')
             for task in tasks:
-                if (handle==self.id or task['task_id']==handle) and task['state']=='QUEUED':
-                    db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='USER_CANCELED' WHERE task_id=? AND state='QUEUED'",(task['task_id'],))
+                if (handle==self.id or task['task_id']==handle) and task['state'] in ('QUEUED','FALLBACK_PENDING'):
+                    db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='USER_CANCELED' WHERE task_id=? AND state IN ('QUEUED','FALLBACK_PENDING')",(task['task_id'],))
         self.changed.set()
         if scoped:
-            if scoped['state']=='QUEUED' or scoped['state'] in TERMINAL:
-                return {'state':'CANCELED' if scoped['state']=='QUEUED' else scoped['state'],'workers':[]}
+            if scoped['state'] in ('QUEUED','FALLBACK_PENDING') or scoped['state'] in TERMINAL:
+                return {'state':'CANCELED' if scoped['state'] in ('QUEUED','FALLBACK_PENDING') else scoped['state'],'workers':[]}
             await self.send_worker(scoped['worker_id'],{'operation':'cancel-task','task_id':handle})
             return {'state':'CANCEL_REQUESTED','workers':[scoped['worker_id']],'task_id':handle}
         targets={t['worker_id']:self.children.get(t['worker_id']) for t in tasks}
@@ -262,10 +353,12 @@ class Group:
         if stored['task_id']:return {'stage':'ACCEPTED_QUEUED','evidence_kind':'controller-queue-admission','external_submission_id':stored['task_id']}
         require(row['state'] in ('READY','RUNNING','IDLE_GRACE'),'TARGET_OFFLINE','Worker controller has released ownership')
         task_id=new_id()
+        from .presentation import render
+        input_text=render(message)
         with self.journal.transaction() as db:
             count=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND state='QUEUED'",(worker_id,)).fetchone()[0]
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')
-            db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],canonical({'text':canonical(message).decode(),'initial':False}).decode()))
+            db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],canonical({'text':input_text,'initial':False}).decode()))
             db.execute('UPDATE messages SET task_id=? WHERE message_id=?',(task_id,message['message_id']))
             policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0])
             phases=policy.get('phases',{'1':policy['initial_tasks']})
@@ -274,7 +367,7 @@ class Group:
             db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
             db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait','UNCLAIMED',None,None,new_id(),self.generation))
         self.policy=policy
-        await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':canonical(message).decode()})
+        await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':input_text})
         self.finished_at=None;self.changed.set()
         return {'stage':'ACCEPTED_QUEUED','evidence_kind':'controller-queue-admission','external_submission_id':task_id,'native_expiry_enforced':False}
 
@@ -323,11 +416,8 @@ class Group:
         phase_results=[r for r in result['results'] if r['task_id'] in self.phases()[str(generation)]]
         summary_limit,title_limit=2000,512
         while True:
-            summaries=[dict(title=r['worker']['title'][:title_limit],title_truncated=len(r['worker']['title'])>title_limit,
-                provider=r['worker']['provider'],native_session_id=r['worker']['native_session_id'],status=r['status'],
-                summary=r['summary'][:summary_limit],summary_truncated=r.get('summary_truncated',False) or len(r['summary'])>summary_limit,
-                result_artifact_id=r['result_artifact_id']) for r in phase_results]
-            text='NativePeers group '+self.id+' completion generation '+str(generation)+'. These are independently produced worker results.\n'+json.dumps(summaries,ensure_ascii=False)
+            from .presentation import completion
+            text=completion(self.id,generation,phase_results,summary_limit,title_limit)
             if len(text.encode('utf-8'))<=INLINE_BODY:break
             if summary_limit:summary_limit//=2
             else:
@@ -411,12 +501,13 @@ class Group:
             except asyncio.TimeoutError:pass
 
     def stop_queued(self):
-        self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason=? WHERE state='QUEUED' AND native_turn_id IS NULL AND EXISTS (SELECT 1 FROM workers w WHERE w.worker_id=tasks.worker_id AND w.group_id=? AND w.generation=tasks.generation)",
+        self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason=? WHERE (state='FALLBACK_PENDING' OR (state='QUEUED' AND native_turn_id IS NULL)) AND EXISTS (SELECT 1 FROM workers w WHERE w.worker_id=tasks.worker_id AND w.group_id=? AND w.generation=tasks.generation)",
                                 (self.shutdown_reason or 'SUPERVISOR_RELEASED',self.id))
 
     async def close(self):
         self.closing=True
         self.stop_queued()
+        if self.handoffs:await asyncio.gather(*list(self.handoffs),return_exceptions=True)
         self.journal.db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND state='UNCLAIMED' AND mode='push'",(self.id,))
         for route in self.journal.all("SELECT delivery_id FROM completion_routes WHERE group_id=? AND state='RETAINED'",(self.id,)):
             settle_deferred(self.journal,self.id,route['delivery_id'])

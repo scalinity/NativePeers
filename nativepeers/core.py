@@ -45,7 +45,7 @@ class Core:
             if refresh:
                 from .reconcile import observe
                 return await observe(self.journal,self.registry,self.router,handle,cursor=scan_cursor,max_bytes=1048576 if scan_max_bytes is None else scan_max_bytes)
-            return self.router.outcome(handle)
+            return dict(self.router.outcome(handle),message=json.loads(message['payload_json']))
         require(not refresh,'PROTOCOL_ERROR','Receipt refresh requires an exact message ID')
         return self.delegation.status(caller,handle)
 
