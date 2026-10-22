@@ -167,6 +167,20 @@ async def parent(provider):
         atomic_json(RUN/(provider+'-case.json'),record);journal.close()
 
 
+async def push():
+    journal=Journal(STATE);core=Core(journal)
+    try:
+        caller=bind_caller(journal,core.registry,allow_external=False)
+        case=json.loads((RUN/'codex-case.json').read_text());assert caller.key==case['caller'] and case['status']=='PASS'
+        path=RUN/'push.json';assert not path.exists(),'Push test is one-shot; inspect its existing operation instead of replaying'
+        row=journal.one("SELECT * FROM workers WHERE group_id=? AND provider='antigravity'",(case['groups'][0],))
+        from nativepeers.recovery import resume_worker
+        resumed=await resume_worker(journal,caller,row['worker_id'],'Read answer_antigravity.py. Return NP-PRO-PUSH-CHILD and 42. Do not edit files, send peer messages or start agents.','push')
+        atomic_json(path,{'at':stamp(),'parent_native_id':case['parent_native_id'],'caller':caller.key,'worker_native_id':row['native_id'],'source':source(),**resumed})
+        print(json.dumps(dict(resumed,parent_native_id=case['parent_native_id'],worker_native_id=row['native_id'],state='DISPATCHED; wait for native controller completion')))
+    finally:journal.close()
+
+
 def launch(provider):
     prepared=json.loads((RUN/'prepared.json').read_text());binary=Path(prepared['providers'][provider]['path'])
     assert fingerprint(binary)['sha256']==prepared['providers'][provider]['sha256']
@@ -183,7 +197,8 @@ Allow this same tool process up to 480 seconds and collect its output if it runs
 
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','launch','parent']);parser.add_argument('provider',nargs='?',choices=['codex','antigravity']);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','launch','parent','push']);parser.add_argument('provider',nargs='?',choices=['codex','antigravity']);args=parser.parse_args()
     if args.action=='prepare':asyncio.run(prepare())
     elif args.action=='parent':asyncio.run(parent(args.provider))
+    elif args.action=='push':asyncio.run(push())
     else:launch(args.provider)
