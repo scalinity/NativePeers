@@ -139,3 +139,13 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn('must never reach the provider',self.binary.with_suffix('.inputs').read_text())
         finally:
             if manifest.get('native_process'):signal_owned(manifest['native_process'],signal.SIGKILL,group=True)
+
+    async def test_cleanup_rejects_a_mismatched_provider_manifest_without_signaling(self):
+        from nativepeers.errors import PeerError
+        await self.start(unconfirmed=True);path=self.root/'workers'/(self.worker+'.json')
+        original=json.loads(path.read_text());atomic_json(path,dict(original,generation=99))
+        try:
+            with self.assertRaises(PeerError) as error:await self.group.cleanup_native(self.worker,self.group.children[self.worker])
+            self.assertEqual(error.exception.code,'OWNERSHIP_UNKNOWN')
+            self.assertTrue(matches(original['native_process']))
+        finally:atomic_json(path,original)

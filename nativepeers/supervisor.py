@@ -123,11 +123,11 @@ class Group:
 
     async def cleanup_native(self,worker_id,child):
         path=self.journal.root/'workers'/(worker_id+'.json')
-        if not path.exists():return
+        require(path.exists(),'OWNERSHIP_UNKNOWN','Owned provider process manifest is missing; capacity remains reserved')
         manifest=json.loads(path.read_text())
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
         if not row or row['generation']!=child['row']['generation']:return
-        if manifest.get('worker_id')!=worker_id or manifest.get('generation')!=row['generation'] or manifest.get('native_id')!=row['native_id']:return
+        require(manifest.get('worker_id')==worker_id and manifest.get('generation')==row['generation'] and manifest.get('native_id')==row['native_id'],'OWNERSHIP_UNKNOWN','Owned provider manifest differs from its generation; capacity remains reserved')
         owner=manifest.get('native_process')
         if not owner or not matches(owner):return
         signal_owned(owner,signal.SIGTERM,group=True)
