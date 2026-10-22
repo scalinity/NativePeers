@@ -77,7 +77,7 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
         ('claude','.local/bin/claude'))}
     nearest=next((p for p in ancestors if Path(p['executable']) in binaries),None)
     if nearest and binaries[Path(nearest['executable'])]=='antigravity':
-        candidates=[p for p in registry.list('antigravity') if p['owner']==nearest]
+        candidates=registry.for_owner('antigravity',nearest)
         require(len(candidates)==1,'CALLER_UNBOUND','Antigravity owner has no unique hook-observed native session')
         p=candidates[0]
         return Caller('peer',p['handle'],p['incarnation_id'],p.get('policy',{}))

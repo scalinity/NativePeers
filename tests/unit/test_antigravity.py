@@ -129,6 +129,19 @@ class AntigravityTests(unittest.TestCase):
         self.assertEqual(json.loads(path.read_text()),{'existing':{'enabled':False},'later':{'enabled':True}})
         self.assertTrue((self.home/'.local/bin/agy').exists())
 
+    def test_bound_facade_checks_identity_without_title_discovery(self):
+        from nativepeers.mcp_server import Facade
+        with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
+             patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','NPEER_BINDING':''}):
+            observe(self.j,self.event,'SessionStart')
+            facade=Facade(self.j,None)
+            with patch('nativepeers.registry.Registry.list',side_effect=AssertionError('discovery called')), \
+                 patch('nativepeers.antigravity.summaries',side_effect=AssertionError('native titles read')):
+                for _ in range(10):
+                    self.assertEqual(facade.binding_state()['state'],'BOUND')
+                    self.assertIn('worker_spawn',facade.names())
+
     def test_changed_runtime_is_refused_before_any_configuration_write(self):
         self.evidence.write_text(json.dumps({'providers':{'antigravity':{'executable_sha256':'not-the-installed-binary','version':'fixture'}}}))
         with self.assertRaises(Exception) as error:install(self.j,home=self.home,verified_source=self.evidence)

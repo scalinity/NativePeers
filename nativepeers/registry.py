@@ -45,6 +45,13 @@ class Registry:
             require(row["status"] == "live" and matches(descriptor["owner"]), "TARGET_OFFLINE", "Registered native owner is offline")
         return descriptor
 
+    def for_owner(self,provider,owner,native_id=None):
+        rows=self.journal.all('SELECT descriptor_json FROM peer_instances WHERE provider=? AND pid=? AND process_start=? AND status=\'live\''+
+            (' AND native_id=?' if native_id is not None else ''),
+            (provider,owner['pid'],owner['start'])+((native_id,) if native_id is not None else ()))
+        if not rows or not matches(owner):return []
+        return [peer for row in rows if (peer:=json.loads(row['descriptor_json']))['owner']==owner]
+
     def list(self, provider=None, include_offline=False):
         rows = self.journal.all("SELECT * FROM peer_instances ORDER BY last_seen DESC")
         claude_metadata={}

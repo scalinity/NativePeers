@@ -110,7 +110,7 @@ def observe(journal,event,kind):
     workspaces=event.get('workspacePaths')
     require(isinstance(workspaces,list) and workspaces and isinstance(workspaces[0],str) and Path(workspaces[0]).is_absolute(),
             'PROTOCOL_ERROR','Native hook has no absolute workspace path')
-    existing=[p for p in registry.list('antigravity') if p['owner']==owner and p['peer_key']['native_session_id']==native]
+    existing=registry.for_owner('antigravity',owner,native)
     if existing:peer=existing[0]
     else:
         from .policy import load

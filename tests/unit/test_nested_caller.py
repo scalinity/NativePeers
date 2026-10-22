@@ -18,6 +18,7 @@ class NestedCallerTests(unittest.TestCase):
 
     def invoke(self,owners,peers):
         registry=Mock();registry.list.side_effect=lambda provider:peers.get(provider,[])
+        registry.for_owner.side_effect=lambda provider,owner:[p for p in peers.get(provider,[]) if p['owner']==owner]
         with patch('nativepeers.caller.ancestry',return_value=[SimpleNamespace(json=lambda p=p:p) for p in owners]), \
              patch.dict(os.environ,{'NPEER_BINDING':'','NPEER_BOOTSTRAP':'','CODEX_THREAD_ID':'codex-native'}):
             return bind_caller(Mock(),registry,allow_external=False)
