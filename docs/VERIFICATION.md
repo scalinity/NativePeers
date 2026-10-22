@@ -1,3 +1,39 @@
+# Verification
+
+The model/Antigravity and implementation-worker extension passed its scoped native checks on Claude Code **2.1.308**, managed Codex **0.163.0** and official Antigravity CLI **1.4.5**. The original full acceptance suite remains qualified on its separately documented variants; this is not an unqualified complete-suite PASS.
+
+| Check | Status | Current result |
+|---|---|---|
+| Unit tests | PASS | 69 unit methods plus property/subtest cases |
+| Fake-provider and MCP contracts | PASS | 19 contract methods; full offline run: 88 tests and 35 subtests |
+| Existing CodexMCP manager/naming tests | PASS | 23 tests; simulated update failures/activation occurred only in temporary fixtures, with no real package build/update |
+| Claude → two Gemini High workers | PASS | Distinct native UUIDs, overlapping native task intervals, successful reads and real denied writes under a disclosed temporary fixture declaration |
+| Codex → Gemini High and explicit Claude Sonnet | PASS | Separate native conversations, overlapping task intervals, exact observed models and original-Codex bounded return |
+| Antigravity → Codex Sol/xhigh and Gemini High | PASS | Actual native caller and MCP binding, separate native conversations and original-Antigravity bounded return |
+| Claude → three implementation workers | PASS | Claude Sonnet, Codex Sol/xhigh and Gemini High edited/tested code concurrently in separate project-local worktrees; original checkout unchanged; all results reported in the original Claude conversation |
+| Original-Claude push | PASS | One aggregate native submission, matching ingestion and attributed completion at the original UUID |
+| Installed passive | PASS within recorded scope | Owned installs are idempotent, executable receipts match, original shell prefix/auth integrity and managed Codex package retained; MCP enabled/default/disabled states match |
+| Final raw protected-configuration comparison | BLOCKED | Later Claude settings drift and the native Codex `node_repl` definition are retained without attribution; no further configuration writes were made |
+| Automatic Antigravity startup naming/picker flag | BLOCKED | CLI has no supported startup name flag; initial slash text is a model prompt. Local `/rename` and `/resume` are manual native TUI operations |
+| Gemini peer inbox, worker MCP/sibling exchange, automated Gemini cancel/resume | NOT_RUN live | Hook/controller contracts have offline coverage; no idle-wakeup claim |
+| Complete original acceptance matrix | Qualified | Earlier remaining variants are preserved below and in `evidence/acceptance.json`; the extension does not relabel them |
+
+The final extension batch used actual native parent tool executions. Claude parent `89b68580-b7b4-424e-be2f-354e3537b992` launched Gemini workers `74bfa873-3203-472b-bc9e-7f660afd3f5b` and `59c9b4e5-3d01-41c7-b13f-9a38a6dac9f6`. Its implementation group `ca896b7f-6482-44a3-8f47-fb7adefb6c2b` returned Claude worker `aed3ba7c-f26f-4491-91e0-bab7e5754b20`, Codex worker `01a16220-ee17-75f2-8d56-555c55966b01` and Gemini worker `aa3c3187-abed-4013-97ea-8cde3c91b3ce`. Each created its own `scale` function, ran checks and produced a new-file patch. The same original Claude UUID reported both Gemini results, all three implementations and the native pushed completion. Native task intervals demonstrate client-side overlap, not vendor GPU scheduling.
+
+The retained ledger is **95/98 counted inputs/launch slots**, **0 reserved**, **0 unsettled**, and **1847.220 seconds** of active testing (30 minutes 47.220 seconds). Pre-model stops and uncertain admissions were retained conservatively. The eight-worker ceiling remained; the final batch had at most seven overlapping owned worker lifetimes. No further model inputs were submitted after the accepted batch. Provider internal rounds remain separately recorded; native background memory hooks were observed during diagnostics and are not counted as NativePeers-owned workers.
+
+Private local records are in `evidence/private/model-antigravity/live/report.json`, `cleanup.json`, `dependencies-final.json` and `post-live-installer-reconciliation.json`. All extension-owned native parents/controllers exited. The temporary broader fixture profile was removed; the installed analysis profile stayed narrower. Three dirty fixture implementation worktrees and their result patches are retained inside the ignored fixture project for inspection and native history continuation. No source checkout was stashed, reset, cleaned or merged. Downloads used to verify the official update were removed after checksum verification.
+
+The final passive check confirms both original authentication integrity hashes, the managed executable/link, unchanged Codex lifecycle-hook file and daemon/model/effort/features, all MCP enabled/default/disabled states and 15 of the 16 original MCP definitions. The native `node_repl` definition differs from the original M1 record. An earlier close-out read reconstructed the extension's exact Claude settings baseline after removing the new owned Bash hook; a later read no longer did. These unrelated current settings were retained, and further configuration writes stopped. Their raw byte attribution is BLOCKED rather than reported as an exact preservation PASS. `evidence/private/model-antigravity/protected-final.json` records the scope; no new live model inputs followed this passive comparison. Supported exact `thread/queue/list` checks found the final owned Codex parent/worker queues empty. Unique fixture source files have checksum-verified private backups; worktree paths and sizes are in `closeout-inventory.json` under that same private directory.
+
+Antigravity independently updated from the initially installed 1.4.4 to 1.4.5; the compatibility gate stopped new workers before input, and the official update was verified against its release archive. The current native batch passed on 1.4.5. One later installer-only change requires the recorded native hash before configuration writes. Its positive/negative installation fixtures pass; the four worker runtime functions in that module are byte-for-byte unchanged from the accepted native run. Native routes and provider execution retain their accepted fingerprints.
+
+The [daily commands](USAGE.md), [Gemini and model reference](ANTIGRAVITY.md), [implementation template](../examples/implementation-workers.json) and global Claude conventions document editing profiles, exact models, scoped permissions and the native naming boundary. Authentication stays native: Claude claude.ai Max, Codex ChatGPT sign-in and Antigravity Google sign-in; no credentials were extracted or copied into backups.
+
+## Earlier acceptance and review-fix record
+
+The following record predates the extension and retains its historical fingerprints and qualifications. Its references to a current retest describe that earlier record. The new checks above do not silently re-certify every old assertion.
+
 # NativePeers verification — 2026-10-21
 
 NativePeers is implemented and installed. **All three review-critical fixes passed focused revalidation**, including real native task waits, cancellation and original-parent returns on both providers. **Complete-suite acceptance remains qualified/BLOCKED** on the four original variants and the remaining checks whose full native scope was not repeated.

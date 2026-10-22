@@ -51,7 +51,8 @@ class Installer:
     def merged(self,path,provider,remove=False):
         original=json.loads(path.read_text()) if path.exists() else {}
         result=json.loads(json.dumps(original));hooks=result.setdefault('hooks',{})
-        for event in ['SessionStart','SessionEnd']:
+        events=['SessionStart','SessionEnd']+(['PreToolUse'] if provider=='claude' else [])
+        for event in events:
             groups=hooks.setdefault(event,[])
             if remove:
                 cleaned=[]
@@ -62,7 +63,9 @@ class Installer:
                 if cleaned:hooks[event]=cleaned
                 else:hooks.pop(event,None)
             elif not any(self.owned(h,provider) for g in groups for h in g.get('hooks',[])):
-                groups.append({'hooks':[{'type':'command','command':self.command_for(provider),'timeout':3}]})
+                group={'hooks':[{'type':'command','command':self.command_for(provider),'timeout':3}]}
+                if event=='PreToolUse':group['matcher']='Bash'
+                groups.append(group)
         if not hooks:result.pop('hooks',None)
         return original,result
 
@@ -147,9 +150,9 @@ class Installer:
                 before,after=self.merged(path,provider)
                 if before!=after:
                     atomic_json(backup/(provider+'-owned-blocks.json'),{'path':str(path),'before_sha256':expected,
-                        'before_hooks':before.get('hooks',{}),'changed_events':['SessionStart','SessionEnd']})
+                        'before_hooks':before.get('hooks',{}),'changed_events':['SessionStart','SessionEnd']+(['PreToolUse'] if provider=='claude' else [])})
                     compare_write(path,(json.dumps(after,indent=2,ensure_ascii=False)+'\n').encode(),expected)
-                    manifest['changed_keys'].append(str(path)+':hooks.SessionStart/SessionEnd')
+                    manifest['changed_keys'].append(str(path)+':hooks.SessionStart/SessionEnd'+('/PreToolUse' if provider=='claude' else ''))
                     atomic_json(self.manifest,manifest)
             for provider,path in self.skills.items():
                 expected,raw,desired=skill_inputs[provider]

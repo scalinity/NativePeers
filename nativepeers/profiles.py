@@ -25,7 +25,8 @@ def codex_config(journal,binding,profile):
             'mcp_server_policy':policies,
             'plugins':{name:{'enabled':False} for name in config.get('plugins',{})},
             'features.multi_agent':False,'features.multi_agent_v2':False,
-            'features.js_repl':False,'web_search':'disabled'}
+            'features.js_repl':False,'web_search':'disabled',
+            'memories.generate_memories':False,'memories.use_memories':False}
 
 
 def config_arguments(config):
@@ -48,6 +49,7 @@ def claude_arguments(journal,binding,spec,native_id,*,resume=False):
     args=['-p','--output-format','stream-json','--verbose','--model',spec['model'],
           '--permission-mode','dontAsk','--max-turns',str(spec.get('max_task_turns',8)),
           '--strict-mcp-config','--mcp-config',json.dumps({'mcpServers':{'nativepeers':{k:v for k,v in facade_config(journal,binding).items() if k!='enabled'}}})]
+    if spec.get('reasoning_effort'):args+=['--effort',spec['reasoning_effort']]
     if profile=='analysis':
         args += ['--tools','Read,Glob,Grep','--allowedTools','Read,Glob,Grep,mcp__nativepeers__*']
     else:

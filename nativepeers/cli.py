@@ -25,7 +25,7 @@ def parser():
     def command(name):
         child=subs.add_parser(name);child.add_argument('--json',action='store_true',default=argparse.SUPPRESS);return child
     command('whoami')
-    q=command('list');q.add_argument('--provider',choices=['claude','codex']);q.add_argument('--include-offline',action='store_true')
+    q=command('list');q.add_argument('--provider',choices=['claude','codex','antigravity']);q.add_argument('--include-offline',action='store_true')
     q=command('resolve');q.add_argument('--to',required=True)
     for name in ['send','reply']:
         q=command(name)
@@ -47,7 +47,7 @@ def parser():
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
-        q=command(name);q.add_argument('--dry-run',action='store_true')
+        q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true')
     return p
 
 
@@ -106,6 +106,9 @@ async def dispatch(args,journal):
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):
+        if args.antigravity:
+            from .antigravity_install import install as install_antigravity
+            return install_antigravity(journal,dry_run=args.dry_run,remove=name=='uninstall')
         from .install import install,uninstall
         return await (install if name=='install' else uninstall)(journal,dry_run=args.dry_run)
     raise PeerError('PROTOCOL_ERROR','Unknown command')

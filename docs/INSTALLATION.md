@@ -15,7 +15,7 @@ Installation uses an own lock plus the existing CodexMCP manager's supported upd
 | Path | Owned change |
 |---|---|
 | `~/.local/bin/npeer` | Link to this project's `bin/npeer` |
-| `~/.claude/settings.json` | NativePeers SessionStart/SessionEnd command handlers |
+| `~/.claude/settings.json` | NativePeers SessionStart/SessionEnd handlers and a Bash PreToolUse capability refresh |
 | `~/.codex/hooks.json` | NativePeers SessionStart/SessionEnd command handlers |
 | `~/.codex/config.toml` | Native trust hashes for those exact owned handlers |
 | `~/.claude/skills/nativepeers/SKILL.md` | Claude CLI integration instructions |
@@ -35,3 +35,10 @@ Targeted uninstall removes only matching owned handlers, their matching trust ha
 Do not restore whole provider configuration or authentication files from a historical baseline. To undo an individual hook entry manually, match only `/Users/danny/Documents/Tools/NativePeers/bin/npeer-hook --provider claude` or `--provider codex` in the corresponding lifecycle hook, then remove only its exact owned trust state if still matching the install manifest. NativePeers never changes the `codex` shell function, global daemon feature, model/account settings, existing MCP states, native histories, managed patch set, Herdr/T3/Ghostty configuration or hourly update job.
 
 The live acceptance fixture uses a separate ignored `evidence/private/live-state` journal and disposable native sessions. That state contains test history pointers and private process manifests; it is not the daily-use default journal. Do not copy it into the installation or replay its native inputs. `evidence/live-budget.json` is the one implementation verification allowance across restarts.
+
+
+Antigravity is installed separately with `npeer install --antigravity --json`; use `npeer uninstall --antigravity --json` for owned-block removal. Its native CLI lives at `~/.local/bin/agy`, and configuration under `~/.gemini/config/` contains the namespaced hook/MCP entry, two scoped profiles and skill. The shell source block `NATIVEPEERS_GEMINI_START` through `NATIVEPEERS_GEMINI_END` in `~/.zshrc` owns only the `gemini` shortcut. It preserves the prior file bytes and existing Codex function. Remove only that block to undo the shortcut; NativePeers uninstall retains the official CLI, Google sign-in, native histories and results. [Detailed commands and limitations](ANTIGRAVITY.md).
+
+The model guidance in `~/.claude/CLAUDE.md` now documents optional per-worker models for all providers. Its namespaced NativePeers block was updated without replacing unrelated conventions. Targeted private snapshots are in project `backups/model-antigravity-conventions/` and `backups/model-antigravity-shell/`; do not restore whole historical configuration over later unrelated edits.
+
+Antigravity installation validates the current executable against its scoped entry in `evidence/capabilities.json` before writing configuration. A native CLI auto-update requires reviewing the changed runtime and recording the affected checks before admission. Reinstall does not silently bless a changed binary. Worktree creation owns only an appended `/.worktrees/` line in each source repository's local Git exclude, with a targeted snapshot under project `backups/worktree-excludes/`; remove only that exact line after reviewing/removing the owned worktrees.

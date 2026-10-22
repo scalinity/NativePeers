@@ -10,6 +10,7 @@ def launch_environment(provider: str) -> dict[str, str]:
         "claude": {"CLAUDE_CONFIG_DIR", "ANTHROPIC_API_KEY", "ANTHROPIC_BASE_URL",
                    "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
                    "CLAUDE_CODE_USE_FOUNDRY", "AWS_PROFILE", "AWS_REGION", "GOOGLE_CLOUD_PROJECT"},
+        "antigravity": set(),
     }
     if provider not in provider_names:
         raise ValueError("Unsupported provider")

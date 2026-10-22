@@ -66,6 +66,23 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':100,'on_timeout':'retain'},Reader(True))
         self.assertEqual(self.route()['state'],'UNCLAIMED');self.assertEqual(self.route()['mode'],'wait')
 
+    async def test_single_initial_task_wait_preserves_its_separate_batch_push(self):
+        waiter=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.task,'timeout_ms':1000},Reader()))
+        await asyncio.sleep(.01)
+        self.assertEqual(self.route()['state'],'UNCLAIMED')
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(self.task,));self.group.changed.set()
+        result=await waiter
+        self.assertTrue(result['ready']);self.assertEqual(result['notification_disposition'],'batch-notification-unchanged')
+        calls=[]
+        class FakeRouter:
+            async def send(s,*args,**kwargs):
+                calls.append(kwargs['client_request_id']);return {'state':'ACCEPTED_QUEUED','message_id':new_id()}
+        class FakeCore:
+            def __init__(s,j):s.router=FakeRouter()
+        with patch('nativepeers.core.Core',FakeCore):
+            await self.group.notify();await self.group.notify()
+        self.assertEqual(len(calls),1);self.assertEqual(self.route()['state'],'PUSH_ACCEPTED')
+
     async def test_uncertain_wait_output_suppresses_automatic_duplicate(self):
         self.j.db.execute("UPDATE tasks SET state='COMPLETED'")
         result=await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':10},Reader())

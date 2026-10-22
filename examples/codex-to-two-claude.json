@@ -13,7 +13,8 @@
         "mode": "inherit-read-only"
       },
       "context_refs": [],
-      "result_format": "nativepeers.result.v1"
+      "result_format": "nativepeers.result.v1",
+      "model": "opus"
     },
     {
       "provider": "claude",
@@ -24,7 +25,8 @@
         "mode": "inherit-read-only"
       },
       "context_refs": [],
-      "result_format": "nativepeers.result.v1"
+      "result_format": "nativepeers.result.v1",
+      "model": "sonnet"
     }
   ],
   "limits": {

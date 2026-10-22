@@ -48,7 +48,7 @@ def native_ancestor(owner, ancestors):
 
 
 def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
-    path = fixed_binding or os.getenv("NPEER_BINDING")
+    path = fixed_binding or os.getenv("NPEER_BINDING") or os.getenv("NPEER_BOOTSTRAP")
     if path:
         value = read_binding(journal, Path(path))
         if value["kind"] == "controller":
@@ -57,9 +57,24 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
         peer = registry.verify(value["peer_key"], value["incarnation_id"])
         if fixed_binding is None:
             require(native_ancestor(peer["owner"], [p.json() for p in ancestry()]), "CALLER_UNBOUND", "Native owner is outside caller ancestry")
-        return Caller("peer", peer["handle"], peer["incarnation_id"], value.get("grants", {}))
+        grants=value.get('grants',{})
+        if peer['owner_kind']=='interactive-standalone':
+            grants=dict(grants,profiles=peer.get('policy',{}).get('profiles',['analysis']))
+        return Caller("peer", peer["handle"], peer["incarnation_id"], grants)
     native = os.getenv("CODEX_THREAD_ID")
     ancestors = [p.json() for p in ancestry()]
+    # A nested CLI cannot borrow an enclosing conversation's verified identity.
+    binaries={(Path.home()/name).resolve():provider for provider,name in (
+        ('antigravity','.local/bin/agy'),('codex','.local/share/codex-mcp-manager/current/bin/codex'),
+        ('claude','.local/bin/claude'))}
+    nearest=next((p for p in ancestors if Path(p['executable']) in binaries),None)
+    if nearest and binaries[Path(nearest['executable'])]=='antigravity':
+        candidates=[p for p in registry.list('antigravity') if p['owner']==nearest]
+        require(len(candidates)==1,'CALLER_UNBOUND','Antigravity owner has no unique hook-observed native session')
+        p=candidates[0]
+        return Caller('peer',p['handle'],p['incarnation_id'],p.get('policy',{}))
+    if nearest and binaries[Path(nearest['executable'])]=='claude':
+        require(False,'CALLER_UNBOUND','Claude tool has no hook-provided binding')
     if native:
         candidates = [p for p in registry.list("codex") if p["peer_key"]["native_session_id"] == native and native_ancestor(p["owner"],ancestors)]
         require(len(candidates) == 1, "CALLER_UNBOUND", "Tool thread has no unique hook-observed native owner")

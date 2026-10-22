@@ -44,7 +44,7 @@ class PeerKey:
     native_session_id: str
 
     def __post_init__(self):
-        require(self.provider in ("claude", "codex"), "UNSUPPORTED_HOST", "Unknown provider")
+        require(self.provider in ("claude", "codex", "antigravity"), "UNSUPPORTED_HOST", "Unknown provider")
         try:
             uuid.UUID(self.native_session_id)
             uuid.UUID(self.host_id)

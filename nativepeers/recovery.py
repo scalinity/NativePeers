@@ -41,8 +41,14 @@ def assert_released(journal,row):
 
 def resume_command(journal,caller,worker_id):
     row,_=owned_worker(journal,caller,worker_id);assert_released(journal,row)
-    command=['codex','resume',row['native_id']] if row['provider']=='codex' else ['claude','--resume',row['native_id']]
-    return {'worker_id':worker_id,'native_id':row['native_id'],'command':shlex.join(command),'launched':False,
+    command=['codex','resume',row['native_id']] if row['provider']=='codex' else ['agy','--conversation',row['native_id']] if row['provider']=='antigravity' else ['claude','--resume',row['native_id']]
+    model=row['model_observed'] or row['model_requested']
+    if model:command+=['--model',model]
+    if row['provider']=='codex' and row['effort_requested']:
+        command+=['--config','model_reasoning_effort='+json.dumps(row['effort_requested'])]
+    elif row['effort_requested']:command+=['--effort',row['effort_requested']]
+    return {'worker_id':worker_id,'native_id':row['native_id'],'cwd':row['cwd'],'native_argv':command,
+            'command':'cd '+shlex.quote(row['cwd'])+' && '+shlex.join(command),'launched':False,
             'ownership_scope':'Verified released NativePeers writers and registered eligible local native runtimes; no private-backend takeover.'}
 
 

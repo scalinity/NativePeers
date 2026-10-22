@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "client_request_id": "example-two-argon-1",
+  "completion_mode": "wait",
+  "failure_policy": "collect-all",
+  "workers": [
+    {
+      "provider": "antigravity",
+      "model": "gemini-4-argon-high",
+      "title": "Argon Analysis",
+      "task": "Read the assigned fixture and report one verified finding.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      }
+    },
+    {
+      "provider": "antigravity",
+      "model": "gemini-4-argon-high",
+      "title": "Argon Review",
+      "task": "Independently inspect the assigned fixture and report a different verified finding.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      }
+    }
+  ],
+  "limits": {
+    "max_concurrent_workers": 2,
+    "max_depth": 1,
+    "wall_time_seconds": 300,
+    "max_task_turns_per_worker": 4
+  },
+  "allow_sibling_messages": false
+}

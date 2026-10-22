@@ -58,6 +58,10 @@ class Delegation:
             return dict(self.status(caller,prior['group_id']),client_request_id=request_id)
         from .protocol import validate
         validate(request,json.loads((ROOT/'schemas/spawn.v1.json').read_text()))
+        for worker in request['workers']:
+            if 'model' in worker:
+                require(worker['model'].strip() and not any(ord(c)<32 for c in worker['model']),
+                        'PROTOCOL_ERROR','Worker model must be a nonempty native model ID or alias')
         from .policy import load
         local=load(self.journal)
         workers=request.get('workers');require(isinstance(workers,list) and 0<len(workers)<=local['workers_per_group'],'CAPACITY_UNAVAILABLE','Batch exceeds configured worker limit')
@@ -81,6 +85,11 @@ class Delegation:
         test_budget=json.loads(budget_path.read_text()) if budget_path.exists() else {}
         codex_config=tomllib.loads((Path.home()/'.codex/config.toml').read_text())
         claude_settings=Path.home()/'.claude/settings.json';claude_config=json.loads(claude_settings.read_text()) if claude_settings.exists() else {}
+        agy_catalog={}
+        agy_settings=Path.home()/'.gemini/antigravity-cli/settings.json'
+        if any(w.get('provider')=='antigravity' for w in workers):
+            from .antigravity import catalog
+            agy_catalog=await catalog(Path.home()/'.local/bin/agy')
         catalog=None
         if any(w.get('provider')=='codex' for w in workers):
             client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex')
@@ -88,7 +97,7 @@ class Delegation:
             finally:await client.close()
         prepared=[];batch_baseline=snapshot(parent['cwd'])
         for source in workers:
-            require(isinstance(source,dict) and source.get('provider') in ('claude','codex'),'PROTOCOL_ERROR','Unknown worker provider')
+            require(isinstance(source,dict) and source.get('provider') in ('claude','codex','antigravity'),'PROTOCOL_ERROR','Unknown worker provider')
             spec=dict(source);spec['title']=title(spec['title']);spec['task']=bounded_text(spec['task'])
             profile=spec.get('permission_profile','analysis');require(profile in parent.get('policy',{}).get('profiles',['analysis']),
                 'PERMISSION_CAPABILITY_UNKNOWN','Requested worker profile exceeds the verified parent ceiling')
@@ -97,13 +106,24 @@ class Delegation:
             require(profile!='analysis' or workspace.get('mode','inherit-read-only')=='inherit-read-only','PROTOCOL_ERROR','Analysis uses a read-only workspace')
             require(profile!='workspace' or workspace.get('mode')=='isolated-worktree','WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated worktrees')
             spec.update(permission_profile=profile,cwd=parent['cwd'],wall_time_seconds=wall,max_task_turns=turns)
-            spec['model']=spec.get('model') or (codex_config.get('model') if spec['provider']=='codex' else claude_config.get('model','sonnet'))
+            spec['model']=spec.get('model',codex_config.get('model') if spec['provider']=='codex' else claude_config.get('model','sonnet'))
+            if spec['provider']=='antigravity':
+                configured=json.loads(agy_settings.read_text()).get('model') if agy_settings.exists() else None
+                default=configured if configured in agy_catalog else next((slug for slug,name in agy_catalog.items() if name==configured),None)
+                spec['model']=source.get('model',default)
+            require(isinstance(spec['model'],str) and spec['model'].strip() and not any(ord(c)<32 for c in spec['model']),
+                    'PROTOCOL_ERROR','Worker model must be a nonempty native model ID or alias')
             if spec['provider']=='codex':
                 spec['reasoning_effort']=spec.get('reasoning_effort') or codex_config.get('model_reasoning_effort','medium')
                 model=next((m for m in catalog if m['model']==spec['model']),None)
                 require(model,'MODEL_UNAVAILABLE','Exact requested Codex model is absent from the installed catalog')
                 require(spec['reasoning_effort'] in [e['reasoningEffort'] for e in model['supportedReasoningEfforts']],
                         'EFFORT_UNSUPPORTED','Exact requested effort is absent from the installed catalog')
+            if spec['provider']=='antigravity':
+                require(spec['model'] in agy_catalog,'MODEL_UNAVAILABLE','Exact Antigravity model is absent from the signed-in native catalog')
+                spec['model_display_name']=agy_catalog[spec['model']]
+                effort=spec.get('reasoning_effort')
+                require(effort is None or spec['model'].endswith('-'+effort),'EFFORT_UNSUPPORTED','Antigravity effort must match the pinned model slug')
             refs=spec.get('context_refs',[])
             require(isinstance(refs,list) and len(refs)<=16 and all(isinstance(r,str) for r in refs),'PROTOCOL_ERROR','Context references must be registered artifact handles')
             from .artifacts import Artifacts
@@ -113,7 +133,7 @@ class Delegation:
             grants=dict(worker_id=worker_id,group_id=group_id,depth=depth,max_depth=ceiling,profiles=[profile],
                 can_spawn=depth<limits.get('max_depth',1),max_concurrent_workers=limits.get('max_concurrent_workers',4),
                 message_targets=[caller.key],allow_sibling_messages=policy['allow_sibling_messages'])
-            executable=(Path.home()/('.local/bin/claude' if spec['provider']=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')).resolve(strict=True)
+            executable=(Path.home()/{'claude':'.local/bin/claude','codex':'.local/share/codex-mcp-manager/current/bin/codex','antigravity':'.local/bin/agy'}[spec['provider']]).resolve(strict=True)
             lease=dict(spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
                 executable=str(executable),live_budget_file=test_budget.get('path'),live_tranche=test_budget.get('tranche','first_cross_provider_delegations'))
             prepared.append(dict(worker_id=worker_id,task_id=task_id,lease=lease,workspace=workspace))

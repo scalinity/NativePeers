@@ -29,16 +29,39 @@ def observe(provider, event, journal):
         lease=json.loads(path.read_text())
         require(matches(lease['owner']) and lease['expires_at']>time.time(), 'CALLER_UNBOUND','Worker controller lease expired')
         # Bounded observation only: no registration, waits, identity change, or turn-end unregistration.
-        journal.event(lease['worker_id'],'native-hook-observed',dict(event=event['hook_event_name'],native_id=event['session_id'],process=owner))
-        return {'controller_owned':True,'worker_id':lease['worker_id']}
+        worker_id=lease.get('worker_id') or lease['grants']['worker_id']
+        journal.event(worker_id,'native-hook-observed',dict(event=event['hook_event_name'],native_id=event['session_id'],process=owner))
+        return {'controller_owned':True,'worker_id':worker_id}
     if provider=='codex':
         from .process import terminal_owner
         require(terminal_owner(owner),'UNSUPPORTED_TRANSPORT','Unowned private app-server has no verified standalone TUI ingress')
     registry=Registry(journal)
+    if provider=='claude' and event['hook_event_name']=='PreToolUse':
+        row=journal.one("SELECT descriptor_json FROM peer_instances WHERE native_id=? AND pid=? AND process_start=? AND status='live' AND owner_kind='interactive-standalone'",
+                        (event['session_id'],owner['pid'],owner['start']))
+        if not row:return {'updated':False,'reason':'no-exact-registered-parent'}
+        peer=json.loads(row['descriptor_json']);mode=event.get('permission_mode')
+        profiles=['analysis']+(['workspace'] if mode in ('bypassPermissions','dontAsk','acceptEdits','default','auto') else [])
+        peer['policy']=dict(peer['policy'],profiles=profiles,permission_mode_observed=mode)
+        from .files import canonical
+        journal.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE incarnation_id=?',(canonical(peer).decode(),peer['incarnation_id']))
+        return {'updated':True,'profiles':profiles}
     if event['hook_event_name']=='SessionEnd':
         journal.db.execute("UPDATE peer_instances SET status='offline' WHERE native_id=? AND pid=? AND process_start=? AND owner_kind='interactive-standalone'",(event['session_id'],owner['pid'],owner['start']))
         return {'ended':True}
     home=Path(os.getenv('CODEX_HOME' if provider=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if provider=='codex' else '.claude'))).resolve()
+    if provider=='codex':
+        transcript=event.get('transcript_path')
+        if not transcript:
+            # Internal historyless threads can emit hooks under the same TUI PID.
+            # They must not replace its registered conversation or become peers.
+            journal.event(event['session_id'],'registration-ignored',{'reason':'no-native-history-identity','owner':owner})
+            return {'registered':False,'reason':'no-native-history-identity'}
+        path=Path(transcript).resolve()
+        require(path.is_relative_to(home) and not Path(transcript).is_symlink(),'OWNERSHIP_CONFLICT','Native history is outside the provider home')
+        with path.open('rb') as stream:header=json.loads(stream.readline(262145))
+        require(header.get('type')=='session_meta' and header.get('payload',{}).get('id')==event['session_id'],
+                'OWNERSHIP_CONFLICT','Native history header differs from the hook UUID')
     native_title=codex_name(home,event['session_id']) if provider=='codex' else claude_name(home,event['session_id'],owner['pid'])
     transport={'kind':'codex-native-queue'}
     if provider=='claude':

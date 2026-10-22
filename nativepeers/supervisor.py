@@ -241,7 +241,7 @@ class Group:
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         waiter=new_id();claimed=False
         generation=self.phase_for(payload['handle'])
-        owns_notification=payload['handle']==self.id or self.phases()[str(generation)]==[payload['handle']]
+        owns_notification=payload['handle']==self.id or (generation!=1 and self.phases()[str(generation)]==[payload['handle']])
         if owns_notification:
             with self.journal.transaction() as db:
                 row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()

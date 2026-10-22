@@ -31,7 +31,7 @@ class DelegationTests(unittest.IsolatedAsyncioTestCase):
                 if count==1:source.write_text('V2\n')
                 return value
             request={'workers':[{'provider':'claude','title':str(i),'task':'fixture','permission_profile':'workspace','workspace':{'mode':'isolated-worktree'}} for i in range(2)]}
-            with patch('nativepeers.delegation.Path.home',return_value=home),patch('nativepeers.delegation.prepare',side_effect=changing_prepare),patch.object(delegation,'ensure_supervisor',new_callable=AsyncMock) as start:
+            with patch('nativepeers.delegation.Path.home',return_value=home),patch('nativepeers.worktrees.ROOT',root/'project'),patch('nativepeers.delegation.prepare',side_effect=changing_prepare),patch.object(delegation,'ensure_supervisor',new_callable=AsyncMock) as start:
                 with self.assertRaises(PeerError) as error:await delegation.spawn(caller,request)
                 self.assertEqual(error.exception.code,'WORKSPACE_SNAPSHOT_REQUIRED');start.assert_not_awaited()
             self.assertEqual(source.read_text(),'V2\n')

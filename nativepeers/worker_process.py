@@ -32,7 +32,7 @@ class Worker:
         self.provider=None;self.provider_identity=None;self.client=None;self.native=self.row['native_id'];self.turn=None
         self.stopping=False;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
         self.canceling_task=None;self.turn_task=None
-        self.expected_native=self.native;self.model_observed=None
+        self.expected_native=self.native;self.model_observed=self.row['model_observed']
 
     def emit(self,event,**payload):
         print(canonical(dict(event=event,worker_id=self.row['worker_id'],generation=self.row['generation'],**payload)).decode(),flush=True)
@@ -51,17 +51,31 @@ class Worker:
         if self.expected_native:
             require(native_id==self.expected_native,'OWNERSHIP_CONFLICT','Provider emitted a different native session ID')
         require(self.native is None or self.native==native_id,'OWNERSHIP_CONFLICT','Worker identity cannot change')
-        self.native=native_id;self.model_observed=model or self.model_observed
+        if model:
+            requested=self.spec['model']
+            if self.row['provider']=='antigravity' and model==self.spec.get('model_display_name'):model=requested
+            if self.row['provider'] in ('codex','antigravity') or requested.startswith('claude-'):
+                require(model==requested.removesuffix('[1m]'),'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
+                        details={'requested':requested,'observed':model})
+            self.model_observed=model
+            self.spec['model']=model
+            self.journal.db.execute('UPDATE workers SET model_observed=?,lease_json=? WHERE worker_id=?',
+                (model,canonical(self.lease).decode(),self.row['worker_id']))
+        self.native=native_id
+        self.expected_native=native_id
         existing=json.loads(self.binding.read_text())
         if existing.get('state')=='BOUND':return
-        home=Path(os.getenv('CODEX_HOME' if self.row['provider']=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if self.row['provider']=='codex' else '.claude'))).resolve()
+        if self.row['provider']=='antigravity':
+            from .antigravity import native_home
+            home=native_home()
+        else:home=Path(os.getenv('CODEX_HOME' if self.row['provider']=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if self.row['provider']=='codex' else '.claude'))).resolve()
         peer=Registry(self.journal).register(self.row['provider'],home,native_id,self.row['role_title'],self.owner,
             self.row['cwd'],{'kind':'owned-worker','group_id':self.row['group_id'],'worker_id':self.row['worker_id']},
             owner_kind='owned-worker-controller',policy=self.lease['grants'])
         self.journal.db.execute('UPDATE workers SET peer_key=?,native_id=?,model_observed=? WHERE worker_id=?',
             (peer['handle'],native_id,self.model_observed,self.row['worker_id']))
         atomic_json(self.binding,dict(state='BOUND',kind='peer',peer_key=peer['handle'],incarnation_id=peer['incarnation_id'],
-            owner=self.owner,expires_at=self.lease['expires_at'],grants=self.lease['grants']))
+            worker_id=self.row['worker_id'],owner=self.owner,expires_at=self.lease['expires_at'],grants=self.lease['grants']))
         self.manifest();self.emit('bound',native_id=native_id,peer_key=peer['handle'])
 
     async def prepare(self):
@@ -100,6 +114,13 @@ class Worker:
             self.journal.event(self.row['worker_id'],'effective-tool-profile',{'profile':self.spec['permission_profile'],
                 'servers':[{ 'name':s['name'],'tools':list(s['tools']),'runtime_status':s.get('runtimeStatus')} for s in inventory['data']],
                 'sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
+        elif self.row['provider']=='antigravity':
+            from .antigravity_install import worker_profile,verify_tool_gate
+            verify(self.journal,'antigravity',self.lease['executable'])
+            path=Path.home()/'.gemini/config/agents'/('nativepeers-'+self.spec['permission_profile']+'.md')
+            require(path.is_file() and path.read_text()==worker_profile(self.spec['permission_profile']),
+                    'PERMISSION_CAPABILITY_UNKNOWN','The Antigravity worker profile is missing or modified; run npeer install --antigravity')
+            verify_tool_gate(self.spec)
         else:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'AUTH_REQUIRED','Installed Claude executable is unavailable')
@@ -126,7 +147,8 @@ class Worker:
                 except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
                 budget.admit(reservation)
             async with asyncio.timeout(self.spec.get('wall_time_seconds',1800)):
-                self.turn_task=asyncio.create_task(self.codex_turn(text) if self.row['provider']=='codex' else self.claude_turn(text))
+                turn={'codex':self.codex_turn,'claude':self.claude_turn,'antigravity':self.antigravity_turn}[self.row['provider']]
+                self.turn_task=asyncio.create_task(turn(text))
                 result=await self.turn_task
         except BaseException as error:
             self.retire_after_task=True
@@ -148,11 +170,15 @@ class Worker:
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
         if self.row['worktree_id']:
-            from .worktrees import git
-            baseline=self.lease['baseline'];patch=git(self.row['cwd'],'diff',baseline['head'],'--binary').stdout
+            from .worktrees import git,changes
+            from .models import ARTIFACT_MAX
+            baseline=self.lease['baseline'];captured=changes(self.row['cwd'],baseline);patch=captured.pop('patch')
+            record['changes'].update(captured)
             record['changes']['commit']=git(self.row['cwd'],'rev-parse','HEAD').stdout.decode().strip()
             record['changes']['baseline']=baseline
-            if patch:record['changes']['patch_artifact']=Artifacts(self.journal).put(patch,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
+            if patch and len(patch)<=ARTIFACT_MAX:
+                record['changes']['patch_artifact']=Artifacts(self.journal).put(patch,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
+            elif patch:record['changes']['patch_unavailable_reason']='Diff exceeds the local artifact limit; inspect the retained worktree.'
         artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='application/json')
         with self.journal.transaction() as db:
             db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
@@ -246,7 +272,10 @@ class Worker:
                     self.turn=event.get('uuid') or new_id()
                     self.ingested()
                     self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
-                if event.get('type')=='assistant':assistant_rounds+=1
+                if event.get('type')=='assistant':
+                    assistant_rounds+=1
+                    if event.get('message',{}).get('model'):
+                        self.bind(event['session_id'],model=event['message']['model'])
                 if event.get('type')=='result':terminal=event
             await self.provider.wait();await drain
             require(terminal is not None,'WORKER_CRASHED','Claude exited without a terminal result')
@@ -254,6 +283,50 @@ class Worker:
             return dict(status='completed' if terminal.get('subtype')=='success' and not terminal.get('is_error') and self.provider.returncode==0 else 'failed',
                         text=terminal.get('result',''),native_turn_ids=[self.turn] if self.turn else [],
                         error=None if terminal.get('subtype')=='success' else {'code':classify(terminal),'subtype':terminal.get('subtype'),'errors':terminal.get('errors',[])},usage=terminal.get('usage'))
+        finally:
+            if not drain.done():drain.cancel()
+
+    async def antigravity_turn(self,text):
+        from .antigravity import arguments
+        env=launch_environment('antigravity')
+        env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
+        self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*arguments(self.spec,self.native),
+            cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
+        self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        self.provider.stdin.write(canonical({'event':'user','message':{'content':text}})+b'\n')
+        await self.provider.stdin.drain();self.provider.stdin.close()
+        errors=bytearray()
+        async def stderr():
+            while chunk:=await self.provider.stderr.read(4096):
+                errors.extend(chunk);del errors[:-65536]
+        drain=asyncio.create_task(stderr());terminal=None
+        try:
+            while line:=await self.provider.stdout.readline():
+                event=json.loads(line);body=event.get('result',event.get('step_update',{}))
+                native=event.get('conversation_id') or body.get('conversation_id')
+                if native:
+                    require(self.expected_native is None or native==self.expected_native,'OWNERSHIP_CONFLICT','Antigravity emitted a different owned native ID')
+                if event.get('event')=='init':
+                    self.bind(native)
+                    tools=event.get('init',{}).get('tools',[])
+                    self.turn=new_id();self.ingested()
+                    self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
+                    self.journal.event(self.row['worker_id'],'effective-tool-profile',{'advertised_catalog':tools,'profile':self.spec['permission_profile'],
+                        'enforcement':'Native PreToolUse hook denies every tool outside the fixed owned worker profile; the advertised catalog is not treated as an effective grant.'})
+                if event.get('event')=='result':terminal=event['result']
+            await self.provider.wait();await drain
+            require(terminal is not None,'WORKER_CRASHED','Antigravity exited without a terminal result',details=errors.decode(errors='replace')[-1000:])
+            observed=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='native-hook-observed' AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC LIMIT 1",(self.row['worker_id'],self.native))
+            require(observed,'PERMISSION_CAPABILITY_UNKNOWN','No verified native Antigravity worker hook observed this conversation')
+            if observed:
+                model=json.loads(observed['payload_json']).get('model')
+                if model:self.bind(self.native,model=model)
+            status=terminal.get('status')
+            self.journal.event(self.running_task,'provider-internal-rounds',{'num_turns':terminal.get('num_turns'),'counter_scope':'native conversation cumulative; worker inputs are counted separately'})
+            return {'status':'completed' if status=='SUCCESS' and self.provider.returncode==0 else 'canceled' if status in ('CANCELED','INTERRUPTED') else 'failed',
+                    'text':terminal.get('response',''),'native_turn_ids':[self.turn] if self.turn else [],'usage':terminal.get('usage'),
+                    'error':None if status=='SUCCESS' and self.provider.returncode==0 else {'code':classify(terminal),'native_status':status,'message':terminal.get('error')}}
         finally:
             if not drain.done():drain.cancel()
 
@@ -301,7 +374,7 @@ async def run(worker_id,lease_fd):
     async def lease():
         await asyncio.to_thread(os.read,lease_fd,1);os.close(lease_fd)
         worker.stopping=True;await worker.interrupt();await worker.queue.put(None)
-        await worker.close();main_task.cancel()
+        main_task.cancel()
     readers=[]
     try:
         readers=[asyncio.create_task(commands()),asyncio.create_task(lease())]
@@ -313,8 +386,8 @@ async def run(worker_id,lease_fd):
     except Exception as error:
         worker.emit('failed',error=error.json() if isinstance(error,PeerError) else {'code':'WORKER_CRASHED','message':str(error)[:1000]})
     finally:
-        await worker.close()
         for reader in readers:reader.cancel()
+        await worker.close()
         journal.close()
         # A blocked stdin thread must not keep a finite controller alive after lease EOF.
         os._exit(0)

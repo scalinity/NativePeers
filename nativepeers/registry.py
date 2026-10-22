@@ -25,7 +25,7 @@ class Registry:
         label=load(self.journal)["home_labels"].get(str(home.resolve()),home.name)
         descriptor = dict(schema_version=1, peer_key=key.json(), handle=key.handle,
                           incarnation_id=incarnation, title=title(native_title) if native_title else None,
-                          title_source="native-explicit" if native_title else "unknown", owner=owner,
+                          title_source=("nativepeers-worker-role" if provider=='antigravity' and owner_kind=='owned-worker-controller' else "native-explicit") if native_title else "unknown", owner=owner,
                           owner_kind=owner_kind, cwd=str(Path(cwd).resolve()), transport=transport,
                           lifecycle="unknown", policy=policy or {}, capabilities=capabilities or {},
                           home=str(home.resolve()), home_label=label, last_evidence_at=time.time())
@@ -48,7 +48,7 @@ class Registry:
     def list(self, provider=None, include_offline=False):
         rows = self.journal.all("SELECT * FROM peer_instances ORDER BY last_seen DESC")
         claude_metadata={}
-        if any(r['provider']=='claude' and r['status']=='live' and r['owner_kind']=='interactive-standalone' for r in rows):
+        if provider in (None,'claude') and any(r['provider']=='claude' and r['status']=='live' and r['owner_kind']=='interactive-standalone' for r in rows):
             from .adapters.metadata import claude_sessions
             homes={json.loads(r['descriptor_json'])['home'] for r in rows if r['provider']=='claude' and r['status']=='live' and r['owner_kind']=='interactive-standalone'}
             for home in homes:
@@ -66,6 +66,10 @@ class Registry:
                 if peer['peer_key']['provider']=='codex':
                     from .adapters.metadata import codex_name
                     native_title=codex_name(Path(peer['home']),peer['peer_key']['native_session_id'])
+                elif peer['peer_key']['provider']=='antigravity':
+                    from .antigravity import summaries
+                    names=summaries(native_id=peer['peer_key']['native_session_id'],home=Path(peer['home']))
+                    native_title=names[0]['title'] if names else None
                 else:native_title=claude_metadata.get((peer['home'],peer['peer_key']['native_session_id'],peer['owner']['pid']))
                 if native_title and native_title!=peer['title']:
                     peer['title']=title(native_title);peer['title_source']='native-explicit'
@@ -87,7 +91,7 @@ class Registry:
         if ":" in selector:
             qualifier, possible_alias = selector.split(":", 1)
             possible_provider=qualifier.split('@',1)[0]
-            if possible_provider in ('codex','claude'):
+            if possible_provider in ('codex','claude','antigravity'):
                 provider=possible_provider;alias=possible_alias
                 if '@' in qualifier:label=qualifier.split('@',1)[1]
         alias = title(alias)

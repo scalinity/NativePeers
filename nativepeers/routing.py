@@ -14,7 +14,9 @@ from .receipts import reduce_receipt
 class Router:
     def __init__(self, journal, registry, adapters=None):
         self.journal, self.registry = journal, registry
-        self.adapters = adapters or {"claude-inbox":claude_inbox, "codex-native-queue":codex_queue}
+        from .antigravity import queue_native_hook
+        self.adapters = adapters or {"claude-inbox":claude_inbox, "codex-native-queue":codex_queue,
+                                     "antigravity-native-hook":queue_native_hook}
 
     def outcome(self, message_id):
         message = self.journal.one("SELECT * FROM messages WHERE message_id=?", (message_id,))

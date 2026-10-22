@@ -1,0 +1,3 @@
+#!/bin/sh
+export PYTHONPATH=/Users/danny/Documents/Tools/NativePeers${PYTHONPATH:+:$PYTHONPATH}
+exec /Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m nativepeers.antigravity hook "$@"

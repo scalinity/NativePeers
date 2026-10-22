@@ -26,7 +26,8 @@
           "provider": {
             "enum": [
               "claude",
-              "codex"
+              "codex",
+              "antigravity"
             ]
           },
           "title": {
@@ -38,7 +39,10 @@
             "type": "string"
           },
           "model": {
-            "type": "string"
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "Native model ID or supported alias, for each provider. Omit to resolve the configured default once at spawn."
           },
           "reasoning_effort": {
             "type": "string"

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "client_request_id": "example-three-implementation-1",
+  "workers": [
+    {
+      "provider": "claude",
+      "title": "Claude Implementation",
+      "model": "sonnet",
+      "task": "Replace this text with one focused implementation task and its required checks. Make changes only in the assigned isolated worktree. Report actual changed files and checks; do not merge into the original checkout.",
+      "permission_profile": "workspace",
+      "workspace": {
+        "mode": "isolated-worktree"
+      }
+    },
+    {
+      "provider": "codex",
+      "title": "Codex Implementation",
+      "model": "gpt-6.1-sol",
+      "task": "Replace this text with one focused implementation task and its required checks. Make changes only in the assigned isolated worktree. Report actual changed files and checks; do not merge into the original checkout.",
+      "permission_profile": "workspace",
+      "workspace": {
+        "mode": "isolated-worktree"
+      },
+      "reasoning_effort": "xhigh"
+    },
+    {
+      "provider": "antigravity",
+      "title": "Antigravity Implementation",
+      "model": "gemini-4-argon-high",
+      "task": "Replace this text with one focused implementation task and its required checks. Make changes only in the assigned isolated worktree. Report actual changed files and checks; do not merge into the original checkout.",
+      "permission_profile": "workspace",
+      "workspace": {
+        "mode": "isolated-worktree"
+      }
+    }
+  ],
+  "completion_mode": "wait",
+  "limits": {
+    "max_concurrent_workers": 3,
+    "max_depth": 1,
+    "wall_time_seconds": 1800,
+    "max_task_turns_per_worker": 8
+  },
+  "allow_sibling_messages": false
+}

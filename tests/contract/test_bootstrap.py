@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from mcp import ClientSession
 from mcp.client.stdio import StdioServerParameters,stdio_client
@@ -16,6 +17,20 @@ ROOT=Path(__file__).resolve().parents[2]
 
 
 class BootstrapTests(unittest.IsolatedAsyncioTestCase):
+    async def test_native_caller_facade_uses_its_owned_bootstrap_before_native_id(self):
+        from nativepeers.mcp_server import Facade
+        with tempfile.TemporaryDirectory() as directory:
+            journal=Journal(Path(directory));binding=journal.root/'bindings/bootstrap'
+            atomic_json(binding,{'state':'RESERVED_UNBOUND','provider':'antigravity','worker_id':'reserved','grants':{'can_spawn':False}})
+            with patch.dict(os.environ,{'NPEER_BOOTSTRAP':str(binding)}):
+                facade=Facade(journal,None)
+                self.assertEqual(facade.binding,binding)
+                self.assertEqual(facade.binding_state()['state'],'RESERVED_UNBOUND')
+                self.assertIn('peer_reply',facade.names());self.assertNotIn('worker_spawn',facade.names())
+                atomic_json(binding,{'state':'BOUND','provider':'antigravity','worker_id':'reserved','grants':{'can_spawn':False}})
+                self.assertEqual(facade.binding_state()['state'],'BOUND')
+            journal.close()
+
     async def test_unbound_handshake_and_prompt_mutation_refusal(self):
         with tempfile.TemporaryDirectory() as directory:
             journal=Journal(Path(directory));binding=journal.root/'bindings/bootstrap'

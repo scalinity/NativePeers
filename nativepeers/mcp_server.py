@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from mcp.server import Server, NotificationOptions
@@ -21,12 +22,13 @@ def object_schema(properties, required=()):
 
 
 STRING={'type':'string'}
+SPAWN_SCHEMA=json.loads((Path(__file__).resolve().parent.parent/'schemas/spawn.v1.json').read_text())
 TOOLS={
  'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
  'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
  'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100}})),
- 'worker_spawn':('Launch independent native workers; these are not vendor-native subagents.',object_schema({'spec':{'type':'object'}},['spec'])),
+ 'worker_spawn':('Launch independent native workers, with a provider-native model ID or alias per worker. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA},['spec'])),
  'task_status':('Read local task/group or bootstrap state, without inference.',object_schema({'handle':STRING})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
  'task_result':('Read retained immutable attributed results.',object_schema({'handle':STRING},['handle'])),
@@ -40,15 +42,20 @@ from .protocol import valid
 
 class Facade:
     def __init__(self,journal,binding):
-        self.journal,self.binding=journal,binding
+        self.journal,self.binding=journal,binding or (Path(os.environ['NPEER_BOOTSTRAP']) if os.getenv('NPEER_BOOTSTRAP') else None)
         self.sessions=set();self.watch_task=None
 
     def binding_state(self):
+        if self.binding is None:
+            try:
+                caller=bind_caller(self.journal,Registry(self.journal),allow_external=False)
+                return {'state':'BOUND','provider':'antigravity','grants':dict(caller.grants,can_spawn=caller.grants.get('can_spawn',not caller.grants.get('worker_id')))}
+            except PeerError:return {'state':'RESERVED_UNBOUND','provider':'antigravity','grants':{'can_spawn':True}}
         return json.loads(self.binding.read_text())
 
     def names(self):
         state=self.binding_state()
-        if state.get('state')!='BOUND' and state.get('provider')!='claude':return ['task_status']
+        if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity'):return ['task_status']
         granted=state.get('grants',{})
         names=['peer_list','peer_send','peer_reply','peer_inbox','task_status','task_wait','task_result','artifact_read']
         if granted.get('can_spawn'):names += ['worker_spawn','task_cancel']
@@ -105,7 +112,7 @@ async def serve(binding):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--binding',type=Path,required=True);args=parser.parse_args();asyncio.run(serve(args.binding))
+    parser=argparse.ArgumentParser();mode=parser.add_mutually_exclusive_group(required=True);mode.add_argument('--binding',type=Path);mode.add_argument('--native-caller',action='store_true');args=parser.parse_args();asyncio.run(serve(args.binding))
 
 
 if __name__=='__main__':main()
