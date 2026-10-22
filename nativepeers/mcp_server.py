@@ -30,7 +30,8 @@ TOOLS={
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
  'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'unread':{'type':'boolean'},'paged':{'type':'boolean'},'cursor':STRING})),
  'peer_ack':('Record this recipient\'s model-reported processing acknowledgment; this is not native ingestion evidence.',object_schema({'message_id':STRING},['message_id'])),
- 'worker_spawn':('Launch independent native workers with exact selections and optional explicit Claude-to-Gemini fallbacks for proven clean provider failures. Fallback does not grant delegation authority. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA},['spec'])),
+ 'worker_spawn':('Check or launch independent native workers with exact selections and optional explicit Claude-to-Gemini fallbacks. check:true plans without reserving or launching workers; catalog helpers are reported. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA,'check':{'type':'boolean'}},['spec'])),
+ 'worker_resume':('Resume an exact released owned native worker. Reuse the same request ID and identical arguments after a lost response; input is never replayed.',object_schema({'worker_id':STRING,'task':STRING,'completion_mode':{'enum':['push','wait']},'client_request_id':STRING},['worker_id','task','client_request_id'])),
  'task_groups':('List this bound parent\'s retained delegations without claiming notifications.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'cursor':STRING})),
  'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
@@ -69,7 +70,7 @@ class Facade:
         if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity'):return ['task_status']
         granted=state.get('grants',{})
         names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read']
-        if granted.get('can_spawn'):names += ['worker_spawn','task_cancel']
+        if granted.get('can_spawn'):names += ['worker_spawn','worker_resume','task_cancel']
         return names
 
     async def watch(self):

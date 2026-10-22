@@ -55,7 +55,10 @@ class Core:
         if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_inbox':return self.router.inbox(caller,args.get('limit',20),args.get('unread',False),cursor=args.get('cursor'),paged=args.get('paged',False))
         if name=='peer_ack':return self.router.ack(caller,args['message_id'])
-        if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'])
+        if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'],check=args.get('check',False))
+        if name=='worker_resume':
+            from .recovery import resume_worker
+            return await resume_worker(self.journal,caller,args['worker_id'],args['task'],args.get('completion_mode'),args['client_request_id'])
         if name=='task_groups':return self.delegation.groups(caller,args.get('limit',20),args.get('cursor'))
         if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False),scan_cursor=args.get('scan_cursor'),scan_max_bytes=args.get('scan_max_bytes'))
         if name=='task_result':return self.delegation.result(caller,args['handle'],include_artifacts=args.get('include_artifacts',False))

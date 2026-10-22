@@ -289,3 +289,34 @@ class AckGroupsFacadeTests(unittest.IsolatedAsyncioTestCase):
                 with self.subTest(kind=caller.kind, name=name), self.assertRaises(PeerError) as raised:
                     await self.core.tool(caller, name, args)
                 self.assertEqual(raised.exception.code, code)
+
+    async def test_bound_preflight_and_exact_resume_share_cli_core_without_replay(self):
+        from nativepeers.compatibility import fingerprint
+        from nativepeers.files import canonical,sha256
+        home=self.root/'home';binary=home/'.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('never execute metadata fixture')
+        atomic_json(self.journal.root/'compat/runtime.json',{'providers':{'claude':fingerprint(binary)}})
+        self.lease['grants']={'can_spawn':True,'max_depth':1,'max_concurrent_workers':2};atomic_json(self.binding,self.lease)
+        request={'workers':[{'provider':'claude','model':'sonnet','title':'check only','task':'inspect fixture'}],'limits':{'max_concurrent_workers':1}}
+        before=self.snapshot()
+        async with self.session() as session:
+            names=[v.name for v in (await session.list_tools()).tools];self.assertIn('worker_resume',names)
+            planned=await self.mcp(session,'worker_spawn',{'spec':request,'check':True})
+            self.assertTrue(planned['read_only']);self.assertTrue(planned['ready']);self.assertEqual(self.snapshot(),before)
+            spec=self.root/'batch.json';spec.write_text(json.dumps(request))
+            cli=await self.cli('spawn','--check','--spec',str(spec))
+            for key in ('baseline','native_helpers','ready','read_only','capacity'):self.assertEqual(planned[key],cli[key])
+            group=self.group();worker=self.journal.one('SELECT worker_id FROM workers WHERE group_id=?',(group,))['worker_id']
+            task=self.journal.one('SELECT task_id FROM tasks WHERE worker_id=?',(worker,))['task_id']
+            response={'task_id':task,'worker_id':worker,'state':'QUEUED'}
+            self.journal.db.execute('INSERT INTO resume_requests VALUES(?,?,?,?,?)',(self.caller.key,'exact-resume',sha256({'worker_id':worker,'text':'retained input','completion_mode':'wait'}),task,canonical(response).decode()))
+            before=self.snapshot();args={'worker_id':worker,'task':'retained input','completion_mode':'wait','client_request_id':'exact-resume'}
+            first=await self.mcp(session,'worker_resume',args);self.assertEqual(first,dict(response,state='COMPLETED'))
+            self.assertEqual(await self.mcp(session,'worker_resume',args),first);self.assertEqual(self.snapshot(),before)
+            await self.mcp(session,'worker_resume',dict(args,task='changed'),error='IDEMPOTENCY_CONFLICT')
+            other=self.group(parent='different-parent');other_worker=self.journal.one('SELECT worker_id FROM workers WHERE group_id=?',(other,))['worker_id']
+            await self.mcp(session,'worker_resume',dict(args,worker_id=other_worker),error='APPROVAL_BLOCKED')
+            await self.mcp(session,'worker_resume',{'worker_id':worker,'task':'missing ID'},error='PROTOCOL_ERROR')
+        self.lease.update(state='RESERVED_UNBOUND',provider='claude');atomic_json(self.binding,self.lease)
+        async with self.session() as session:
+            await self.mcp(session,'worker_resume',args,error='CALLER_NOT_READY')
+            await self.mcp(session,'worker_spawn',{'spec':request,'check':True},error='CALLER_NOT_READY')
