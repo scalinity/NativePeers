@@ -49,3 +49,5 @@ Each worker accepts a `model` field. The MCP spawn tool advertises that field di
 NativePeers also implements changes: tailor [the three-provider implementation example](examples/implementation-workers.json) using `permission_profile:"workspace"` and `workspace.mode:"isolated-worktree"`. Claude, Codex and Gemini have each created and tested code in concurrent native workers, with results returned to the original Claude parent. Worktrees remain inside the source project, and results include reviewable patches for new files. [Current checks and remaining boundaries](docs/VERIFICATION.md).
 
 The [Astra review and fixes](docs/ASTRA_REVIEW.md) records the paired review, all 12 resolutions and current verification boundaries. The [installed Claude conventions](docs/CLAUDE_CONVENTIONS.md) explain when and how to delegate implementation, review and integration.
+
+A [copy-ready GPT-6 Pro review prompt](docs/GPT6_PRO_REVIEW_PROMPT.txt) pins the complete code/review snapshot for an independent capability and gap review.

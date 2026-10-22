@@ -2,7 +2,7 @@
 
 The requested two-agent `gpt-6-astra`/`xhigh` review and all 12 address items are complete and pushed individually. Current code: `434ea56106da05ccf76d230988a15891578d5334`. Full offline verification: **107 tests and 63 subtests PASS**; protected manager/naming regressions: **23 PASS**. Current native caller and both installed dry-runs pass without provider configuration changes. [Findings and fixes](docs/ASTRA_REVIEW.md), [Claude conventions](docs/CLAUDE_CONVENTIONS.md).
 
-No new native model acceptance inputs were submitted: the ledger stays **95/98, 0 reserved, 0 unsettled**. Earlier live evidence is historical for its recorded fingerprints; post-fix live acceptance is NOT_RUN. All review agents are closed. Final nonsecret documentation, publication and Downloads handoff are being prepared; continue from `evidence/private/astra-review-20261022/state.json`.
+No new native model acceptance inputs were submitted: the ledger stays **95/98, 0 reserved, 0 unsettled**. Earlier live evidence is historical for its recorded fingerprints; post-fix live acceptance is NOT_RUN. All review agents are closed. The nonsecret review and conventions are published. The GPT-6 Pro prompt and tracked-source ZIP are saved in Downloads and pin review commit `b5c51f93f97afb720e16626fa4ba6786ccbe1254`; the same prompt is published as `docs/GPT6_PRO_REVIEW_PROMPT.txt`. Exact paths and hashes are recorded in `evidence/private/astra-review-20261022/downloads.json`.
 
 ## Previous implementation checkpoint
 
