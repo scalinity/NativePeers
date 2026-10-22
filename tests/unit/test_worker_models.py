@@ -1,11 +1,13 @@
+import asyncio
 import json
 import os
 from pathlib import Path
 import shlex
 import tempfile
 import time
+from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from nativepeers.caller import Caller
 from nativepeers.delegation import Delegation
@@ -15,7 +17,7 @@ from nativepeers.journal import Journal
 from nativepeers.models import new_id
 from nativepeers.process import identity
 from nativepeers.profiles import claude_arguments
-from nativepeers.recovery import resume_command
+from nativepeers.recovery import resume_command, resume_worker
 from nativepeers.registry import Registry
 from nativepeers.worker_process import Worker
 
@@ -191,3 +193,88 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(PeerError) as error:
             worker.bind(worker.native, model='claude-sonnet-5-5')
         self.assertEqual(error.exception.code, 'MODEL_UNAVAILABLE')
+
+    async def test_claude_context_suffix_is_launch_selection_not_model_identity(self):
+        for requested in ('claude-opus-5-5[1m]', 'opus[1m]'):
+            for echoes in (('claude-opus-5-5[1m]', 'claude-opus-5-5'),
+                           ('claude-opus-5-5', 'claude-opus-5-5[1m]')):
+                with self.subTest(requested=requested, echoes=echoes):
+                    worker = await self.worker(requested)
+                    for echo in echoes:
+                        worker.bind(worker.native, model=echo)
+                        self.assertEqual(worker.model_observed, 'claude-opus-5-5')
+                        self.assertEqual(worker.spec['model'], 'claude-opus-5-5[1m]')
+                    row = self.journal.one('SELECT * FROM workers WHERE worker_id=?', (worker.row['worker_id'],))
+                    self.assertEqual(row['model_requested'], requested)
+                    self.assertEqual(row['model_observed'], 'claude-opus-5-5')
+                    self.assertEqual(json.loads(row['lease_json'])['spec']['model'], 'claude-opus-5-5[1m]')
+                    before = row.copy()
+                    with self.assertRaises(PeerError) as error:
+                        worker.bind(worker.native, model='claude-sonnet-5-5[1m]')
+                    self.assertEqual(error.exception.code, 'MODEL_UNAVAILABLE')
+                    self.assertEqual(self.journal.one('SELECT * FROM workers WHERE worker_id=?',
+                                                     (worker.row['worker_id'],)), before)
+
+    async def test_claude_serialized_turn_keeps_full_model_and_context_suffix(self):
+        for requested in ('claude-opus-5-5[1m]', 'opus[1m]'):
+            with self.subTest(requested=requested):
+                worker = await self.worker(requested)
+                worker.lease['executable'] = 'offline-claude-fixture'
+                worker.running_task = new_id()
+
+                def process(*args, **kwargs):
+                    stdout, stderr = asyncio.StreamReader(), asyncio.StreamReader()
+                    events = [
+                        {'type': 'system', 'subtype': 'init', 'session_id': worker.native,
+                         'model': 'claude-opus-5-5[1m]', 'tools': ['Read']},
+                        {'type': 'assistant', 'session_id': worker.native,
+                         'message': {'model': 'claude-opus-5-5'}},
+                        {'type': 'result', 'subtype': 'success', 'session_id': worker.native,
+                         'result': 'offline fixture', 'num_turns': 1},
+                    ]
+                    stdout.feed_data(b'\n'.join(canonical(event) for event in events) + b'\n')
+                    stdout.feed_eof(); stderr.feed_eof()
+                    return SimpleNamespace(pid=os.getpid(), stdin=Mock(drain=AsyncMock()), stdout=stdout,
+                                           stderr=stderr, wait=AsyncMock(), returncode=0)
+
+                with patch('nativepeers.worker_process.asyncio.create_subprocess_exec',
+                           new_callable=AsyncMock, side_effect=process) as launch, \
+                     patch('nativepeers.worker_process.launch_environment', return_value={}):
+                    for turn in (1, 2):
+                        worker.tasks_started = turn
+                        result = await worker.claude_turn('offline fixture')
+                        self.assertEqual(result['status'], 'completed')
+                first, second = [call.args for call in launch.await_args_list]
+                self.assertEqual(first[first.index('--model') + 1], requested)
+                self.assertEqual(second[second.index('--model') + 1], 'claude-opus-5-5[1m]')
+                self.assertEqual(second[second.index('--resume') + 1], worker.native)
+
+    async def test_claude_context_suffix_survives_manual_automatic_and_legacy_resume(self):
+        parent = self.registry.verify(self.caller.key, self.caller.incarnation)
+        self.enterContext(patch('nativepeers.registry.Registry.verify', return_value=parent))
+        for requested in ('claude-opus-5-5[1m]', 'opus[1m]'):
+            for legacy in (False, True):
+                with self.subTest(requested=requested, legacy=legacy):
+                    spawned = await self.spawn({'workers': [
+                        {'provider': 'claude', 'title': 'resume fixture', 'task': 'fixture', 'model': requested}]})
+                    row = self.journal.one('SELECT * FROM workers WHERE group_id=?', (spawned['group_id'],))
+                    worker = Worker(self.journal, row['worker_id']); worker.bootstrap()
+                    worker.bind(worker.native, model='claude-opus-5-5')
+                    if legacy:
+                        # Previous versions replaced the launch selection with the base echo.
+                        worker.spec['model'] = 'claude-opus-5-5'
+                        self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',
+                                                (canonical(worker.lease).decode(), row['worker_id']))
+                    self.journal.db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=?",
+                                            (row['worker_id'],))
+                    with patch('nativepeers.recovery.assert_released'), \
+                         patch('nativepeers.recovery.Delegation.ensure_supervisor', new_callable=AsyncMock):
+                        manual = resume_command(self.journal, self.caller, row['worker_id'])['native_argv']
+                        await resume_worker(self.journal, self.caller, row['worker_id'], 'fixture', 'wait')
+                    self.assertEqual(manual[manual.index('--model') + 1], 'claude-opus-5-5[1m]')
+                    resumed = Worker(self.journal, row['worker_id'])
+                    self.assertEqual(resumed.spec['model'], 'claude-opus-5-5[1m]')
+                    self.assertEqual(resumed.model_observed, 'claude-opus-5-5')
+                    with self.assertRaises(PeerError) as error:
+                        resumed.bind(worker.native, model='claude-sonnet-5-5')
+                    self.assertEqual(error.exception.code, 'MODEL_UNAVAILABLE')
