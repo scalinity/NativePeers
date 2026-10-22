@@ -113,10 +113,14 @@ class Installer:
 
     async def trust(self,remove=False,manifest=None):
         if not self.native:return {}
-        client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex')
+        client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',
+                         environment={'CODEX_HOME':str(self.config.parent)})
         try:
             await client.start();read=await client.call('config/read',{'includeLayers':True})
-            layer=next(l for l in read['layers'] if l['name'].get('type')=='user' and Path(l['name']['file']).resolve()==self.config.resolve() and not l['name'].get('profile'))
+            layer=next((l for l in read.get('layers',[]) if l['name'].get('type')=='user'
+                        and Path(l['name']['file']).resolve()==self.config.resolve() and not l['name'].get('profile')),None)
+            require(layer is not None,'CAPABILITY_MISMATCH','Native configuration did not report the selected user layer',
+                    details={'expected_user_config':str(self.config)})
             raw=tomllib.loads(self.config.read_text());state=raw.get('hooks',{}).get('state',{})
             updated=json.loads(json.dumps(state));owned={}
             if remove:
