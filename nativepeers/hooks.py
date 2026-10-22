@@ -8,28 +8,29 @@ import sys
 import time
 
 from .adapters.metadata import claude_name, codex_name
+from .caller import read_binding, verify_owned_binding
 from .errors import require
 from .files import atomic_json
 from .journal import Journal
 from .models import new_id
-from .process import ancestry, matches
+from .process import ancestry
 from .registry import Registry
 
 
 def observe(provider, event, journal):
     binary=(Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')).resolve()
-    owners=[p for p in ancestry()[1:] if p.executable==str(binary)]
+    ancestors=[p.json() for p in ancestry()[1:]]
+    owners=[p for p in ancestors if p['executable']==str(binary)]
     require(owners,"CALLER_UNBOUND","No exact native provider owner in hook ancestry")
-    owner=owners[0].json()
+    owner=owners[0]
     bootstrap=os.getenv('NPEER_BOOTSTRAP')
     if bootstrap:
         path=Path(bootstrap)
-        require(path.parent.resolve()==(journal.root/'bindings').resolve() and not path.is_symlink(),
-                'CALLER_UNBOUND','Invalid worker bootstrap path')
-        lease=json.loads(path.read_text())
-        require(matches(lease['owner']) and lease['expires_at']>time.time(), 'CALLER_UNBOUND','Worker controller lease expired')
+        lease=read_binding(journal,path,allow_reserved=True)
+        row=verify_owned_binding(journal,lease,ancestors,
+                                 provider=provider,native_id=event['session_id'])
         # Bounded observation only: no registration, waits, identity change, or turn-end unregistration.
-        worker_id=lease.get('worker_id') or lease['grants']['worker_id']
+        worker_id=row['worker_id']
         journal.event(worker_id,'native-hook-observed',dict(event=event['hook_event_name'],native_id=event['session_id'],process=owner))
         return {'controller_owned':True,'worker_id':worker_id}
     if provider=='codex':

@@ -263,6 +263,8 @@ class AntigravityTests(unittest.TestCase):
         atomic_json(binding,lease)
         group=new_id();self.j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RUNNING','{}'))
         self.j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,None,'antigravity',self.native,'worker','gemini-4-argon-high',None,None,str(self.home),None,'RUNNING',1,canonical({'spec':{'permission_profile':'analysis'}}).decode()))
+        atomic_json(self.j.root/'workers'/(worker+'.json'),dict(worker_id=worker,group_id=group,generation=1,
+            owner=self.owner.json(),native_process=self.owner.json(),native_id=self.native))
         event=dict(self.event,toolCall={'name':'write_to_file','args':{'TargetFile':str(self.home/'canary')}})
         with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
              patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \

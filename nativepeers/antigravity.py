@@ -12,7 +12,7 @@ import time
 from .errors import require
 from .files import canonical
 from .journal import Journal
-from .process import ancestry, matches
+from .process import ancestry
 from .registry import Registry
 
 
@@ -81,14 +81,11 @@ def observe(journal,event,kind):
     owner=owners[0]
     bootstrap=os.getenv('NPEER_BOOTSTRAP')
     if bootstrap:
-        from .caller import native_ancestor
+        from .caller import read_binding, verify_owned_binding
         path=Path(bootstrap)
-        require(path.parent.resolve()==(journal.root/'bindings').resolve() and not path.is_symlink(),
-                'CALLER_UNBOUND','Invalid Antigravity bootstrap path')
-        lease=json.loads(path.read_text())
-        require(matches(lease['owner']) and native_ancestor(lease['owner'],ancestors) and lease['expires_at']>time.time(),
-                'CALLER_UNBOUND','Owned controller is outside hook ancestry or expired')
-        worker_id=lease.get('worker_id') or lease['grants']['worker_id']
+        lease=read_binding(journal,path,allow_reserved=True)
+        row=verify_owned_binding(journal,lease,ancestors,provider='antigravity',native_id=native)
+        worker_id=row['worker_id']
         journal.event(worker_id,'native-hook-observed',{'native_id':native,'model':event.get('modelName'),'event':kind,'process':owner})
         if kind=='PreToolUse':
             from .antigravity_install import allowed_tools

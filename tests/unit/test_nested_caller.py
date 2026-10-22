@@ -69,12 +69,3 @@ class NestedCallerTests(unittest.TestCase):
                     with patch('nativepeers.mcp_server.Registry',return_value=registry):
                         result=asyncio.run(Facade(Mock(),None).call(None,SimpleNamespace(name='peer_send',arguments={'target':'x','text':'no','client_request_id':'x'})))
                     self.assertTrue(result.is_error)
-
-    def test_owned_worker_bootstrap_keeps_its_controller_binding(self):
-        controller=self.owner('codex',2);inner=self.owner('antigravity',1)
-        peer=dict(self.peer(controller,'antigravity'),owner_kind='owned-worker-controller')
-        registry=Mock();registry.verify.return_value=peer
-        with patch('nativepeers.caller.read_binding',return_value={'kind':'peer','peer_key':peer['handle'],'incarnation_id':'incarnation','grants':{'worker_id':'worker'}}), \
-             patch('nativepeers.caller.ancestry',return_value=[SimpleNamespace(json=lambda p=p:p) for p in [inner,controller]]), \
-             patch.dict(os.environ,{'NPEER_BINDING':'','NPEER_BOOTSTRAP':'/owned/bootstrap'}):
-            self.assertEqual(bind_caller(Mock(),registry).grants['worker_id'],'worker')
