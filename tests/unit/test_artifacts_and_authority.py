@@ -185,6 +185,23 @@ class ArtifactAddTests(unittest.TestCase):
         custom=self.root/'custom-provider-home';custom.mkdir();private=custom/'context.txt';private.write_text('Private state')
         with patch.dict(os.environ,{'CODEX_HOME':str(custom)}):self.assert_rejected(private,'APPROVAL_BLOCKED')
 
+    def test_other_registered_provider_homes_are_private_without_environment_overrides(self):
+        alternate=self.root/'NativeHomes'/'claude-work';native=new_id()
+        transcript=alternate/'projects'/'fixture-project'/(native+'.jsonl')
+        transcript.parent.mkdir(parents=True);transcript.write_text('Private native input fixture')
+        with patch.dict(os.environ,{},clear=True):
+            peer=self.registry.register('claude',alternate,native,'other native home',identity(os.getpid()).json(),
+                                        self.cwd,{'kind':'fake'},owner_kind='test')
+            # Independent fixture conversations share one test process, so restore the caller's live row.
+            self.j.db.execute("UPDATE peer_instances SET status='live' WHERE peer_key=?",(self.caller.key,))
+            for status in ('live','offline','replaced'):
+                with self.subTest(status=status):
+                    self.j.db.execute('UPDATE peer_instances SET status=? WHERE peer_key=?',(status,peer['handle']))
+                    with patch('nativepeers.artifacts._selected_file_bytes',side_effect=AssertionError('Private state was opened')):
+                        self.assert_rejected(transcript,'APPROVAL_BLOCKED')
+            normal=self.artifacts.add_file(self.path,self.caller)
+        self.assertEqual(base64.b64decode(self.artifacts.read(normal['artifact_id'],self.caller.key)['data_base64']),self.path.read_bytes())
+
     def test_import_design_brief_with_placeholder_succeeds(self):
         raw=b'# Design brief\nFixture examples: password=placeholder\nAPI_KEY=example\n{"access_token":"placeholder"}\n'
         for name in ('design-brief.md','transcript-design-brief.md','rollout-plan.md'):
