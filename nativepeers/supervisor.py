@@ -14,7 +14,7 @@ from .artifacts import Artifacts
 from .caller import Caller
 from .control import runtime_root
 from .delegation import Delegation,TERMINAL,supervisor_environment
-from .errors import PeerError,require
+from .errors import ControllerNotStarted,PeerError,require
 from .files import advisory_lock,async_advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
@@ -66,8 +66,13 @@ class Group:
                 '--worker-id',row['worker_id'],'--lease-fd',str(read_fd),cwd=ROOT,env=supervisor_environment(self.journal),
                 stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=log,
                 pass_fds=(read_fd,),close_fds=True,start_new_session=True,limit=PEER_FRAME+1)
-        except BaseException:
-            os.close(write_fd);raise
+        except BaseException as error:
+            os.close(write_fd)
+            if isinstance(error,OSError):
+                failure=ControllerNotStarted(row,error)
+                self.journal.event(row['worker_id'],'controller-not-created',failure.details)
+                raise failure from error
+            raise
         finally:os.close(read_fd);log.close()
         child={'process':process,'owner':identity(process.pid).json(),'lease_fd':write_fd,'ready':asyncio.get_running_loop().create_future(),'row':row}
         self.children[row['worker_id']]=child;child['reader']=asyncio.create_task(self.read_worker(row['worker_id']))
@@ -293,7 +298,16 @@ class Group:
                 row=self.journal.one("SELECT * FROM workers WHERE worker_id=? AND group_id=? AND state='RESERVED'",(payload['worker_id'],self.id))
                 require(row,'OWNERSHIP_CONFLICT','Worker is not reserved for this resume')
                 self.finished_at=None
-                await self.start_worker(row)
+                try:await self.start_worker(row)
+                except ControllerNotStarted:
+                    with self.journal.transaction() as db:
+                        changed=db.execute("UPDATE tasks SET state='FAILED',terminal_reason='CONTROLLER_NOT_CREATED' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED' AND native_turn_id IS NULL",(payload['task_id'],row['worker_id'],row['generation'])).rowcount
+                        if changed:
+                            db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=? AND state='RESERVED'",(row['worker_id'],row['generation']))
+                            for phase,tasks in self.policy['phases'].items():
+                                if tasks==[payload['task_id']]:db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state='UNCLAIMED'",(self.id,int(phase)))
+                    self.changed.set()
+                    raise
                 await self.send_worker(row['worker_id'],{'operation':'task','task_id':payload['task_id'],'text':payload['text']})
                 self.finished_at=None;value={'worker_id':row['worker_id'],'task_id':payload['task_id'],'state':'QUEUED'}
             elif op=='release-idle':

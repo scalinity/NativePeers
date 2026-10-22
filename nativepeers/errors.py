@@ -20,3 +20,11 @@ class SupervisorNotStarted(PeerError):
     def __init__(self, group_id, error):
         super().__init__('SUPERVISOR_LOST','Supervisor process creation failed before startup',
                          details={'group_id':group_id,'supervisor_started':False,'cause':type(error).__name__})
+
+
+class ControllerNotStarted(PeerError):
+    """Controller creation positively failed, before any native writer existed."""
+    def __init__(self, row, error):
+        super().__init__('WORKER_LAUNCH_FAILED','Worker controller could not be created',details={
+            'worker_id':row['worker_id'],'generation':row['generation'],'native_id':row['native_id'],
+            'controller_created':False,'cause':type(error).__name__})

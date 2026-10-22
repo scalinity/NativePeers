@@ -138,3 +138,32 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
         sent=await self.send();self.assertEqual(sent['state'],'TARGET_OFFLINE')
         self.assertFalse(json.loads(sent['attempt']['error_json'])['may_have_received'])
         self.assertFalse(self.sent)
+
+    async def test_live_supervisor_positive_controller_failure_releases_exact_generation(self):
+        from nativepeers.errors import PeerError
+        previous=subprocess.Popen(['/bin/sleep','30'])
+        previous_owner=identity(previous.pid).json();previous.terminate();previous.wait(timeout=2)
+        row=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.released,))
+        atomic_json(self.j.root/'workers'/(self.released+'.json'),{'worker_id':self.released,'native_id':row['native_id'],'generation':1,'owner':previous_owner,'native_process':None})
+        async def start(row):return await Group.start_worker(self.group,row)
+        with patch.object(self.group,'start_worker',side_effect=start),patch('nativepeers.supervisor.asyncio.create_subprocess_exec',side_effect=FileNotFoundError('positive precreation failure')) as launch:
+            with self.assertRaises(PeerError) as error:await self.resume()
+            self.assertEqual(error.exception.code,'WORKER_LAUNCH_FAILED');self.assertFalse(error.exception.may_have_received)
+            task=self.j.one('SELECT * FROM tasks WHERE worker_id=? AND generation=2',(self.released,))
+            retry=await self.resume();self.assertEqual((retry['task_id'],retry['state']),(task['task_id'],'FAILED'))
+            launch.assert_awaited_once()
+        self.assertEqual(self.j.one('SELECT state FROM workers WHERE worker_id=?',(self.released,))['state'],'RELEASED_RESUMABLE')
+        self.assertEqual(self.j.one('SELECT state FROM workers WHERE worker_id=?',(self.live,))['state'],'RUNNING')
+        marker=json.loads(self.j.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='controller-not-created'",(self.released,))['payload_json'])
+        self.assertEqual(marker['generation'],2);self.assertIs(marker['controller_created'],False)
+        fresh=await resume_worker(self.other,self.caller,self.released,'fresh input','wait','fresh-resume')
+        self.assertNotEqual(fresh['task_id'],task['task_id']);self.assertEqual(len(self.sent),1)
+        self.assertEqual((await self.resume())['state'],'FAILED')
+
+    async def test_live_supervisor_unknown_startup_keeps_reservation_and_retry(self):
+        from nativepeers.errors import PeerError
+        with patch.object(self.group,'start_worker',side_effect=PeerError('SUPERVISOR_LOST','after creation unknown',may_have_received=True)) as launch:
+            with self.assertRaises(PeerError):await self.resume()
+            retry=await self.resume();self.assertEqual(retry['state'],'QUEUED');launch.assert_awaited_once()
+        self.assertEqual(self.j.one('SELECT state FROM workers WHERE worker_id=?',(self.released,))['state'],'RESERVED')
+        self.assertFalse(self.sent)
