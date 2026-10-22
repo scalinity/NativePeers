@@ -74,7 +74,8 @@ def _git(cwd,args,deadline,*,raw=None):
     require(time.monotonic()<deadline,'PREVIEW_UNAVAILABLE','Inspection time limit reached')
     environment={k:v for k,v in os.environ.items() if not k.startswith('GIT_')}
     environment.update(GIT_OPTIONAL_LOCKS='0',GIT_TERMINAL_PROMPT='0')
-    command=['git','-C',str(cwd),'-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null',*args]
+    command=['git','-C',str(cwd),'-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null',
+             '-c','diff.autoRefreshIndex=false',*args]
     process=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=environment)
     output={process.stdout:bytearray(),process.stderr:bytearray()};sent=0;raw=raw or b''
     try:

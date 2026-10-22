@@ -15,7 +15,8 @@
       "verification": "19 resume/phase tests and 13 subtests PASS. A positive live-supervisor controller creation failure settles the exact generation, frees its slot, retains terminal exact-ID retries and permits a fresh operation; unknown startup remains reserved without replay."
     },
     "N4": {
-      "status": "PENDING"
+      "status": "FIXED",
+      "verification": "34 planning/workspace/delta tests and 10 subtests PASS: public cold-index check preserves index and staged bytes, configured filters never run, built-in EOL normalization remains supported. Delta preview also disables automatic index refresh."
     },
     "PIPE": {
       "status": "PENDING"
@@ -56,7 +57,7 @@
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
     "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
-    "nativepeers/adapters/codex_app_server.py": "ef11680aa44c38dc2e66b4ea3dff4a87b7328a921f38abfc7bdbb2d1e2f4cc61",
+    "nativepeers/adapters/codex_app_server.py": "9f14e06a128a2ea392ac136c1caedc42d3303182f310bee2da0b991572b3c698",
     "nativepeers/adapters/metadata.py": "f2c3c9409ef5f033d742e7cafd669a8f56489f283cad06a01cd8fdef99f93260",
     "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
     "nativepeers/antigravity.py": "00b84c23ab6242d5ff6e584dbc9424c58ca14464157b8921e29b09b8013f8f3e",
@@ -64,7 +65,7 @@
     "nativepeers/artifacts.py": "4161379e5d874c668c2e62eb0147565cfec0a67ed253e47dbc9cce8e95e53a40",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
     "nativepeers/caller.py": "e856fd6fcf4041aa5af4bece74948cf98cbb87c4ddf431220dbe561522d199ae",
-    "nativepeers/change_preview.py": "60755291113be3da04eef1b089e50b36adcae35bd8427005ec547a05eb188a4b",
+    "nativepeers/change_preview.py": "3ded04e7a5d14fc1baea4cca5de844d429772f559448c6a60a28848412257422",
     "nativepeers/claude_stream.py": "ff459549ca6322027623cfe0840492b0be2df1fb423062d4359661b70b79d5c1",
     "nativepeers/cleanup.py": "683faa73f76b48dac6909d4c1c24ee209c17cd8940da896dfd887e9a8403e342",
     "nativepeers/cli.py": "b3abbb621e021f4715e59c8f8aab363af14ce49ec60cc35ac20aba56d5a3163f",
@@ -99,7 +100,7 @@
     "nativepeers/supervisor.py": "e3118fc5aada89ef09f9eb62027fb3e27248c4f2aeb6cdba076932d685427d50",
     "nativepeers/worker_process.py": "b3a15dd6d576f3b3c8e85ffbbe3c1a99a2cb5450944dbc4e466854d05289579b",
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
-    "nativepeers/worktrees.py": "081cc2bbf259eede2c08fc9710a60a12c97b1c5c6e2ebc69cc5894b8900d5fb8"
+    "nativepeers/worktrees.py": "1953fcc7479f6b1838c7b45af246432734e6f9f7dfc9ca081e0f097f1fc836ac"
   },
-  "source_map_sha256": "d423d9d8c7d17bea356b4d61ab380faab22e9e456ea6dfe01af0358f6dea27ee"
+  "source_map_sha256": "2ad1a70323a0b12360785e3b5d1deddd22212f0082517c79d4e509a68692622e"
 }

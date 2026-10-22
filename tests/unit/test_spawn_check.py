@@ -109,3 +109,36 @@ class SpawnCheckTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(PeerError) as error:await self.delegation.spawn(self.caller,request,check=True)
             self.assertEqual(error.exception.code,'MODEL_UNAVAILABLE')
         self.assertEqual(self.rows(),before);self.start.assert_not_awaited()
+
+    async def test_public_cold_index_check_does_not_refresh_index_or_staged_inputs(self):
+        git(self.source,'init','-q');git(self.source,'add','main.py');git(self.source,'commit','-qm','Create cold index fixture')
+        (self.source/'staged.txt').write_text('staged input');git(self.source,'add','staged.txt')
+        path=self.source/'main.py';info=path.stat();os.utime(path,ns=(info.st_atime_ns,info.st_mtime_ns+2000000000))
+        index=self.source/'.git/index';before=index.read_bytes();rows=self.rows()
+        request=self.request();request['workers'][0].update(permission_profile='workspace',workspace={'mode':'isolated-worktree'})
+        spec=self.root/'cold.json';spec.write_text(json.dumps(request))
+        with patch('nativepeers.cli.bind_caller',return_value=self.caller):
+            value=await dispatch(parser().parse_args(['spawn','--check','--spec',str(spec)]),self.j)
+        self.assertTrue(value['ready']);self.assertEqual(index.read_bytes(),before)
+        self.assertEqual(path.read_text(),'VALUE=1\n');self.assertEqual(self.rows(),rows)
+        self.assertFalse((self.source/'.worktrees').exists());self.start.assert_not_awaited()
+
+    async def test_public_check_refuses_custom_normalization_without_running_filter(self):
+        (self.source/'.gitattributes').write_text('main.py filter=fixture\n')
+        git(self.source,'init','-q');git(self.source,'add','.');git(self.source,'commit','-qm','Create filter fixture')
+        marker=self.root/'filter-ran';git(self.source,'config','filter.fixture.clean','touch '+str(marker)+'; cat')
+        (self.source/'main.py').write_text('VALUE=2\n');before=(self.source/'.git/index').read_bytes();rows=self.rows()
+        request=self.request();spec=self.root/'filter.json';spec.write_text(json.dumps(request))
+        with patch('nativepeers.cli.bind_caller',return_value=self.caller),self.assertRaises(PeerError) as error:
+            await dispatch(parser().parse_args(['spawn','--check','--spec',str(spec)]),self.j)
+        self.assertIn('Custom Git filter',error.exception.message)
+        self.assertFalse(marker.exists());self.assertEqual((self.source/'.git/index').read_bytes(),before)
+        self.assertEqual(self.rows(),rows);self.start.assert_not_awaited()
+
+    async def test_builtin_line_ending_normalization_still_plans(self):
+        (self.source/'.gitattributes').write_text('main.py text eol=crlf\n')
+        git(self.source,'init','-q');git(self.source,'add','.');git(self.source,'commit','-qm','Create normalization fixture')
+        (self.source/'main.py').write_bytes(b'VALUE=1\r\n')
+        request=self.request();request['workers'][0].update(permission_profile='workspace',workspace={'mode':'isolated-worktree'})
+        plan=await self.delegation.spawn(self.caller,request,check=True)
+        self.assertTrue(plan['ready']);self.assertFalse((self.source/'.worktrees').exists())

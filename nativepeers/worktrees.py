@@ -137,6 +137,17 @@ def git(cwd,*args,input=None,stdin=None,env=None,check=True,timeout=None):
     return result
 
 
+def read_git(cwd,*args,**kwargs):
+    """Inspect without index refreshes, hooks, monitors or external filters."""
+    options=['--no-optional-locks','-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null',
+             '-c','diff.autoRefreshIndex=false']
+    filters=git(cwd,*options,'config','--null','--name-only','--get-regexp',r'^filter\..*\.(clean|smudge|process|required)$',check=False)
+    require(filters.returncode in (0,1),'WORKSPACE_SNAPSHOT_REQUIRED','Git filter configuration could not be read')
+    for key in filters.stdout.decode().split('\0'):
+        if key:options.extend(['-c',key+'='+('false' if key.endswith('.required') else '')])
+    return git(cwd,*options,*args,**kwargs)
+
+
 @contextlib.contextmanager
 def _temporary_index(cwd,deadline,*,options=()):
     directory=git(cwd,'rev-parse','--absolute-git-dir',timeout=max(.001,deadline-time.monotonic())).stdout.decode().strip()
@@ -232,13 +243,18 @@ def _input_metadata(captured):
 
 
 def snapshot(cwd,*,untracked_allowlist=()):
-    root=git(cwd,'rev-parse','--show-toplevel',check=False)
+    root=read_git(cwd,'rev-parse','--show-toplevel',check=False)
     if root.returncode:return {'git':False,'cwd':str(Path(cwd).resolve())}
     root=Path(root.stdout.decode().strip())
-    result={'git':True,'root':str(root),'head':git(root,'rev-parse','HEAD').stdout.decode().strip(),
-            'branch':git(root,'branch','--show-current').stdout.decode().strip(),
-            'status_hex':git(root,'status','--porcelain=v1','-z','--untracked-files=all').stdout.hex(),
-            'patch_sha256':hashlib.sha256(git(root,'diff','HEAD','--binary').stdout).hexdigest()}
+    tracked=read_git(root,'ls-files','-z').stdout
+    if tracked:
+        attributes=read_git(root,'check-attr','-z','--stdin','filter',input=tracked).stdout.split(b'\0')
+        require(all(value in (b'unspecified',b'unset') for value in attributes[2::3]),
+                'WORKSPACE_SNAPSHOT_REQUIRED','Custom Git filter normalization is unavailable in a read-only snapshot')
+    result={'git':True,'root':str(root),'head':read_git(root,'rev-parse','HEAD').stdout.decode().strip(),
+            'branch':read_git(root,'branch','--show-current').stdout.decode().strip(),
+            'status_hex':read_git(root,'status','--porcelain=v1','-z','--untracked-files=all').stdout.hex(),
+            'patch_sha256':hashlib.sha256(read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout).hexdigest()}
     if untracked_allowlist:result['untracked_inputs']=_input_metadata(_capture_untracked(root,untracked_allowlist))
     return result
 
@@ -274,11 +290,11 @@ def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
         require(isinstance(paths,list) and all(isinstance(p,str) for p in paths),
                 'WORKSPACE_SNAPSHOT_REQUIRED','Untracked-file selection must be an explicit list of paths')
         selected.extend(paths)
-    names=git(root,'diff','--name-only','HEAD','-z').stdout.split(b'\0')
+    names=read_git(root,'diff','--no-ext-diff','--no-textconv','--name-only','HEAD','-z').stdout.split(b'\0')
     require(not any(sensitive(n.decode()) for n in names if n),
             'WORKSPACE_SNAPSHOT_REQUIRED','Dirty secret files are not copied into worker worktrees')
     captured=_capture_untracked(root,selected)
-    patch=git(root,'diff','HEAD','--binary').stdout
+    patch=read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout
     expected=baseline
     if captured:baseline=dict(baseline,untracked_inputs=_input_metadata(captured))
     if expected_baseline is not None and 'untracked_inputs' in expected_baseline:expected=baseline
