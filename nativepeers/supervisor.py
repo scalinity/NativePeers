@@ -169,7 +169,12 @@ class Group:
         rows=self.journal.all("SELECT * FROM workers WHERE group_id=? AND state='RESERVED'",(self.id,))
         results=await asyncio.gather(*[self.start_worker(row) for row in rows],return_exceptions=True)
         if any(isinstance(r,BaseException) for r in results):
-            for row in rows:self.fail_worker(row['worker_id'],{'code':'CAPABILITY_MISMATCH','message':'Batch readiness failed before task admission'})
+            for row in rows:self.fail_worker(row['worker_id'],{'code':'CAPABILITY_MISMATCH','message':'Batch readiness failed before task admission'},row['generation'])
+            # No task has crossed the readiness barrier. End every started lifetime
+            # now; ordinary follow-up grace is only for admitted work.
+            started=[(row['worker_id'],self.children[row['worker_id']]) for row in rows if row['worker_id'] in self.children]
+            cleanup=await asyncio.gather(*[self.release_worker(worker,expected=child) for worker,child in started],return_exceptions=True)
+            require(not any(isinstance(r,BaseException) for r in cleanup),'OWNERSHIP_UNKNOWN','Batch startup failed and an owned writer could not be proved stopped; capacity remains reserved')
             return
         self.journal.db.execute("UPDATE groups SET state='RUNNING' WHERE group_id=?",(self.id,))
         # Readiness barrier is complete for both controllers before either native task is submitted.

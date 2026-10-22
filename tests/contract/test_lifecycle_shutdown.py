@@ -196,3 +196,34 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
                 unblock.set()
                 if cleanup and not cleanup.done():cleanup.cancel()
                 if cleanup:await asyncio.gather(cleanup,return_exceptions=True)
+
+    async def test_mixed_preflight_failure_releases_every_started_writer_before_return(self):
+        import sys
+        second=new_id();lease=json.loads(self.j.one('SELECT lease_json FROM workers')['lease_json'])
+        bad=self.root/'unverified-provider';bad.write_text('fixture');bad.chmod(0o700)
+        bad_lease=dict(lease,executable=str(bad),binding=str(self.root/'bindings'/new_id()),grants={'worker_id':second,'group_id':self.id})
+        self.j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(second,self.id,None,'codex',None,'bad preflight','gpt-6.1-sol',None,'xhigh',str(self.root),None,'RESERVED',1,canonical(bad_lease).decode()))
+        for task,worker in [(self.first,self.worker),(self.successor,second)]:
+            self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,'QUEUED',None,None,1,canonical({'text':'must never reach the provider'}).decode()))
+        self.policy.update(initial_tasks=[self.first,self.successor],workers=[self.worker,second],followup_grace_seconds=600)
+        self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(self.policy).decode(),))
+        unrelated=await asyncio.create_subprocess_exec(sys.executable,'-c','import time; time.sleep(30)')
+        try:
+            self.group=Group(self.j,self.id)
+            await asyncio.wait_for(self.group.initialize(),8)
+            self.assertEqual([t['state'] for t in self.group.tasks()],['FAILED']*2)
+            self.assertFalse(self.binary.with_suffix('.inputs').exists())
+            for worker,child in self.group.children.items():
+                self.assertFalse(matches(child['owner']))
+                manifest=json.loads((self.root/'workers'/(worker+'.json')).read_text())
+                self.assertFalse(manifest['native_process'] and matches(manifest['native_process']))
+            self.assertEqual(self.j.one("SELECT COUNT(*) n FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')")['n'],0)
+            # The same finite supervisor can immediately admit a corrected generation.
+            row=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.worker,));lease=json.loads(row['lease_json']);lease['released_native']=True
+            self.j.db.execute("UPDATE workers SET generation=2,state='RESERVED',lease_json=? WHERE worker_id=?",(canonical(lease).decode(),self.worker))
+            row=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.worker,))
+            await asyncio.wait_for(self.group.start_worker(row),5)
+            self.assertTrue(matches(self.group.children[self.worker]['owner']))
+            self.assertIsNone(unrelated.returncode)
+        finally:
+            unrelated.terminate();await asyncio.wait_for(unrelated.wait(),3)
