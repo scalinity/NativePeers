@@ -116,3 +116,52 @@ class Artifacts:
                     byte_size=row["byte_size"], offset=offset, bytes_read=len(raw),
                     data_base64=base64.b64encode(raw).decode(),
                     next_offset=offset+len(raw) if offset+len(raw)<row["byte_size"] else None)
+
+    def export(self,handle,path,caller):
+        """Write one granted immutable artifact to a new local file, atomically."""
+        from .registry import Registry
+        require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Artifact export requires a verified native caller')
+        peer=Registry(self.journal).verify(caller.key,caller.incarnation)
+        path=Path(path).expanduser().absolute()
+        require('..' not in path.parts and path.name not in ('','.','..'),'PROTOCOL_ERROR','Invalid artifact output path')
+        path=path.parent.resolve(strict=True)/path.name
+        if caller.grants.get('worker_id') or peer['owner_kind']=='owned-worker-controller':
+            require('workspace' in caller.grants.get('profiles',[]) and path.is_relative_to(Path(peer['cwd'])),
+                    'APPROVAL_BLOCKED','Worker export requires its writing profile and owned cwd')
+        def page(offset):
+            try:return self.read(handle,caller.key,offset,RESULT_PAGE)
+            except PeerError as error:
+                if error.code!='APPROVAL_BLOCKED' or not caller.grants.get('worker_id'):raise
+                return self.read(handle,caller.grants['worker_id'],offset,RESULT_PAGE)
+        first=page(0)  # Check the reader grant before opening an output directory.
+        directory=None;temporary='.npeer-export-'+new_id()
+        try:
+            directory=os.open(path.anchor,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+            for part in path.parts[1:-1]:
+                following=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=directory)
+                os.close(directory);directory=following
+            fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600,dir_fd=directory)
+            digest=hashlib.sha256();offset=0;current=first
+            with os.fdopen(fd,'wb') as stream:
+                while True:
+                    require(current['offset']==offset and current['sha256']==first['sha256'] and current['byte_size']==first['byte_size'],
+                            'PROTOCOL_ERROR','Artifact changed during export')
+                    raw=base64.b64decode(current['data_base64'],validate=True)
+                    require(len(raw)<=RESULT_PAGE and offset+len(raw)<=ARTIFACT_MAX,'PAYLOAD_TOO_LARGE','Artifact export exceeds its bounds')
+                    stream.write(raw);digest.update(raw);offset+=len(raw)
+                    if current['next_offset'] is None:break
+                    require(raw and current['next_offset']==offset,'PROTOCOL_ERROR','Artifact page did not advance')
+                    current=page(offset)
+                require(offset==first['byte_size'] and digest.hexdigest()==first['sha256'],'PROTOCOL_ERROR','Exported artifact digest differs')
+                stream.flush();os.fsync(stream.fileno())
+            # A hard link publishes the complete file without replacing an existing target.
+            os.link(temporary,path.name,src_dir_fd=directory,dst_dir_fd=directory,follow_symlinks=False)
+            metadata=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='worker-delta-artifact' ORDER BY sequence DESC LIMIT 1",(handle,))
+            result=dict(artifact_id=handle,path=str(path),sha256=first['sha256'],byte_size=offset)
+            if metadata:result['worker_delta_base']=json.loads(metadata['payload_json'])['input_tree']
+            return result
+        finally:
+            if directory is not None:
+                try:os.unlink(temporary,dir_fd=directory)
+                except FileNotFoundError:pass
+                os.close(directory)

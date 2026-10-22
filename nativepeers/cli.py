@@ -44,6 +44,7 @@ def parser():
         if name=='wait':q.add_argument('--timeout-ms',type=int,default=30000);q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
+    q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144)
     q=command('resume-command');q.add_argument('worker_id')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait'])
@@ -85,6 +86,9 @@ async def dispatch(args,journal):
     if name=='artifact-add':
         from .artifacts import Artifacts
         return Artifacts(journal).add_file(args.file,caller,max_bytes=args.max_bytes)
+    if name=='artifact-export':
+        from .artifacts import Artifacts
+        return Artifacts(journal).export(args.handle,args.output,caller)
     if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))
     if name in ('resume-worker','resume-command'):
         from .recovery import resume_command,resume_worker

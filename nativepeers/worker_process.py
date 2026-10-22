@@ -184,6 +184,7 @@ class Worker:
             elif patch:record['changes']['patch_unavailable_reason']='Diff exceeds the local artifact limit; inspect the retained worktree.'
             if delta:
                 record['changes']['worker_delta_artifact']=Artifacts(self.journal).put(delta,row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='text/x-diff')
+                self.journal.event(record['changes']['worker_delta_artifact'],'worker-delta-artifact',{'input_tree':captured['worker_delta_base']})
         artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='application/json')
         with self.journal.transaction() as db:
             db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
