@@ -28,7 +28,7 @@ TOOLS={
  'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
  'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
- 'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100}})),
+ 'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'unread':{'type':'boolean'},'paged':{'type':'boolean'},'cursor':STRING})),
  'worker_spawn':('Launch independent native workers, with a provider-native model ID or alias per worker. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA},['spec'])),
  'task_status':('Read task/group or exact-message status; refresh observes native receipts without replay.',object_schema({'handle':STRING,'refresh':{'type':'boolean'}})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),

@@ -164,12 +164,23 @@ class Router:
             db.execute("UPDATE attempts SET state=?,external_submission_id=COALESCE(?,external_submission_id),ended_at=? WHERE attempt_id=?",(state,receipt.get("external_submission_id"),time.time(),attempt_id))
             db.execute("INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)",(new_id(),message_id,attempt_id,receipt["stage"],receipt["evidence_kind"],peer["peer_key"]["native_session_id"],receipt.get("native_turn_id"),canonical(receipt).decode(),time.time()))
 
-    def inbox(self,caller,limit=20,unread=False):
+    def inbox(self,caller,limit=20,unread=False,*,cursor=None,paged=False):
         require(caller.kind=="peer","CALLER_UNBOUND","Inbox requires a bound native session")
-        require(0<limit<=100,"PROTOCOL_ERROR","Inbox limit must be 1 to 100")
+        require(type(limit) is int and 0<limit<=100 and type(unread) is bool,"PROTOCOL_ERROR","Invalid inbox limit or unread selection")
         predicate = " AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=messages.message_id AND r.stage='MODEL_REPORTED_PROCESSED')" if unread else ''
-        rows=self.journal.all("SELECT payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC LIMIT ?",(caller.key,limit))
-        messages=[json.loads(r["payload_json"]) for r in rows]
+        from .pagination import encode,decode
+        scope=['inbox',caller.key,unread]
+        ceiling=self.journal.one('SELECT COALESCE(MAX(rowid),0) n FROM messages')['n']
+        params=[caller.key];position=None
+        if cursor is not None:
+            position,ceiling=decode(cursor,scope)
+            require(isinstance(position,list) and len(position)==2 and type(position[0]) in (int,float) and isinstance(position[1],str),
+                    'PROTOCOL_ERROR','Invalid inbox cursor position')
+            predicate+=' AND (created_at<? OR (created_at=? AND message_id<?))'
+            params.extend([position[0],position[0],position[1]])
+        predicate+=' AND rowid<=?';params.extend([ceiling,limit+1])
+        rows=self.journal.all("SELECT created_at,message_id,payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC,message_id DESC LIMIT ?",params)
+        messages=[json.loads(r["payload_json"]) for r in rows[:limit]]
         peer=self.registry.get(caller.key)
         if peer['owner_kind']=='interactive-standalone':
             visible=[]
@@ -178,6 +189,9 @@ class Router:
                 known=receipt['state'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED','REPLY_SUBMITTED') or any(r['stage'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED') for r in receipt['receipts'])
                 visible.append(message if known else {'message_id':message['message_id'],'delivery_state':receipt['state'],'body_available':False,'reason':'Native admission or inbound policy has not established ingestion.'})
             messages=visible
+        if paged or cursor is not None:
+            last=rows[limit-1] if len(rows)>limit else None
+            return {'messages':messages,'next_cursor':encode(scope,[last['created_at'],last['message_id']],ceiling) if last else None}
         return messages
 
     def ack(self,caller,message_id):
