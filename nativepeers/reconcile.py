@@ -1,8 +1,9 @@
 """Bounded native-history observations advance receipts without replaying input."""
 import json
+from contextlib import suppress
 from pathlib import Path
 
-from .adapters.codex_app_server import AppServer
+from .adapters.codex_app_server import AppServer, ProviderError
 from .errors import require
 from .files import canonical
 
@@ -30,18 +31,25 @@ async def observe(journal,registry,router,message_id):
     require(record,'PROTOCOL_ERROR','Unknown message')
     peer=registry.get(record['to_key'],live=False);native=peer['peer_key']['native_session_id'];home=Path(peer['home'])
     provider=peer['peer_key']['provider']
-    def unconfirmed():
+    def unconfirmed(error=None):
         outcome=router.outcome(message_id)
-        if provider=='antigravity':outcome['reconciliation']={'state':'UNCONFIRMED','reason':'No exact persisted Antigravity USER_INPUT envelope was observed; ephemeral hook output alone does not prove ingestion.'}
+        if error is not None:outcome['reconciliation']={'state':'UNCONFIRMED','reason':'Native history is unavailable','error':type(error).__name__}
+        elif provider=='antigravity':outcome['reconciliation']={'state':'UNCONFIRMED','reason':'No exact persisted Antigravity USER_INPUT envelope was observed; ephemeral hook output alone does not prove ingestion.'}
         return outcome
     path=Path(peer['native_transcript']) if peer.get('native_transcript') else None
     if path is None and peer['peer_key']['provider']=='codex':
-        client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment={'CODEX_HOME':str(home)})
+        client=None
         try:
+            client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment={'CODEX_HOME':str(home)})
             await client.start();thread=(await client.call('thread/read',{'threadId':native,'includeTurns':False}))['thread']
             require(thread['id']==native,'OWNERSHIP_UNKNOWN','Native read returned another thread')
             path=Path(thread['path']) if thread.get('path') else None
-        finally:await client.close()
+        except (OSError,ProviderError) as error:
+            return unconfirmed(error)
+        finally:
+            if client is not None:
+                # Cleanup availability errors must not mask identity failures or cancellation.
+                with suppress(OSError,ProviderError):await client.close()
     if path is None and peer['peer_key']['provider']=='claude':
         path=home/'projects'/str(peer['cwd']).replace('/','-').replace('.','-')/(native+'.jsonl')
     if path is None or not path.exists():return unconfirmed()
@@ -53,8 +61,7 @@ async def observe(journal,registry,router,message_id):
             if start:stream.readline()
             lines=stream.read(1024*1024).splitlines()
     except OSError as error:
-        outcome=unconfirmed();outcome['reconciliation']={'state':'UNCONFIRMED','reason':'Native history is unavailable','error':type(error).__name__}
-        return outcome
+        return unconfirmed(error)
     wanted=json.loads(record['payload_json'])
     for line in lines:
         try:event=json.loads(line)

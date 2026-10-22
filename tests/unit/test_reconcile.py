@@ -1,8 +1,15 @@
-import json,os,tempfile,unittest
+import asyncio,contextlib,io,json,os,tempfile,unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import AsyncMock,patch
+from nativepeers.adapters.codex_app_server import ProviderError
 from nativepeers.caller import Caller
+from nativepeers.cli import main
+from nativepeers.core import Core
+from nativepeers.errors import PeerError
 from nativepeers.files import canonical
 from nativepeers.journal import Journal
+from nativepeers.mcp_server import Facade
 from nativepeers.models import new_id
 from nativepeers.process import identity
 from nativepeers.registry import Registry
@@ -68,3 +75,72 @@ class ReconcileTests(unittest.IsolatedAsyncioTestCase):
    result=await core.status(recipient,handle,refresh=True);self.assertEqual(result['state'],'INGESTED')
    self.assertEqual(len(calls),1)
    for table in ('messages','send_requests','attempts'):self.assertEqual(j.one('SELECT COUNT(*) AS n FROM '+table)['n'],1)
+
+
+class ReconcileAvailabilityTests(unittest.TestCase):
+ def setUp(self):
+  self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
+  self.root=Path(self.temp.name);self.journal=Journal(self.root/'state');self.addCleanup(self.journal.close)
+  self.core=Core(self.journal);registry=self.core.registry
+  sender=registry.register('claude',self.root/'sender',new_id(),'sender',identity(os.getpid()).json(),self.root,{'kind':'fake'},owner_kind='test')
+  self.peer=registry.register('codex',self.root/'recipient',new_id(),'recipient',identity(os.getpid()).json(),self.root,{'kind':'fake'},owner_kind='test')
+  self.journal.db.execute("UPDATE peer_instances SET status='live'")
+  self.caller=Caller('peer',sender['handle'],sender['incarnation_id'])
+  self.delivery=AsyncMock(return_value={'stage':'SUBMITTED_UNCONFIRMED','evidence_kind':'fake-submission'})
+  self.core.router.adapters['fake']=self.delivery
+  self.sent=asyncio.run(self.core.router.send(self.caller,self.peer['handle'],'retain on lookup failure',client_request_id='lookup'))
+
+ def test_lookup_failures_retain_outcome_through_cli_and_mcp(self):
+  cases=(('constructor',FileNotFoundError('fixture executable')),
+         ('start',TimeoutError('fixture initialization')),
+         ('start',ProviderError('initialize',{'message':'fixture rejection'})),
+         ('call',ProviderError('thread/read',{'message':'fixture history unavailable'})),
+         ('call',TimeoutError('fixture read')),
+         ('call',ConnectionError('fixture disconnect')))
+  for phase,failure in cases:
+   for surface in ('cli','mcp'):
+    with self.subTest(phase=phase,error=type(failure).__name__,surface=surface):
+     client=AsyncMock()
+     if phase!='constructor':getattr(client,phase).side_effect=failure
+     with patch('nativepeers.reconcile.AppServer',side_effect=failure if phase=='constructor' else None,return_value=client):
+      if surface=='cli':
+       output=io.StringIO()
+       with patch('sys.argv',['npeer','status',self.sent['message_id'],'--refresh','--json']),\
+            patch('nativepeers.cli.Journal',return_value=self.journal),patch.object(self.journal,'close'),\
+            patch('nativepeers.cli.bind_caller',return_value=self.caller),patch('nativepeers.cli.Core',return_value=self.core),\
+            contextlib.redirect_stdout(output),self.assertRaises(SystemExit) as raised:
+        main()
+       self.assertEqual(raised.exception.code,6);response=json.loads(output.getvalue())
+      else:
+       facade=Facade(self.journal,None)
+       with patch.object(facade,'binding_state',return_value={'state':'BOUND','grants':{}}),\
+            patch('nativepeers.mcp_server.bind_caller',return_value=self.caller),patch('nativepeers.core.Core',return_value=self.core):
+        result=asyncio.run(facade.call(None,SimpleNamespace(name='task_status',arguments={'handle':self.sent['message_id'],'refresh':True})))
+       self.assertFalse(result.is_error);response=json.loads(result.content[0].text)
+     self.assertTrue(response['ok']);self.assertIsNone(response['error'])
+     outcome=response['data'];self.assertEqual(outcome['reconciliation']['state'],'UNCONFIRMED')
+     self.assertEqual(outcome['reconciliation']['error'],type(failure).__name__)
+     for key in ('message_id','exchange_id','target','state','attempt','receipts'):self.assertEqual(outcome[key],self.sent[key])
+     if phase!='constructor':client.close.assert_awaited_once()
+  self.delivery.assert_awaited_once()
+  for table in ('messages','send_requests','attempts'):self.assertEqual(self.journal.one('SELECT COUNT(*) AS n FROM '+table)['n'],1)
+
+ def test_lookup_identity_and_path_mismatches_stay_errors_after_cleanup(self):
+  outside=self.root/'outside.jsonl';outside.write_text('')
+  for thread in ({'id':new_id()},{'id':self.peer['peer_key']['native_session_id'],'path':str(outside)}):
+   with self.subTest(thread=thread):
+    client=AsyncMock();client.call.return_value={'thread':thread}
+    client.close.side_effect=ConnectionError('fixture cleanup disconnect')
+    with patch('nativepeers.reconcile.AppServer',return_value=client),self.assertRaises(PeerError) as raised:
+     asyncio.run(self.core.status(self.caller,self.sent['message_id'],refresh=True))
+    self.assertEqual(raised.exception.code,'OWNERSHIP_UNKNOWN');client.close.assert_awaited_once()
+
+ def test_lookup_cancellation_propagates_after_cleanup(self):
+  for phase in ('start','call'):
+   with self.subTest(phase=phase):
+    client=AsyncMock();getattr(client,phase).side_effect=asyncio.CancelledError()
+    client.close.side_effect=ConnectionError('fixture cleanup disconnect')
+    with patch('nativepeers.reconcile.AppServer',return_value=client),self.assertRaises(asyncio.CancelledError):
+     asyncio.run(self.core.status(self.caller,self.sent['message_id'],refresh=True))
+    client.close.assert_awaited_once()
+  self.assertEqual(self.core.router.outcome(self.sent['message_id'])['state'],'SUBMITTED_UNCONFIRMED')
