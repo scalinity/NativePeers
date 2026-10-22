@@ -1,8 +1,10 @@
 """Explicit, bounded file copies for writing workers with a non-Git source."""
+from contextlib import closing
 import os
 from pathlib import Path
 import shutil
 import stat
+import sqlite3
 
 from .errors import PeerError,require
 from .files import private_directory
@@ -39,9 +41,9 @@ def selection(workspace):
     return paths
 
 
-def _capture(root,selected):
+def _capture(root,selected,*,journal=None):
     require(len(selected)<=MAX_FILES,'WORKSPACE_SNAPSHOT_REQUIRED','Copy batch exceeds 256 selected files')
-    captured={};remaining=ARTIFACT_MAX;private_roots=_private_roots()
+    captured={};remaining=ARTIFACT_MAX;private_roots=_private_roots(journal)
     for relative in sorted(selected):
         require(not any((root/relative).is_relative_to(home) for home in private_roots),
                 'WORKSPACE_SNAPSHOT_REQUIRED','Private native state cannot be selected for copying')
@@ -69,22 +71,34 @@ def _capture(root,selected):
     return captured
 
 
-def _private_roots():
-    return [Path.home()/'.local/state/nativepeers',
-            *(Path(os.environ[name]).expanduser().resolve() for name in ('CODEX_HOME','CLAUDE_CONFIG_DIR','NPEER_HOME') if os.environ.get(name))]
+def _private_roots(journal=None):
+    # Match artifact import's known-private boundary, including offline registrations.
+    roots=[(Path.home()/'.local/state/nativepeers').resolve(),
+           *(Path(os.environ[name]).expanduser().resolve() for name in
+             ('CODEX_HOME','CLAUDE_CONFIG_DIR','NPEER_HOME') if os.environ.get(name))]
+    if journal is not None:
+        roots.append(journal.root.resolve())
+        # freeze/prepare also run in executor threads; never share the journal connection.
+        try:
+            with closing(sqlite3.connect((journal.root/'journal.sqlite3').resolve().as_uri()+'?mode=ro',uri=True)) as db:
+                homes=db.execute("SELECT DISTINCT json_extract(descriptor_json,'$.home') FROM peer_instances").fetchall()
+            roots.extend(Path(home).expanduser().resolve() for (home,) in homes)
+        except (sqlite3.Error,TypeError,ValueError) as error:
+            raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED','Known private native roots could not be verified') from error
+    return roots
 
 
-def _root(cwd):
+def _root(cwd,*,journal=None):
     root=Path(cwd).resolve(strict=True)
-    require(root.is_dir() and not private_path(root) and not any(root.is_relative_to(home) for home in _private_roots()),
+    require(root.is_dir() and not private_path(root) and not any(root.is_relative_to(home) for home in _private_roots(journal)),
             'WORKSPACE_SNAPSHOT_REQUIRED','Copy source must be a project directory outside private native state')
     return root
 
 
-def capture(cwd,workspaces,baseline,*,expected_baseline=None):
-    root=_root(cwd);selected=set()
+def capture(cwd,workspaces,baseline,*,expected_baseline=None,journal=None):
+    root=_root(cwd,journal=journal);selected=set()
     for workspace in workspaces:selected.update(selection(workspace))
-    captured=_capture(root,selected)
+    captured=_capture(root,selected,journal=journal)
     baseline=dict(baseline,copy_inputs=_input_metadata(captured))
     expected=baseline if expected_baseline is not None and 'copy_inputs' in expected_baseline else {k:v for k,v in baseline.items() if k!='copy_inputs'}
     require(expected_baseline is None or expected==expected_baseline,
@@ -92,12 +106,13 @@ def capture(cwd,workspaces,baseline,*,expected_baseline=None):
     return baseline,captured
 
 
-def validate_source(cwd,frozen):
-    observed=dict(snapshot(cwd),copy_inputs=_input_metadata(_capture(_root(cwd),frozen.untracked)))
+def validate_source(cwd,frozen,*,journal=None):
+    journal=journal or frozen.journal
+    observed=dict(snapshot(cwd),copy_inputs=_input_metadata(_capture(_root(cwd,journal=journal),frozen.untracked,journal=journal)))
     require(observed==frozen.baseline,'WORKSPACE_SNAPSHOT_REQUIRED','Original directory differs from the frozen copy-batch inputs')
 
 
-def prepare_copy(cwd,worker_id,workspace,frozen,*,expected_baseline=None):
+def prepare_copy(cwd,worker_id,workspace,frozen,*,expected_baseline=None,journal=None):
     baseline=frozen.baseline;selected=selection(workspace)
     require(not baseline.get('git') and 'copy_inputs' in baseline and frozen.patch is None
             and all(p in frozen.untracked for p in selected),
@@ -107,8 +122,8 @@ def prepare_copy(cwd,worker_id,workspace,frozen,*,expected_baseline=None):
             'WORKSPACE_SNAPSHOT_REQUIRED','Original directory differs from the shared copy-batch baseline')
     require(isinstance(worker_id,str) and worker_id not in ('','.','..') and Path(worker_id).name==worker_id,
             'WORKSPACE_SNAPSHOT_REQUIRED','Copy worker ID must be a single directory name')
-    validate_source(cwd,frozen)
-    root=_root(cwd);parent=private_directory(root/'.worktrees');directory=parent/worker_id
+    validate_source(cwd,frozen,journal=journal)
+    root=_root(cwd,journal=journal);parent=private_directory(root/'.worktrees');directory=parent/worker_id
     directory.mkdir(mode=0o700)
     try:
         for relative in selected:
@@ -128,7 +143,7 @@ def prepare_copy(cwd,worker_id,workspace,frozen,*,expected_baseline=None):
         tree=git(directory,'write-tree').stdout.decode().strip()
         head=git(directory,'commit-tree',tree,input=b'Create isolated copy baseline\n').stdout.decode().strip()
         git(directory,'-c','core.hooksPath=/dev/null','update-ref','HEAD',head)
-        validate_source(cwd,frozen)
+        validate_source(cwd,frozen,journal=journal)
         return str(directory),worker_id,dict(baseline,workspace_mode='isolated-copy',
             copy_inputs={p:baseline['copy_inputs'][p] for p in selected},head=head,input_tree=tree)
     except BaseException:

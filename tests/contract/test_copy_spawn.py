@@ -39,7 +39,7 @@ class CopySpawnTests(unittest.IsolatedAsyncioTestCase):
             async def start(group_id):
                 group=Group(journal,group_id);groups.append(group);await group.initialize()
             spec={'client_request_id':'copy-fixture','workers':[{'provider':'claude','title':str(i),'task':'edit only selected input','model':'claude-fixture','permission_profile':'workspace','workspace':{'mode':'isolated-copy','file_allowlist':['main.py']}} for i in range(2)],'completion_mode':'wait','limits':{'max_concurrent_workers':2,'wall_time_seconds':5,'followup_grace_seconds':0}}
-            with patch.dict(os.environ,{'NPEER_HOME':str(journal.root)}),patch('nativepeers.delegation.Path.home',return_value=home),patch.object(delegation,'ensure_supervisor',side_effect=start):
+            with patch('nativepeers.supervisor.PYTHON',Path(sys.executable)),patch.dict(os.environ,{'NPEER_HOME':str(journal.root)}),patch('nativepeers.delegation.Path.home',return_value=home),patch.object(delegation,'ensure_supervisor',side_effect=start):
                 try:
                     status=await delegation.spawn(caller,spec)
                     await asyncio.wait_for(groups[0].monitor(),10)
@@ -78,3 +78,23 @@ class CopySpawnTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(PeerError):await delegation.spawn(caller,spec)
                 start.assert_not_awaited()
             self.assertEqual((source/'input').read_text(),'two');self.assertFalse((source/'.git').exists())
+
+    async def test_public_spawn_rejects_registered_nonambient_home_before_copy_or_supervisor(self):
+        # The parent-owned call site must pass journal= to freeze; emulate that wiring here.
+        from nativepeers.worktrees import freeze
+        for inside_home in (False,True):
+            with self.subTest(inside_home=inside_home),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory).resolve();source=root/'source';source.mkdir();home=source/'alternate';home.mkdir()
+                (home/'input').write_text('private fixture')
+                binary=root/'launcher/.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('never launched')
+                journal=Journal(root/'state');self.addCleanup(journal.close);registry=Registry(journal)
+                registry.register('claude',home,new_id(),'nonambient',identity(os.getpid()).json(),str(source),{},owner_kind='test')
+                cwd=home if inside_home else source
+                parent=registry.register('codex',root/'parent-home',new_id(),'parent',identity(os.getpid()).json(),str(cwd),{},owner_kind='test',policy={'profiles':['workspace']})
+                caller=Caller('peer',parent['handle'],parent['incarnation_id']);delegation=Delegation(journal,registry)
+                spec={'workers':[{'provider':'claude','title':'fixture','task':'fixture','permission_profile':'workspace','workspace':{'mode':'isolated-copy','file_allowlist':['input' if inside_home else 'alternate/input']}}]}
+                def bound_freeze(*args,**kwargs):return freeze(*args,**kwargs,journal=journal)
+                with patch('nativepeers.delegation.Path.home',return_value=root/'launcher'),patch('nativepeers.delegation.freeze',side_effect=bound_freeze),patch('nativepeers.delegation.prepare') as copying,patch.object(delegation,'ensure_supervisor',new_callable=AsyncMock) as start:
+                    with self.assertRaises(PeerError) as error:await delegation.spawn(caller,spec)
+                    self.assertEqual(error.exception.code,'WORKSPACE_SNAPSHOT_REQUIRED');copying.assert_not_called();start.assert_not_awaited()
+                self.assertFalse((cwd/'.worktrees').exists())

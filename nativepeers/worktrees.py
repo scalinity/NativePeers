@@ -1,7 +1,7 @@
 """Reproducible owned writing workspaces; the source checkout is never reset."""
 import hashlib
 import contextlib
-from dataclasses import dataclass
+from dataclasses import dataclass,field
 import os
 from pathlib import Path
 import selectors
@@ -248,9 +248,10 @@ class FrozenWorkspace:
     baseline:dict
     patch:bytes|None
     untracked:dict
+    journal:object=field(default=None,repr=False,compare=False)
 
 
-def freeze(cwd,workspaces,*,expected_baseline=None):
+def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
     """Capture the union of explicit writing inputs once, before admitting a batch.
 
     Keep this object in memory; only its JSON-safe baseline belongs in worker leases.
@@ -261,8 +262,8 @@ def freeze(cwd,workspaces,*,expected_baseline=None):
     if copying:
         from .isolated_copy import capture
         require(not writing and not baseline['git'],'WORKSPACE_SNAPSHOT_REQUIRED','Isolated copies require a non-Git source; Git sources use isolated-worktree')
-        baseline,captured=capture(cwd,copying,baseline,expected_baseline=expected_baseline)
-        frozen=FrozenWorkspace(baseline,None,captured)
+        baseline,captured=capture(cwd,copying,baseline,expected_baseline=expected_baseline,journal=journal)
+        frozen=FrozenWorkspace(baseline,None,captured,journal)
         validate_frozen(cwd,frozen)
         return frozen
     if not writing:return FrozenWorkspace(baseline,None,{})
@@ -290,11 +291,11 @@ def freeze(cwd,workspaces,*,expected_baseline=None):
     return frozen
 
 
-def validate_frozen(cwd,frozen):
+def validate_frozen(cwd,frozen,*,journal=None):
     """Recheck all batch inputs immediately before native worker admission."""
     if 'copy_inputs' in frozen.baseline:
         from .isolated_copy import validate_source
-        validate_source(cwd,frozen)
+        validate_source(cwd,frozen,journal=journal)
         return
     require(snapshot(cwd,untracked_allowlist=list(frozen.untracked))==frozen.baseline,
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout differs from the frozen writing-batch inputs')
@@ -304,10 +305,10 @@ def prepare(journal,cwd,worker_id,workspace,*,expected_baseline=None,frozen=None
     mode=workspace.get('mode','inherit-read-only')
     if mode=='inherit-read-only':return str(Path(cwd).resolve()),None,snapshot(cwd)
     require(mode in ('isolated-worktree','isolated-copy'),'WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated-worktree or isolated-copy mode')
-    if frozen is None:frozen=freeze(cwd,[workspace],expected_baseline=expected_baseline)
+    if frozen is None:frozen=freeze(cwd,[workspace],expected_baseline=expected_baseline,journal=journal)
     if mode=='isolated-copy':
         from .isolated_copy import prepare_copy
-        return prepare_copy(cwd,worker_id,workspace,frozen,expected_baseline=expected_baseline)
+        return prepare_copy(cwd,worker_id,workspace,frozen,expected_baseline=expected_baseline,journal=journal)
     baseline=frozen.baseline
     require(baseline['git'] and frozen.patch is not None,
             'WORKSPACE_SNAPSHOT_REQUIRED','Writing inputs were not frozen for this batch')
