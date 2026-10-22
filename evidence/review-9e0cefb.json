@@ -18,7 +18,8 @@
     {
       "id": "R3",
       "description": "Fresh Antigravity per-process readiness and evidence",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 20 provider/readiness/identity tests and 75 subtests; drift/disabled/hookless/wrong-process/stale observations plus healthy serialized turns"
     },
     {
       "id": "R4",
