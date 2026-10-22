@@ -49,7 +49,8 @@
     {
       "id": "I2",
       "description": "Historical native wording qualification",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: inspected USAGE historical statement against VERIFICATION original source/runtime record and latest five-input Sol/Flash report; no native PASS relabeled"
     },
     {
       "id": "S1",
