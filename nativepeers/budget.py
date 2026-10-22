@@ -1,4 +1,4 @@
-"""One durable live-verification allowance across every test process."""
+"""Durable live-verification usage; a null ceiling means tracking without a cap."""
 from __future__ import annotations
 
 import json
@@ -26,12 +26,13 @@ class LiveBudget:
             raise ValueError("A reservation must contain at least one turn")
         def operation(data):
             elapsed = sum((i.get("end") or time.time()) - i["start"] for i in data["active_intervals"])
-            if elapsed >= data["ceiling"]["active_seconds"]:
+            time_limit=data['ceiling']['active_seconds'];turn_limit=data['ceiling']['submitted_turns']
+            if time_limit is not None and elapsed >= time_limit:
                 raise RuntimeError("BUDGET_EXHAUSTED: active live time")
             used = sum(r["count"] for r in data["reservations"] if r["state"] != "not_admitted")
-            if used + count > data["ceiling"]["submitted_turns"]:
+            if turn_limit is not None and used + count > turn_limit:
                 raise RuntimeError("BUDGET_EXHAUSTED: submitted turns")
-            if tranche not in ("M1", "first_cross_provider_delegations") and used + count > data['ceiling']['submitted_turns']-data.get('delegation_reserve',0):
+            if turn_limit is not None and tranche not in ("M1", "first_cross_provider_delegations") and used + count > turn_limit-data.get('delegation_reserve',0):
                 raise RuntimeError("BUDGET_EXHAUSTED: preserve delegation reserve")
             reservation = str(uuid.uuid4())
             data["reservations"].append(dict(id=reservation, label=label, count=count,

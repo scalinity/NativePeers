@@ -29,6 +29,22 @@ class BudgetTests(unittest.TestCase):
         self.assertAlmostEqual(data['active_seconds'],13-data['active_intervals'][0]['start'])
         self.assertEqual(data['consumed_turns'],1);self.assertEqual(data['reserved_turns'],0)
 
+    def test_removed_caps_preserve_usage_and_still_settle(self):
+        data=self.read();data['ceiling'].update(active_seconds=None,submitted_turns=None)
+        data['consumed_turns']=148;data['delegation_reserve']=16
+        data['active_intervals']=[{'start':1,'end':4001}];data['active_seconds']=4000
+        atomic_json(self.path,data);self.clock=5000
+        request=self.budget.reserve('authorized uncapped test',tranche='flash_fallback')
+        self.budget.admit(request);self.budget.settle(request,observed_turns=1,completed_at=5001)
+        data=self.read();self.assertEqual(data['consumed_turns'],149)
+        self.assertEqual(data['reserved_turns'],0);self.assertEqual(data['outstanding_native_requests'],[])
+        self.assertGreater(data['active_seconds'],4000)
+
+    def test_configured_caps_remain_enforced(self):
+        request=self.budget.reserve('all finite slots',count=8)
+        with self.assertRaisesRegex(RuntimeError,'submitted turns'):self.budget.reserve('ninth')
+        self.assertEqual(self.read()['reserved_turns'],8)
+
     def test_overlapping_reverse_settlement_uses_the_latest_native_completion(self):
         a=self.budget.reserve('first');self.budget.admit(a);self.clock=11
         b=self.budget.reserve('second');self.budget.admit(b)

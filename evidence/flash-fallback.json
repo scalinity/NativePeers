@@ -1,0 +1,218 @@
+{
+  "status": "COMPLETE: uncapped usage tracking; scoped native Flash fallback and readable original-parent return PASS",
+  "base_commit": "74aa05ff63f694f543b23b9f80cd038278119af6",
+  "at": "2026-10-22T15:09:24.284092-04:00",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "ef11680aa44c38dc2e66b4ea3dff4a87b7328a921f38abfc7bdbb2d1e2f4cc61",
+    "nativepeers/adapters/metadata.py": "f2c3c9409ef5f033d742e7cafd669a8f56489f283cad06a01cd8fdef99f93260",
+    "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
+    "nativepeers/antigravity.py": "00b84c23ab6242d5ff6e584dbc9424c58ca14464157b8921e29b09b8013f8f3e",
+    "nativepeers/antigravity_install.py": "f36ee1eae92a2eafa5fa1f8e23e0dfd90111ff0e0c6082dc3b17959f81de3f5b",
+    "nativepeers/artifacts.py": "4161379e5d874c668c2e62eb0147565cfec0a67ed253e47dbc9cce8e95e53a40",
+    "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
+    "nativepeers/caller.py": "e856fd6fcf4041aa5af4bece74948cf98cbb87c4ddf431220dbe561522d199ae",
+    "nativepeers/change_preview.py": "60755291113be3da04eef1b089e50b36adcae35bd8427005ec547a05eb188a4b",
+    "nativepeers/claude_stream.py": "ff459549ca6322027623cfe0840492b0be2df1fb423062d4359661b70b79d5c1",
+    "nativepeers/cleanup.py": "683faa73f76b48dac6909d4c1c24ee209c17cd8940da896dfd887e9a8403e342",
+    "nativepeers/cli.py": "b3abbb621e021f4715e59c8f8aab363af14ce49ec60cc35ac20aba56d5a3163f",
+    "nativepeers/compatibility.py": "0439f19f292517c91143a2587107aff36aef5cb82e993aa2fc52ce02c5326ad1",
+    "nativepeers/control.py": "c995adf790984d5457ad836dd3b8f7f675c84aeb6571fb3a2153e89f5429f24d",
+    "nativepeers/core.py": "6f73dae77b17fd695bca274dba0ef3070ec94839eb1c88074a8f17632cd545c8",
+    "nativepeers/delegation.py": "9753f04e731fb898276f921de114bb62b46eb2b312bcd147d3a07eeb9189f17c",
+    "nativepeers/errors.py": "8391998802bac132516aeea664748804d3b91bf735dc62b2a7d8761399d42da2",
+    "nativepeers/fallback.py": "790e40c19e9b4c96b092f41a2ec5d265fe29a9778802f9fe6ca6ef149595019b",
+    "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
+    "nativepeers/hooks.py": "456ba4f1cc9da27e0601fea9319180f56f8ff24bcbfa608090016c6a4b6fe421",
+    "nativepeers/install.py": "4e8a318d945df33702c90279c17935f0c2e49747f38d9d39b94addbd2c8c1290",
+    "nativepeers/isolated_copy.py": "99148c3315084323861165f20bfc18398ebad5fdb8d105942c1949f6a406b256",
+    "nativepeers/journal.py": "9d586d9aff0c3df1dd2d292fee8eb7e745b8a48eabbf36cd53d0ea8c330e8d49",
+    "nativepeers/launch.py": "06da9e1accaacb41e61af2d963762a8344688e81801066064e0d18a1dfd20dba",
+    "nativepeers/mcp_server.py": "da7c1b1be07f7ecd83e34aff667897fbaa72fb3da29c36a4b1963370fec717ae",
+    "nativepeers/models.py": "440f0e4ed691e399df5a07a5b7aac451f135f1c4e5e9763a1506a7e55bf60087",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "289602df261419717d3302d613f3771590868ffae3b7c7543c8a84ba2659b5d9",
+    "nativepeers/presentation.py": "dea4b873f78d0002d3b0bf9ee6c5807cdd221739be8cb6b609458b2869ea0e80",
+    "nativepeers/process.py": "f1a75356a7a3d753c88263e7f7d6dd90e49ed3a0f239ec44d686528e26d2caeb",
+    "nativepeers/profiles.py": "5b9a8bdca866a240c7875dcc0bdd3148fc7101b88dc2c832760b68f7a6982111",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "1ddb864d4706de2819dd48d07d0ca775d9bfa92084c7b90365da90074dc52f40",
+    "nativepeers/readiness.py": "29273e47c7dcb0190db33fe8a81032f4cd657fdec1e68fb840819ddd422b995c",
+    "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
+    "nativepeers/reconcile.py": "71ef7f185cb6ba9a7aafa4c93ac8d51e988feb06a649ed47ae744e0e0b8776a9",
+    "nativepeers/recovery.py": "1f14fcdb73e66fe6266dc91062859f18f6812d2c87a1c401ff604b934b387fcc",
+    "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
+    "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
+    "nativepeers/supervisor.py": "9c19611ac38027270f48191da9a3ec2b43ad36eb65f63391706e8ce203032cc5",
+    "nativepeers/worker_process.py": "44674462e037fe64544092d0e47f3e56ac9b8907899a5d4e525fd3806f0c444b",
+    "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
+    "nativepeers/worktrees.py": "081cc2bbf259eede2c08fc9710a60a12c97b1c5c6e2ebc69cc5894b8900d5fb8"
+  },
+  "source_map_sha256": "e97d12268556bc9640d3a008078b88460f6cd6cba80cd0746231980fcbe60439",
+  "tests": {
+    "offline": {
+      "status": "PASS",
+      "tests": 356,
+      "subtests": 545,
+      "seconds": 121.21,
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8",
+      "source_frozen_during_run": true,
+      "scope": "Full offline unit/property/contract suite; native acceptance recorded separately"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py",
+      "scope": "isolated manager/naming fixtures; no package activation"
+    },
+    "installed_passive": {
+      "status": "PASS",
+      "provider_fingerprints_match": true,
+      "owned_integrations_present": true,
+      "protected_files_unchanged": 8,
+      "entrypoint_uses_checkout": true,
+      "global_configuration_writes": 0
+    },
+    "native": {
+      "status": "PASS",
+      "scope": "Simulated clean Claude quota to two real Gemini Flash tasks; editing/wait and readable hook return to original native Flash parent",
+      "model": "gemini-3.8-flash-medium",
+      "checks": {
+        "helper_pass": true,
+        "parent_succeeded": true,
+        "readable_completion_observed": true,
+        "same_parent": true
+      },
+      "parent_native_id": "1fa276a1-b717-4a37-826b-30467b5d460c",
+      "successful_runs": [
+        {
+          "mode": "wait",
+          "group_id": "1687c309-48b3-4aed-8fef-e3e98808555d",
+          "task_id": "4839e7ce-77b2-41a0-ad6e-cfd96cf86d48",
+          "native_worker_id": "9b4dfaf3-dc44-41ff-bb99-40df3334ea90",
+          "provider": "antigravity",
+          "requested_model": "gemini-3.8-flash-medium",
+          "observed_model": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempts": 2,
+          "primary_fixture": "deterministic fake Claude quota; no real Claude invocation",
+          "checks": {
+            "completed": true,
+            "distinct_native_ids": true,
+            "flash_observed": true,
+            "flash_requested": true,
+            "independent_check": true,
+            "isolated_directory": true,
+            "nonce_in_worker_result": true,
+            "old_controller_exited": true,
+            "old_native_exited": true,
+            "original_parent_wait": true,
+            "parent_distinct": true,
+            "primary_quota": true,
+            "reconstruction_patch": true,
+            "source_preserved": true,
+            "two_retained_attempts": true,
+            "wait_claimed": true,
+            "worker_delta": true
+          }
+        },
+        {
+          "mode": "push",
+          "group_id": "9591d77a-d3a8-428e-83c4-6b3f6e173b9e",
+          "task_id": "7cc77626-f968-4297-b8a4-d39fa9642af2",
+          "native_worker_id": "7cefd7a1-5571-4ec3-8775-c9cf1b9fab5e",
+          "provider": "antigravity",
+          "requested_model": "gemini-3.8-flash-medium",
+          "observed_model": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempts": 2,
+          "primary_fixture": "deterministic fake Claude quota; no real Claude invocation",
+          "checks": {
+            "completed": true,
+            "distinct_native_ids": true,
+            "flash_observed": true,
+            "flash_requested": true,
+            "nonce_in_worker_result": true,
+            "old_controller_exited": true,
+            "old_native_exited": true,
+            "original_parent_target": true,
+            "parent_distinct": true,
+            "primary_quota": true,
+            "readable_frame": true,
+            "source_preserved": true,
+            "two_retained_attempts": true
+          }
+        }
+      ]
+    }
+  },
+  "usage": {
+    "new_counted_inputs": 9,
+    "diagnostic_parent_inputs": 4,
+    "interrupted_editing_child_inputs": 1,
+    "successful_parent_inputs": 1,
+    "successful_child_inputs": 2,
+    "completion_inputs": 1,
+    "ceiling": {
+      "active_seconds": null,
+      "concurrent_owned_workers": 8,
+      "submitted_turns": null
+    },
+    "cumulative_inputs": 157,
+    "active_seconds": 3712.270929813385,
+    "reserved": 0,
+    "outstanding": []
+  },
+  "diagnostics": [
+    {
+      "attempt": 1,
+      "status": "INTERRUPTED",
+      "reason": "First parent shell invocation denied Python access; model retried despite instruction and admitted editing fallback. Stopping the parent interrupted its child as PARENT_LOST; result and edits retained; all verified owners exited."
+    },
+    {
+      "attempt": 2,
+      "status": "FAIL",
+      "reason": "Worker-only sandbox applied to host prevented journal lock access; no child submitted."
+    },
+    {
+      "attempt": 3,
+      "status": "FAIL",
+      "reason": "Fixture-local journal placement still denied by test host sandbox; no child submitted."
+    },
+    {
+      "attempt": 4,
+      "status": "FAIL",
+      "reason": "Adding enclosing project changed native workspacePaths registration to the project root; exact-cwd assertion prevented dispatch."
+    },
+    {
+      "attempt": 5,
+      "status": "PASS",
+      "reason": "Ordinary native host retained its configured permission mode; no extra bypass flags. Children retained production sandbox/profile. Exact primary workspace and return checks passed."
+    }
+  ],
+  "limitations": [
+    "Real Claude quota detection is reproduced offline; no Claude inference or auth retry was performed.",
+    "Argon is quota-limited; no Argon inference was performed. Flash is explicitly selected, not silently substituted.",
+    "Native parent hook delivery occurs at its next invocation; idle wakeup is not claimed.",
+    "Historical all-provider acceptance gaps remain unrun or blocked for their recorded reasons, not the removed cumulative allowance.",
+    "No production incident tasks were replayed or provider histories edited."
+  ],
+  "private_capture_policy": "Native transcripts, private journals, auth integrity hashes and fixture copies remain ignored; only bounded outcome summaries are published.",
+  "cleanup": {
+    "fixture_worktrees_removed": 4,
+    "fixture_branches_removed": 4,
+    "generated_files_checksum_preserved": true,
+    "native_histories_retained": true,
+    "active_owned_processes": 0,
+    "private_capture_size": "under 2 MiB"
+  },
+  "publication": {
+    "status": "PENDING",
+    "repository": "https://github.com/scalinity/NativePeers",
+    "source_zip_uploaded": false
+  }
+}

@@ -184,7 +184,8 @@ def launch(provider):
     finally:journal.close()
     remaining=json.loads(LEDGER.read_text())
     needed=4 if provider=='claude' else 3
-    if remaining['ceiling']['submitted_turns']-remaining['consumed_turns']-remaining['reserved_turns']<needed:
+    ceiling=remaining['ceiling']['submitted_turns']
+    if ceiling is not None and ceiling-remaining['consumed_turns']-remaining['reserved_turns']<needed:
         raise RuntimeError('Test slots must remain for the parent, worker and any completion wakeup')
     command=f'{ROOT}/.venv/bin/python {ROOT}/tests/live/antigravity_paths.py parent-case {provider}'
     prompt=f'''Authorized disposable NativePeers integration NP-{provider}. Use your native shell tool to run this exact command ONCE:

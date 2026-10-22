@@ -70,7 +70,7 @@
   "blockers": [
     {
       "check": "LIVE-09",
-      "reason": "Codex same-provider initial results retained; original-parent read not observed before ceiling."
+      "reason": "Historical Codex same-provider original-parent read was not observed; this Flash-only batch does not cover that assertion."
     },
     {
       "check": "LIVE-10",
@@ -83,10 +83,6 @@
     {
       "check": "LIVE-16",
       "reason": "Strict H/T3 absence/unreachability isolation NOT_RUN; unrelated services remain untouched."
-    },
-    {
-      "check": "FALLBACK-NATIVE",
-      "reason": "The retained live allowance is exhausted at 148/148. Fresh Gemini fallback inference and native readable-frame ingestion/presentation are NOT_RUN. No Claude retry was submitted."
     }
   ],
   "canonical_documents": {
@@ -111,56 +107,45 @@
   },
   "capabilities": "evidence/capabilities.json",
   "cleanup": {
-    "active_owned_processes": [],
-    "current_review": {
-      "owned_implementation_worktrees_removed": 3,
-      "owned_lane_histories_retained_on_main": true,
-      "active_implementation_agents": 0,
-      "regenerable_fixture_backups_removed": 4,
-      "active_owned_native_requests": [],
-      "private_record": "evidence/private/review-9e0cefb-20261022/cleanup.json"
-    },
-    "implementation_worktrees_removed": 3,
-    "manifest": "evidence/private/astra4-20261022/closeout.json",
-    "reason": "Exact owned native test histories retain their cwd; unique fixture changes are checksum-backed up",
-    "retained_native_fixture_worktrees": 10,
-    "unresolved_native_requests": [],
-    "provider_fallback": {
-      "new_project_worktrees": 0,
-      "regenerable_fixture_backup_entries_removed": 68,
-      "private_recovery_copies_retained": true,
-      "feature_branch_removed": true,
-      "remaining_project_worktrees": 1
-    }
+    "fixture_worktrees_removed": 4,
+    "fixture_branches_removed": 4,
+    "generated_files_checksum_preserved": true,
+    "native_histories_retained": true,
+    "active_owned_processes": 0,
+    "private_capture_size": "under 2 MiB"
   },
   "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
   "current_review": {
-    "evidence": "evidence/provider-fallback.json",
-    "status": "COMPLETE: implementation installed; offline/passive PASS; new native inference BLOCKED by existing allowance",
-    "branch": "main",
-    "completed": [
-      "provider-diagnostics",
-      "readable-notices",
-      "explicit-fallback",
-      "focused-contracts",
-      "installation-docs-closeout"
-    ],
-    "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c",
-    "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4"
+    "evidence": "evidence/flash-fallback.json",
+    "status": "COMPLETE: uncapped usage tracking; scoped native Flash fallback and readable original-parent return PASS",
+    "branch": "test/flash-fallback-native",
+    "source_map_sha256": "e97d12268556bc9640d3a008078b88460f6cd6cba80cd0746231980fcbe60439",
+    "code_commit": null
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "branch": "main",
-    "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
+    "branch": "test/flash-fallback-native",
+    "code_commit": null,
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
       "?? patches/session-naming-native.patch",
       "?? test_name_session.py"
     ],
-    "base_commit": "acd6782f4cea8f5a5bcc61bcba6018ed8b77a747",
-    "owned_uncommitted_changes": [],
-    "last_verified_publication": "7a8667373d2c818b9ee44d672d7f3a6371095d90"
+    "base_commit": "74aa05ff63f694f543b23b9f80cd038278119af6",
+    "owned_uncommitted_changes": [
+      "nativepeers/budget.py",
+      "tests/unit/test_budget.py",
+      "tests/live/antigravity_paths.py",
+      "tests/live/flash_fallback.py",
+      "PROGRESS.md",
+      "docs/PROVIDER_FALLBACK.md",
+      "docs/VERIFICATION.md",
+      "evidence/live-budget.json",
+      "evidence/checkpoint.json",
+      "evidence/flash-fallback.json"
+    ],
+    "last_verified_publication": "74aa05ff63f694f543b23b9f80cd038278119af6"
   },
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
@@ -185,22 +170,23 @@
       "prompt": "docs/GPT6_PRO_REVIEW_PROMPT.txt",
       "prompt_sha256": "ee91ef5cc0e253a27fb1abb988d53f322230edac69a22b13a06a543db8bd162c",
       "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt"
-    }
+    },
+    "provider_fallback": "evidence/provider-fallback.json"
   },
   "live_budget": {
-    "active_seconds": 3524.3949735164642,
     "ceiling": {
-      "active_seconds": 3600,
+      "active_seconds": null,
       "concurrent_owned_workers": 8,
-      "submitted_turns": 148
+      "submitted_turns": null
     },
-    "consumed_turns": 148,
-    "path": "evidence/live-budget.json",
+    "consumed_turns": 157,
     "reserved_turns": 0,
-    "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
+    "active_seconds": 3712.270929813385,
+    "path": "evidence/live-budget.json",
+    "sha256": "9239fbf36aae7043663b867b594627f8e11198cf8540aedf61f6f46c5cb9768e"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Use the installed opt-in feature. Before any separately authorized fresh native acceptance, run npeer whoami --json and inspect evidence/live-budget.json; the current 148/148 allowance does not permit another submitted test input.",
+  "next_action": "Commit and publish cap removal, current Flash verification and documentation; ready to address the new GPT-6 Pro report.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -210,51 +196,108 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "status": "PUSHED",
+    "status": "PENDING",
     "repository": "https://github.com/scalinity/NativePeers",
-    "branch": "main",
-    "verified_remote_code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
-    "source_zip_uploaded": false,
-    "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
-    "current_verification": "evidence/provider-fallback.json",
-    "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c"
+    "source_zip_uploaded": false
   },
   "schema_version": 2,
-  "stage": "Provider diagnostics, explicit Claude-to-Gemini fallback and readable native notices",
+  "stage": "COMPLETE: scoped native Flash fallback/readable return and full offline checks PASS",
   "tests_current": {
     "offline": {
       "status": "PASS",
-      "tests": 354,
+      "tests": 356,
       "subtests": 545,
-      "seconds": 152.53,
+      "seconds": 121.21,
       "command": ".venv/bin/python -m pytest -q",
       "python": "3.14.8",
       "source_frozen_during_run": true,
-      "scope": "Unit/contract tests including real isolated controller processes with fake native providers; zero new model inputs"
+      "scope": "Full offline unit/property/contract suite; native acceptance recorded separately"
     },
     "manager_and_naming": {
       "status": "PASS",
       "tests": 23,
-      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
-      "scope": "Isolated fixtures only; actual managed package was not activated or updated"
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py",
+      "scope": "isolated manager/naming fixtures; no package activation"
     },
     "installed_passive": {
       "status": "PASS",
-      "provider_executable_hashes_match_receipts": true,
-      "owned_checks": "PRESENT",
-      "skills_match_sources": true,
-      "second_installs_operations": [
-        0,
-        0
-      ],
-      "CLAUDE_outside_owned_block_unchanged": true,
-      "protected_auth_native_config_shell_unchanged": true,
-      "entrypoint_uses_project": true
+      "provider_fingerprints_match": true,
+      "owned_integrations_present": true,
+      "protected_files_unchanged": 8,
+      "entrypoint_uses_checkout": true,
+      "global_configuration_writes": 0
     },
     "native": {
-      "status": "BLOCKED",
-      "submitted_inputs": 0,
-      "reason": "The retained live allowance is exhausted at 148/148. Fresh Gemini fallback inference and native readable-frame ingestion/presentation are NOT_RUN. No Claude retry was submitted."
+      "status": "PASS",
+      "scope": "Simulated clean Claude quota to two real Gemini Flash tasks; editing/wait and readable hook return to original native Flash parent",
+      "model": "gemini-3.8-flash-medium",
+      "checks": {
+        "helper_pass": true,
+        "parent_succeeded": true,
+        "readable_completion_observed": true,
+        "same_parent": true
+      },
+      "parent_native_id": "1fa276a1-b717-4a37-826b-30467b5d460c",
+      "successful_runs": [
+        {
+          "mode": "wait",
+          "group_id": "1687c309-48b3-4aed-8fef-e3e98808555d",
+          "task_id": "4839e7ce-77b2-41a0-ad6e-cfd96cf86d48",
+          "native_worker_id": "9b4dfaf3-dc44-41ff-bb99-40df3334ea90",
+          "provider": "antigravity",
+          "requested_model": "gemini-3.8-flash-medium",
+          "observed_model": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempts": 2,
+          "primary_fixture": "deterministic fake Claude quota; no real Claude invocation",
+          "checks": {
+            "completed": true,
+            "distinct_native_ids": true,
+            "flash_observed": true,
+            "flash_requested": true,
+            "independent_check": true,
+            "isolated_directory": true,
+            "nonce_in_worker_result": true,
+            "old_controller_exited": true,
+            "old_native_exited": true,
+            "original_parent_wait": true,
+            "parent_distinct": true,
+            "primary_quota": true,
+            "reconstruction_patch": true,
+            "source_preserved": true,
+            "two_retained_attempts": true,
+            "wait_claimed": true,
+            "worker_delta": true
+          }
+        },
+        {
+          "mode": "push",
+          "group_id": "9591d77a-d3a8-428e-83c4-6b3f6e173b9e",
+          "task_id": "7cc77626-f968-4297-b8a4-d39fa9642af2",
+          "native_worker_id": "7cefd7a1-5571-4ec3-8775-c9cf1b9fab5e",
+          "provider": "antigravity",
+          "requested_model": "gemini-3.8-flash-medium",
+          "observed_model": "gemini-3.8-flash-medium",
+          "status": "completed",
+          "retained_attempts": 2,
+          "primary_fixture": "deterministic fake Claude quota; no real Claude invocation",
+          "checks": {
+            "completed": true,
+            "distinct_native_ids": true,
+            "flash_observed": true,
+            "flash_requested": true,
+            "nonce_in_worker_result": true,
+            "old_controller_exited": true,
+            "old_native_exited": true,
+            "original_parent_target": true,
+            "parent_distinct": true,
+            "primary_quota": true,
+            "readable_frame": true,
+            "source_preserved": true,
+            "two_retained_attempts": true
+          }
+        }
+      ]
     }
   },
   "transports": {
@@ -268,5 +311,6 @@
       "check": "EXT-PROTECTED-RAW",
       "reason": "Concurrent global Claude settings drift and current native node_repl definition retained; no further configuration writes until exact current ownership/delta reconciliation. See private protected-final.json."
     }
-  ]
+  ],
+  "updated_at": "2026-10-22T15:12:21.462189-04:00"
 }
