@@ -167,3 +167,19 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
             retry=await self.resume();self.assertEqual(retry['state'],'QUEUED');launch.assert_awaited_once()
         self.assertEqual(self.j.one('SELECT state FROM workers WHERE worker_id=?',(self.released,))['state'],'RESERVED')
         self.assertFalse(self.sent)
+
+    async def test_resume_post_write_loss_is_uncertain_and_exact_retry_sends_no_frame(self):
+        from unittest.mock import Mock
+        from nativepeers.errors import PeerError
+        frames=[]
+        class Pipe:
+            def write(self,wire):frames.append(json.loads(wire))
+            async def drain(self):raise BrokenPipeError('resume frame may have arrived')
+        self.group.children[self.released]={'process':Mock(stdin=Pipe())}
+        async def handoff(worker,frame):return await Group.send_worker(self.group,worker,frame)
+        with patch.object(self.group,'send_worker',side_effect=handoff):
+            with self.assertRaises(PeerError) as error:await self.resume()
+        self.assertEqual(error.exception.code,'DELIVERY_UNKNOWN');self.assertTrue(error.exception.may_have_received)
+        retry=await self.resume();self.assertEqual(retry['task_id'],frames[0]['task_id'])
+        self.assertEqual(retry['state'],'QUEUED');self.assertEqual(len(frames),1)
+        self.assertEqual(self.j.one('SELECT state FROM workers WHERE worker_id=?',(self.released,))['state'],'RESERVED')

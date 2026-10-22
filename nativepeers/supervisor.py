@@ -56,7 +56,13 @@ class Group:
     async def send_worker(self,worker_id,value):
         child=self.children[worker_id];wire=canonical(value)+b'\n'
         require(len(wire)<=PEER_FRAME,'PAYLOAD_TOO_LARGE','Worker control frame exceeds 64 KiB')
-        child['process'].stdin.write(wire);await child['process'].stdin.drain()
+        try:
+            child['process'].stdin.write(wire);await child['process'].stdin.drain()
+        except Exception as error:
+            if value.get('operation')=='task':
+                raise PeerError('DELIVERY_UNKNOWN','Committed task handoff was not confirmed',may_have_received=True,
+                    details={'worker_id':worker_id,'task_id':value['task_id'],'cause':type(error).__name__}) from error
+            raise
 
     async def start_worker(self,row):
         read_fd=write_fd=log=None

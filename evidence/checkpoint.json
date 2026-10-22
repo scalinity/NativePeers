@@ -3,7 +3,7 @@
   "active_owned_processes": [],
   "authorized_current_deltas": {
     "auth_and_provider_defaults": "No changes",
-    "current_review": "NativePeers code/docs/tests, three owned skills, owned global CLAUDE.md block, and own integration receipts only; all auth/native settings/shell/package hashes preserved",
+    "current_review": "Review 0274647 product/tests/docs, three owned skills and owned CLAUDE block. Codex configuration raw drift retained without attribution; no further writes planned.",
     "global_claude_owned_block": "NativePeers section only; outside bytes unchanged; source docs/CLAUDE_CONVENTIONS.md; private original backups/astra4-20261022/CLAUDE-owned-block.md",
     "managed_package": "No activation or native patch",
     "native_test_trust": "Removed exact owned fixture entries under manager lock; original config bytes reconstructed"
@@ -119,7 +119,7 @@
     "evidence": "evidence/review-0274647.json",
     "status": "IN_PROGRESS",
     "branch": "fix/pro-0274647",
-    "source_map_sha256": "a7838afbfab3f9a12fb2d2290ce9291bd2f015a450a81c8ce76bf3d1da2ffd48"
+    "source_map_sha256": "ad9132c5789f0ff639c3abdf99a8b6f7fd62a3c3f17d6febdcf6267267d065fc"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
@@ -193,18 +193,41 @@
     "source_zip_uploaded": false
   },
   "schema_version": 2,
-  "stage": "Addressing all review 0274647 defects and suggestions",
+  "stage": "Offline 374/554 PASS; native Flash reacceptance prepared",
   "tests_current": {
     "offline": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "tests": 374,
+      "subtests": 554,
+      "seconds": 160.49,
+      "command": ".venv/bin/python -m pytest -q",
+      "source_frozen_during_run": true
     },
     "native": {
       "status": "NOT_RUN",
-      "scope": "No native inference yet in this address pass"
+      "scope": "Current-source Flash fallback/MCP check and exact-history resume batch prepared"
     },
     "focused": {
       "status": "PASS",
       "scope": "Item-specific offline regressions; full suite and native acceptance recorded separately"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py"
+    },
+    "installed": {
+      "status": "PASS",
+      "owned_skills_match": true,
+      "CLAUDE_outside_owned_block_unchanged": true,
+      "second_install_operations": [
+        0,
+        0
+      ]
+    },
+    "preservation": {
+      "status": "BLOCKED",
+      "scope": "Codex raw config drift attribution only; other protected hashes unchanged, owned hook trust unchanged, Sol/xhigh and daemon_auto_start=false retained"
     }
   },
   "transports": {

@@ -8,7 +8,7 @@
     },
     "N2": {
       "status": "FIXED",
-      "verification": "21 routing/admission tests and 18 subtests PASS: real group socket preserves post-write uncertainty with task/message IDs, exact retries emit one frame, late ingestion advances receipts, pre-admission rejection stays definite."
+      "verification": "24 routing/admission tests and 18 subtests PASS. Post-write uncertainty is preserved at the common task-frame boundary for follow-up and resume; exact retries never emit another frame. The added resume case was discovered during close-out."
     },
     "N3": {
       "status": "FIXED",
@@ -48,15 +48,38 @@
   },
   "tests": {
     "offline": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "tests": 374,
+      "subtests": 554,
+      "seconds": 160.49,
+      "command": ".venv/bin/python -m pytest -q",
+      "source_frozen_during_run": true
     },
     "native": {
       "status": "NOT_RUN",
-      "scope": "No native inference yet in this address pass"
+      "scope": "Current-source Flash fallback/MCP check and exact-history resume batch prepared"
     },
     "focused": {
       "status": "PASS",
       "scope": "Item-specific offline regressions; full suite and native acceptance recorded separately"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py"
+    },
+    "installed": {
+      "status": "PASS",
+      "owned_skills_match": true,
+      "CLAUDE_outside_owned_block_unchanged": true,
+      "second_install_operations": [
+        0,
+        0
+      ]
+    },
+    "preservation": {
+      "status": "BLOCKED",
+      "scope": "Codex raw config drift attribution only; other protected hashes unchanged, owned hook trust unchanged, Sol/xhigh and daemon_auto_start=false retained"
     }
   },
   "source": {
@@ -103,10 +126,10 @@
     "nativepeers/recovery.py": "1f14fcdb73e66fe6266dc91062859f18f6812d2c87a1c401ff604b934b387fcc",
     "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
     "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
-    "nativepeers/supervisor.py": "3c0ae517d01baf5c45579ae93bc101b44d241f05d04535016b4af813b26bfc42",
+    "nativepeers/supervisor.py": "e6c0d19d304731953343a87935168f2429e324a8f6887b4bf13a00fd2bd79df1",
     "nativepeers/worker_process.py": "b2315a04211ed1d6e293252c26b516811e1e5e094d63feaef8c4218e5b9415c9",
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
     "nativepeers/worktrees.py": "1abe0a6890c1ed989bdb29ff949f24b4508d4351ebd58ea1bc88112a2b1f0a99"
   },
-  "source_map_sha256": "a7838afbfab3f9a12fb2d2290ce9291bd2f015a450a81c8ce76bf3d1da2ffd48"
+  "source_map_sha256": "ad9132c5789f0ff639c3abdf99a8b6f7fd62a3c3f17d6febdcf6267267d065fc"
 }
