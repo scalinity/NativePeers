@@ -107,7 +107,7 @@ class Delegation:
             require(profile in ('analysis','workspace'),'PERMISSION_CAPABILITY_UNKNOWN','Trusted workers require an explicit operator profile')
             workspace=spec.get('workspace',{'mode':'inherit-read-only'})
             require(profile!='analysis' or workspace.get('mode','inherit-read-only')=='inherit-read-only','PROTOCOL_ERROR','Analysis uses a read-only workspace')
-            require(profile!='workspace' or workspace.get('mode')=='isolated-worktree','WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated worktrees')
+            require(profile!='workspace' or workspace.get('mode') in ('isolated-worktree','isolated-copy'),'WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require an isolated worktree or explicit isolated copy')
             spec.update(permission_profile=profile,cwd=parent['cwd'],wall_time_seconds=wall,max_task_turns=turns)
             spec['model']=spec.get('model',codex_config.get('model') if spec['provider']=='codex' else claude_config.get('model','sonnet'))
             if spec['provider']=='antigravity':
@@ -174,7 +174,7 @@ class Delegation:
                 cwd,worktree_id,baseline=await asyncio.to_thread(prepare,self.journal,parent['cwd'],worker['worker_id'],worker['workspace'],frozen=batch_workspace)
                 worker['lease']['spec']['cwd']=cwd;worker['lease']['baseline']=baseline
                 self.journal.db.execute('UPDATE workers SET cwd=?,worktree_id=?,lease_json=? WHERE worker_id=?',(cwd,worktree_id,canonical(worker['lease']).decode(),worker['worker_id']))
-            if any(w['workspace'].get('mode')=='isolated-worktree' for w in prepared):
+            if any(w['workspace'].get('mode') in ('isolated-worktree','isolated-copy') for w in prepared):
                 await asyncio.to_thread(validate_frozen,parent['cwd'],batch_workspace)
             await self.ensure_supervisor(group_id)
         except Exception as error:

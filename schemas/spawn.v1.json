@@ -60,13 +60,25 @@
               "mode": {
                 "enum": [
                   "inherit-read-only",
-                  "isolated-worktree"
+                  "isolated-worktree",
+                  "isolated-copy"
                 ]
               },
               "untracked_allowlist": {
                 "type": "array",
                 "items": {
                   "type": "string"
+                }
+              },
+              "file_allowlist": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 256,
+                "description": "Explicit relative regular files for a non-Git isolated-copy workspace; the batch union is limited to 256 files and 10 MiB.",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
                 }
               }
             }
