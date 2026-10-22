@@ -164,7 +164,8 @@ class Router:
     def inbox(self,caller,limit=20,unread=False):
         require(caller.kind=="peer","CALLER_UNBOUND","Inbox requires a bound native session")
         require(0<limit<=100,"PROTOCOL_ERROR","Inbox limit must be 1 to 100")
-        rows=self.journal.all("SELECT payload_json FROM messages WHERE to_key=? ORDER BY created_at DESC LIMIT ?",(caller.key,limit))
+        predicate = " AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=messages.message_id AND r.stage='MODEL_REPORTED_PROCESSED')" if unread else ''
+        rows=self.journal.all("SELECT payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC LIMIT ?",(caller.key,limit))
         messages=[json.loads(r["payload_json"]) for r in rows]
         peer=self.registry.get(caller.key)
         if peer['owner_kind']=='interactive-standalone':
@@ -174,8 +175,6 @@ class Router:
                 known=receipt['state'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED','REPLY_SUBMITTED') or any(r['stage'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED') for r in receipt['receipts'])
                 visible.append(message if known else {'message_id':message['message_id'],'delivery_state':receipt['state'],'body_available':False,'reason':'Native admission or inbound policy has not established ingestion.'})
             messages=visible
-        if unread:
-            messages=[m for m in messages if not self.journal.one("SELECT receipt_id FROM receipts WHERE message_id=? AND stage='MODEL_REPORTED_PROCESSED'",(m["message_id"],))]
         return messages
 
     def ack(self,caller,message_id):

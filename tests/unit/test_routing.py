@@ -158,6 +158,16 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         message=self.journal.one('SELECT * FROM messages WHERE message_id=?',(outcome['message_id'],))
         self.assertEqual(message['expires_at']-message['created_at'],2)
 
+    async def test_old_unread_survives_acknowledged_rows_before_limit(self):
+        old=await self.router.send(self.ca,'b','old unread')
+        for count in range(110):
+            row=await self.router.send(self.ca,'b',str(count))
+            self.router.ack(self.cb,row['message_id'])
+            if count in (20,109):
+                inbox=self.router.inbox(self.cb,limit=20,unread=True)
+                self.assertEqual([m['message_id'] for m in inbox],[old['message_id']])
+        self.assertEqual(len(self.router.inbox(self.cb,limit=20)),20)
+
     async def test_frame_limits_and_ack(self):
         with self.assertRaises(PeerError):await self.router.send(self.ca,'b','x'*12289)
         result=await self.router.send(self.ca,'b','ok')
