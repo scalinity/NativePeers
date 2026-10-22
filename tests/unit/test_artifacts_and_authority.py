@@ -74,6 +74,9 @@ class ArtifactAddTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name).resolve();self.cwd=self.root/'workspace';self.cwd.mkdir()
+        environment=patch.dict(os.environ,{'CODEX_HOME':str(self.root/'fixture-home/.codex'),
+                                          'CLAUDE_CONFIG_DIR':str(self.root/'fixture-home/.claude')})
+        environment.start();self.addCleanup(environment.stop)
         self.home=self.root/'native-home';self.home.mkdir()
         self.j=Journal(self.root/'state');self.addCleanup(self.j.close)
         self.registry=Registry(self.j)
@@ -119,6 +122,9 @@ class ArtifactAddTests(unittest.TestCase):
             result=asyncio.run(delegation.spawn(self.caller,request))
             start.assert_awaited_once()
             workers={w['role_title']:w['worker_id'] for w in result['workers']}
+            leases=[json.loads(row['lease_json']) for row in self.j.all('SELECT lease_json FROM workers')]
+            self.assertTrue(all(lease['provider_home']==str(home/'.codex') for lease in leases))
+            self.assertTrue(all(lease['spec']['model']=='fixture-model' for lease in leases))
             allowed=Caller('peer','selected-native-peer',grants={'worker_id':workers['selected']})
             denied=Caller('peer','unrelated-native-peer',grants={'worker_id':workers['unrelated']})
             page=asyncio.run(Core(self.j).tool(allowed,'artifact_read',{'handle':handle}))

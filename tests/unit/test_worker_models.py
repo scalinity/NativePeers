@@ -27,6 +27,10 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
         self.home = Path(self.temporary.name).resolve()
         for provider in ('claude', 'codex'):
             (self.home / ('.' + provider)).mkdir()
+        environment = patch.dict(os.environ, {'CODEX_HOME': str(self.home / '.codex'),
+                                              'CLAUDE_CONFIG_DIR': str(self.home / '.claude')})
+        environment.start()
+        self.addCleanup(environment.stop)
         (self.home / '.claude/settings.json').write_text('{"model":"sonnet"}')
         (self.home / '.codex/config.toml').write_text('model="gpt-fixture"\nmodel_reasoning_effort="high"\n')
         for relative in ('.local/bin/claude', '.local/share/codex-mcp-manager/current/bin/codex'):
@@ -61,6 +65,10 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([r['model_requested'] for r in rows], ['opus', 'gpt-fixture', 'sonnet'])
         self.assertEqual([json.loads(r['lease_json'])['spec']['model'] for r in rows],
                          ['opus', 'gpt-fixture', 'sonnet'])
+        leases = [json.loads(r['lease_json']) for r in rows]
+        self.assertEqual([lease['provider_home'] for lease in leases],
+                         [str(self.home / name) for name in ('.claude', '.codex', '.claude')])
+        self.assertEqual(leases[1]['spec']['reasoning_effort'], 'high')
         (self.home / '.claude/settings.json').write_text('{"model":"haiku"}')
         second = await self.spawn(request)
         self.assertEqual(first['group_id'], second['group_id'])
