@@ -8,7 +8,7 @@ import time
 from .control import group_call
 from .delegation import Delegation,TERMINAL
 from .errors import require
-from .files import async_advisory_lock,canonical
+from .files import async_advisory_lock,canonical,sha256
 from .models import bounded_text,new_id
 from .launch import recorded_home,home_environment
 from .process import matches
@@ -65,10 +65,24 @@ def resume_command(journal,caller,worker_id):
             'ownership_scope':'Verified released NativePeers writers and registered eligible local native runtimes; no private-backend takeover.'}
 
 
-async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
+def _resume_request(journal,caller,request_id,digest):
+    prior=journal.one('SELECT r.*,t.state FROM resume_requests r JOIN tasks t USING(task_id) WHERE caller_key=? AND client_request_id=?',
+                      (caller.key,request_id))
+    if prior:
+        require(prior['payload_sha256']==digest,'IDEMPOTENCY_CONFLICT','Resume request ID has different content')
+        return dict(json.loads(prior['response_json']),state=prior['state'])
+
+
+async def resume_worker(journal,caller,worker_id,text,completion_mode=None,client_request_id=None):
     require(completion_mode in (None,'push','wait'),'PROTOCOL_ERROR','Invalid resume completion mode')
+    require(client_request_id is None or isinstance(client_request_id,str) and bool(client_request_id),
+            'PROTOCOL_ERROR','Resume request ID must be a nonempty string')
+    request_id=bounded_text(client_request_id) if client_request_id is not None else new_id()
     text=bounded_text(text);row,group=owned_worker(journal,caller,worker_id)
+    digest=sha256({'worker_id':worker_id,'text':text,'completion_mode':completion_mode})
     async with async_advisory_lock(journal.root/'locks'/(group['group_id']+'.resume.lock')):
+        prior=_resume_request(journal,caller,request_id,digest)
+        if prior:return prior
         row,group=owned_worker(journal,caller,worker_id);assert_released(journal,row)
         registry=Registry(journal);parent=registry.verify(caller.key,caller.incarnation)
         from .policy import load
@@ -94,19 +108,25 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
         phases[str(phase)]=[task_id];policy.update(phases=phases,controller_generation=controller_generation,parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'],created_at=time.time())
         lease.update(released_native=True,expires_at=time.time()+lease['spec']['wall_time_seconds']+600)
         lease['grants']['message_targets']=[caller.key]
+        response={'worker_id':worker_id,'task_id':task_id,'group_id':group['group_id'],'native_id':row['native_id'],
+                  'completion_generation':phase,'state':'QUEUED','client_request_id':request_id}
         with journal.transaction() as db:
+            # Different groups have different resume locks but share the caller's ID space.
+            raced=_resume_request(journal,caller,request_id,digest)
+            if raced:return raced
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
             require(active<local["workers_total"],'CAPACITY_UNAVAILABLE','No safe native worker slot is available')
             db.execute("UPDATE workers SET state='RESERVED',generation=generation+1,lease_json=? WHERE worker_id=? AND state='RELEASED_RESUMABLE'",(canonical(lease).decode(),worker_id))
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,None,None,'QUEUED',None,None,row['generation']+1,canonical({'text':text,'initial':False}).decode()))
             db.execute('UPDATE groups SET state=?,policy_json=? WHERE group_id=?',('RESERVED',canonical(policy).decode(),group['group_id']))
             db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group['group_id'],phase,caller.key,completion_mode or policy['completion_mode'],'UNCLAIMED',None,None,new_id(),controller_generation))
+            db.execute('INSERT INTO resume_requests VALUES(?,?,?,?,?)',(caller.key,request_id,digest,task_id,canonical(response).decode()))
         if supervisor_alive:
             await group_call(journal,group['group_id'],'resume',{'caller_key':caller.key,'worker_id':worker_id,'task_id':task_id,'text':text},timeout=35)
         else:
             if manifest_path.exists():manifest_path.rename(manifest_path.with_name('owner.generation-'+str(manifest['generation'])+'.json'))
             await Delegation(journal,registry).ensure_supervisor(group['group_id'])
-        return {'worker_id':worker_id,'task_id':task_id,'group_id':group['group_id'],'native_id':row['native_id'],'completion_generation':phase,'state':'QUEUED'}
+        return response
 
 
 def reconcile_owned(journal,caller,group_id,*,dry_run=False):

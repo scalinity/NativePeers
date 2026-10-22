@@ -47,7 +47,7 @@ def parser():
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144)
     q=command('resume-command');q.add_argument('worker_id')
-    q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait'])
+    q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
@@ -92,7 +92,7 @@ async def dispatch(args,journal):
     if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))
     if name in ('resume-worker','resume-command'):
         from .recovery import resume_command,resume_worker
-        return resume_command(journal,caller,args.worker_id) if name=='resume-command' else await resume_worker(journal,caller,args.worker_id,read_file(args.task_file),args.completion_mode)
+        return resume_command(journal,caller,args.worker_id) if name=='resume-command' else await resume_worker(journal,caller,args.worker_id,read_file(args.task_file),args.completion_mode,args.client_request_id)
     if name=='recover':
         group=core.delegation.group(caller,args.group)
         workers=journal.all('SELECT worker_id,native_id,state FROM workers WHERE group_id=?',(group['group_id'],))
