@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Observe exact owned parents and settle the retained Pro-review ledger."""
 import asyncio
+import base64
+from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -10,9 +13,95 @@ from nativepeers.budget import LiveBudget
 from nativepeers.core import Core
 from nativepeers.files import atomic_json
 from nativepeers.journal import Journal
-from tests.live.pro_review import RUN,STATE,LEDGER,source,stamp
+from tests.live.pro_review import RUN,STATE,LEDGER,artifact_nonce_matches,source,stamp
 from tests.live.review_collect import native_events
 from tests.live.collect_antigravity import antigravity_events
+
+
+def json_objects(value,depth=0):
+    if depth>8:return
+    if isinstance(value,str):
+        try:decoded=json.loads(value)
+        except ValueError:
+            # Native tool steps can wrap the MCP JSON in a short text label.
+            decoder=json.JSONDecoder()
+            for index,char in enumerate(value):
+                if char!='{':continue
+                try:decoded,_=decoder.raw_decode(value[index:])
+                except ValueError:continue
+                yield from json_objects(decoded,depth+1)
+            return
+        yield from json_objects(decoded,depth+1)
+    elif isinstance(value,list):
+        for item in value:yield from json_objects(item,depth+1)
+    elif isinstance(value,dict):
+        yield value
+        for key in ('content','text','output','result','response','Ok','structuredContent'):
+            if key in value:yield from json_objects(value[key],depth+1)
+
+
+def artifact_result(value,context):
+    for item in json_objects(value):
+        if item.get('isError') or item.get('is_error') or item.get('ok') is False:return False
+        page=item.get('data')
+        if item.get('ok') is not True or not isinstance(page,dict):continue
+        if page.get('artifact_id')!=context['artifact_id'] or page.get('sha256')!=context['sha256']:continue
+        try:raw=base64.b64decode(page['data_base64'],validate=True);text=raw.decode()
+        except (KeyError,TypeError,ValueError,UnicodeError):continue
+        if (page.get('offset')==0 and len(raw)==context['byte_size']==page.get('bytes_read')
+                and hashlib.sha256(raw).hexdigest()==context['sha256'] and artifact_nonce_matches(text,context)):
+            return True
+    return False
+
+
+def artifact_call(value,context):
+    if not isinstance(value,dict):return False
+    function=value.get('function',value)
+    if not isinstance(function,dict):return False
+    name=function.get('name','')
+    if not isinstance(name,str) or 'nativepeers' not in name or not name.endswith('_artifact_read'):return False
+    args=function.get('arguments',function.get('args',function.get('input',{})))
+    if isinstance(args,str):
+        try:args=json.loads(args)
+        except ValueError:return False
+    return isinstance(args,dict) and args.get('handle')==context['artifact_id']
+
+
+def artifact_read_evidence(peer,context,result):
+    provider=peer['peer_key']['provider']
+    history,_=(antigravity_events(peer) if provider=='antigravity' else native_events(peer))
+    full=history.with_name('transcript_full.jsonl')
+    if provider=='antigravity' and full.exists():
+        assert full.resolve().is_relative_to(Path(peer['home'])) and not full.is_symlink()
+        history=full
+    pending={}
+    for line in history.read_text().splitlines():
+        event=json.loads(line);at=event.get('created_at') if provider=='antigravity' else event.get('timestamp',event.get('ts'))
+        if not at:continue
+        when=datetime.fromisoformat(at.replace('Z','+00:00')).timestamp()
+        if not result['started_at']<=when<=result['completed_at']+1:continue
+        call_id=None;output=None;event_id=None
+        if provider=='antigravity':
+            event_id=event.get('step_index')
+            if event.get('type')=='PLANNER_RESPONSE':
+                for call in event.get('tool_calls',[]):
+                    if artifact_call(call,context):pending[call.get('id',event_id)]=event_id
+            if event.get('type')=='MCP_TOOL' and event.get('status')=='DONE' and pending:
+                call_id=event.get('tool_call_id',next(reversed(pending)));output=event.get('content')
+        else:
+            payload=event.get('payload',{});kind=payload.get('type');call_id=payload.get('call_id');event_id=call_id
+            if event.get('type')=='response_item':
+                if kind in ('function_call','custom_tool_call') and call_id and artifact_call(payload,context):pending[call_id]=call_id
+                if kind in ('function_call_output','custom_tool_call_output'):output=payload.get('output')
+            elif event.get('type')=='event_msg':
+                invocation=payload.get('invocation',{})
+                call=dict(name='mcp__'+invocation.get('server','')+'__'+invocation.get('tool',''),arguments=invocation.get('arguments',{}))
+                if kind=='mcp_tool_call_begin' and call_id and artifact_call(call,context):pending[call_id]=call_id
+                if kind=='mcp_tool_call_end':output=payload.get('result')
+        if call_id in pending and artifact_result(output,context):
+            return dict(native_history=str(history),native_session_id=peer['peer_key']['native_session_id'],
+                        call_event_id=pending[call_id],result_event_id=event_id,artifact_id=context['artifact_id'],sha256=context['sha256'])
+    return None
 
 
 def collect():
@@ -32,6 +121,16 @@ def collect():
             assertions.update(current_source=case['source']==source(),case_passed=case.get('status')=='PASS',
                 actual_parent_tool_call=any(e['kind']=='tool' and 'pro_review.py parent '+provider in e['text'] for e in events),
                 original_parent_observed_results=bool(finals and len(ids)==2 and all(native in finals[-1]['text'] for native in ids)))
+            artifact_reads={};context=case.get('context_artifact')
+            assertions['artifact_context_recorded']=bool(context)
+            for result in case.get('results',[]):
+                child=result['worker']['provider'];evidence=None
+                if context:
+                    try:evidence=artifact_read_evidence(core.registry.get(result['worker']['peer_key'],live=False),context,result)
+                    except (OSError,json.JSONDecodeError,RuntimeError):pass
+                    assertions[child+'_artifact_nonce']=artifact_nonce_matches(result['summary'],context)
+                artifact_reads[child]=evidence
+                assertions[child+'_native_artifact_read']=evidence is not None
             ledger=json.loads(LEDGER.read_text())
             for reservation_id in [launch['reservation'],*launch.get('continuation_reservations',[])]:
                 reservation=next(r for r in ledger['reservations'] if r['id']==reservation_id)
@@ -40,7 +139,7 @@ def collect():
                     budget.settle(reservation_id,observed_turns=1,native_id=case['parent_native_id'],completed_at=completed[-1]['at'])
             checks.append(dict(provider=provider,status='PASS' if all(assertions.values()) else 'PENDING' if case.get('status') is None or not finals else 'FAIL',
                 assertions=assertions,parent_native_id=case['parent_native_id'],worker_native_ids=ids,native_history=str(history),
-                parent_terminal_event_ids=[e['id'] for e in finals],source=case['source'],groups=case.get('groups',[])))
+                parent_terminal_event_ids=[e['id'] for e in finals],source=case['source'],groups=case.get('groups',[]),artifact_reads=artifact_reads))
         pushed=None
         if (RUN/'push.json').exists():
             case=json.loads((RUN/'push.json').read_text());peer=core.registry.get(case['caller'],live=False)
