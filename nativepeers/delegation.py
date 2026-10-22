@@ -232,6 +232,9 @@ class Delegation:
             self.journal.event(group_id,'startup-error',{'type':type(error).__name__,'message':str(error)[:1000]})
             # A readiness timeout is uncertain; never launch another supervisor from this path.
             if not launch_attempted or isinstance(error,SupervisorNotStarted):
+                for row in self.journal.all('SELECT worker_id,generation,native_id,cwd FROM workers WHERE group_id=?',(group_id,)):
+                    self.journal.event(row['worker_id'],'controller-not-created',dict(row,controller_created=False,
+                        cause=type(error).__name__,source='spawn-before-supervisor'))
                 self.journal.db.execute("UPDATE groups SET state='FAILED' WHERE group_id=?",(group_id,))
                 self.journal.db.execute("UPDATE workers SET state='FAILED' WHERE group_id=?",(group_id,))
                 self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='STARTUP_FAILED_BEFORE_SUBMISSION' WHERE state='QUEUED' AND native_turn_id IS NULL AND worker_id IN (SELECT worker_id FROM workers WHERE group_id=?)",(group_id,))

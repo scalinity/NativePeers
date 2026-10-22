@@ -195,3 +195,25 @@ class CleanupTests(unittest.TestCase):
             return inventory(*args,**kwargs)
         with patch('nativepeers.cleanup._inventory',side_effect=race):value=self.candidate(worker)
         self.assertFalse(value['safe_candidate']);self.assertIn('changed during',value['reason']);self.assertTrue(work.exists())
+
+    def test_positive_prelaunch_failure_has_a_read_only_cleanup_candidate_without_manifest(self):
+        from nativepeers.delegation import Delegation
+        from nativepeers.errors import SupervisorNotStarted
+        (self.source/'input').write_text('base\n');git(self.source,'init','-q');git(self.source,'add','input');git(self.source,'commit','-qm','Create never-launched fixture')
+        parent=self.j.one('SELECT * FROM peer_instances WHERE peer_key=?',(self.caller.key,))
+        descriptor=json.loads(parent['descriptor_json']);descriptor['policy']={'profiles':['analysis','workspace']}
+        self.j.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE peer_key=?',(canonical(descriptor).decode(),self.caller.key))
+        home=self.root/'home';binary=home/'.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('never invoked')
+        async def failure(group):raise SupervisorNotStarted(group,FileNotFoundError('positive fixture prelaunch failure'))
+        request={'workers':[{'provider':'claude','title':'never started','task':'unused','permission_profile':'workspace','workspace':{'mode':'isolated-worktree'}}]}
+        with patch('nativepeers.delegation.Path.home',return_value=home),patch.dict(os.environ,{'CLAUDE_CONFIG_DIR':str(home/'.claude')}),patch.object(Delegation,'ensure_supervisor',side_effect=failure),self.assertRaises(SupervisorNotStarted):
+            asyncio.run(Delegation(self.j,Registry(self.j)).spawn(self.caller,request))
+        row=self.j.one('SELECT * FROM workers');self.assertEqual(row['state'],'FAILED')
+        self.assertFalse((self.j.root/'workers'/(row['worker_id']+'.json')).exists())
+        before=self.j.db.total_changes;value=self.candidate(row['worker_id'])
+        self.assertTrue(value['safe_candidate'],value);self.assertTrue(value['never_launched']);self.assertIsNone(value['retained_result'])
+        self.assertEqual(self.j.db.total_changes,before);self.assertTrue(Path(row['cwd']).exists())
+        (Path(row['cwd'])/'input').write_text('unique later edit\n')
+        self.assertFalse(self.candidate(row['worker_id'])['safe_candidate'])
+        self.j.db.execute('DELETE FROM events WHERE kind=\'controller-not-created\'')
+        self.assertFalse(self.candidate(row['worker_id'])['safe_candidate'])

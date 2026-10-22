@@ -39,7 +39,8 @@
       "verification": "28 Git/copy planning tests and 62 subtests PASS. Explicit Git untracked selections reject offline/nonambient registered provider homes before materialization; ordinary neighbors work and executor-thread revalidation rejects a home registered after capture."
     },
     "CLEANUP": {
-      "status": "PENDING"
+      "status": "FIXED",
+      "verification": "22 cleanup/admission tests PASS, including a production spawn with definite supervisor creation failure. Its unchanged, positively never-created workspace is a read-only cleanup candidate without a manifest/result; unknown, changed, active and resumed cases stay refused. Pipe/log setup failures now close their own descriptors and use the same positive creation distinction."
     },
     "EVIDENCE": {
       "status": "PENDING"
@@ -72,7 +73,7 @@
     "nativepeers/caller.py": "e856fd6fcf4041aa5af4bece74948cf98cbb87c4ddf431220dbe561522d199ae",
     "nativepeers/change_preview.py": "3ded04e7a5d14fc1baea4cca5de844d429772f559448c6a60a28848412257422",
     "nativepeers/claude_stream.py": "ff459549ca6322027623cfe0840492b0be2df1fb423062d4359661b70b79d5c1",
-    "nativepeers/cleanup.py": "f3997f456e7af9601380fa0323aa5161d4727ab9eb60434ab5773b67e5ceb414",
+    "nativepeers/cleanup.py": "fbf0a9fe4c79b81edf19c89bca9fd4b8e17d81f4d61a8e66cd02540095d29ac0",
     "nativepeers/cli.py": "6f08fa0145f36ef3f4d2d8311e2ffcf737ead5324e38c964d6ded05c95797c8f",
     "nativepeers/compatibility.py": "8501618584cf7dcc4ec3d0e124a3fb37d116becf66235f89277d391f062efff9",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
@@ -102,10 +103,10 @@
     "nativepeers/recovery.py": "1f14fcdb73e66fe6266dc91062859f18f6812d2c87a1c401ff604b934b387fcc",
     "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
     "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
-    "nativepeers/supervisor.py": "484546e1ff0892ede8f5906c7a97b8804d55012b4be1faf5adbcabc045f654b8",
+    "nativepeers/supervisor.py": "3c0ae517d01baf5c45579ae93bc101b44d241f05d04535016b4af813b26bfc42",
     "nativepeers/worker_process.py": "b2315a04211ed1d6e293252c26b516811e1e5e094d63feaef8c4218e5b9415c9",
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
     "nativepeers/worktrees.py": "1abe0a6890c1ed989bdb29ff949f24b4508d4351ebd58ea1bc88112a2b1f0a99"
   },
-  "source_map_sha256": "c9b4a100c9de09cff4dbec302fa5819e00fdeb768cf91d09a6d9be2c256618f8"
+  "source_map_sha256": "a7838afbfab3f9a12fb2d2290ce9291bd2f015a450a81c8ce76bf3d1da2ffd48"
 }

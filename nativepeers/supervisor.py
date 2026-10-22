@@ -59,21 +59,24 @@ class Group:
         child['process'].stdin.write(wire);await child['process'].stdin.drain()
 
     async def start_worker(self,row):
-        read_fd,write_fd=os.pipe()
-        log=open(self.journal.root/'groups'/self.id/(row['worker_id']+'.stderr'),'ab',buffering=0)
+        read_fd=write_fd=log=None
         try:
+            read_fd,write_fd=os.pipe()
+            log=open(self.journal.root/'groups'/self.id/(row['worker_id']+'.stderr'),'ab',buffering=0)
             process=await asyncio.create_subprocess_exec(str(PYTHON),'-m','nativepeers.worker_process',
                 '--worker-id',row['worker_id'],'--lease-fd',str(read_fd),cwd=ROOT,env=supervisor_environment(self.journal),
                 stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=log,
                 pass_fds=(read_fd,),close_fds=True,start_new_session=True,limit=PEER_FRAME+1)
         except BaseException as error:
-            os.close(write_fd)
+            if write_fd is not None:os.close(write_fd)
             if isinstance(error,OSError):
                 failure=ControllerNotStarted(row,error)
                 self.journal.event(row['worker_id'],'controller-not-created',failure.details)
                 raise failure from error
             raise
-        finally:os.close(read_fd);log.close()
+        finally:
+            if read_fd is not None:os.close(read_fd)
+            if log is not None:log.close()
         child={'process':process,'owner':identity(process.pid).json(),'lease_fd':write_fd,'ready':asyncio.get_running_loop().create_future(),'row':row}
         self.children[row['worker_id']]=child;child['reader']=asyncio.create_task(self.read_worker(row['worker_id']))
         await asyncio.wait_for(asyncio.shield(child['ready']),30)

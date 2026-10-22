@@ -100,7 +100,7 @@ async def dispatch(args,journal):
         require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Cleanup planning requires a verified parent')
         core.registry.verify(caller.key,caller.incarnation)
         require(1<=args.limit<=100,'PROTOCOL_ERROR','Cleanup selection limit must be 1 to 100')
-        workers=args.worker_id or [row['worker_id'] for row in journal.all("SELECT w.worker_id FROM workers w JOIN groups g USING(group_id) WHERE g.parent_key=? AND w.state='RELEASED_RESUMABLE' AND w.worktree_id IS NOT NULL ORDER BY w.rowid DESC LIMIT ?",(caller.key,args.limit))]
+        workers=args.worker_id or [row['worker_id'] for row in journal.all("SELECT w.worker_id FROM workers w JOIN groups g USING(group_id) WHERE g.parent_key=? AND (w.state='RELEASED_RESUMABLE' OR w.state='FAILED' AND EXISTS (SELECT 1 FROM events e WHERE e.subject_id=w.worker_id AND e.kind='controller-not-created')) AND w.worktree_id IS NOT NULL ORDER BY w.rowid DESC LIMIT ?",(caller.key,args.limit))]
         if not workers:return dict(planner_only=True,removed=False,recheck_required=True,candidates=[],instruction='No released owned writing workspaces in this bounded selection.')
         return plan(journal,caller,workers)
     if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))

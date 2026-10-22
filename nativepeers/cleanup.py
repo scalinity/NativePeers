@@ -15,14 +15,23 @@ from .process import matches
 
 
 def _released(journal,row):
-    require(row['state']=='RELEASED_RESUMABLE','OWNERSHIP_CONFLICT','Worker has not released its writer')
+    require(row['state'] in ('RELEASED_RESUMABLE','FAILED'),'OWNERSHIP_CONFLICT','Worker has not released its writer')
     # Resumed histories keep their retained workspaces; this planner covers initial runs.
     require(row['generation']==1,'OWNERSHIP_CONFLICT','Resumed generations must be retained')
-    manifest=json.loads(_selected_file_bytes(journal.root/'workers'/(row['worker_id']+'.json'),65536))
-    require(all(manifest.get(key)==row[key] for key in ('worker_id','group_id','native_id','generation'))
-            and manifest.get('owner'),'OWNERSHIP_UNKNOWN','Owned process manifest differs from this generation')
-    require(not matches(manifest['owner']) and not (manifest.get('native_process') and matches(manifest['native_process'])),
-            'OWNERSHIP_CONFLICT','An owned controller or native process is still alive')
+    path=journal.root/'workers'/(row['worker_id']+'.json')
+    proof=journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='controller-not-created' ORDER BY sequence DESC LIMIT 1",(row['worker_id'],))
+    proof=json.loads(proof['payload_json']) if proof else None
+    if proof and proof.get('controller_created') is False and all(proof.get(k)==row[k] for k in ('worker_id','generation','native_id','cwd')):
+        require(not path.exists(),'OWNERSHIP_UNKNOWN','A process manifest contradicts the never-created record')
+        started=journal.one('SELECT 1 FROM tasks WHERE worker_id=? AND (native_turn_id IS NOT NULL OR result_artifact_id IS NOT NULL)',(row['worker_id'],))
+        require(not started,'OWNERSHIP_UNKNOWN','Native execution evidence contradicts the prelaunch record')
+        manifest={'controller_created':False,'proof':proof}
+    else:
+        manifest=json.loads(_selected_file_bytes(path,65536))
+        require(all(manifest.get(key)==row[key] for key in ('worker_id','group_id','native_id','generation'))
+                and manifest.get('owner'),'OWNERSHIP_UNKNOWN','Owned process manifest differs from this generation')
+        require(not matches(manifest['owner']) and not (manifest.get('native_process') and matches(manifest['native_process'])),
+                'OWNERSHIP_CONFLICT','An owned controller or native process is still alive')
     tasks=journal.one("SELECT COUNT(*) total,SUM(state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')) unfinished FROM tasks WHERE worker_id=?",(row['worker_id'],))
     require(tasks['total'] and not tasks['unfinished'],'OWNERSHIP_CONFLICT','Worker has unfinished tasks')
     # Inspect only registry descriptors, without native discovery or metadata refresh writes.
@@ -150,20 +159,23 @@ def plan(journal,caller,worker_ids,*,timeout=5,max_entries=10000,max_bytes=ARTIF
             sizes,files,dirs=_inventory(work,deadline,max_entries,max_bytes);value.update(sizes)
             value['retained_results']=journal.all('SELECT task_id,result_artifact_id,generation,state FROM tasks WHERE worker_id=? AND result_artifact_id IS NOT NULL ORDER BY rowid LIMIT 101',(row['worker_id'],))
             require(len(value['retained_results'])<=100,'CLEANUP_UNAVAILABLE','Too many retained task results for one bounded plan')
-            task,record=_result(journal,caller,row)
-            retained=record.get('changes',{})
-            value['retained_result']={'task_id':task['task_id'],'result_artifact_id':task['result_artifact_id'],
-                'worker_delta_artifact':retained.get('worker_delta_artifact'),
-                'patch_artifact':retained.get('patch_artifact'),'worker_delta_base':retained.get('worker_delta_base')}
-            common=_storage(source,work,baseline,mode,deadline)
-            require(retained.get('baseline')==baseline and retained.get('worktree')==str(work)
+            if manifest.get('controller_created') is False:
+                value.update(never_launched=True,retained_result=None)
+            else:
+                task,record=_result(journal,caller,row)
+                retained=record.get('changes',{})
+                value['retained_result']={'task_id':task['task_id'],'result_artifact_id':task['result_artifact_id'],
+                    'worker_delta_artifact':retained.get('worker_delta_artifact'),
+                    'patch_artifact':retained.get('patch_artifact'),'worker_delta_base':retained.get('worker_delta_base')}
+                require(retained.get('baseline')==baseline and retained.get('worktree')==str(work)
                     and retained.get('worker_delta_base')==baseline['input_tree'],
                     'OWNERSHIP_UNKNOWN','Retained result differs from the owned workspace')
-            require(retained.get('worker_delta_empty') is True and not retained.get('worker_delta_artifact')
+                require(retained.get('worker_delta_empty') is True and not retained.get('worker_delta_artifact')
                     and not retained.get('worker_delta_unavailable_reason')
                     and not retained.get('excluded_sensitive_or_symlink_files')
                     and not retained.get('patch_unavailable_reason'),
                     'UNIQUE_CHANGES','Retained result has unique, excluded or unavailable changes')
+            common=_storage(source,work,baseline,mode,deadline)
             value['current_changes']=_content(source,work,baseline,mode,deadline,files,dirs)
             # Recheck the retained directory and ownership after all potentially slow reads.
             sizes_after,files_after,dirs_after=_inventory(work,deadline,max_entries,max_bytes)

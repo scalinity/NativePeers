@@ -26,5 +26,5 @@ class ControllerNotStarted(PeerError):
     """Controller creation positively failed, before any native writer existed."""
     def __init__(self, row, error):
         super().__init__('WORKER_LAUNCH_FAILED','Worker controller could not be created',details={
-            'worker_id':row['worker_id'],'generation':row['generation'],'native_id':row['native_id'],
+            'worker_id':row['worker_id'],'generation':row['generation'],'native_id':row['native_id'],'cwd':row['cwd'],
             'controller_created':False,'cause':type(error).__name__})

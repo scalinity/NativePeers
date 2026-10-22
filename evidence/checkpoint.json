@@ -119,7 +119,7 @@
     "evidence": "evidence/review-0274647.json",
     "status": "IN_PROGRESS",
     "branch": "fix/pro-0274647",
-    "source_map_sha256": "c9b4a100c9de09cff4dbec302fa5819e00fdeb768cf91d09a6d9be2c256618f8"
+    "source_map_sha256": "a7838afbfab3f9a12fb2d2290ce9291bd2f015a450a81c8ce76bf3d1da2ffd48"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
@@ -176,7 +176,7 @@
     "sha256": "9239fbf36aae7043663b867b594627f8e11198cf8540aedf61f6f46c5cb9768e"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Next pending review item: CLEANUP",
+  "next_action": "Next pending review item: EVIDENCE",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
