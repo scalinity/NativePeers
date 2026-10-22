@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sys
 import time
 from zoneinfo import ZoneInfo
@@ -34,6 +35,22 @@ MODELS={'codex':'gpt-6.1-sol','antigravity':'gemini-3.8-flash-medium'}
 def stamp():return datetime.now(ZoneInfo('America/New_York')).isoformat()
 
 def source():return {str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'nativepeers').rglob('*.py'))}
+
+
+def artifact_nonce_matches(text,context):
+    return any(hashlib.sha256(nonce.encode()).hexdigest()==context['nonce_sha256']
+               for nonce in re.findall(r'\bNP-ARTIFACT-[0-9a-f]{32}\b',text))
+
+
+def import_context(journal,caller,provider):
+    from nativepeers.artifacts import Artifacts
+    nonce='NP-ARTIFACT-'+new_id().replace('-','')
+    path=RUN/('artifact-input-'+provider+'.txt')
+    try:
+        path.write_text('VALUE=7\nNONCE='+nonce+'\n')
+        imported=Artifacts(journal).add_file(path,caller)
+    finally:path.unlink(missing_ok=True)
+    return dict(imported,nonce_sha256=hashlib.sha256(nonce.encode()).hexdigest())
 
 
 async def prepare():
@@ -92,21 +109,25 @@ async def parent(provider):
     record.pop('status',None)
     atomic_json(case_path,record)
     try:
-        from nativepeers.artifacts import Artifacts
-        imported=None if record['groups'] else Artifacts(journal).add_file(FIXTURE/'brief.txt',caller)
+        if not record.get('context_artifact'):
+            assert not record['groups'],'Retained scenario predates artifact-consumption checks; use a fresh NPEER_PRO_REVIEW_RUN'
+            record['context_artifact']=import_context(journal,caller,provider)
+            atomic_json(case_path,record)
+        imported=record['context_artifact']
         workers=[]
         for child in ('codex','antigravity'):
-            task=('Read '+str(FIXTURE/'brief.txt')+' and report its exact contents and product VALUE * 6. '
+            task=('Call the namespaced NativePeers artifact_read tool with handle '+imported['artifact_id']+' and limit 4096. '
+                  'Decode its data_base64 field and report the exact NONCE and product VALUE * 6 from that artifact. '
                   'Do not start agents or send peer messages. ')
             if editing:
-                task+='Create only answer_'+child+'.py defining answer() returning VALUE * 6 with VALUE taken from brief.txt. Run an actual Python check that answer()==42. Do not commit or modify base.py. '
+                task+='Create only answer_'+child+'.py defining answer() returning VALUE * 6 with VALUE taken from the artifact. Run an actual Python check that answer()==42. Do not commit or modify base.py. '
             else:
                 task+='Call the namespaced NativePeers task_status tool without a handle to report your verified native UUID. Use native read tools only. '
             task+='Report NP-PRO-'+provider+'-'+child+' with the result and actual checks.'
             worker={'provider':child,'title':'NP Pro '+provider+' '+child,'task':task,'model':MODELS[child],
                     'permission_profile':'workspace' if editing else 'analysis',
                     'workspace':{'mode':'isolated-worktree','untracked_allowlist':['brief.txt']} if editing else {'mode':'inherit-read-only'},
-                    'context_refs':[imported['artifact_id']] if imported else []}
+                    'context_refs':[imported['artifact_id']]}
             if child=='codex':worker['reasoning_effort']='xhigh'
             workers.append(worker)
         spec={'schema_version':1,'client_request_id':'pro-'+provider+'-initial','workers':workers,'completion_mode':'wait',
@@ -134,6 +155,15 @@ async def parent(provider):
         for result in results:
             child=result['worker']['provider'];assertions[child+'_model']=result['model_observed']==MODELS[child]
             assertions[child+'_finding']='42' in result['summary'] and 'NP-PRO-'+provider+'-'+child in result['summary']
+            assertions[child+'_artifact_nonce']=artifact_nonce_matches(result['summary'],imported)
+            from tests.live.pro_review_collect import artifact_read_evidence
+            evidence=None;deadline=time.monotonic()+5
+            while evidence is None and time.monotonic()<deadline:
+                try:evidence=artifact_read_evidence(core.registry.get(result['worker']['peer_key'],live=False),imported,result)
+                except (OSError,json.JSONDecodeError,RuntimeError):pass
+                if evidence is None:await asyncio.sleep(.1)
+            record.setdefault('artifact_reads',{})[child]=evidence
+            assertions[child+'_native_artifact_read']=evidence is not None
             event=journal.one("SELECT at FROM events WHERE subject_id=? AND kind='native-task-started'",(result['task_id'],));starts.append(event['at'] if event else result['started_at'])
             if editing:
                 changes=result['changes'];assertions[child+'_delta']=bool(changes.get('worker_delta_artifact'))
