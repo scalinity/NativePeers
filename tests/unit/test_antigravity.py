@@ -269,6 +269,13 @@ class AntigravityTests(unittest.TestCase):
              patch.dict(os.environ,{'NPEER_BOOTSTRAP':str(binding)}):
             self.assertEqual(observe(self.j,event,'PreToolUse')['decision'],'deny')
             self.assertEqual(observe(self.j,dict(self.event,toolCall={'name':'view_file','args':{}}),'PreToolUse'),{'decision':'allow'})
+            for args,decision in [({'ServerName':'nativepeers','ToolName':'artifact_read','Arguments':{}},'allow'),
+                                  ({'ServerName':'nativepeers','ToolName':'task_status','Arguments':{}},'allow'),
+                                  ({'ServerName':'other','ToolName':'artifact_read','Arguments':{}},'deny'),
+                                  ({'ServerName':'nativepeers','ToolName':'arbitrary','Arguments':{}},'deny'),
+                                  ({},'deny'),('malformed','deny')]:
+                with self.subTest(args=args):
+                    self.assertEqual(observe(self.j,dict(self.event,toolCall={'name':'call_mcp_tool','args':args}),'PreToolUse')['decision'],decision)
         self.assertFalse((self.home/'canary').exists())
         self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE subject_id=? AND kind='antigravity-tool-gate'",(worker,)))
 import asyncio

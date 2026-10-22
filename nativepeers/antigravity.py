@@ -95,7 +95,7 @@ def observe(journal,event,kind):
             row=journal.one('SELECT lease_json FROM workers WHERE worker_id=?',(worker_id,))
             require(row,'CALLER_UNBOUND','Worker lease no longer exists')
             spec=json.loads(row['lease_json'])['spec']
-            name=event['toolCall']['name'];allowed=allowed_tools(spec['permission_profile'],name)
+            name=event['toolCall']['name'];allowed=allowed_tools(spec['permission_profile'],name,event['toolCall'].get('args'))
             journal.event(worker_id,'antigravity-tool-gate',{'native_id':native,'tool':name,'allowed':allowed})
             if not allowed:
                 return {'decision':'deny','reason':'Tool is outside this NativePeers worker profile.'}

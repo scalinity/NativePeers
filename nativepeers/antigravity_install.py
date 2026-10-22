@@ -13,8 +13,10 @@ READ_TOOLS=['view_file','list_dir','find_by_name','grep_search']
 WRITE_TOOLS=['write_to_file','replace_file_content','multi_replace_file_content','run_command']
 
 
-def allowed_tools(profile,name):
+def allowed_tools(profile,name,args=None):
     from .mcp_server import TOOLS
+    if name=='call_mcp_tool':
+        return isinstance(args,dict) and args.get('ServerName')=='nativepeers' and args.get('ToolName') in TOOLS
     return name in READ_TOOLS+(WRITE_TOOLS if profile=='workspace' else []) or name in {prefix+tool for prefix in ('mcp_nativepeers_','mcp__nativepeers__') for tool in TOOLS}
 
 
