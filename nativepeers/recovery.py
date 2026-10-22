@@ -13,6 +13,7 @@ from .models import bounded_text,new_id
 from .launch import recorded_home,home_environment
 from .process import matches
 from .registry import Registry
+from .worker_process import model_selection
 
 
 def owned_worker(journal,caller,worker_id):
@@ -52,7 +53,7 @@ def assert_released(journal,row):
 def resume_command(journal,caller,worker_id):
     row,_=owned_worker(journal,caller,worker_id);assert_released(journal,row)
     command=['codex','resume',row['native_id']] if row['provider']=='codex' else ['agy','--conversation',row['native_id']] if row['provider']=='antigravity' else ['claude','--resume',row['native_id']]
-    model=row['model_observed'] or row['model_requested']
+    model=model_selection(row)
     if model:command+=['--model',model]
     if row['provider']=='codex' and row['effort_requested']:
         command+=['--config','model_reasoning_effort='+json.dumps(row['effort_requested'])]
@@ -77,7 +78,7 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None):
         lease['spec']['max_task_turns']=min(lease['spec']['max_task_turns'],local['max_task_turns'])
         lease['spec']['wall_time_seconds']=min(lease['spec']['wall_time_seconds'],local['task_wall_seconds'])
         profile=lease['spec']['permission_profile']
-        if row['model_observed']:lease['spec']['model']=row['model_observed']
+        lease['spec']['model']=model_selection(row)
         require(profile in parent.get('policy',{}).get('profiles',['analysis']),'PERMISSION_CAPABILITY_UNKNOWN','Current parent does not retain the original permission ceiling')
         policy=json.loads(group['policy_json']);manifest_path=journal.root/'groups'/group['group_id']/'owner.json'
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else None

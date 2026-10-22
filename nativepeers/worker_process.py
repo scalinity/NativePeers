@@ -25,10 +25,21 @@ from .provider_errors import classify
 from .worker_report import PROMPT,extract
 
 
+def model_selection(row):
+    """Keep Claude's launch-only context suffix alongside its observed identity."""
+    selected=json.loads(row.get('lease_json') or '{}').get('spec',{}).get('model') or row['model_requested']
+    observed=row['model_observed']
+    if row['provider']=='claude' and observed:
+        extended=any(value and value.endswith('[1m]') for value in (selected,row['model_requested']))
+        return observed.removesuffix('[1m]')+('[1m]' if extended else '')
+    return observed or selected
+
+
 class Worker:
     def __init__(self,journal,worker_id):
         self.journal=journal;self.row=journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
         self.lease=json.loads(self.row['lease_json']);self.spec=self.lease['spec'];self.binding=Path(self.lease['binding'])
+        self.spec['model']=model_selection(self.row)
         self.home=recorded_home(journal,self.row);self.lease['provider_home']=str(self.home)
         journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),worker_id))
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
@@ -57,11 +68,13 @@ class Worker:
         if model:
             requested=self.spec['model']
             if self.row['provider']=='antigravity' and model==self.spec.get('model_display_name'):model=requested
-            if self.row['provider'] in ('codex','antigravity') or requested.startswith('claude-'):
-                require(model==requested.removesuffix('[1m]'),'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
+            if self.row['provider']=='claude':model=model.removesuffix('[1m]')
+            expected=(self.model_observed or requested).removesuffix('[1m]') if self.row['provider']=='claude' else requested
+            if self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
+                require(model==expected,'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
                         details={'requested':requested,'observed':model})
             self.model_observed=model
-            self.spec['model']=model
+            self.spec['model']=model+('[1m]' if self.row['provider']=='claude' and requested.endswith('[1m]') else '')
             self.journal.db.execute('UPDATE workers SET model_observed=?,lease_json=? WHERE worker_id=?',
                 (model,canonical(self.lease).decode(),self.row['worker_id']))
         self.native=native_id
@@ -268,7 +281,6 @@ class Worker:
                 if emitted:require(emitted==self.expected_native,'OWNERSHIP_CONFLICT','Claude emitted another native ID')
                 if event.get('type')=='system' and event.get('subtype')=='init':
                     self.bind(event['session_id'],model=event.get('model'))
-                    if self.model_observed:self.spec['model']=self.model_observed
                     allowed={'Read','Glob','Grep','ToolSearch','ListMcpResourcesTool','ReadMcpResourceTool'}
                     if self.spec['permission_profile']=='workspace':allowed|={'Bash','Edit','Write'}
                     unsafe=[t for t in event.get('tools',[]) if t not in allowed and not t.startswith('mcp__nativepeers__')]
