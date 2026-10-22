@@ -1,12 +1,17 @@
 """Reproducible owned writing worktrees; the source checkout is never reset."""
 import hashlib
+import contextlib
+import os
 from pathlib import Path
+import selectors
 import shutil
 import subprocess
+import time
 
 from .errors import require, PeerError
 from .files import sha256,advisory_lock,atomic_json,private_directory
 from .profiles import ROOT
+from .models import ARTIFACT_MAX
 
 SECRET_NAMES={'.env','.credentials.json','auth.json','id_rsa','id_ed25519'}
 
@@ -34,21 +39,55 @@ def worktree_parent(journal,root):
     return directory
 
 
-def changes(cwd,baseline):
-    tracked=[p for p in git(cwd,'diff','--name-only',baseline['head'],'-z').stdout.decode().split('\0') if p]
-    untracked=[p for p in git(cwd,'ls-files','--others','--exclude-standard','-z').stdout.decode().split('\0') if p]
-    excluded=[p for p in tracked+untracked if sensitive(p) or (Path(cwd)/p).is_symlink()]
+def bounded_diff(cwd,args,limit,deadline):
+    process=subprocess.Popen(['git','-C',str(cwd),'diff','--no-ext-diff','--no-textconv',*args],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    data=bytearray()
+    try:
+        with selectors.DefaultSelector() as selector:
+            selector.register(process.stdout,selectors.EVENT_READ)
+            while True:
+                remaining=deadline-time.monotonic()
+                if remaining<=0 or not selector.select(remaining):return None,'Diff capture timed out; inspect the retained worktree.'
+                chunk=os.read(process.stdout.fileno(),min(65536,limit-len(data)+1))
+                if not chunk:break
+                data.extend(chunk)
+                if len(data)>limit:return None,'Diff exceeds the local artifact limit; inspect the retained worktree.'
+        code=process.wait(timeout=max(.001,deadline-time.monotonic()))
+        if code not in (0,1):return None,'Git diff failed; inspect the retained worktree.'
+        return data,None
+    except subprocess.TimeoutExpired:return None,'Diff capture timed out; inspect the retained worktree.'
+    finally:
+        if process.poll() is None:
+            with contextlib.suppress(ProcessLookupError):process.kill()
+            process.wait(timeout=1)
+        process.stdout.close()
+
+
+def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
+    deadline=time.monotonic()+timeout
+    try:
+        tracked=[p for p in git(cwd,'diff','--name-only',baseline['head'],'-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
+        untracked=[p for p in git(cwd,'ls-files','--others','--exclude-standard','-z',timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0') if p]
+    except (OSError,subprocess.TimeoutExpired,PeerError):
+        return {'patch':b'','changed_files':[],'untracked_files':[],'file_count':None,'excluded_sensitive_or_symlink_files':[],
+                'patch_unavailable_reason':'File discovery failed or timed out; inspect the retained worktree.'}
+    excluded={p for p in tracked+untracked if sensitive(p) or (Path(cwd)/p).is_symlink()}
     selected=[p for p in tracked if p not in excluded]
-    patch=git(cwd,'diff',baseline['head'],'--binary','--',*selected).stdout if selected else b''
-    for relative in untracked:
-        if relative not in excluded:
-            patch+=git(cwd,'diff','--no-index','--binary','--','/dev/null',relative,check=False).stdout
-    return {'patch':patch,'changed_files':tracked[:100],'untracked_files':untracked[:100],
-            'file_count':len(tracked)+len(untracked),'excluded_sensitive_or_symlink_files':excluded[:100]}
+    result={'changed_files':tracked[:100],'untracked_files':untracked[:100],
+            'file_count':len(tracked)+len(untracked),'excluded_sensitive_or_symlink_files':sorted(excluded)[:100]}
+    commands=([ [baseline['head'],'--binary','--',*selected] ] if selected else [])
+    commands.extend(['--no-index','--binary','--','/dev/null',relative] for relative in untracked if relative not in excluded)
+    data=bytearray()
+    for args in commands:
+        try:piece,reason=bounded_diff(cwd,args,max_bytes-len(data),deadline)
+        except OSError:piece,reason=None,'Git diff could not start; inspect the retained worktree.'
+        if reason:return dict(result,patch=b'',patch_unavailable_reason=reason)
+        data.extend(piece)
+    return dict(result,patch=bytes(data))
 
 
-def git(cwd,*args,input=None,check=True):
-    result=subprocess.run(['git','-C',str(cwd),*args],input=input,capture_output=True)
+def git(cwd,*args,input=None,check=True,timeout=None):
+    result=subprocess.run(['git','-C',str(cwd),*args],input=input,capture_output=True,timeout=timeout)
     if check and result.returncode:
         raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED',result.stderr.decode(errors='replace')[:800])
     return result

@@ -9,6 +9,20 @@ from nativepeers.worktrees import changes,git,prepare,snapshot
 
 
 class WritingResultsTests(unittest.TestCase):
+    def test_patch_capture_bounds_single_combined_and_many_new_files(self):
+        for count,size,limit,overflow in [(1,100000,1024,True),(3,300,1024,True),(120,10,100000,False)]:
+            with self.subTest(count=count,size=size),tempfile.TemporaryDirectory() as directory:
+                repo=Path(directory);git(repo,'init','-q');(repo/'base').write_text('baseline\n')
+                git(repo,'add','base');git(repo,'commit','-qm','Create bounded patch fixture');baseline=snapshot(repo)
+                for index in range(count):(repo/('created-'+str(index))).write_text('x'*size+'\n')
+                result=changes(repo,baseline,max_bytes=limit)
+                self.assertEqual(result['file_count'],count)
+                self.assertEqual(len(result['untracked_files']),min(count,100))
+                self.assertEqual('patch_unavailable_reason' in result,overflow)
+                if overflow:self.assertEqual(result['patch'],b'')
+                else:self.assertLessEqual(len(result['patch']),limit)
+                self.assertTrue((repo/'created-0').exists())
+
     def test_isolated_edits_include_new_files_and_leave_original_dirty_state_intact(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);repo=root/'repo';repo.mkdir();journal=Journal(root/'state')
