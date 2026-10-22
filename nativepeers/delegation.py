@@ -222,6 +222,25 @@ class Delegation:
             result['notifications']=[]
         return result
 
+    def groups(self,caller,limit=20,cursor=None):
+        require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Retained groups require a verified native parent')
+        self.registry.verify(caller.key,caller.incarnation)
+        require(type(limit) is int and 1<=limit<=100,'PROTOCOL_ERROR','Group limit must be 1 to 100')
+        from .pagination import encode,decode
+        scope=['groups',caller.key]
+        ceiling=self.journal.one('SELECT COALESCE(MAX(rowid),0) n FROM groups')['n']
+        position=ceiling+1
+        if cursor is not None:position,ceiling=decode(cursor,scope)
+        require(type(position) is int and 0<position<=ceiling+1,'PROTOCOL_ERROR','Invalid group position')
+        rows=self.journal.all('SELECT rowid AS page_id,* FROM groups WHERE parent_key=? AND rowid<=? AND rowid<? ORDER BY rowid DESC LIMIT ?',
+                              (caller.key,ceiling,position,limit+1))
+        groups=[]
+        for row in rows[:limit]:
+            workers=self.journal.all('SELECT worker_id,role_title,provider,native_id,state,generation FROM workers WHERE group_id=? ORDER BY worker_id',(row['group_id'],))
+            counts=self.journal.one('SELECT COUNT(*) tasks,COUNT(result_artifact_id) results FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(row['group_id'],))
+            groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results'])))
+        return {'groups':groups,'next_cursor':encode(scope,rows[limit-1]['page_id'],ceiling) if len(rows)>limit else None}
+
     def result(self,caller,handle):
         status=self.status(caller,handle);policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(status['group_id'],))['policy_json'])
         results=[]

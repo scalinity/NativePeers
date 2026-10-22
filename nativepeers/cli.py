@@ -27,6 +27,7 @@ def parser():
     command('whoami')
     q=command('list');q.add_argument('--provider',choices=['claude','codex','antigravity']);q.add_argument('--include-offline',action='store_true')
     q=command('resolve');q.add_argument('--to',required=True)
+    q=command('groups');q.add_argument('--mine',action='store_true',required=True);q.add_argument('--limit',type=int,default=20);q.add_argument('--cursor')
     for name in ['send','reply']:
         q=command(name)
         if name=='send':q.add_argument('--to',required=True)
@@ -75,6 +76,7 @@ async def dispatch(args,journal):
             client_request_id=args.client_request_id,in_reply_to=args.message_id if name=='reply' else None)
     if name=='inbox':return core.router.inbox(caller,args.limit,args.unread)
     if name=='ack':return core.router.ack(caller,args.message_id)
+    if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
     if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)))
     if name=='status':return await core.status(caller,args.handle,refresh=args.refresh)
     if name=='result':return core.delegation.result(caller,args.handle)
