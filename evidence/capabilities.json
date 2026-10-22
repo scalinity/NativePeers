@@ -59,9 +59,19 @@
     "codex": {
       "auth_route": "native ChatGPT sign-in",
       "catalog": "advertised",
+      "context_display_runtime_update": {
+        "checks": "PASS: private app-server, usage notifications, native SessionStart registration and queue ingestion using an isolated local model",
+        "date": "2026-10-22",
+        "external_model_inputs": 0,
+        "inference_scope": "Existing real-model inference and extension-live-revalidation claims in this provider record belong to the previous executable; real-model acceptance was not rerun for this executable.",
+        "packaged_checks": "/Users/danny/Documents/Tools/CodexMCP/artifacts/context-remaining/final-package.log",
+        "previous_executable": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.163.0-8f85dd9c6933-1792479166735424000/bin/codex",
+        "previous_executable_sha256": "e844deb6c905536f43775e3b85de1140f052d7c21a65c086150b765b25a16c1c",
+        "proof": "/Users/danny/Documents/Tools/CodexMCP/artifacts/context-remaining/native-compatibility.json"
+      },
       "effort_observation": "native submitted thread settings; server inference effort is not echoed independently",
-      "executable": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.163.0-8f85dd9c6933-1792479166735424000/bin/codex",
-      "executable_sha256": "e844deb6c905536f43775e3b85de1140f052d7c21a65c086150b765b25a16c1c",
+      "executable": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.163.0-cd98f25eded9-1792683766158703000/bin/codex",
+      "executable_sha256": "f7c396eaa492543208a028ec4337d494a2a20082bb3479d5a639a714d2c86a37",
       "extension_live_revalidation": {
         "effort_independently_echoed": false,
         "effort_submitted": "xhigh",
@@ -73,7 +83,7 @@
         "status": "PASS"
       },
       "inference": "M1 sacrificial native TUI response",
-      "managed_identity": "rust-v0.163.0-8f85dd9c6933",
+      "managed_identity": "rust-v0.163.0-cd98f25eded9",
       "native_queue_probe": "PASS",
       "private_stdio_mistaken_for_tui": false,
       "registration_before_first_native_turn": false,
@@ -87,6 +97,7 @@
     "schema-experimental": "a4edc8ec8533753bf4540764836c1eb173088315656bd731ea6843415dc98444",
     "schema-stable": "6eb413df3a382032cd799d1fd19a9b3e11d32fa2249436030765b5cbaa71228c"
   },
+  "schema_fingerprints_scope": "Recorded before the 2026-10-22 context-display runtime update; current stable and experimental schemas were regenerated and validated in /Users/danny/Documents/Tools/CodexMCP/artifacts/context-remaining/final-package.log",
   "schema_version": 1,
   "tests": {
     "astra_review_fix": {
