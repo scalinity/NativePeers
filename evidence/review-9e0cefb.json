@@ -78,7 +78,8 @@
     {
       "id": "S4",
       "description": "Bounded older delivery observation",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 18 receipt tests and 42 subtests; bounded backward windows with explicit ranges, exact native/content guards, append/replacement handling, CLI/MCP authorization and zero resubmission"
     },
     {
       "id": "S5",

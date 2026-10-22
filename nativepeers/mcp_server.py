@@ -32,7 +32,7 @@ TOOLS={
  'peer_ack':('Record this recipient\'s model-reported processing acknowledgment; this is not native ingestion evidence.',object_schema({'message_id':STRING},['message_id'])),
  'worker_spawn':('Launch independent native workers, with a provider-native model ID or alias per worker. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA},['spec'])),
  'task_groups':('List this bound parent\'s retained delegations without claiming notifications.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'cursor':STRING})),
- 'task_status':('Read task/group or exact-message status; refresh observes native receipts without replay.',object_schema({'handle':STRING,'refresh':{'type':'boolean'}})),
+ 'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
  'task_result':('Read retained immutable attributed results; optionally include up to 16 authorized artifact pages of 16 KiB.',object_schema({'handle':STRING,'include_artifacts':{'type':'boolean'}},['handle'])),
  'task_cancel':('Cancel only work owned by this caller.',object_schema({'handle':STRING,'reason':STRING},['handle','reason'])),

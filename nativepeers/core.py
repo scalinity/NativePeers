@@ -36,14 +36,15 @@ class Core:
         self.router.adapters['owned-worker']=owned
         self.delegation=Delegation(journal,self.registry)
 
-    async def status(self,caller,handle,*,refresh=False):
+    async def status(self,caller,handle,*,refresh=False,scan_cursor=None,scan_max_bytes=None):
+        require(refresh or (scan_cursor is None and scan_max_bytes is None),'PROTOCOL_ERROR','Receipt scan options require refresh')
         message=self.journal.one('SELECT * FROM messages WHERE message_id=?',(handle,))
         if message:
             require(caller.kind=='peer' and caller.key in (message['from_actor_key'],message['to_key']),
                     'APPROVAL_BLOCKED','Message status is outside caller scope')
             if refresh:
                 from .reconcile import observe
-                return await observe(self.journal,self.registry,self.router,handle)
+                return await observe(self.journal,self.registry,self.router,handle,cursor=scan_cursor,max_bytes=1048576 if scan_max_bytes is None else scan_max_bytes)
             return self.router.outcome(handle)
         require(not refresh,'PROTOCOL_ERROR','Receipt refresh requires an exact message ID')
         return self.delegation.status(caller,handle)
@@ -56,7 +57,7 @@ class Core:
         if name=='peer_ack':return self.router.ack(caller,args['message_id'])
         if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'])
         if name=='task_groups':return self.delegation.groups(caller,args.get('limit',20),args.get('cursor'))
-        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False))
+        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False),scan_cursor=args.get('scan_cursor'),scan_max_bytes=args.get('scan_max_bytes'))
         if name=='task_result':return self.delegation.result(caller,args['handle'],include_artifacts=args.get('include_artifacts',False))
         if name=='task_wait':
             group=self.delegation.group(caller,args['handle'])
