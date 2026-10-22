@@ -124,13 +124,18 @@
     "manifest": "evidence/private/astra4-20261022/closeout.json",
     "reason": "Exact owned native test histories retain their cwd; unique fixture changes are checksum-backed up",
     "retained_native_fixture_worktrees": 10,
-    "unresolved_native_requests": []
+    "unresolved_native_requests": [],
+    "provider_fallback": {
+      "new_project_worktrees": 0,
+      "regenerable_fixture_backup_entries_removed": 68,
+      "private_recovery_copies_retained": true
+    }
   },
   "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
   "current_review": {
     "evidence": "evidence/provider-fallback.json",
     "status": "COMPLETE: implementation installed; offline/passive PASS; new native inference BLOCKED by existing allowance",
-    "branch": "feat/provider-fallback",
+    "branch": "main",
     "completed": [
       "provider-diagnostics",
       "readable-notices",
@@ -138,13 +143,14 @@
       "focused-contracts",
       "installation-docs-closeout"
     ],
-    "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c"
+    "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c",
+    "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "branch": "feat/provider-fallback",
-    "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
-    "commit": "b7baf43cb26820b6494655cb38d6fff8b0c79b42",
+    "branch": "main",
+    "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
+    "commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -152,7 +158,7 @@
       "?? test_name_session.py"
     ],
     "base_commit": "acd6782f4cea8f5a5bcc61bcba6018ed8b77a747",
-    "owned_uncommitted_changes": "Provider fallback implementation, focused tests, presentation, docs, examples and owned integration sources"
+    "owned_uncommitted_changes": "Verification/publication metadata only; implementation committed and remote-verified"
   },
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
@@ -161,7 +167,23 @@
     "pro": "evidence/pro-review.json",
     "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints.",
     "pro_followup": "evidence/pro-followup-review.json",
-    "review_9e0cefb": "evidence/review-9e0cefb.json"
+    "review_9e0cefb": "evidence/review-9e0cefb.json",
+    "previous_publication": {
+      "repository": "https://github.com/scalinity/NativePeers",
+      "branch": "main",
+      "owned_fixes_pushed": true,
+      "source_zip_uploaded": false,
+      "release_created": false,
+      "current_verification": "evidence/review-9e0cefb.json",
+      "review_snapshot": "0274647a6a039e264afd11b7e3891075f5af9f20",
+      "review_tree": "9bb648f6e8f856837c3f5c708f0c24266991c1f2",
+      "tracked_files": 189,
+      "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
+      "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
+      "prompt": "docs/GPT6_PRO_REVIEW_PROMPT.txt",
+      "prompt_sha256": "ee91ef5cc0e253a27fb1abb988d53f322230edac69a22b13a06a543db8bd162c",
+      "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt"
+    }
   },
   "live_budget": {
     "active_seconds": 3524.3949735164642,
@@ -176,7 +198,7 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Commit and push the installed fallback implementation and source-frozen offline/passive verification; retain the exhausted native allowance and do not replay incident tasks.",
+  "next_action": "Use the installed opt-in feature. Before any separately authorized fresh native acceptance, run npeer whoami --json and inspect evidence/live-budget.json; the current 148/148 allowance does not permit another submitted test input.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -186,20 +208,14 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
+    "status": "PUSHED",
     "repository": "https://github.com/scalinity/NativePeers",
     "branch": "main",
-    "owned_fixes_pushed": true,
+    "verified_remote_code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
     "source_zip_uploaded": false,
-    "release_created": false,
-    "current_verification": "evidence/review-9e0cefb.json",
-    "review_snapshot": "0274647a6a039e264afd11b7e3891075f5af9f20",
-    "review_tree": "9bb648f6e8f856837c3f5c708f0c24266991c1f2",
-    "tracked_files": 189,
-    "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
-    "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
-    "prompt": "docs/GPT6_PRO_REVIEW_PROMPT.txt",
-    "prompt_sha256": "ee91ef5cc0e253a27fb1abb988d53f322230edac69a22b13a06a543db8bd162c",
-    "downloads_prompt": "NativePeers-GPT-6-Pro-Review-0274647.txt"
+    "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
+    "current_verification": "evidence/provider-fallback.json",
+    "source_map_sha256": "08c80b89180640bc8dc68724b85fcb8cd6ccceb46484f6a851f83a704aedd86c"
   },
   "schema_version": 2,
   "stage": "Provider diagnostics, explicit Claude-to-Gemini fallback and readable native notices",

@@ -218,8 +218,16 @@
     "New notices use readable frames; already-queued incident payloads and retained histories were not rewritten."
   ],
   "publication": {
-    "status": "PENDING",
+    "status": "PUSHED",
     "repository": "https://github.com/scalinity/NativePeers",
+    "branch": "main",
+    "verified_remote_code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
     "source_zip_uploaded": false
+  },
+  "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
+  "cleanup": {
+    "new_project_worktrees": 0,
+    "regenerable_fixture_backup_entries_removed": 68,
+    "private_recovery_copies_retained": true
   }
 }
