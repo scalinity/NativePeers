@@ -1,4 +1,4 @@
-"""Reproducible owned writing worktrees; the source checkout is never reset."""
+"""Reproducible owned writing workspaces; the source checkout is never reset."""
 import hashlib
 import contextlib
 from dataclasses import dataclass
@@ -67,6 +67,10 @@ def bounded_diff(cwd,args,limit,deadline,*,options=()):
 
 def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     deadline=time.monotonic()+timeout
+    unsafe=sensitive
+    if baseline.get('workspace_mode')=='isolated-copy':
+        from .isolated_copy import private_path
+        unsafe=private_path
     delta={'worker_delta':b'','worker_delta_base':baseline.get('input_tree')}
     try:
         # Disable configured external filters even during Git's file discovery and patch capture.
@@ -92,7 +96,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
             untracked=list(dict.fromkeys(untracked+[p for p in input_paths if p not in indexed and (Path(cwd)/p).is_file()]))
         except (OSError,subprocess.TimeoutExpired,PeerError):
             delta['worker_delta_unavailable_reason']='Frozen input tree discovery failed or timed out; inspect the retained worktree.'
-    excluded={p for p in tracked+untracked+input_paths if sensitive(p) or (Path(cwd)/p).is_symlink()}
+    excluded={p for p in tracked+untracked+input_paths if unsafe(p) or (Path(cwd)/p).is_symlink()}
     selected=[p for p in tracked if p not in excluded]
     result=dict(delta,changed_files=tracked[:100],untracked_files=untracked[:100],
                 file_count=len(tracked)+len(untracked),excluded_sensitive_or_symlink_files=sorted(excluded)[:100])
@@ -114,7 +118,7 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
         tree=_working_tree(cwd,baseline['head'],paths,deadline,tracked_paths=set(tracked)|indexed,options=options)
         names=git(cwd,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only',baseline['input_tree'],tree,'-z',
                   timeout=max(.001,deadline-time.monotonic())).stdout.decode().split('\0')
-        paths=[p for p in names if p and p not in excluded and not sensitive(p) and not (Path(cwd)/p).is_symlink()]
+        paths=[p for p in names if p and p not in excluded and not unsafe(p) and not (Path(cwd)/p).is_symlink()]
         if paths:
             data,reason=bounded_diff(cwd,[baseline['input_tree'],tree,'--binary','--',*paths],max_bytes,deadline,options=options)
             if reason:result['worker_delta_unavailable_reason']=reason
@@ -252,7 +256,15 @@ def freeze(cwd,workspaces,*,expected_baseline=None):
     Keep this object in memory; only its JSON-safe baseline belongs in worker leases.
     """
     baseline=snapshot(cwd)
+    copying=[workspace for workspace in workspaces if workspace.get('mode')=='isolated-copy']
     writing=[workspace for workspace in workspaces if workspace.get('mode','inherit-read-only')=='isolated-worktree']
+    if copying:
+        from .isolated_copy import capture
+        require(not writing and not baseline['git'],'WORKSPACE_SNAPSHOT_REQUIRED','Isolated copies require a non-Git source; Git sources use isolated-worktree')
+        baseline,captured=capture(cwd,copying,baseline,expected_baseline=expected_baseline)
+        frozen=FrozenWorkspace(baseline,None,captured)
+        validate_frozen(cwd,frozen)
+        return frozen
     if not writing:return FrozenWorkspace(baseline,None,{})
     require(baseline['git'],'WORKSPACE_SNAPSHOT_REQUIRED','Concurrent writing in a non-Git directory requires an explicit isolated copy')
     root=Path(baseline['root']);selected=[]
@@ -280,6 +292,10 @@ def freeze(cwd,workspaces,*,expected_baseline=None):
 
 def validate_frozen(cwd,frozen):
     """Recheck all batch inputs immediately before native worker admission."""
+    if 'copy_inputs' in frozen.baseline:
+        from .isolated_copy import validate_source
+        validate_source(cwd,frozen)
+        return
     require(snapshot(cwd,untracked_allowlist=list(frozen.untracked))==frozen.baseline,
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout differs from the frozen writing-batch inputs')
 
@@ -287,8 +303,11 @@ def validate_frozen(cwd,frozen):
 def prepare(journal,cwd,worker_id,workspace,*,expected_baseline=None,frozen=None):
     mode=workspace.get('mode','inherit-read-only')
     if mode=='inherit-read-only':return str(Path(cwd).resolve()),None,snapshot(cwd)
-    require(mode=='isolated-worktree','WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated-worktree mode')
+    require(mode in ('isolated-worktree','isolated-copy'),'WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated-worktree or isolated-copy mode')
     if frozen is None:frozen=freeze(cwd,[workspace],expected_baseline=expected_baseline)
+    if mode=='isolated-copy':
+        from .isolated_copy import prepare_copy
+        return prepare_copy(cwd,worker_id,workspace,frozen,expected_baseline=expected_baseline)
     baseline=frozen.baseline
     require(baseline['git'] and frozen.patch is not None,
             'WORKSPACE_SNAPSHOT_REQUIRED','Writing inputs were not frozen for this batch')
