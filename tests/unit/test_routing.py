@@ -59,6 +59,47 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.router.record(one['message_id'],one['attempt']['attempt_id'],dict(stage='INGESTED',evidence_kind='matching-native-event'),self.b)
         self.assertEqual(self.router.outcome(one['message_id'])['state'],'INGESTED')
 
+    async def test_late_adapter_errors_preserve_independent_native_receipts(self):
+        observer_journal=Journal(self.journal.root);self.addCleanup(observer_journal.close)
+        observer=Router(observer_journal,Registry(observer_journal))
+        for stage in ('SUBMITTED_UNCONFIRMED','HELD','REJECTED','ACCEPTED_QUEUED','INGESTED',
+                      'MODEL_REPORTED_PROCESSED','REPLY_RECORDED','REPLY_SUBMITTED'):
+            for failure in (TimeoutError('lost adapter response'),PeerError('TARGET_GONE','late disconnect')):
+                with self.subTest(stage=stage,error=type(failure).__name__):
+                    started=asyncio.Event();release=asyncio.Event();messages=[]
+                    async def pending(peer,message):
+                        messages.append(message);started.set();await release.wait();raise failure
+                    self.router.adapters['fake']=pending
+                    request_id=stage+type(failure).__name__
+                    sending=asyncio.create_task(self.router.send(self.ca,'b','confirmed first',client_request_id=request_id))
+                    await started.wait()
+                    message_id=messages[0]['message_id'];attempt_id=observer.outcome(message_id)['attempt']['attempt_id']
+                    observer.record(message_id,attempt_id,dict(stage=stage,evidence_kind='independent-native-event',
+                                    external_submission_id='native-submission'),self.b)
+                    release.set();result=await sending
+                    self.assertEqual(result['state'],stage)
+                    self.assertEqual(result['attempt']['external_submission_id'],'native-submission')
+                    error=json.loads(result['attempt']['error_json'])
+                    self.assertEqual(error['code'],'TARGET_GONE' if isinstance(failure,PeerError) else 'DELIVERY_UNKNOWN')
+                    self.assertEqual([row['stage'] for row in result['receipts']],[stage])
+                    again=await self.router.send(self.ca,'b','confirmed first',client_request_id=request_id)
+                    self.assertEqual(again,result);self.assertEqual(len(messages),1)
+
+    async def test_canceled_adapter_preserves_confirmed_ingestion(self):
+        started=asyncio.Event();messages=[]
+        async def pending(peer,message):
+            messages.append(message);started.set();await asyncio.Event().wait()
+        self.router.adapters['fake']=pending
+        sending=asyncio.create_task(self.router.send(self.ca,'b','ingested before cancellation',client_request_id='cancel-ingested'))
+        await started.wait()
+        message_id=messages[0]['message_id'];attempt_id=self.router.outcome(message_id)['attempt']['attempt_id']
+        self.router.record(message_id,attempt_id,dict(stage='INGESTED',evidence_kind='owned-native-turn-start'),self.b)
+        sending.cancel()
+        with self.assertRaises(asyncio.CancelledError):await sending
+        result=await self.router.send(self.ca,'b','ingested before cancellation',client_request_id='cancel-ingested')
+        self.assertEqual(result['state'],'INGESTED');self.assertEqual(len(messages),1)
+        self.assertEqual(json.loads(result['attempt']['error_json'])['message'],'CancelledError')
+
     async def test_same_request_concurrency(self):
         rows=await asyncio.gather(*[self.router.send(self.ca,'b','same',client_request_id='concurrent') for _ in range(8)])
         self.assertEqual(len({r['message_id'] for r in rows}),1);self.assertEqual(len(self.admissions),1)

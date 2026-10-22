@@ -152,7 +152,9 @@ class Router:
             error = PeerError(state, 'Native admission has not started; retry the same client request ID', details={'cause':type(exception).__name__})
         # A contender's timeout cannot overwrite an attempt another invocation has submitted.
         condition = " AND state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED')" if not submitted else ''
-        self.journal.db.execute('UPDATE attempts SET state=?,ended_at=?,error_json=? WHERE attempt_id=?'+condition,
+        # Independent native evidence may arrive while the adapter is still awaiting its response.
+        state_update = "CASE WHEN state IN ('SUBMITTING','DELIVERY_UNKNOWN') THEN ? ELSE state END" if submitted else '?'
+        self.journal.db.execute('UPDATE attempts SET state='+state_update+',ended_at=?,error_json=? WHERE attempt_id=?'+condition,
             (state,time.time(),canonical(error.json()).decode(),attempt_id))
 
     def record(self,message_id,attempt_id,receipt,peer):
