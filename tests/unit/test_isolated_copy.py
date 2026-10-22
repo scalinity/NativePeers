@@ -216,3 +216,29 @@ class IsolatedCopyTests(unittest.TestCase):
         for workspace in ({'mode':'unknown'},{'mode':'isolated-copy','file_allowlist':[]},
                           {'mode':'isolated-copy','file_allowlist':[1]},self.workspace(*(['edit.txt']*257))):
             with self.subTest(workspace=workspace),self.assertRaises(PeerError):validate({'workers':[dict(worker,workspace=workspace)]},schema)
+
+    def test_registered_nonambient_homes_and_canonical_journal_are_private(self):
+        from nativepeers.registry import Registry
+        from nativepeers.process import identity
+        from nativepeers.models import new_id
+        home=self.source/'alternate';home.mkdir();(home/'settings').write_text('private fixture')
+        peer=Registry(self.journal).register('codex',home,new_id(),'fixture',identity(os.getpid()).json(),str(self.source),{},owner_kind='test')
+        self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE incarnation_id=?",(peer['incarnation_id'],))
+        for source,selected in [(self.source,'alternate/settings'),(home,'settings'),(self.root,'state/host.json'),(self.journal.root,'host.json')]:
+            with self.subTest(source=source,selected=selected),self.assertRaises(PeerError):
+                freeze(source,[self.workspace(selected)],journal=self.journal)
+        self.assertFalse((self.source/'.worktrees').exists())
+
+    def test_private_roots_are_rechecked_after_freeze_and_in_executor_threads(self):
+        from nativepeers.registry import Registry
+        from nativepeers.process import identity
+        from nativepeers.models import new_id
+        home=self.source/'alternate';home.mkdir();(home/'input').write_text('fixture')
+        workspace=self.workspace('alternate/input')
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            frozen=pool.submit(freeze,self.source,[workspace],journal=self.journal).result()
+        Registry(self.journal).register('antigravity',home,new_id(),'fixture',identity(os.getpid()).json(),str(home),{},owner_kind='test')
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with self.assertRaises(PeerError):pool.submit(validate_frozen,self.source,frozen).result()
+            with self.assertRaises(PeerError):pool.submit(prepare,self.journal,self.source,'private',workspace,frozen=frozen).result()
+        self.assertFalse((self.source/'.worktrees/private').exists())

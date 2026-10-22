@@ -161,7 +161,7 @@ class Delegation:
                     else:codex_config(self.journal,Path(lease['binding']),spec['permission_profile'],home=Path(lease['provider_home']))
                 except PeerError as error:failures.append(dict(provider=provider,title=spec['title'],error=error.json()))
                 planned.append(dict(spec,workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable']))
-            frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline)
+            frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
             return dict(state='CHECKED',read_only=True,ready=not failures and active+len(prepared)<=local['workers_total'],
                 workers=planned,baseline=frozen.baseline,failures=failures,
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
@@ -195,13 +195,13 @@ class Delegation:
         directory=private_directory(self.journal.root/'groups'/group_id)
         launch_attempted=False
         try:
-            batch_workspace=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline)
+            batch_workspace=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
             for worker in prepared:
                 cwd,worktree_id,baseline=await asyncio.to_thread(prepare,self.journal,parent['cwd'],worker['worker_id'],worker['workspace'],frozen=batch_workspace)
                 worker['lease']['spec']['cwd']=cwd;worker['lease']['baseline']=baseline
                 self.journal.db.execute('UPDATE workers SET cwd=?,worktree_id=?,lease_json=? WHERE worker_id=?',(cwd,worktree_id,canonical(worker['lease']).decode(),worker['worker_id']))
             if any(w['workspace'].get('mode') in ('isolated-worktree','isolated-copy') for w in prepared):
-                await asyncio.to_thread(validate_frozen,parent['cwd'],batch_workspace)
+                await asyncio.to_thread(validate_frozen,parent['cwd'],batch_workspace,journal=self.journal)
             launch_attempted=True
             await self.ensure_supervisor(group_id)
         except Exception as error:

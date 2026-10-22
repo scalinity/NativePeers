@@ -30,7 +30,8 @@
     {
       "id": "R5",
       "description": "Registered private roots in copy capture",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 25 isolated-copy/public-spawn/check tests and 60 subtests; nonambient registered homes and cwd-in-home rejected before copy/supervisor; normal neighboring input remains usable"
     },
     {
       "id": "R6",
