@@ -1,3 +1,9 @@
+# Pro review verification
+
+The current reliability correction report is [PRO_REVIEW.md](PRO_REVIEW.md), with exact code/runtime fingerprints in [pro-review.json](../evidence/pro-review.json). The full offline suite passes **165 tests and 149 subtests**, and manager/naming fixtures pass **23 tests**. Final-source Sol/Flash original-parent waits, concurrent implementation/analysis workers, exact Gemini history resume and native original-Codex queue return pass. Fresh Claude inference remains **BLOCKED** by its usage limit; the complete all-provider matrix is not a current unqualified PASS.
+
+The following records are retained historical verification with the source/runtime limitations stated in each section. They do not override the current report.
+
 # Current Astra review-fix verification
 
 Two parallel `gpt-6-astra`/`xhigh` reviewers found 2 critical issues, 8 warnings and 2 suggestions in the latest extension. All 12 were fixed and pushed, with focused tests and two downstream identity/installation recovery corrections. [Full findings and resolution](ASTRA_REVIEW.md).
