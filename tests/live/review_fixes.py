@@ -91,7 +91,7 @@ async def prepare():
     finally:journal.close()
 
 
-def launch(provider):
+def launch(provider,workspace=None):
     passive=json.loads((RUN/'passive.json').read_text());binary=Path(passive['providers'][provider]['path'])
     if fingerprint(binary)['sha256']!=passive['providers'][provider]['sha256']:raise RuntimeError('Executable changed after passive preparation')
     command=f'{ROOT}/.venv/bin/python {ROOT}/tests/live/review_fixes.py parent-case {provider}'
@@ -107,9 +107,11 @@ The helper binds to your actual native identity, spawns exactly two independent 
         args=[str(binary),'--name','RV Codex Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(overrides),prompt]
     budget=LiveBudget(LEDGER);reservation=budget.reserve('RV '+provider+' parent initial input',tranche='review_fixes')
     expected_owner=dict(identity(os.getpid()).json(),executable=str(binary))
-    atomic_json(RUN/(provider+'-launch.json'),{'provider':provider,'native_id':native,'initial_reservation':reservation,'executable':str(binary),'owner_expected_after_exec':expected_owner,'argv':args,'at':stamp()})
+    workspace=workspace or FIXTURE
+    if workspace not in (FIXTURE,ROOT/'evidence/scratch/live-workspace'):raise RuntimeError('Workspace is outside the owned disposable fixtures')
+    atomic_json(RUN/(provider+'-launch.json'),{'provider':provider,'native_id':native,'initial_reservation':reservation,'executable':str(binary),'owner_expected_after_exec':expected_owner,'argv':args,'cwd':str(workspace),'at':stamp()})
     environment=launch_environment(provider);environment.update(NPEER_HOME=str(STATE),PYTHONPATH=str(ROOT),TERM='xterm-256color')
-    os.chdir(FIXTURE);budget.admit(reservation);os.execve(binary,args,environment)
+    os.chdir(workspace);budget.admit(reservation);os.execve(binary,args,environment)
 
 
 async def until(predicate,timeout=150):
@@ -190,9 +192,9 @@ async def parent_case(provider):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','launch','parent-case']);parser.add_argument('provider',nargs='?',choices=['claude','codex']);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('action',choices=['prepare','launch','parent-case']);parser.add_argument('provider',nargs='?',choices=['claude','codex']);parser.add_argument('--workspace',type=Path);args=parser.parse_args()
     if args.action=='prepare':asyncio.run(prepare())
-    elif args.action=='launch':launch(args.provider)
+    elif args.action=='launch':launch(args.provider,args.workspace)
     else:asyncio.run(parent_case(args.provider))
 
 
