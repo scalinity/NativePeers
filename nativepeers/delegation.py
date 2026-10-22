@@ -47,7 +47,7 @@ class Delegation:
                 'APPROVAL_BLOCKED','Task is outside the bound caller grant')
         return group
 
-    async def spawn(self,caller,request):
+    async def spawn(self,caller,request,*,check=False):
         require(caller.kind=='peer','CALLER_UNBOUND','Delegation requires a verified native caller')
         require(not caller.grants.get('worker_id') or caller.grants.get('can_spawn'), 'APPROVAL_BLOCKED','Worker cannot delegate at its current depth')
         require(isinstance(request,dict),'PROTOCOL_ERROR','Spawn specification must be an object')
@@ -56,7 +56,7 @@ class Delegation:
         prior=self.journal.one('SELECT * FROM spawn_requests WHERE caller_key=? AND client_request_id=?',(caller.key,request_id))
         if prior:
             require(prior['spec_sha256']==digest,'IDEMPOTENCY_CONFLICT','Spawn request ID has different content')
-            return dict(self.status(caller,prior['group_id']),client_request_id=request_id)
+            if not check:return dict(self.status(caller,prior['group_id']),client_request_id=request_id)
         from .protocol import validate
         validate(request,json.loads((ROOT/'schemas/spawn.v1.json').read_text()))
         for worker in request['workers']:
@@ -144,6 +144,31 @@ class Delegation:
         policy['phases']={'1':policy['initial_tasks']}
         policy['controller_generation']=1
         active=self.journal.one("SELECT COUNT(*) AS count FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')")['count']
+        if check:
+            # The shared normalization above does no reservation or materialization.
+            # Catalog helpers are native metadata queries, never model inputs.
+            from .compatibility import verify
+            from .profiles import claude_arguments,codex_config
+            failures=[];planned=[]
+            for worker in prepared:
+                lease=worker['lease'];spec=lease['spec'];provider=spec['provider']
+                try:
+                    verify(self.journal,provider,lease['executable'])
+                    if provider=='antigravity':
+                        from .antigravity_install import verify_worker_ready
+                        verify_worker_ready(self.journal,spec,lease['executable'])
+                    elif provider=='claude':claude_arguments(self.journal,Path(lease['binding']),spec,new_id(),home=Path(lease['provider_home']))
+                    else:codex_config(self.journal,Path(lease['binding']),spec['permission_profile'],home=Path(lease['provider_home']))
+                except PeerError as error:failures.append(dict(provider=provider,title=spec['title'],error=error.json()))
+                planned.append(dict(spec,workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable']))
+            frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline)
+            return dict(state='CHECKED',read_only=True,ready=not failures and active+len(prepared)<=local['workers_total'],
+                workers=planned,baseline=frozen.baseline,failures=failures,
+                capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
+                native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
+                                for provider in ('codex','antigravity') if provider in homes],
+                client_request_id=request_id,existing_group_id=prior['group_id'] if prior else None,
+                limitations=['A plan does not reserve capacity or guarantee later entitlement, runtime tools or unchanged files/configuration.'])
         if active+len(prepared)>local['workers_total']:
             candidates=self.journal.all("SELECT worker_id,group_id FROM workers w WHERE state='IDLE_GRACE' AND NOT EXISTS(SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED'))")
             for idle in candidates:

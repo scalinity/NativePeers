@@ -65,7 +65,8 @@
     {
       "id": "S2",
       "description": "Read-only spawn check",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 6 new spawn-check tests and 2 subtests plus 15 normalization/model tests and 23 subtests; preserved source/index/journal, shared actual plan fields, explicit catalog-helper reporting"
     },
     {
       "id": "S3",

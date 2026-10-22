@@ -36,7 +36,7 @@ def parser():
         q.add_argument('--request-reply',action='store_true');q.add_argument('--client-request-id')
     q=command('inbox');q.add_argument('--unread',action='store_true');q.add_argument('--limit',type=int,default=20);q.add_argument('--page',action='store_true');q.add_argument('--cursor')
     q=command('ack');q.add_argument('message_id')
-    q=command('spawn');q.add_argument('--spec',type=Path,required=True)
+    q=command('spawn');q.add_argument('--spec',type=Path,required=True);q.add_argument('--check',action='store_true')
     for name in ['status','result','wait','cancel']:
         q=command(name);q.add_argument('handle')
         if name=='status':q.add_argument('--refresh',action='store_true')
@@ -78,7 +78,7 @@ async def dispatch(args,journal):
     if name=='inbox':return core.router.inbox(caller,args.limit,args.unread,cursor=args.cursor,paged=args.page)
     if name=='ack':return core.router.ack(caller,args.message_id)
     if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
-    if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)))
+    if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)),check=args.check)
     if name=='status':return await core.status(caller,args.handle,refresh=args.refresh)
     if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
