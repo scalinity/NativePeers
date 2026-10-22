@@ -72,7 +72,8 @@
     {
       "id": "S3",
       "description": "Worker delta application preview",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 25 patch/delta/CLI tests and 21 subtests; final 10 preview tests and 4 subtests; real Git check preserves source/index, binary/new/deleted/renamed files, owned delegated parent"
     },
     {
       "id": "S4",
