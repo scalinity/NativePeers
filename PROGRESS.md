@@ -6,4 +6,4 @@ Current results: **334 tests / 523 subtests**, **23 manager/naming fixtures**, i
 
 No new native inputs: **148 consumed, 0 reserved, 3524.394974 / 3600 active seconds, zero outstanding requests**. Current-source native acceptance is NOT_RUN; older observations retain their fingerprints. Fresh Claude was last reported quota-blocked and is untested here. Never replay uncertain work or reset the ledger.
 
-Close-out: retain the integrated lane histories on main, remove only the three verified clean owned review worktrees, publish the final current-source review prompt and confirm remote sync. No ZIP/release upload is authorized or planned.
+All three owned review worktrees and implementation agents are removed/closed, and their reviewed histories are retained on main. Four regenerable fixture backups were removed; actual rollback files remain private under this project. All nonsecret work is pushed to the public repository. The current independent-review prompt is `docs/GPT6_PRO_REVIEW_PROMPT.txt`; no ZIP or release asset is uploaded.

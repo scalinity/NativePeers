@@ -113,13 +113,12 @@
   "cleanup": {
     "active_owned_processes": [],
     "current_review": {
-      "active_owned_native_processes": [],
-      "fixture_cwd_retained": "evidence/private/pro-followup-20261022/native/fixture",
-      "history_retained_on_main": true,
-      "implementation_lanes_removed": 4,
-      "local_lane_branches_removed": 4,
-      "private_task_state": "evidence/private/pro-followup-20261022/state.json",
-      "regenerable_fixture_backups_removed": 16
+      "owned_implementation_worktrees_removed": 3,
+      "owned_lane_histories_retained_on_main": true,
+      "active_implementation_agents": 0,
+      "regenerable_fixture_backups_removed": 4,
+      "active_owned_native_requests": [],
+      "private_record": "evidence/private/review-9e0cefb-20261022/cleanup.json"
     },
     "implementation_worktrees_removed": 3,
     "manifest": "evidence/private/astra4-20261022/closeout.json",
@@ -132,7 +131,7 @@
     "reviewed_commit": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
     "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
     "evidence": "evidence/review-9e0cefb.json",
-    "status": "IN_PROGRESS",
+    "status": "COMPLETE: every review item implemented; offline/passive PASS; current-source native NOT_RUN",
     "completed": [
       "R1",
       "R2",
@@ -154,13 +153,14 @@
     "last_completed": "D1",
     "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
     "native_batch": "NOT_RUN",
-    "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832"
+    "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832",
+    "last_commit": "b7baf43cb26820b6494655cb38d6fff8b0c79b42"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "branch": "main",
-    "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "commit": "93b98dac838048240603b00c8fd74a710f59e93d",
+    "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
+    "commit": "b7baf43cb26820b6494655cb38d6fff8b0c79b42",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -189,33 +189,25 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Continue remaining review TODO: ",
+  "next_action": "Read docs/REVIEW_9E0CEFB.md and use the installed commands. Further native acceptance must retain the ledger and existing active-time ceiling; no uncertain input may be replayed.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
   },
   "outstanding_native_requests": [],
-  "owned_review_lanes": [
-    ".worktrees/review9-provider",
-    ".worktrees/review9-workspace",
-    ".worktrees/review9-mcp"
-  ],
+  "owned_review_lanes": [],
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "all_tracked_blobs_modes_tree_verified": true,
-    "archive_sha256": "879aad13f1b5043490ff06e55e8f230c4bb19e81bcce873dd9fed501848b6e17",
+    "repository": "https://github.com/scalinity/NativePeers",
     "branch": "main",
     "owned_fixes_pushed": true,
-    "prompt": "NativePeers-GPT-6-Pro-Review-9e0cefb.txt",
-    "repository": "https://github.com/scalinity/NativePeers",
-    "review_packet": "evidence/followup-review.json",
-    "review_snapshot": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
-    "review_tree": "d081ee831065565b92611444f7b885d657c23aa2",
-    "source_archive": "NativePeers-Source-9e0cefb.zip"
+    "source_zip_uploaded": false,
+    "release_created": false,
+    "current_verification": "evidence/review-9e0cefb.json"
   },
   "schema_version": 2,
-  "stage": "Address every item from independent review 9e0cefb",
+  "stage": "Review 9e0cefb fully addressed; native verification qualified",
   "tests_current": {
     "offline": {
       "status": "PASS",

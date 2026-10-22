@@ -1,7 +1,7 @@
 {
   "reviewed_commit": "9e0cefbbaa5771cff1a2b0ac82aeaeb7db41cd49",
   "base_commit": "e17d8aa0d0d46afb5d899c24c6f635c708dca54a",
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE: every review item implemented; offline/passive PASS; current-source native NOT_RUN",
   "todo": [
     {
       "id": "R1",
@@ -245,5 +245,15 @@
     "Authenticated alternate homes NOT_RUN",
     "Original same-provider parent-read, human-draft, real duplicate-title and literal external-host-unreachable variants remain unaccepted",
     "Native Antigravity workspace hook/profile precedence unknown; passive conflicts are rejected"
-  ]
+  ],
+  "cleanup": {
+    "owned_implementation_worktrees_removed": 3,
+    "owned_lane_histories_retained_on_main": true,
+    "active_implementation_agents": 0,
+    "regenerable_fixture_backups_removed": 4,
+    "active_owned_native_requests": [],
+    "private_record": "evidence/private/review-9e0cefb-20261022/cleanup.json"
+  },
+  "public_repository": "https://github.com/scalinity/NativePeers",
+  "next_action": "Read docs/REVIEW_9E0CEFB.md and use the installed commands. Further native acceptance must retain the ledger and existing active-time ceiling; no uncertain input may be replayed."
 }
