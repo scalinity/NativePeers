@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "reviewed_commit": "f81f5c897fed3de5bbb90bd0c1e8ae0183eed81a",
+  "status": "IN_PROGRESS",
+  "report": "docs/PRO_FOLLOWUP_REVIEW.md",
+  "items": {
+    "F1": {
+      "status": "DONE",
+      "scope": "Generation-fenced cancellation",
+      "commit": "b7f1a85830860e7e76c3c539d9cbf072c0b57aac",
+      "verification": "13 cancellation and real-process lifecycle tests passed"
+    },
+    "F2": {
+      "status": "TODO",
+      "scope": "Ambient owned caller and hook identity"
+    },
+    "F3": {
+      "status": "DONE",
+      "scope": "Multi-phase wait ownership",
+      "commit": "e4c70d766f5ae6519e635c8a8490a6c838294f53",
+      "verification": "32 notification tests and 17 subtests passed including CLI MCP dynamic phases and disconnect"
+    },
+    "F4": {
+      "status": "DONE",
+      "scope": "Established wait connection loss",
+      "commit": "afafdafbdec5aac21893d18af6adfe1635ccdd2d",
+      "verification": "34 notification tests and 21 subtests passed including real socket EOF and abort through CLI and MCP"
+    },
+    "F5": {
+      "status": "DONE",
+      "scope": "Pre-admission batch cleanup",
+      "commit": "2558ddbaf38e2a5ab6fb63bca8edb299a64be353",
+      "verification": "14 lifecycle and cancellation tests passed; mixed preflight submits zero tasks and corrected generation starts immediately"
+    },
+    "F6": {
+      "status": "TODO",
+      "scope": "Installer provider home"
+    },
+    "F7": {
+      "status": "DONE",
+      "scope": "Claude context-window selection",
+      "commit": "07b8cef0cd4cb8b1f3dcb88f9472ad6463c86967",
+      "verification": "23 model lifecycle cancellation and real selected-home launch/resume tests; 26 subtests passed"
+    },
+    "T1": {
+      "status": "TODO",
+      "scope": "Git-filter portable fault injection"
+    },
+    "E1": {
+      "status": "TODO",
+      "scope": "Consistent current checkpoint"
+    },
+    "H1": {
+      "status": "TODO",
+      "scope": "Antigravity effective MCP readiness"
+    },
+    "S1": {
+      "status": "DONE",
+      "scope": "Retained parent group discovery",
+      "commit": "e687e90fc5946104ddd2b41a9db539a71fe14295",
+      "verification": "2 parent-filtered stable-pagination discovery tests passed without changing completion ownership"
+    },
+    "S2": {
+      "status": "DONE",
+      "scope": "Artifact export",
+      "commit": "b008310141c53ab0f7526fae72eb256eff90ec8b",
+      "verification": "7 export and writing-result tests passed; 28 artifact tests and 48 subtests passed"
+    },
+    "S3": {
+      "status": "DONE",
+      "scope": "Unread and paginated MCP inbox",
+      "commit": "f7ea2157aac40d887162dfd50cb4b89724e0e04a",
+      "verification": "20 routing and inbox tests with 18 subtests passed including unread behind 110 acknowledgments and equal timestamps"
+    },
+    "S4": {
+      "status": "TODO",
+      "scope": "Passive owned integration readiness"
+    },
+    "S5": {
+      "status": "DONE",
+      "scope": "Idempotent resume",
+      "commit": "d8c42b3897675331159b6449b7758cc8c68c19e2",
+      "verification": "23 resume CLI idempotency lifecycle and real-controller tests; 18 subtests passed"
+    },
+    "C1": {
+      "status": "TODO",
+      "scope": "Non-Git isolated editing and implementation worker documentation"
+    },
+    "V1": {
+      "status": "TODO",
+      "scope": "Affected offline, passive and bounded native verification"
+    },
+    "D1": {
+      "status": "TODO",
+      "scope": "Conventions and final review package"
+    }
+  },
+  "tests": {
+    "offline": {
+      "status": "IN_PROGRESS"
+    },
+    "manager_and_naming": {
+      "status": "NOT_RUN"
+    },
+    "installed_passive": {
+      "status": "NOT_RUN"
+    },
+    "native": {
+      "status": "NOT_RUN",
+      "reason": "Current changes have not received new model acceptance; historical Astra4 observations retain their old fingerprints."
+    }
+  }
+}
