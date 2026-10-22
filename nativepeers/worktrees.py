@@ -208,15 +208,18 @@ def _working_tree(cwd,head,paths,deadline,*,tracked_paths=(),options=()):
         return command('write-tree').stdout.decode().strip()
 
 
-def _capture_untracked(root,selected):
+def _capture_untracked(root,selected,*,journal=None):
     require(isinstance(selected,(list,tuple)) and all(isinstance(p,str) for p in selected),
             'WORKSPACE_SNAPSHOT_REQUIRED','Untracked-file selection must be an explicit list of paths')
     if not selected:return {}
+    from .isolated_copy import _private_roots,private_path
+    private_roots=_private_roots(journal)
     untracked=set(git(root,'ls-files','--others','--exclude-standard','-z').stdout.decode().split('\0'))-{''}
     captured={}
     for relative in sorted(set(selected)):
         path=Path(relative)
-        require(not path.is_absolute() and '..' not in path.parts and relative in untracked and not sensitive(path),
+        require(not path.is_absolute() and '..' not in path.parts and relative in untracked and not private_path(path)
+                and not any((root/path).is_relative_to(home) for home in private_roots),
                 'WORKSPACE_SNAPSHOT_REQUIRED','Untracked-file selection is not safe or explicit')
         try:
             require(not any((root/part).is_symlink() for part in (path,*path.parents)),
@@ -242,7 +245,7 @@ def _input_metadata(captured):
     return {path:{'sha256':hashlib.sha256(data).hexdigest(),'mode':mode} for path,(data,mode) in captured.items()}
 
 
-def snapshot(cwd,*,untracked_allowlist=()):
+def snapshot(cwd,*,untracked_allowlist=(),journal=None):
     root=read_git(cwd,'rev-parse','--show-toplevel',check=False)
     if root.returncode:return {'git':False,'cwd':str(Path(cwd).resolve())}
     root=Path(root.stdout.decode().strip())
@@ -255,7 +258,7 @@ def snapshot(cwd,*,untracked_allowlist=()):
             'branch':read_git(root,'branch','--show-current').stdout.decode().strip(),
             'status_hex':read_git(root,'status','--porcelain=v1','-z','--untracked-files=all').stdout.hex(),
             'patch_sha256':hashlib.sha256(read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout).hexdigest()}
-    if untracked_allowlist:result['untracked_inputs']=_input_metadata(_capture_untracked(root,untracked_allowlist))
+    if untracked_allowlist:result['untracked_inputs']=_input_metadata(_capture_untracked(root,untracked_allowlist,journal=journal))
     return result
 
 
@@ -293,7 +296,7 @@ def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
     names=read_git(root,'diff','--no-ext-diff','--no-textconv','--name-only','HEAD','-z').stdout.split(b'\0')
     require(not any(sensitive(n.decode()) for n in names if n),
             'WORKSPACE_SNAPSHOT_REQUIRED','Dirty secret files are not copied into worker worktrees')
-    captured=_capture_untracked(root,selected)
+    captured=_capture_untracked(root,selected,journal=journal)
     patch=read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout
     expected=baseline
     if captured:baseline=dict(baseline,untracked_inputs=_input_metadata(captured))
@@ -302,7 +305,7 @@ def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout differs from the shared writing-batch baseline')
     require(hashlib.sha256(patch).hexdigest()==baseline['patch_sha256'],
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout changed during patch capture')
-    frozen=FrozenWorkspace(baseline,patch,captured)
+    frozen=FrozenWorkspace(baseline,patch,captured,journal)
     validate_frozen(cwd,frozen)
     return frozen
 
@@ -313,7 +316,7 @@ def validate_frozen(cwd,frozen,*,journal=None):
         from .isolated_copy import validate_source
         validate_source(cwd,frozen,journal=journal)
         return
-    require(snapshot(cwd,untracked_allowlist=list(frozen.untracked))==frozen.baseline,
+    require(snapshot(cwd,untracked_allowlist=list(frozen.untracked),journal=journal or frozen.journal)==frozen.baseline,
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout differs from the frozen writing-batch inputs')
 
 

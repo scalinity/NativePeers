@@ -142,3 +142,31 @@ class SpawnCheckTests(unittest.IsolatedAsyncioTestCase):
         request=self.request();request['workers'][0].update(permission_profile='workspace',workspace={'mode':'isolated-worktree'})
         plan=await self.delegation.spawn(self.caller,request,check=True)
         self.assertTrue(plan['ready']);self.assertFalse((self.source/'.worktrees').exists())
+
+    async def test_git_selection_excludes_offline_registered_home_before_materialization(self):
+        git(self.source,'init','-q');git(self.source,'add','main.py');git(self.source,'commit','-qm','Create private input fixture')
+        private=self.source/'provider-cache';private.mkdir();(private/'settings.json').write_text('dummy private-state fixture')
+        (self.source/'neighbor.txt').write_text('ordinary selected input')
+        peer=self.registry.register('codex',private,new_id(),'offline home',identity(os.getpid()).json(),str(private),{},owner_kind='test')
+        self.j.db.execute("UPDATE peer_instances SET status='offline' WHERE peer_key=?",(peer['handle'],))
+        # This fake historical registration shares the fixture PID; keep the real fixture parent live.
+        self.j.db.execute("UPDATE peer_instances SET status='live' WHERE peer_key=?",(self.caller.key,))
+        request=self.request();request['workers'][0].update(permission_profile='workspace',workspace={'mode':'isolated-worktree','untracked_allowlist':['provider-cache/settings.json']})
+        for check in (True,False):
+            with self.subTest(check=check),self.assertRaises(PeerError) as error:await self.delegation.spawn(self.caller,request,check=check)
+            self.assertEqual(error.exception.code,'WORKSPACE_SNAPSHOT_REQUIRED')
+            self.assertFalse((self.source/'.worktrees').exists());self.start.assert_not_awaited()
+        request['client_request_id']='safe-git-neighbor';request['workers'][0]['workspace']['untracked_allowlist']=['neighbor.txt']
+        planned=await self.delegation.spawn(self.caller,request,check=True);self.assertTrue(planned['ready'])
+        self.assertIn('neighbor.txt',planned['baseline']['untracked_inputs'])
+
+    async def test_git_revalidation_rechecks_new_registered_homes_in_executor(self):
+        import asyncio
+        from nativepeers.worktrees import freeze,validate_frozen
+        git(self.source,'init','-q');git(self.source,'add','main.py');git(self.source,'commit','-qm','Create revalidation fixture')
+        private=self.source/'late-home';private.mkdir();(private/'settings.json').write_text('dummy')
+        frozen=await asyncio.to_thread(freeze,self.source,[{'mode':'isolated-worktree','untracked_allowlist':['late-home/settings.json']}],journal=self.j)
+        peer=self.registry.register('codex',private,new_id(),'new private home',identity(os.getpid()).json(),str(private),{},owner_kind='test')
+        self.j.db.execute("UPDATE peer_instances SET status='offline' WHERE peer_key=?",(peer['handle'],))
+        with self.assertRaises(PeerError):await asyncio.to_thread(validate_frozen,self.source,frozen)
+        self.assertFalse((self.source/'.worktrees').exists())
