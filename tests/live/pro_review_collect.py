@@ -59,6 +59,11 @@ def artifact_call(value,context):
     function=value.get('function',value)
     if not isinstance(function,dict):return False
     name=function.get('name','')
+    if name=='call_mcp_tool':
+        args=function.get('args')
+        if not isinstance(args,dict) or args.get('ServerName')!='nativepeers' or args.get('ToolName')!='artifact_read':return False
+        function={'name':'mcp_nativepeers_artifact_read','arguments':args.get('Arguments')}
+        name=function['name']
     if not isinstance(name,str) or 'nativepeers' not in name or not name.endswith('_artifact_read'):return False
     args=function.get('arguments',function.get('args',function.get('input',{})))
     if isinstance(args,str):
@@ -69,12 +74,16 @@ def artifact_call(value,context):
 
 def artifact_read_evidence(peer,context,result):
     provider=peer['peer_key']['provider']
+    if provider=='antigravity' and not peer.get('native_transcript'):
+        from uuid import UUID
+        native=str(UUID(peer['peer_key']['native_session_id']))
+        peer=dict(peer,native_transcript=str(Path(peer['home'])/'brain'/native/'.system_generated/logs/transcript.jsonl'))
     history,_=(antigravity_events(peer) if provider=='antigravity' else native_events(peer))
     full=history.with_name('transcript_full.jsonl')
     if provider=='antigravity' and full.exists():
         assert full.resolve().is_relative_to(Path(peer['home'])) and not full.is_symlink()
         history=full
-    pending={}
+    pending={};wrapped=set()
     for line in history.read_text().splitlines():
         event=json.loads(line);at=event.get('created_at') if provider=='antigravity' else event.get('timestamp',event.get('ts'))
         if not at:continue
@@ -85,11 +94,20 @@ def artifact_read_evidence(peer,context,result):
             event_id=event.get('step_index')
             if event.get('type')=='PLANNER_RESPONSE':
                 for call in event.get('tool_calls',[]):
-                    if artifact_call(call,context):pending[call.get('id',event_id)]=event_id
-            if event.get('type')=='MCP_TOOL' and event.get('status')=='DONE' and pending:
-                call_id=event.get('tool_call_id',next(reversed(pending)));output=event.get('content')
+                    if artifact_call(call,context):
+                        key=call.get('id',event_id);pending[key]=event_id
+                        if call.get('name')=='call_mcp_tool':wrapped.add(key)
+            if event.get('type') in ('MCP_TOOL','GENERIC') and event.get('status')=='DONE' and pending:
+                call_id=event.get('tool_call_id',next(reversed(pending)))
+                if event.get('type')=='MCP_TOOL' or (call_id in wrapped and event_id==pending[call_id]+1):output=event.get('content')
         else:
             payload=event.get('payload',{});kind=payload.get('type');call_id=payload.get('call_id');event_id=call_id
+            item=payload.get('item',{})
+            if (event.get('type')=='event_msg' and kind=='item_completed' and item.get('type')=='McpToolCall'
+                    and payload.get('thread_id')==peer['peer_key']['native_session_id'] and item.get('status')=='completed'):
+                call=dict(name='mcp__'+item.get('server','')+'__'+item.get('tool',''),arguments=item.get('arguments',{}))
+                if artifact_call(call,context) and artifact_result(item.get('result'),context):
+                    return dict(native_history=str(history),native_session_id=peer['peer_key']['native_session_id'],call_event_id=item['id'],result_event_id=item['id'],artifact_id=context['artifact_id'],sha256=context['sha256'])
             if event.get('type')=='response_item':
                 if kind in ('function_call','custom_tool_call') and call_id and artifact_call(payload,context):pending[call_id]=call_id
                 if kind in ('function_call_output','custom_tool_call_output'):output=payload.get('output')

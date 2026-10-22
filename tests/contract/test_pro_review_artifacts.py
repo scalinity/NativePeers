@@ -105,3 +105,24 @@ class ProReviewArtifactTests(unittest.TestCase):
                 'invocation':invocation,'result':{'Ok':self.response}}} for kind in ('mcp_tool_call_begin','mcp_tool_call_end')]
         peer=self.write_history('codex',events)
         self.assertIsNotNone(artifact_read_evidence(peer,self.context,self.interval))
+
+    def test_installed_gemini_wrapper_and_exact_owned_history_path(self):
+        events=self.antigravity_events()
+        events[0]['tool_calls']=[{'name':'call_mcp_tool','args':{'ServerName':'nativepeers','ToolName':'artifact_read','Arguments':{'handle':self.context['artifact_id'],'limit':4096}}}]
+        events[1]['type']='GENERIC'
+        peer=self.write_history('antigravity',events)
+        old=Path(peer.pop('native_transcript'));target=self.home/'brain'/peer['peer_key']['native_session_id']/'.system_generated/logs'
+        target.mkdir(parents=True);(target/'transcript.jsonl').write_bytes(old.read_bytes())
+        self.assertIsNotNone(artifact_read_evidence(peer,self.context,self.interval))
+        events[0]['tool_calls'][0]['args']['ServerName']='unrelated'
+        (target/'transcript.jsonl').write_text('\n'.join(json.dumps(x) for x in events)+'\n')
+        self.assertIsNone(artifact_read_evidence(peer,self.context,self.interval))
+
+    def test_installed_codex_completed_mcp_item_carries_native_call_and_result(self):
+        item={'type':'McpToolCall','id':'exec-native-event','server':'nativepeers','tool':'artifact_read','arguments':{'handle':self.context['artifact_id']},'status':'completed','result':self.response}
+        events=[{'type':'event_msg','timestamp':self.at,'payload':{'type':'item_completed','thread_id':'placeholder','item':item}}]
+        peer=self.write_history('codex',events);path=Path(peer['native_transcript'])
+        events[0]['payload']['thread_id']=peer['peer_key']['native_session_id'];path.write_text(json.dumps(events[0])+'\n')
+        self.assertIsNotNone(artifact_read_evidence(peer,self.context,self.interval))
+        events[0]['payload']['thread_id']=new_id();path.write_text(json.dumps(events[0])+'\n')
+        self.assertIsNone(artifact_read_evidence(peer,self.context,self.interval))
