@@ -176,7 +176,7 @@
     "sha256": "9239fbf36aae7043663b867b594627f8e11198cf8540aedf61f6f46c5cb9768e"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Next pending review item: PIPE",
+  "next_action": "Next pending review item: MCP",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"

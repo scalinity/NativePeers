@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from pathlib import Path
 
 from ..launch import launch_environment
+from ..errors import PeerError
 
 
 class ProviderError(RuntimeError):
@@ -24,6 +26,7 @@ class AppServer:
         self.sequence = 0
         self.process = None
         self.stderr_tail = bytearray()
+        self.cleanup = None
 
     async def start(self):
         self.process = await asyncio.create_subprocess_exec(
@@ -95,18 +98,33 @@ class AppServer:
         finally:
             if not task.done():task.cancel()
 
-    async def close(self):
+    async def close(self, *, exit_timeout=10, kill_timeout=5, reader_timeout=1):
         if self.process is None:
             return
+        if self.cleanup is not None:
+            if self.cleanup['state']=='UNCERTAIN':raise PeerError('CLEANUP_UNCERTAIN',self.cleanup['message'],details=self.cleanup)
+            return self.cleanup
         if self.process.stdin:
             self.process.stdin.close()
-        try:
-            await asyncio.wait_for(self.process.wait(), 10)
-        except asyncio.TimeoutError:
-            self.process.terminate()
-            try:
-                await asyncio.wait_for(self.process.wait(), 5)
-            except asyncio.TimeoutError:
-                self.process.kill()
-                await self.process.wait()
-        await asyncio.gather(self.reader, self.error_reader, return_exceptions=True)
+        # Process.wait() can itself await inherited pipes after the leader exits.
+        # Observe the subprocess returncode separately from pipe EOF.
+        for timeout,action in ((exit_timeout,None),(kill_timeout,'terminate'),(kill_timeout,'kill')):
+            if self.process.returncode is not None:break
+            if action:
+                with contextlib.suppress(ProcessLookupError):getattr(self.process,action)()
+            deadline=asyncio.get_running_loop().time()+timeout
+            while self.process.returncode is None and asyncio.get_running_loop().time()<deadline:
+                await asyncio.sleep(.01)
+        readers=[task for task in (getattr(self,'reader',None),getattr(self,'error_reader',None)) if task]
+        _,pending=await asyncio.wait(readers,timeout=reader_timeout) if readers else (set(),set())
+        uncertain=bool(pending) or self.process.returncode is None
+        for task in pending:task.cancel()
+        await asyncio.gather(*readers,return_exceptions=True)
+        if self.process.returncode is not None:
+            # asyncio exposes no public close for subprocess output readers.
+            # Close only our local pipe transport, never a dead leader's group.
+            self.process._transport.close()
+        self.cleanup={'state':'UNCERTAIN' if uncertain else 'CLOSED','provider_exited':self.process.returncode is not None,
+            'pending_output_readers':len(pending),'message':'Provider exited without output-pipe EOF; descendant ownership is unresolved' if pending else 'Provider process did not confirm exit' if uncertain else 'Owned provider and output readers closed'}
+        if uncertain:raise PeerError('CLEANUP_UNCERTAIN',self.cleanup['message'],details=self.cleanup)
+        return self.cleanup

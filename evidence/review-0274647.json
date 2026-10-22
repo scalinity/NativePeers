@@ -19,7 +19,8 @@
       "verification": "34 planning/workspace/delta tests and 10 subtests PASS: public cold-index check preserves index and staged bytes, configured filters never run, built-in EOL normalization remains supported. Delta preview also disables automatic index refresh."
     },
     "PIPE": {
-      "status": "PENDING"
+      "status": "FIXED",
+      "verification": "17 cleanup/reconciliation/cancellation tests and 18 subtests PASS. Real inherited-pipe child cannot block close; structured CLEANUP_UNCERTAIN is retained, readers stop, no dead-leader group is signaled, normal close remains idempotent. Installed Codex topology remains NOT_RUN."
     },
     "MCP": {
       "status": "PENDING"
