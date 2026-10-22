@@ -1,6 +1,7 @@
 """Supported Antigravity CLI catalog, native metadata and short lifecycle hooks."""
 import argparse
 import asyncio
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -36,14 +37,21 @@ def resolve_name(name):
     return rows[0]['conversation_id']
 
 
-async def catalog(executable):
+async def catalog(executable,*,timeout=30,terminate_grace=1):
     from .launch import launch_environment
     process=await asyncio.create_subprocess_exec(str(executable),'models',env=launch_environment('antigravity'),
         stdin=asyncio.subprocess.DEVNULL,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
     try:
-        output,error=await asyncio.wait_for(process.communicate(),30)
+        output,error=await asyncio.wait_for(process.communicate(),timeout)
     except BaseException:
-        if process.returncode is None:process.terminate();await process.wait()
+        try:
+            if process.returncode is None:
+                with contextlib.suppress(ProcessLookupError):process.terminate()
+                try:await asyncio.wait_for(process.communicate(),terminate_grace)
+                except asyncio.TimeoutError:
+                    with contextlib.suppress(ProcessLookupError):process.kill()
+                    await asyncio.wait_for(process.communicate(),5)
+        except (ProcessLookupError,asyncio.TimeoutError):pass
         raise
     require(process.returncode==0,'AUTH_REQUIRED' if b'sign in' in (output+error).lower() else 'CAPABILITY_MISMATCH',
             'Antigravity could not list native models; sign in through agy before launching workers')
