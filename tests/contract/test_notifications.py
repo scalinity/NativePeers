@@ -5,8 +5,11 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock,patch
 
+from nativepeers.artifacts import Artifacts
+from nativepeers.core import Core
+from nativepeers.delegation import Delegation
 from nativepeers.files import canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
@@ -37,6 +40,14 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.group=Group(self.j,self.id)
 
     def route(self):return self.j.one('SELECT * FROM completion_routes')
+
+    def complete(self,task=None):
+        task=task or self.task;worker=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.worker,))
+        record={'summary':'retained finding','task_id':task,'status':'completed',
+                'worker':{'provider':worker['provider'],'native_session_id':worker['native_id'],'title':worker['role_title']}}
+        artifact=Artifacts(self.j).put(canonical(record),self.worker,[self.parent],media_type='application/json')
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED',result_artifact_id=? WHERE task_id=?",(artifact,task))
+        return artifact
 
     async def test_wait_timeout_releases_claim_and_rearms_requested_push(self):
         result=await self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':5,'on_timeout':'push'},Reader())
@@ -121,18 +132,95 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         for expected,actual in zip(results,sent):
             self.assertEqual(actual['native_session_id'],expected['worker']['native_session_id']);self.assertEqual(actual['result_artifact_id'],expected['result_artifact_id']);self.assertTrue(actual['summary_truncated'])
 
-    async def test_terminal_wait_reads_retained_results_without_a_supervisor(self):
-        from nativepeers.artifacts import Artifacts
-        from nativepeers.delegation import Delegation
-        result={'summary':'retained finding','task_id':self.task,'status':'completed'}
-        artifact=Artifacts(self.j).put(canonical(result),self.worker,[self.parent],media_type='application/json')
-        self.j.db.execute("UPDATE tasks SET state='COMPLETED',result_artifact_id=?",(artifact,))
-        delegation=Delegation(self.j,Registry(self.j))
+    async def test_public_terminal_group_wait_claims_once_without_supervisor_or_later_push(self):
+        artifact=self.complete();core=Core(self.j);tasks=self.group.tasks()
+        content=(self.j.root/'artifacts'/artifact).read_bytes();delivery=self.route()['delivery_id']
+        with patch('nativepeers.delegation.group_call',side_effect=AssertionError('No supervisor should be contacted')), \
+             patch('nativepeers.core.Core') as fake:
+            send=fake.return_value.router.send=AsyncMock()
+            first=await core.tool(self.group.parent,'task_wait',{'handle':self.id})
+            self.assertTrue(first['ready']);self.assertTrue(first['notification_output_uncertain'])
+            self.assertEqual(first['result']['results'][0]['summary'],'retained finding')
+            self.assertEqual(first['notification_disposition'],'tool-result-output-pending-observation')
+            self.assertEqual(first['result']['notifications'][0]['state'],'NOTIFICATION_UNKNOWN')
+            route=self.route();self.assertEqual(route['state'],'NOTIFICATION_UNKNOWN')
+            again=await core.tool(self.group.parent,'task_wait',{'handle':self.id})
+            self.assertTrue(again['ready']);self.assertFalse(again['notification_output_uncertain'])
+            self.assertEqual(again['notification_disposition'],'retained-result-read');self.assertEqual(self.route(),route)
+            await asyncio.gather(*(self.group.notify() for _ in range(3)))
+            send.assert_not_awaited()
+        self.assertEqual(self.route()['delivery_id'],delivery);self.assertEqual(self.group.tasks(),tasks)
+        self.assertEqual((self.j.root/'artifacts'/artifact).read_bytes(),content)
+
+    async def test_public_terminal_initial_task_wait_preserves_separate_batch_push(self):
+        self.complete();core=Core(self.j)
         with patch('nativepeers.delegation.group_call',side_effect=AssertionError('No supervisor should be contacted')):
-            for handle in [self.id,self.task]:
-                value=await delegation.wait(self.group.parent,handle)
-                self.assertTrue(value['ready']);self.assertEqual(value['result']['results'][0]['summary'],'retained finding')
-                self.assertEqual(value['notification_disposition'],'retained-result-read')
+            value=await core.tool(self.group.parent,'task_wait',{'handle':self.task})
+        self.assertTrue(value['ready']);self.assertFalse(value['notification_output_uncertain'])
+        self.assertEqual(self.route()['state'],'UNCLAIMED')
+        with patch('nativepeers.core.Core') as fake:
+            send=fake.return_value.router.send=AsyncMock(return_value={'state':'ACCEPTED_QUEUED','message_id':new_id()})
+            await self.group.notify();await self.group.notify()
+            send.assert_awaited_once()
+        self.assertEqual(self.route()['state'],'PUSH_ACCEPTED')
+
+    async def test_public_terminal_followup_wait_claims_only_its_completion_generation(self):
+        self.complete();followup=new_id();self.group.policy.update(phases={'1':[self.task],'2':[followup]},controller_generation=2)
+        self.group.generation=2
+        self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(self.group.policy).decode(),))
+        self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(followup,self.worker,None,None,'QUEUED',None,None,1,'{}'))
+        self.complete(followup)
+        self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED'");initial=self.route()
+        self.j.db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,2,self.parent,'push','UNCLAIMED',None,None,new_id(),2))
+        core=Core(self.j)
+        with patch('nativepeers.delegation.group_call',side_effect=AssertionError('No supervisor should be contacted')), \
+             patch('nativepeers.core.Core') as fake:
+            send=fake.return_value.router.send=AsyncMock()
+            value=await core.tool(self.group.parent,'task_wait',{'handle':followup})
+            self.assertTrue(value['notification_output_uncertain'])
+            self.assertEqual([r['task_id'] for r in value['result']['results']],[followup])
+            await self.group.notify(2);await self.group.notify(2);send.assert_not_awaited()
+        self.assertEqual(self.j.one('SELECT * FROM completion_routes WHERE completion_generation=1'),initial)
+        route=self.j.one('SELECT * FROM completion_routes WHERE completion_generation=2')
+        self.assertEqual((route['state'],route['claimed_generation']),('NOTIFICATION_UNKNOWN',2))
+
+    async def test_terminal_wait_reclaims_expired_wait_without_later_duplicate_push(self):
+        self.complete();self.j.db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id='expired',lease_deadline=?,claimed_generation=0",(time.time()-1,))
+        value=await Delegation(self.j,Registry(self.j)).wait(self.group.parent,self.id)
+        self.assertTrue(value['notification_output_uncertain']);self.assertEqual(self.route()['state'],'NOTIFICATION_UNKNOWN')
+        self.assertNotEqual(self.route()['waiter_id'],'expired');self.assertEqual(self.route()['claimed_generation'],1)
+        with patch('nativepeers.core.Core') as fake:
+            send=fake.return_value.router.send=AsyncMock();await self.group.notify();send.assert_not_awaited()
+
+    async def test_terminal_wait_claim_fences_an_expired_supervisor_waiter(self):
+        ready=asyncio.Event()
+        old_wait=asyncio.create_task(self.group.wait({'caller_key':self.parent,'handle':self.id,'timeout_ms':1000},Reader(ready=ready)))
+        await asyncio.wait_for(ready.wait(),1)
+        self.j.db.execute('UPDATE completion_routes SET lease_deadline=?',(time.time()-1,))
+        self.complete()
+        terminal=await Core(self.j).tool(self.group.parent,'task_wait',{'handle':self.id})
+        self.assertTrue(terminal['notification_output_uncertain']);route=self.route()
+        self.group.changed.set();old=await old_wait
+        self.assertTrue(old['ready']);self.assertFalse(old['notification_output_uncertain'])
+        self.assertEqual(self.route(),route)
+        with patch('nativepeers.core.Core') as fake:
+            send=fake.return_value.router.send=AsyncMock();await self.group.notify();send.assert_not_awaited()
+
+    async def test_terminal_wait_preserves_existing_claims_and_immutable_reads(self):
+        self.complete();delegation=Delegation(self.j,Registry(self.j))
+        before=self.route();delegation.result(self.group.parent,self.id);self.assertEqual(self.route(),before)
+        for state in ['WAIT_LEASED','NOTIFICATION_UNKNOWN','PUSH_SUBMITTING','PUSH_ACCEPTED','HELD','RETAINED']:
+            with self.subTest(state=state):
+                self.j.db.execute('UPDATE completion_routes SET state=?,waiter_id=?,lease_deadline=?,claimed_generation=0',(state,'other-waiter',time.time()+60))
+                before=self.route();value=await delegation.wait(self.group.parent,self.id)
+                self.assertTrue(value['ready']);self.assertFalse(value['notification_output_uncertain'])
+                self.assertEqual(self.route(),before)
+
+    async def test_terminal_worker_result_read_cannot_consume_parent_completion(self):
+        from nativepeers.caller import Caller
+        self.complete();caller=Caller('peer','worker-peer',new_id(),{'worker_id':self.worker,'group_id':self.id})
+        value=await Delegation(self.j,Registry(self.j)).wait(caller,self.task)
+        self.assertTrue(value['ready']);self.assertFalse(value['notification_output_uncertain'])
         self.assertEqual(self.route()['state'],'UNCLAIMED')
 
     async def test_late_old_generation_cannot_reclaim_output(self):

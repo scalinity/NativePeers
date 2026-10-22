@@ -18,6 +18,7 @@ from .errors import PeerError,require
 from .files import advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
+from .notifications import claim_wait,wait_generation,wait_output
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,PYTHON
 from .registry import Registry
@@ -49,10 +50,6 @@ class Group:
     def target_done(self,handle):
         if handle==self.id:return all(t['state'] in TERMINAL for t in self.tasks())
         return any(t['task_id']==handle and t['state'] in TERMINAL for t in self.tasks())
-
-    def phase_for(self,handle):
-        if handle==self.id:return max(int(n) for n in self.phases())
-        return next(int(n) for n,tasks in self.phases().items() if handle in tasks)
 
     async def send_worker(self,worker_id,value):
         child=self.children[worker_id];wire=canonical(value)+b'\n'
@@ -249,14 +246,9 @@ class Group:
         timeout=payload.get('timeout_ms',30000)/1000;require(0<timeout<=30,'PROTOCOL_ERROR','Wait exceeds 30 seconds')
         mode=payload.get('on_timeout') or ('push' if self.policy['completion_mode']=='push' else 'retain')
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
-        waiter=new_id();claimed=False
-        generation=self.phase_for(payload['handle'])
-        owns_notification=payload['handle']==self.id or (generation!=1 and self.phases()[str(generation)]==[payload['handle']])
-        if owns_notification:
-            with self.journal.transaction() as db:
-                row=db.execute('SELECT * FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generation)).fetchone()
-                if row['state']=='UNCLAIMED' or (row['state']=='WAIT_LEASED' and row['lease_deadline']<time.time()):
-                    db.execute("UPDATE completion_routes SET state='WAIT_LEASED',waiter_id=?,lease_deadline=?,claimed_generation=? WHERE group_id=? AND completion_generation=?",(waiter,time.time()+timeout+1,self.generation,self.id,generation));claimed=True
+        waiter=new_id();generation=wait_generation(self.id,self.policy,payload['handle'])
+        owns_notification=generation is not None
+        claimed=claim_wait(self.journal,self.id,generation,self.generation,waiter,timeout)
         deadline=time.monotonic()+timeout
         disconnected=asyncio.create_task(reader.read(1))
         try:
@@ -269,9 +261,9 @@ class Group:
                 self.changed.clear()
             if self.target_done(payload['handle']) and not disconnected.done():
                 if claimed:
-                    self.journal.db.execute("UPDATE completion_routes SET state='NOTIFICATION_UNKNOWN',lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",(self.id,generation,waiter,self.generation))
+                    claimed=wait_output(self.journal,self.id,generation,self.generation,waiter)
                 return {'ready':True,'result':Delegation(self.journal,Registry(self.journal)).result(self.parent,payload['handle']),
-                        'notification_output_uncertain':claimed,'notification_disposition':'tool-result-output-pending-observation' if owns_notification else 'batch-notification-unchanged'}
+                        'notification_output_uncertain':claimed,'notification_disposition':('tool-result-output-pending-observation' if claimed else 'retained-result-read') if owns_notification else 'batch-notification-unchanged'}
             if claimed:
                 self.journal.db.execute("UPDATE completion_routes SET state='UNCLAIMED',mode=?,waiter_id=NULL,lease_deadline=NULL WHERE group_id=? AND completion_generation=? AND waiter_id=? AND claimed_generation=?",('push' if mode=='push' else 'wait',self.id,generation,waiter,self.generation))
             return {'ready':False,'state':'WAIT_EXPIRED','notification_disposition':mode if owns_notification else 'batch-notification-unchanged'}

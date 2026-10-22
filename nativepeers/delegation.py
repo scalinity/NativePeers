@@ -15,6 +15,7 @@ from .errors import PeerError,require
 from .files import async_advisory_lock,atomic_json,canonical,private_directory,sha256
 from .launch import launch_environment
 from .models import bounded_text,new_id,title
+from .notifications import claim_wait,wait_generation,wait_output
 from .process import matches
 from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
@@ -238,7 +239,14 @@ class Delegation:
         status=self.status(caller,handle)
         tasks=[t for t in status['tasks'] if handle==group['group_id'] or t['task_id']==handle]
         if tasks and all(t['state'] in TERMINAL for t in tasks):
-            return {'ready':True,'result':self.result(caller,handle),'notification_output_uncertain':False,'notification_disposition':'retained-result-read'}
+            claimed=False
+            policy=json.loads(group['policy_json']);generation=wait_generation(group['group_id'],policy,handle)
+            if caller.key==group['parent_key']:
+                waiter=new_id();controller_generation=policy.get('controller_generation',1)
+                if claim_wait(self.journal,group['group_id'],generation,controller_generation,waiter,timeout_ms/1000):
+                    claimed=wait_output(self.journal,group['group_id'],generation,controller_generation,waiter)
+            return {'ready':True,'result':self.result(caller,handle),'notification_output_uncertain':claimed,
+                    'notification_disposition':'tool-result-output-pending-observation' if claimed else 'retained-result-read'}
         return await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
 
     async def cancel(self,caller,handle,reason):
