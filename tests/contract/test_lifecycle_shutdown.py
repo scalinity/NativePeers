@@ -149,3 +149,50 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(error.exception.code,'OWNERSHIP_UNKNOWN')
             self.assertTrue(matches(original['native_process']))
         finally:atomic_json(path,original)
+
+    async def test_delayed_cancel_cleanup_cannot_release_a_resumed_generation(self):
+        from nativepeers.caller import Caller
+        from nativepeers.recovery import resume_worker
+        # A resumed turn stays in flight until the test releases its native result.
+        provider=FAKE_PROVIDER.replace("turn=str(uuid.uuid4());result={'turn':{'id':turn}}", """turn=str(uuid.uuid4());result={'turn':{'id':turn}}
+  if 'RESUMED' in params['input'][0]['text']:
+   import threading,time
+   def complete(turn_id=turn):
+    while not Path(__file__).with_suffix('.complete').exists():time.sleep(.01)
+    emit({'method':'turn/completed','params':{'threadId':native,'turn':{'id':turn_id,'status':'completed','items':[{'type':'agentMessage','id':'final','text':'resumed result','phase':'final_answer'}]}}})
+   threading.Thread(target=complete,daemon=True).start()""")
+        self.binary.write_text(provider)
+        atomic_json(self.root/'compat/runtime.json',{'providers':{'codex':fingerprint(self.binary)}})
+        lease=json.loads(self.j.one('SELECT lease_json FROM workers')['lease_json'])
+        lease['grants']['depth']=1
+        self.j.db.execute('UPDATE workers SET lease_json=?',(canonical(lease).decode(),))
+        await self.start()
+        old=self.group.children[self.worker]
+        entered=asyncio.Event();unblock=asyncio.Event();sleep=asyncio.sleep;cleanup=None
+        async def barrier(delay):
+            if asyncio.current_task() is cleanup:
+                entered.set();await unblock.wait()
+            else:await sleep(delay)
+        with patch('nativepeers.supervisor.asyncio.sleep',side_effect=barrier):
+            cleanup=asyncio.create_task(self.group.cancel_and_release(self.worker,expected=old))
+            try:
+                await asyncio.wait_for(entered.wait(),5)
+                await self.group.cancel_worker(self.worker,expected=old)
+                await asyncio.wait_for(old['reader'],8)
+                self.assertEqual(self.j.one('SELECT state FROM workers')['state'],'RELEASED_RESUMABLE')
+                resumed=await resume_worker(self.j,Caller('peer',self.group.row['parent_key'],self.policy['parent_incarnation']),self.worker,'RESUMED','wait')
+                async with asyncio.timeout(5):
+                    while self.j.one('SELECT state FROM tasks WHERE task_id=?',(resumed['task_id'],))['state']!='RUNNING':await sleep(.01)
+                current=self.group.children[self.worker]
+                self.assertEqual(current['row']['generation'],2)
+                unblock.set();await asyncio.wait_for(cleanup,5)
+                self.assertTrue(matches(current['owner']))
+                self.binary.with_suffix('.complete').touch()
+                async with asyncio.timeout(5):
+                    while self.j.one('SELECT state FROM tasks WHERE task_id=?',(resumed['task_id'],))['state']=='RUNNING':await sleep(.01)
+                self.assertEqual(self.j.one('SELECT state FROM tasks WHERE task_id=?',(resumed['task_id'],))['state'],'COMPLETED')
+                self.assertEqual(self.j.one('SELECT generation FROM workers')['generation'],2)
+            finally:
+                unblock.set()
+                if cleanup and not cleanup.done():cleanup.cancel()
+                if cleanup:await asyncio.gather(cleanup,return_exceptions=True)

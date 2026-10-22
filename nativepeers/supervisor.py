@@ -116,8 +116,8 @@ class Group:
             self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",(state,artifact,json.dumps(task_error),task['task_id'],row['generation']))
         self.changed.set()
 
-    async def cancel_worker(self,worker_id,reason=None):
-        if worker_id not in self.children:return
+    async def cancel_worker(self,worker_id,reason=None,*,expected=None):
+        if worker_id not in self.children or (expected is not None and self.children[worker_id] is not expected):return
         try:await self.send_worker(worker_id,dict(operation='cancel',**({'reason':reason} if reason else {})))
         except (BrokenPipeError,ConnectionError):pass
 
@@ -231,17 +231,20 @@ class Group:
                 return {'state':'CANCELED' if scoped['state']=='QUEUED' else scoped['state'],'workers':[]}
             await self.send_worker(scoped['worker_id'],{'operation':'cancel-task','task_id':handle})
             return {'state':'CANCEL_REQUESTED','workers':[scoped['worker_id']],'task_id':handle}
-        targets={t['worker_id'] for t in tasks}
-        await asyncio.gather(*[self.cancel_worker(w) for w in targets])
-        for worker in targets:asyncio.create_task(self.cancel_and_release(worker))
+        targets={t['worker_id']:self.children.get(t['worker_id']) for t in tasks}
+        await asyncio.gather(*[self.cancel_worker(w,expected=child) for w,child in targets.items() if child is not None])
+        for worker,child in targets.items():
+            if child is not None:asyncio.create_task(self.cancel_and_release(worker,expected=child))
         return {'state':'CANCEL_REQUESTED','workers':list(targets)}
 
-    async def cancel_and_release(self,worker_id):
+    async def cancel_and_release(self,worker_id,*,expected):
+        generation=expected['row']['generation']
         deadline=time.monotonic()+15
         while time.monotonic()<deadline:
-            if not any(t['worker_id']==worker_id and t['state']=='RUNNING' for t in self.tasks()):break
+            if self.children.get(worker_id) is not expected:return
+            if not any(t['worker_id']==worker_id and t['generation']==generation and t['state']=='RUNNING' for t in self.tasks()):break
             await asyncio.sleep(.05)
-        await self.release_worker(worker_id)
+        await self.release_worker(worker_id,expected=expected)
         self.changed.set()
 
     async def enqueue(self,payload):
