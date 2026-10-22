@@ -354,7 +354,11 @@ class Group:
                 state='COMPLETED' if all(t['state']=='COMPLETED' for t in tasks if t['task_id'] in self.policy['initial_tasks']) else 'PARTIAL'
                 self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(state,self.id))
                 for phase in self.phases():await self.notify(int(phase))
-                if not active and self.finished_at is None:self.finished_at=time.time()
+                # Notification awaits can admit a successor; never start idle grace
+                # from the activity snapshot taken before that await.
+                active=any(t['state'] not in TERMINAL for t in self.tasks())
+                if active:self.finished_at=None
+                elif self.finished_at is None:self.finished_at=time.time()
             parent_gone=not matches(self.policy['parent_owner']) and not self.policy['survive_parent']
             if parent_gone or time.time()>deadline:
                 self.shutdown_reason=self.shutdown_reason or ('PARENT_LOST' if parent_gone else 'GROUP_DEADLINE_EXCEEDED')
@@ -366,7 +370,7 @@ class Group:
                 if time.time()>deadline+20 or parent_gone:
                     self.journal.event(self.id,'lifetime-ended',{'parent_gone':parent_gone,'deadline':deadline});break
             pending_push=self.journal.one("SELECT 1 FROM completion_routes WHERE group_id=? AND mode='push' AND state='UNCLAIMED' LIMIT 1",(self.id,))
-            if self.finished_at and not pending_push and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:break
+            if not active and self.finished_at is not None and not pending_push and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:break
             self.changed.clear()
             try:await asyncio.wait_for(self.changed.wait(),1)
             except asyncio.TimeoutError:pass

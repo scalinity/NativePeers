@@ -300,3 +300,19 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.group.fail_worker(self.worker,{'code':'WORKER_CRASHED'},generation=1)
         self.assertEqual(self.j.one('SELECT state FROM workers')['state'],'RUNNING')
         self.assertEqual(self.j.one('SELECT state FROM tasks')['state'],'RUNNING')
+
+    async def test_followup_admitted_during_notification_does_not_expire_idle_grace(self):
+        self.complete();self.group.policy.update(created_at=time.time(),wall_time_seconds=5,survive_parent=False,followup_grace_seconds=0)
+        self.group.finished_at=time.time()-20;followup=new_id();calls=0
+        async def notify(generation):
+            nonlocal calls
+            calls+=1
+            if calls==1:
+                self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(followup,self.worker,None,None,'RUNNING',None,None,1,'{}'))
+                self.group.finished_at=None
+            else:
+                self.assertIsNone(self.group.finished_at)
+                self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(followup,))
+            self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED'")
+        with patch.object(self.group,'notify',side_effect=notify):await asyncio.wait_for(self.group.monitor(),3)
+        self.assertEqual(calls,2);self.assertIsNone(self.group.shutdown_reason)
