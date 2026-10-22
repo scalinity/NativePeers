@@ -56,7 +56,15 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
             return Caller("controller", "controller:"+value["group_id"]+":"+str(value["generation"]), grants=value)
         peer = registry.verify(value["peer_key"], value["incarnation_id"])
         if fixed_binding is None:
-            require(native_ancestor(peer["owner"], [p.json() for p in ancestry()]), "CALLER_UNBOUND", "Native owner is outside caller ancestry")
+            ancestors=[p.json() for p in ancestry()]
+            require(native_ancestor(peer["owner"], ancestors), "CALLER_UNBOUND", "Native owner is outside caller ancestry")
+            if peer['owner_kind']=='interactive-standalone':
+                binaries={(Path.home()/name).resolve() for name in (
+                    '.local/bin/agy','.local/bin/claude','.local/share/codex-mcp-manager/current/bin/codex')}
+                binaries.add(Path(peer['owner']['executable']))
+                nearest=next((p for p in ancestors if Path(p['executable']) in binaries),None)
+                require(nearest is not None and native_ancestor(peer['owner'],[nearest]),
+                        'CALLER_UNBOUND','Interactive binding belongs to an enclosing native session')
         grants=value.get('grants',{})
         if peer['owner_kind']=='interactive-standalone':
             grants=dict(grants,profiles=peer.get('policy',{}).get('profiles',['analysis']))

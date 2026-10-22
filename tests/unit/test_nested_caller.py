@@ -1,3 +1,4 @@
+import asyncio
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -5,6 +6,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from nativepeers.caller import bind_caller
+from nativepeers.mcp_server import Facade
 
 
 class NestedCallerTests(unittest.TestCase):
@@ -42,3 +44,30 @@ class NestedCallerTests(unittest.TestCase):
         claude=self.owner('claude',1);codex=self.owner('codex',2)
         with self.assertRaises(Exception) as error:self.invoke([claude,codex],{'codex':[self.peer(codex,'codex')]})
         self.assertEqual(error.exception.code,'CALLER_UNBOUND')
+
+    def test_ambient_interactive_binding_rejects_an_enclosing_native_owner(self):
+        outer=self.owner('claude',2);inner=self.owner('antigravity',1)
+        peer=dict(self.peer(outer,'claude'),owner_kind='interactive-standalone',policy={'profiles':['workspace']})
+        registry=Mock();registry.verify.return_value=peer
+        binding={'kind':'peer','peer_key':peer['handle'],'incarnation_id':peer['incarnation_id'],'grants':{}}
+        for owners,accepted in [([inner,outer],False),([outer],True)]:
+            with self.subTest(accepted=accepted), \
+                 patch('nativepeers.caller.read_binding',return_value=binding), \
+                 patch('nativepeers.caller.ancestry',return_value=[SimpleNamespace(json=lambda p=p:p) for p in owners]), \
+                 patch.dict(os.environ,{'NPEER_BINDING':'/unused','NPEER_BOOTSTRAP':''}):
+                if accepted:self.assertEqual(bind_caller(Mock(),registry).key,peer['handle'])
+                else:
+                    with self.assertRaises(Exception) as error:bind_caller(Mock(),registry)
+                    self.assertEqual(error.exception.code,'CALLER_UNBOUND')
+                    with patch('nativepeers.mcp_server.Registry',return_value=registry):
+                        result=asyncio.run(Facade(Mock(),None).call(None,SimpleNamespace(name='peer_send',arguments={'target':'x','text':'no','client_request_id':'x'})))
+                    self.assertTrue(result.is_error)
+
+    def test_owned_worker_bootstrap_keeps_its_controller_binding(self):
+        controller=self.owner('codex',2);inner=self.owner('antigravity',1)
+        peer=dict(self.peer(controller,'antigravity'),owner_kind='owned-worker-controller')
+        registry=Mock();registry.verify.return_value=peer
+        with patch('nativepeers.caller.read_binding',return_value={'kind':'peer','peer_key':peer['handle'],'incarnation_id':'incarnation','grants':{'worker_id':'worker'}}), \
+             patch('nativepeers.caller.ancestry',return_value=[SimpleNamespace(json=lambda p=p:p) for p in [inner,controller]]), \
+             patch.dict(os.environ,{'NPEER_BINDING':'','NPEER_BOOTSTRAP':'/owned/bootstrap'}):
+            self.assertEqual(bind_caller(Mock(),registry).grants['worker_id'],'worker')
