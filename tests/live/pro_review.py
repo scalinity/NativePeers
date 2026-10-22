@@ -25,7 +25,8 @@ from nativepeers.process import identity,matches
 from nativepeers.profiles import config_arguments
 from nativepeers.worktrees import git,snapshot
 
-RUN=ROOT/'evidence/private/pro-review-20261022/native'
+RUN=Path(os.environ.get('NPEER_PRO_REVIEW_RUN',ROOT/'evidence/private/pro-review-20261022/native')).resolve()
+assert RUN.is_relative_to(ROOT/'evidence/private/pro-review-20261022'),'Live run must stay in its private project folder'
 STATE=RUN/'state';FIXTURE=RUN/'fixture';LEDGER=ROOT/'evidence/live-budget.json'
 MODELS={'codex':'gpt-6.1-sol','antigravity':'gemini-3.8-flash-medium'}
 
@@ -192,7 +193,7 @@ Allow this same tool process up to 480 seconds and collect its output if it runs
     args=[str(binary),'--name','NP Pro Sol Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(json.loads((RUN/'overrides.json').read_text())),prompt] if provider=='codex' else [str(binary),'--model',MODELS[provider],'--dangerously-skip-permissions','--prompt-interactive',prompt]
     budget=LiveBudget(LEDGER);reservation=budget.reserve('Pro review '+provider+' parent input',tranche='pro_review');budget.admit(reservation)
     atomic_json(RUN/(provider+'-launch.json'),{'at':stamp(),'reservation':reservation,'owner_expected_after_exec':dict(identity(os.getpid()).json(),executable=str(binary))})
-    env=launch_environment(provider);env.update(NPEER_HOME=str(STATE),PYTHONPATH=str(ROOT),TERM='xterm-256color')
+    env=launch_environment(provider);env.update(NPEER_HOME=str(STATE),NPEER_PRO_REVIEW_RUN=str(RUN),PYTHONPATH=str(ROOT),TERM='xterm-256color')
     os.chdir(ROOT if provider=='antigravity' else FIXTURE);os.execve(binary,args,env)
 
 
