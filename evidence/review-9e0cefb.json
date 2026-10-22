@@ -34,7 +34,8 @@
     {
       "id": "R6",
       "description": "Strict MCP object shape",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 8 readiness tests and 30 subtests; global/workspace list-of-pairs rejection and valid disabled:false objects"
     },
     {
       "id": "H1",

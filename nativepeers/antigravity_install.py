@@ -70,12 +70,14 @@ def mcp_readiness(spec,*,home=None):
         state='MISSING';reason='Owned nativepeers MCP definition is absent'
         try:
             data=json.loads(target.read_text()) if target.exists() else {}
-            servers=data.get('mcpServers',{});current=servers.get('nativepeers')
+            servers=data.get('mcpServers',{})
+            if not isinstance(servers,dict):raise TypeError('MCP servers must be an object')
+            current=servers.get('nativepeers')
             if optional and 'nativepeers' not in servers:continue
-            if current is None and 'nativepeers' in servers:
+            if 'nativepeers' in servers and not isinstance(current,dict):
                 state='UNKNOWN';reason='Owned MCP definition is not a server object'
             elif current is not None:
-                current=dict(current)
+                current=current.copy()
                 disabled=current.pop('disabled',False)
                 state=('DISABLED' if disabled is True else 'UNKNOWN' if disabled is not False
                        else 'PRESENT' if current==expected else 'MODIFIED')

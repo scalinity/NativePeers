@@ -152,6 +152,33 @@ class ReadinessTests(unittest.TestCase):
         self.assertEqual(self.states(report,'antigravity','profile'),['PRESENT']*2)
         self.assertEqual(self.states(report,'antigravity','mcp_facade'),['PRESENT'])
 
+    def test_antigravity_mcp_gate_requires_json_objects_without_pair_list_coercion(self):
+        self.configured();global_path=self.home/'.gemini/config/mcp_config.json'
+        expected=desired(self.home)[global_path][2]
+        workspace=self.cwd/'.agents/mcp_config.json'
+        malformed=[list(expected.items()),None,[],False,1,'nativepeers']
+        for target in (global_path,workspace):
+            for definition in malformed:
+                with self.subTest(target=target,definition=definition):
+                    self.write_json(global_path,{'mcpServers':{'nativepeers':expected}})
+                    workspace.unlink(missing_ok=True)
+                    self.write_json(target,{'mcpServers':{'nativepeers':definition}})
+                    before=self.snapshot()
+                    with self.assertRaises(PeerError) as error:verify_tool_gate({'cwd':str(self.cwd)})
+                    self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+                    check=next(item for item in error.exception.details if item['path']==str(target))
+                    self.assertEqual(check['state'],'UNKNOWN')
+                    self.assertEqual(self.snapshot(),before)
+            for data in ([],{'mcpServers':[]},{'mcpServers':[['nativepeers',expected]]}):
+                with self.subTest(target=target,data=data):
+                    self.write_json(global_path,{'mcpServers':{'nativepeers':expected}})
+                    workspace.unlink(missing_ok=True);self.write_json(target,data)
+                    with self.assertRaises(PeerError):verify_tool_gate({'cwd':str(self.cwd)})
+        for target in (global_path,workspace):
+            self.write_json(target,{'mcpServers':{'nativepeers':dict(expected,disabled=False)}})
+        before=self.snapshot();verify_tool_gate({'cwd':str(self.cwd)})
+        self.assertEqual(self.snapshot(),before)
+
     def test_antigravity_workspace_and_native_settings_hook_overrides_are_visible(self):
         self.configured()
         self.write_json(self.cwd/'.agents/hooks.json',{'nativepeers':{}})
