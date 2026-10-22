@@ -58,6 +58,8 @@ class Artifacts:
             require(path.is_relative_to(Path(peer['cwd'])), 'APPROVAL_BLOCKED',
                     'Workers can import artifacts only from their owned cwd')
         private_roots = [self.journal.root.resolve(), Path(peer['home'])]
+        private_roots.extend(Path(row['home']).resolve() for row in self.journal.all(
+            "SELECT DISTINCT json_extract(descriptor_json,'$.home') AS home FROM peer_instances"))
         private_roots.extend(Path(os.environ[name]).expanduser().resolve()
                              for name in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR') if os.environ.get(name))
         private_names = {'.ssh', '.aws', '.azure', '.codex', '.claude', '.gemini', 'gcloud',
