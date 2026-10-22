@@ -96,6 +96,53 @@ class WorkerDeltaTests(unittest.TestCase):
                     self.assertEqual((replay/'renamed.txt').read_bytes(),(work/'renamed.txt').read_bytes())
                 self.assertEqual(self.index_bytes(work),worker_index)
 
+    def test_crlf_dirty_input_has_empty_noop_delta_and_replays_real_edit(self):
+        (self.repo/'.gitattributes').write_text('edit.txt text eol=crlf\n')
+        git(self.repo,'add','.gitattributes');git(self.repo,'commit','-qm','Set fixture line endings')
+        (self.repo/'edit.txt').write_bytes(b'parent dirty\r\n')
+        source_before=snapshot(self.repo);work,baseline=self.prepare()
+        self.assertEqual((work/'edit.txt').read_bytes(),b'parent dirty\r\n')
+        worker_index=self.index_bytes(work);noop=changes(work,baseline)
+        self.assertEqual(noop['worker_delta'],b'');self.assertNotIn('worker_delta_unavailable_reason',noop)
+        (work/'edit.txt').write_bytes(b'worker edit\r\n');result=changes(work,baseline)
+        self.assertIn(b'-parent dirty\n+worker edit\n',result['worker_delta'])
+        for view,tree in [('patch',baseline['head']),('worker_delta',baseline['input_tree'])]:
+            replay=self.replay('crlf-'+view,tree,result[view])
+            self.assertEqual((replay/'edit.txt').read_bytes(),b'worker edit\r\n')
+            self.assertEqual(git(replay,'show',':edit.txt').stdout,b'worker edit\n')
+        self.assertEqual(self.index_bytes(work),worker_index);self.assertEqual(snapshot(self.repo),source_before)
+
+    def test_builtin_ident_conversion_does_not_appear_as_worker_edit(self):
+        (self.repo/'.gitattributes').write_text('edit.txt ident\n')
+        (self.repo/'edit.txt').write_text('$Id$\n')
+        git(self.repo,'add','.');git(self.repo,'commit','-qm','Set fixture ident attribute')
+        (self.repo/'edit.txt').write_text('$Id: fixture-expanded-id $\nparent dirty\n')
+        work,baseline=self.prepare();result=changes(work,baseline)
+        self.assertIn(b'$Id:',(work/'edit.txt').read_bytes())
+        self.assertEqual(result['worker_delta'],b'');self.assertNotIn('worker_delta_unavailable_reason',result)
+
+    def test_selected_untracked_input_keeps_its_raw_representation(self):
+        (self.repo/'.gitattributes').write_text('selected text eol=crlf\n')
+        git(self.repo,'add','.gitattributes');git(self.repo,'commit','-qm','Set selected input attributes')
+        (self.repo/'selected').write_bytes(b'raw selected\r\n')
+        work,baseline=self.prepare('selected');result=changes(work,baseline)
+        self.assertEqual(result['worker_delta'],b'');self.assertNotIn('worker_delta_unavailable_reason',result)
+
+    def test_custom_filters_are_not_executed_and_delta_is_explicitly_unavailable(self):
+        work,baseline=self.prepare();marker=self.root/'filter-executed'
+        (work/'.gitattributes').write_text('edit.txt filter=fixture\n')
+        (work/'edit.txt').write_text('worker edit\n')
+        for kind in ('clean','smudge','process'):
+            git(work,'config','filter.fixture.'+kind,'touch '+str(marker))
+        git(work,'config','filter.fixture.required','true')
+        worker_index=self.index_bytes(work);result=changes(work,baseline)
+        self.assertFalse(marker.exists())
+        self.assertIn(b'+worker edit',result['patch'])
+        self.assertEqual(result['worker_delta'],b'')
+        self.assertIn('Custom Git filter',result['worker_delta_unavailable_reason'])
+        self.assertEqual(self.index_bytes(work),worker_index)
+        self.assertFalse(list((self.repo/'.git').rglob('npeer-index-*')))
+
     def test_reverting_parent_edits_and_deleting_input_still_produces_delta(self):
         (self.repo/'edit.txt').write_text('parent dirty\n');(self.repo/'selected').write_text('selected input\n')
         work,baseline=self.prepare('selected');(work/'edit.txt').write_text('baseline\n');(work/'selected').unlink()
