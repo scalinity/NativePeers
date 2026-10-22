@@ -2,14 +2,16 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 import tempfile
 import time
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from nativepeers.antigravity import observe, resolve_name
-from nativepeers.antigravity_install import install, allowed_tools, desired
+from nativepeers.antigravity import observe, resolve_name, queue_native_hook
+from nativepeers.antigravity_install import install, allowed_tools, desired, verify_tool_gate
 from nativepeers.install import compare_write
 from nativepeers.files import canonical,atomic_json
 from nativepeers.journal import Journal
@@ -180,6 +182,59 @@ class AntigravityTests(unittest.TestCase):
             self.assertFalse(allowed_tools('analysis',tool))
         self.assertTrue(allowed_tools('workspace','run_command'))
 
+    def test_tool_gate_refuses_missing_modified_and_overridden_hooks(self):
+        hooks=self.home/'.gemini/config/hooks.json';hooks.parent.mkdir(parents=True)
+        project=self.home/'.agents/hooks.json';settings=self.home/'.gemini/antigravity-cli/settings.json'
+        with patch('nativepeers.antigravity_install.Path.home',return_value=self.home):
+            for case in ['missing','modified','project','settings']:
+                with self.subTest(case=case):
+                    hooks.write_text(json.dumps({'nativepeers':desired(self.home)[hooks][2]}))
+                    project.unlink(missing_ok=True);settings.unlink(missing_ok=True)
+                    if case=='missing':hooks.unlink()
+                    if case=='modified':hooks.write_text('{"nativepeers":{}}')
+                    if case=='project':project.parent.mkdir(exist_ok=True);project.write_text('{"nativepeers":{}}')
+                    if case=='settings':settings.write_text('{"hooks":{"nativepeers":{}}}')
+                    with self.assertRaises(Exception) as error:verify_tool_gate({'cwd':str(self.home)})
+                    self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+
+    def test_actual_hook_entry_point_denies_unverified_owned_tool_calls(self):
+        source=Path(__file__).resolve().parents[2]
+        env=dict(os.environ,HOME=str(self.home),PYTHONPATH=str(source),NPEER_HOME=str(self.j.root),NPEER_BINDING='',NPEER_BOOTSTRAP=str(self.j.root/'bindings/missing'))
+        result=subprocess.run([sys.executable,'-m','nativepeers.antigravity','hook','PreToolUse'],input=json.dumps(dict(self.event,toolCall={'name':'view_file','args':{}})),
+            capture_output=True,text=True,env=env,cwd=source,timeout=5,check=True)
+        self.assertEqual(json.loads(result.stdout)['decision'],'deny')
+        self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE kind='hook-binding-error'"))
+
+    def test_queue_adapter_route_retains_unknown_native_delivery(self):
+        from nativepeers.caller import Caller
+        from nativepeers.registry import Registry
+        from nativepeers.routing import Router
+        registry=Registry(self.j)
+        sender=registry.register('claude',self.home,new_id(),'sender',self.owner.json(),str(self.home),{'kind':'fake'},owner_kind='test')
+        target=registry.register('antigravity',self.provider_home,self.native,'target',self.owner.json(),str(self.home),{'kind':'antigravity-native-hook'},owner_kind='test')
+        self.j.db.execute("UPDATE peer_instances SET status='live'")
+        router=Router(self.j,registry,{'antigravity-native-hook':queue_native_hook})
+        result=asyncio.run(router.send(Caller('peer',sender['handle'],sender['incarnation_id']),target['handle'],'fixture question'))
+        self.assertEqual(result['state'],'SUBMITTED_UNCONFIRMED')
+        self.assertEqual(self.j.one('SELECT target_incarnation FROM attempts')['target_incarnation'],target['incarnation_id'])
+
+    def test_inbox_excludes_expired_messages_and_bounds_each_batch(self):
+        with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
+             patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':''}):
+            observe(self.j,self.event,'SessionStart');peer=self.j.one('SELECT peer_key,incarnation_id FROM peer_instances')
+            messages=[]
+            for index in range(3):
+                message=new_id();messages.append(message);payload={'message_id':message,'body':{'text':'x'*33000}}
+                self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,new_id(),'sender',peer['peer_key'],None,None,canonical(payload).decode(),'hash',time.time()+(-1 if index==0 else 60),index))
+                self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
+                    (new_id(),message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))
+            first=observe(self.j,self.event,'PreInvocation')['injectSteps'][0]['ephemeralMessage']
+            self.assertIn(messages[1],first);self.assertNotIn(messages[0],first);self.assertNotIn(messages[2],first)
+            second=observe(self.j,self.event,'PreInvocation')['injectSteps'][0]['ephemeralMessage']
+            self.assertIn(messages[2],second);self.assertNotIn(messages[1],second)
+            self.assertEqual(observe(self.j,self.event,'PreInvocation'),{})
+
     def test_native_tool_handlers_use_matchers_and_explicit_allow(self):
         config=desired(self.home)[self.home/'.gemini/config/hooks.json'][2]
         handler=config['PreToolUse'][0]
@@ -203,3 +258,4 @@ class AntigravityTests(unittest.TestCase):
             self.assertEqual(observe(self.j,dict(self.event,toolCall={'name':'view_file','args':{}}),'PreToolUse'),{'decision':'allow'})
         self.assertFalse((self.home/'canary').exists())
         self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE subject_id=? AND kind='antigravity-tool-gate'",(worker,)))
+import asyncio
