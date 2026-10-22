@@ -198,11 +198,15 @@ class WorkerDeltaTests(unittest.TestCase):
 
     def test_failed_private_index_capture_retains_full_patch_and_cleans_up(self):
         work,baseline=self.prepare();(work/'new').write_text('worker\n');worker_index=self.index_bytes(work)
+        failures=[]
         def fail_tree(cwd,*args,**kwargs):
-            if args[0]=='write-tree' and kwargs.get('env',{}).get('GIT_INDEX_FILE'):
+            # write-tree has no operands; global filter overrides may precede it with -c options.
+            if args[-1]=='write-tree' and kwargs.get('env',{}).get('GIT_INDEX_FILE'):
+                failures.append(args)
                 raise OSError('fixture tree write failure')
             return git(cwd,*args,**kwargs)
         with patch('nativepeers.worktrees.git',side_effect=fail_tree):result=changes(work,baseline)
+        self.assertEqual(len(failures),1)
         self.assertIn(b'+worker',result['patch']);self.assertEqual(result['worker_delta'],b'')
         self.assertIn('worker_delta_unavailable_reason',result);self.assertEqual(self.index_bytes(work),worker_index)
         self.assertFalse(list((self.repo/'.git').rglob('npeer-index-*')))
