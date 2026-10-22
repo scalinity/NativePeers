@@ -15,8 +15,7 @@ from .errors import PeerError, require
 from .journal import Journal
 from .receipts import delivery_error
 from .registry import Registry
-from .caller import bind_caller, read_binding, verify_owned_binding
-from .process import ancestry
+from .caller import bind_caller, read_binding
 
 
 def object_schema(properties, required=()):
@@ -56,8 +55,9 @@ class Facade:
                 bootstrap=os.getenv('NPEER_BOOTSTRAP')
                 if error.code=='CALLER_NOT_READY' and bootstrap and not os.getenv('NPEER_BINDING'):
                     value=read_binding(self.journal,Path(bootstrap),allow_reserved=True)
-                    row=verify_owned_binding(self.journal,value,[p.json() for p in ancestry()])
-                    return dict(value,provider=row['provider'])
+                    # Inactive discovery/status may precede the native PID. No
+                    # operation dispatches until a fresh bound caller is verified.
+                    return dict(value,state='RESERVED_UNBOUND')
                 if bootstrap or os.getenv('NPEER_BINDING'):raise
                 return {'state':'RESERVED_UNBOUND','provider':'antigravity','grants':{'can_spawn':True}}
         return json.loads(self.binding.read_text())
