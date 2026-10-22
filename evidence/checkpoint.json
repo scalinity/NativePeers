@@ -128,7 +128,9 @@
     "provider_fallback": {
       "new_project_worktrees": 0,
       "regenerable_fixture_backup_entries_removed": 68,
-      "private_recovery_copies_retained": true
+      "private_recovery_copies_retained": true,
+      "feature_branch_removed": true,
+      "remaining_project_worktrees": 1
     }
   },
   "current_protected_baseline": "evidence/private/provider-fallback-20261022/baseline.json",
@@ -150,7 +152,6 @@
   "git": {
     "branch": "main",
     "code_commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
-    "commit": "8d97bb91315149cf409dc4e81527733b699c61d4",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -158,7 +159,8 @@
       "?? test_name_session.py"
     ],
     "base_commit": "acd6782f4cea8f5a5bcc61bcba6018ed8b77a747",
-    "owned_uncommitted_changes": "Verification/publication metadata only; implementation committed and remote-verified"
+    "owned_uncommitted_changes": [],
+    "last_verified_publication": "7a8667373d2c818b9ee44d672d7f3a6371095d90"
   },
   "historical_records": {
     "acceptance": "evidence/acceptance.json",
