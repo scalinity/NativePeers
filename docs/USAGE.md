@@ -83,3 +83,11 @@ Worker leases pin the selected provider home at spawn. Claude uses `CLAUDE_CONFI
 Workers may append a fenced `nativepeers-result` JSON object with `findings` and `tests_run` during their existing task. Findings use `severity` (`critical`, `warning`, `info`) and `summary`, optionally `file` and `line`. Checks use `command`, `outcome` (`passed`, `failed`, `not_run`) and optional `details`. Valid entries appear in the result with `source:"worker-reported"` and `independently_verified:false`; malformed or missing structure leaves the complete provider final text available with a limitation. No formatting-only model turn is launched. Parent integration checks establish independent verification.
 
 Editing results retain two patch views. `changes.patch_artifact` reconstructs the final worker tree from baseline HEAD, including inherited dirty input. `changes.worker_delta_artifact` contains only the worker's changes against its frozen materialized input; `worker_delta_empty:true` identifies a successful no-op. `worker_delta_base` and `baseline.input_tree` identify that input Git tree. Selected untracked inputs carry content hashes and modes in `baseline.untracked_inputs`. Both captures have byte/time limits and keep secret/symlink exclusions. Inspect the retained worktree when a capture is unavailable. The input tree is a local Git object; later Git garbage collection may make a new delta unavailable, while previously stored artifacts remain immutable. Neither view merges changes automatically.
+
+## Import selected context
+
+```sh
+npeer artifact-add --file /absolute/path/design-brief.txt --max-bytes 1048576 --json
+```
+
+The bound CLI imports one regular file and returns its immutable `artifact_id`, digest and size. The default/hard ceiling is 10 MiB; `--max-bytes` narrows it. Add the returned handle to selected workers' `context_refs`; other workers do not gain access. The command rejects directories, symlinks, private provider state, known credential paths and native transcripts. Select an appropriate nonsecret brief deliberately: the importer does not infer secrets from prose. Workers can import only from their registered cwd. No recursive import or new MCP file-reading tool is exposed. Source changes after a successful import do not change the artifact.
