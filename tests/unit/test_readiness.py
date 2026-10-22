@@ -9,7 +9,8 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from nativepeers.antigravity_install import desired, verify_tool_gate
+from nativepeers.antigravity_install import allowed_tools, desired, verify_tool_gate, verify_worker_ready, worker_profile
+from nativepeers.compatibility import fingerprint
 from nativepeers.errors import PeerError
 from nativepeers.install import Installer, readiness
 from nativepeers.worker_process import Worker
@@ -186,6 +187,91 @@ class ReadinessTests(unittest.TestCase):
         report=readiness(self.journal)
         self.assertEqual(self.states(report,'antigravity','hooks'),['PRESENT','MODIFIED','MODIFIED'])
 
+    def test_antigravity_ancestor_hooks_and_both_workspace_profile_layouts_are_checked(self):
+        self.configured();middle=self.cwd/'package';local=middle/'src';local.mkdir(parents=True)
+        for directory in (self.cwd,middle,local):
+            for name in ('hooks.json','agents/nativepeers-analysis.md','agents/nativepeers-analysis/agent.md'):
+                target=directory/'.agents'/name
+                for identical in (False,True):
+                    with self.subTest(target=target,identical=identical):
+                        if name=='hooks.json':
+                            owned=desired(self.home)[self.home/'.gemini/config/hooks.json'][2]
+                            self.write_json(target,{'nativepeers':owned if identical else dict(owned,enabled=False)})
+                        else:
+                            target.parent.mkdir(parents=True,exist_ok=True)
+                            target.write_text(worker_profile('analysis') if identical else worker_profile('workspace'))
+                        spec={'cwd':str(local),'permission_profile':'analysis'};before=self.snapshot()
+                        if identical:verify_tool_gate(spec)
+                        else:
+                            with self.assertRaises(PeerError) as error:verify_tool_gate(spec)
+                            self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+                            check=next(item for item in error.exception.details if item['path']==str(target))
+                            self.assertNotEqual(check['state'],'PRESENT')
+                            self.assertEqual(check['native_effective_precedence'],'unknown')
+                            self.assertTrue(check['reason'])
+                        with patch('pathlib.Path.cwd',return_value=local):report=readiness(self.journal)
+                        check=next(item for item in report['providers']['antigravity']['checks'] if item['path']==str(target))
+                        self.assertEqual(check['state']=='PRESENT',identical)
+                        self.assertEqual(self.snapshot(),before)
+                        target.unlink()
+
+    def test_antigravity_hooks_profiles_and_mcp_share_the_same_git_root_boundary(self):
+        self.configured();local=self.cwd/'package/src';local.mkdir(parents=True)
+        # A .git file marks a worktree root just as a .git directory does.
+        (self.cwd/'.git').rmdir();(self.cwd/'.git').write_text('gitdir: fixture\n')
+        for directory in (self.root,self.cwd):
+            self.write_json(directory/'.agents/hooks.json',{'nativepeers':{}})
+            self.write_json(directory/'.agents/mcp_config.json',{'mcpServers':{'nativepeers':{}}})
+            profile=directory/'.agents/agents/nativepeers-analysis.md'
+            profile.parent.mkdir(parents=True,exist_ok=True);profile.write_text('conflicting profile')
+        with self.assertRaises(PeerError) as error:
+            verify_tool_gate({'cwd':str(local),'permission_profile':'analysis'})
+        paths={item['path'] for item in error.exception.details}
+        for name in ('hooks.json','mcp_config.json','agents/nativepeers-analysis.md'):
+            self.assertIn(str(self.cwd/'.agents'/name),paths)
+            self.assertNotIn(str(self.root/'.agents'/name),paths)
+            (self.cwd/'.agents'/name).unlink()
+        verify_tool_gate({'cwd':str(local),'permission_profile':'analysis'})
+
+    def test_antigravity_workspace_profile_is_scoped_to_the_selected_worker_profile(self):
+        self.configured();target=self.cwd/'.agents/agents/nativepeers-workspace.md'
+        target.parent.mkdir(parents=True);target.write_text('conflicting workspace profile')
+        verify_tool_gate({'cwd':str(self.cwd),'permission_profile':'analysis'})
+        with self.assertRaises(PeerError) as error:
+            verify_tool_gate({'cwd':str(self.cwd),'permission_profile':'workspace'})
+        self.assertIn(str(target),[item['path'] for item in error.exception.details])
+
+    def test_antigravity_tool_gate_tracks_the_facade_inventory_including_parent_s1_additions(self):
+        from nativepeers.mcp_server import TOOLS
+        # The parent owns the facade additions. No second static inventory should
+        # omit them when its commit is integrated with this provider lane.
+        with patch.dict(TOOLS,{'peer_ack':None,'task_groups':None}):
+            for profile in ('analysis','workspace'):
+                for tool in TOOLS:
+                    with self.subTest(profile=profile,tool=tool):
+                        self.assertTrue(allowed_tools(profile,'call_mcp_tool',{'ServerName':'nativepeers','ToolName':tool}))
+                        for prefix in ('mcp_nativepeers_','mcp__nativepeers__'):
+                            self.assertTrue(allowed_tools(profile,prefix+tool))
+                self.assertFalse(allowed_tools(profile,'call_mcp_tool',{'ServerName':'other','ToolName':'peer_ack'}))
+                self.assertFalse(allowed_tools(profile,'mcp__nativepeers__unknown_tool'))
+
+    def test_antigravity_static_admission_is_reusable_without_bootstrap_launch_or_writes(self):
+        self.configured();binary=self.project/'bin/npeer'
+        self.write_json(self.journal.root/'compat/runtime.json',{'providers':{'antigravity':fingerprint(binary)}})
+        before=self.snapshot()
+        with (patch.object(Worker,'bootstrap',side_effect=AssertionError('bootstrap')),
+              patch('subprocess.Popen',side_effect=AssertionError('provider launch')),
+              patch('asyncio.create_subprocess_exec',side_effect=AssertionError('provider launch')),
+              patch('pathlib.Path.mkdir',side_effect=AssertionError('write')),
+              patch('pathlib.Path.write_text',side_effect=AssertionError('write')),
+              patch('pathlib.Path.write_bytes',side_effect=AssertionError('write'))):
+            verify_worker_ready(self.journal,{'cwd':str(self.cwd),'permission_profile':'analysis'},binary)
+        self.assertEqual(self.snapshot(),before)
+        binary.write_text('fixture executable drift')
+        with self.assertRaises(PeerError) as error:
+            verify_worker_ready(self.journal,{'cwd':str(self.cwd),'permission_profile':'analysis'},binary)
+        self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+
     def test_fake_worker_cannot_announce_ready_when_mcp_is_disabled(self):
         self.configured();path=self.home/'.gemini/config/mcp_config.json'
         expected=desired(self.home)[path][2]
@@ -196,6 +282,6 @@ class ReadinessTests(unittest.TestCase):
         worker.lease={'executable':str(self.project/'bin/npeer')}
         worker.journal=SimpleNamespace(db=SimpleNamespace(execute=lambda *args: self.fail('worker became READY')))
         worker.bootstrap=lambda:None;worker.emit=lambda *args,**kwargs:self.fail('worker announced READY')
-        with patch('nativepeers.worker_process.verify'),self.assertRaises(PeerError) as error:
+        with patch('nativepeers.antigravity_install.verify'),self.assertRaises(PeerError) as error:
             asyncio.run(worker.prepare())
         self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')

@@ -299,12 +299,8 @@ class Worker:
             if not drain.done():drain.cancel()
 
     def verify_antigravity(self):
-        from .antigravity_install import worker_profile,verify_tool_gate
-        verify(self.journal,'antigravity',self.lease['executable'])
-        path=Path.home()/'.gemini/config/agents'/('nativepeers-'+self.spec['permission_profile']+'.md')
-        require(path.is_file() and path.read_text()==worker_profile(self.spec['permission_profile']),
-                'PERMISSION_CAPABILITY_UNKNOWN','The Antigravity worker profile is missing or modified; run npeer install --antigravity')
-        verify_tool_gate(self.spec)
+        from .antigravity_install import verify_worker_ready
+        verify_worker_ready(self.journal,self.spec,self.lease['executable'])
 
     async def antigravity_turn(self,text):
         from .antigravity import arguments

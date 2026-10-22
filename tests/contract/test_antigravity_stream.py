@@ -46,9 +46,23 @@ class AntigravityContractTests(unittest.IsolatedAsyncioTestCase):
         for scenario in ['mcp-missing','mcp-disabled','mcp-workspace']:
             with self.subTest(scenario=scenario):await self.run_scenario(scenario)
 
+    async def test_ancestor_hooks_and_workspace_profiles_refuse_subdirectory_launch(self):
+        for scenario in ('project-hooks','project-profile','project-profile-directory'):
+            with self.subTest(scenario=scenario):await self.run_scenario(scenario)
+
     async def run_scenario(self,scenario,followup=False,followup_change=None,before_first=False,resume=False):
         with tempfile.TemporaryDirectory() as directory,patch.dict(os.environ,{'HOME':directory}):
-            home=Path(directory);j=Journal(home/'state');self.addCleanup(j.close)
+            home=Path(directory);(home/'.git').mkdir()
+            cwd=home
+            if scenario.startswith('project-'):
+                cwd=home/'package/src';cwd.mkdir(parents=True)
+                if scenario=='project-hooks':
+                    override=home/'.agents/hooks.json';content='{"nativepeers":{"enabled":false}}'
+                else:
+                    override=home/'.agents/agents'/('nativepeers-analysis.md' if scenario=='project-profile' else 'nativepeers-analysis/agent.md')
+                    content=worker_profile('workspace')
+                override.parent.mkdir(parents=True);override.write_text(content)
+            j=Journal(home/'state');self.addCleanup(j.close)
             profile=home/'.gemini/config/agents/nativepeers-analysis.md';profile.parent.mkdir(parents=True);profile.write_text(worker_profile('analysis'))
             hooks=home/'.gemini/config/hooks.json';hooks.write_text(json.dumps({'nativepeers':desired(home)[hooks][2]}))
             mcp=home/'.gemini/config/mcp_config.json';facade=desired(home)[mcp][2]
@@ -86,20 +100,23 @@ int main(int argc, char **argv) {
             if compiler is None:self.skipTest('A C compiler is required for the native owner fixture')
             subprocess.run([compiler,'-DPYTHON='+json.dumps(sys.executable),'-DSCRIPT='+json.dumps(str(binary)),
                 str(source),'-o',str(native_binary)],check=True,capture_output=True,timeout=30)
-            spec={'provider':'antigravity','model':'gemini-fixture-high','title':'fixture','cwd':directory,'permission_profile':'analysis','max_task_turns':2,'wall_time_seconds':5}
+            spec={'provider':'antigravity','model':'gemini-fixture-high','title':'fixture','cwd':str(cwd),'permission_profile':'analysis','max_task_turns':2,'wall_time_seconds':5}
             if scenario=='display-model':spec['model_display_name']='Gemini Fixture High'
             lease={'spec':spec,'parent_key':'parent','binding':str(j.root/'bindings'/new_id()),'grants':{'group_id':group,'worker_id':worker},'expires_at':time.time()+60,'executable':str(native_binary)}
             j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RESERVED','{}'))
-            j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,None,'antigravity',None,'fixture',spec['model'],None,None,directory,None,'RESERVED',1,canonical(lease).decode()))
+            j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,None,'antigravity',None,'fixture',spec['model'],None,None,str(cwd),None,'RESERVED',1,canonical(lease).decode()))
             for task in ([first] if resume else [first,second]):
                 j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,'QUEUED',None,None,1,'{}'))
             atomic_json(j.root/'compat/runtime.json',{'providers':{'antigravity':fingerprint(native_binary)}})
             value=Worker(j,worker)
             try:
-                if scenario.startswith('mcp-'):
+                if scenario.startswith(('mcp-','project-')):
                     with patch.object(value,'emit') as emit,patch('asyncio.create_subprocess_exec',side_effect=AssertionError('provider launched')):
                         with self.assertRaises(PeerError) as error:await value.prepare()
                     self.assertEqual(error.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+                    if scenario.startswith('project-'):
+                        check=next(item for item in error.exception.details if item['path']==str(override))
+                        self.assertNotEqual(check['state'],'PRESENT')
                     self.assertIsNone(value.provider)
                     emit.assert_not_called()
                     self.assertEqual(j.one('SELECT state FROM workers')['state'],'RESERVED')

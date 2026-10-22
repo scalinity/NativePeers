@@ -5,7 +5,7 @@ from pathlib import Path
 import tomllib
 
 from . import install as installation
-from .antigravity_install import desired, hook_readiness, mcp_readiness
+from .antigravity_install import desired, profile_readiness, hook_readiness, mcp_readiness
 from .launch import provider_home
 
 
@@ -76,11 +76,10 @@ def readiness(journal):
         checks['antigravity'].append(_check('configuration',installer.home/'.gemini/config','UNKNOWN',
                                            reason='Installer definitions are unavailable'))
     for path,(kind,key,expected) in definitions.items():
-        if kind=='file':checks['antigravity'].append(_file(path,expected.encode(),
-            'profile' if path.name!='SKILL.md' else 'skill'))
+        if kind=='file' and path.name=='SKILL.md':checks['antigravity'].append(_file(path,expected.encode(),'skill'))
     if definitions:
         spec={'cwd':str(Path.cwd())}
-        checks['antigravity'].extend(hook_readiness(spec,home=installer.home)+mcp_readiness(spec,home=installer.home))
+        checks['antigravity'].extend(profile_readiness(spec,home=installer.home)+hook_readiness(spec,home=installer.home)+mcp_readiness(spec,home=installer.home))
     hook=installation.ROOT/'bin/npeer-antigravity-hook'
     checks['antigravity'].append(_check('hook_entrypoint',hook,
         'MISSING' if not hook.is_file() else 'PRESENT' if os.access(hook,os.X_OK) else 'DISABLED'))
