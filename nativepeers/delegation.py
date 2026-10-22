@@ -276,7 +276,26 @@ class Delegation:
             result['notifications']=[]
         from .fallback import result_details
         for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
+        result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         return result
+
+    def progress(self,group,*,worker_id=None):
+        policy=json.loads(group['policy_json'])
+        clause=' AND w.worker_id=?' if worker_id else ''
+        params=(group['group_id'],)+((worker_id,) if worker_id else ())
+        tasks=self.journal.all('SELECT t.*,w.generation current_generation FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?'+clause,params)
+        current=[t for t in tasks if t['generation']==t['current_generation']]
+        states={t['task_id']:t['state'] for t in tasks};initial=[t for t in policy.get('initial_tasks',[]) if t in states]
+        phases=policy.get('phases',{})
+        visible=[int(n) for n,ids in phases.items() if not worker_id or any(t in states for t in ids)]
+        activity=self.journal.one("SELECT e.at,e.kind,e.subject_id FROM events e JOIN tasks t ON t.task_id=e.subject_id JOIN workers w USING(worker_id) WHERE w.group_id=? AND t.generation=w.generation"+clause+" AND e.kind IN ('native-task-started','native-task-terminal','provider-internal-rounds') ORDER BY e.sequence DESC LIMIT 1",params)
+        return {'active_tasks':sum(t['state'] not in TERMINAL|{'QUEUED'} for t in current),
+            'queued_tasks':sum(t['state']=='QUEUED' for t in current),
+            'initial_batch_complete':all(states[t] in TERMINAL for t in initial) if initial else None,
+            'latest_completion_phase':max(visible,default=None),
+            'deadline':policy['created_at']+policy.get('group_wall_seconds',policy.get('wall_time_seconds',0)) if 'created_at' in policy else None,
+            'last_native_activity':dict(at=activity['at'],category=activity['kind'],task_id=activity['subject_id']) if activity else None,
+            'activity_is_success':False}
 
     def groups(self,caller,limit=20,cursor=None):
         require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Retained groups require a verified native parent')
@@ -297,7 +316,7 @@ class Delegation:
         for row in rows[:limit]:
             workers=self.journal.all('SELECT worker_id,role_title,provider,native_id,state,generation FROM workers WHERE group_id=? ORDER BY worker_id',(row['group_id'],))
             counts=self.journal.one('SELECT COUNT(*) tasks,COUNT(result_artifact_id) results FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(row['group_id'],))
-            groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results'])))
+            groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results']),progress=self.progress(row)))
         return {'groups':groups,'next_cursor':encode(scope,rows[limit-1]['page_id'],ceiling) if len(rows)>limit else None}
 
     def result(self,caller,handle,*,include_artifacts=False):

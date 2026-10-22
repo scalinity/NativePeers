@@ -27,7 +27,8 @@
       "verification": "22 bound MCP/bootstrap/resume tests and 32 subtests PASS. worker_spawn check:true shares CLI planning; worker_resume requires an exact worker and request ID, preserves terminal retries, rejects wrong parents and inactive calls, and starts no duplicate writer."
     },
     "PROGRESS": {
-      "status": "PENDING"
+      "status": "FIXED",
+      "verification": "47 discovery/MCP/notification tests and 48 subtests PASS. Additive active/queued counts, initial completion, latest phase, deadline and current-generation native activity preserve group state and notification claims; late stale-generation activity is excluded."
     },
     "RUNTIMES": {
       "status": "PENDING"
@@ -74,7 +75,7 @@
     "nativepeers/compatibility.py": "0439f19f292517c91143a2587107aff36aef5cb82e993aa2fc52ce02c5326ad1",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "09a71592355b768a94dfa56a1c49d114111c9e2c049d9516414e40619a056dfe",
-    "nativepeers/delegation.py": "9753f04e731fb898276f921de114bb62b46eb2b312bcd147d3a07eeb9189f17c",
+    "nativepeers/delegation.py": "ad5c1dd4f0e042e11391759da84ba48b1328a08430f8dab5ce8fc348940f2098",
     "nativepeers/errors.py": "240c5503a438aa9c12cdeefb987d18f23ea7c9a48d5af35100608a362cb252c6",
     "nativepeers/fallback.py": "790e40c19e9b4c96b092f41a2ec5d265fe29a9778802f9fe6ca6ef149595019b",
     "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
@@ -104,5 +105,5 @@
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
     "nativepeers/worktrees.py": "1953fcc7479f6b1838c7b45af246432734e6f9f7dfc9ca081e0f097f1fc836ac"
   },
-  "source_map_sha256": "aa748788b5dd2622dc0bf6ef7fd52a494bada837e2c0734246e3dcb452171368"
+  "source_map_sha256": "1bf139085f0dc7cece9bc782e7024b7ee944c4b6e3a46660742d988406de36f4"
 }

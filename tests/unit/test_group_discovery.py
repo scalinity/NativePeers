@@ -62,3 +62,22 @@ class GroupDiscoveryTests(unittest.TestCase):
         self.group()
         page=self.service.groups(self.caller,1,encode(['groups',self.caller.key],SQLITE_MAX,SQLITE_MAX))
         self.assertEqual(len(page['groups']),1)
+
+    def test_progress_distinguishes_initial_completion_from_current_resume_and_queue(self):
+        group=self.group();worker=self.j.one('SELECT * FROM workers WHERE group_id=?',(group,));initial=self.j.one('SELECT task_id FROM tasks WHERE worker_id=?',(worker['worker_id'],))['task_id']
+        running,queued=new_id(),new_id();policy={'initial_tasks':[initial],'phases':{'1':[initial],'2':[running],'3':[queued]},'created_at':100,'wall_time_seconds':60}
+        self.j.db.execute('UPDATE groups SET policy_json=?',(json.dumps(policy),))
+        self.j.db.execute("UPDATE workers SET generation=2,state='RUNNING' WHERE worker_id=?",(worker['worker_id'],))
+        for task,state in ((running,'RUNNING'),(queued,'QUEUED')):
+            self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker['worker_id'],None,None,state,None,None,2,'{}'))
+        self.j.event(running,'native-task-started',{'native_id':worker['native_id']})
+        self.j.event(initial,'native-task-terminal',{'late_old_generation':True})
+        before=self.j.all('SELECT * FROM completion_routes')
+        summary=self.service.groups(self.caller)['groups'][0]
+        progress=summary['progress'];self.assertEqual(summary['state'],'COMPLETED')
+        self.assertEqual(progress['active_tasks'],1);self.assertEqual(progress['queued_tasks'],1)
+        self.assertTrue(progress['initial_batch_complete']);self.assertEqual(progress['latest_completion_phase'],3)
+        self.assertEqual(progress['deadline'],160);self.assertEqual(progress['last_native_activity']['task_id'],running)
+        self.assertFalse(progress['activity_is_success'])
+        self.assertEqual(self.service.status(self.caller,group)['progress'],progress)
+        self.assertEqual(self.j.all('SELECT * FROM completion_routes'),before)
