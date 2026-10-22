@@ -367,7 +367,12 @@ class Group:
             db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
             db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait','UNCLAIMED',None,None,new_id(),self.generation))
         self.policy=policy
-        await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':input_text})
+        try:
+            await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':input_text})
+        except Exception as error:
+            raise PeerError('DELIVERY_UNKNOWN','Follow-up was committed but its controller handoff was not confirmed',
+                may_have_received=True,details={'task_id':task_id,'message_id':message['message_id'],
+                    'worker_id':worker_id,'cause':type(error).__name__}) from error
         self.finished_at=None;self.changed.set()
         return {'stage':'ACCEPTED_QUEUED','evidence_kind':'controller-queue-admission','external_submission_id':task_id,'native_expiry_enforced':False}
 

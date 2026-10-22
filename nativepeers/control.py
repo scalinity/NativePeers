@@ -34,7 +34,7 @@ async def group_call(journal,group_id,operation,payload,timeout=5):
         require(len(raw)<=CONTROL_RESPONSE,'PROTOCOL_ERROR','Group response exceeds 2 MiB')
         value=json.loads(raw)
         if not value.get('ok'):
-            error=value['error'];raise PeerError(error['code'],error['message'],may_have_received=error.get('may_have_received',False))
+            error=value['error'];raise PeerError(error['code'],error['message'],may_have_received=error.get('may_have_received',False),details=error.get('details'))
         return value['data']
     except (ConnectionError,asyncio.IncompleteReadError,TimeoutError) as error:
         raise PeerError('SUPERVISOR_LOST','Group connection was lost before its response',may_have_received=operation not in ('hello','status','wait','result')) from error

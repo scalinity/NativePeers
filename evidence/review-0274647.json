@@ -7,7 +7,8 @@
       "verification": "9 cancellation tests and 2 real-process provider subtests PASS; control cancellation during creation writes zero bytes, cleans the exact process and preserves a successful queued successor. Codex entry is guarded."
     },
     "N2": {
-      "status": "PENDING"
+      "status": "FIXED",
+      "verification": "21 routing/admission tests and 18 subtests PASS: real group socket preserves post-write uncertainty with task/message IDs, exact retries emit one frame, late ingestion advances receipts, pre-admission rejection stays definite."
     },
     "N3": {
       "status": "PENDING"
@@ -67,7 +68,7 @@
     "nativepeers/cleanup.py": "683faa73f76b48dac6909d4c1c24ee209c17cd8940da896dfd887e9a8403e342",
     "nativepeers/cli.py": "b3abbb621e021f4715e59c8f8aab363af14ce49ec60cc35ac20aba56d5a3163f",
     "nativepeers/compatibility.py": "0439f19f292517c91143a2587107aff36aef5cb82e993aa2fc52ce02c5326ad1",
-    "nativepeers/control.py": "c995adf790984d5457ad836dd3b8f7f675c84aeb6571fb3a2153e89f5429f24d",
+    "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "6f73dae77b17fd695bca274dba0ef3070ec94839eb1c88074a8f17632cd545c8",
     "nativepeers/delegation.py": "9753f04e731fb898276f921de114bb62b46eb2b312bcd147d3a07eeb9189f17c",
     "nativepeers/errors.py": "8391998802bac132516aeea664748804d3b91bf735dc62b2a7d8761399d42da2",
@@ -94,10 +95,10 @@
     "nativepeers/recovery.py": "1f14fcdb73e66fe6266dc91062859f18f6812d2c87a1c401ff604b934b387fcc",
     "nativepeers/registry.py": "7b9b59ca077731d8b77b415b56739079dc1f84497556adcd4909c06d138b22ae",
     "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
-    "nativepeers/supervisor.py": "9c19611ac38027270f48191da9a3ec2b43ad36eb65f63391706e8ce203032cc5",
+    "nativepeers/supervisor.py": "cb1a7c212a1e2a817c405785f975a7dda419856a3bba80ab7fa9ed6ebc84e771",
     "nativepeers/worker_process.py": "b3a15dd6d576f3b3c8e85ffbbe3c1a99a2cb5450944dbc4e466854d05289579b",
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
     "nativepeers/worktrees.py": "081cc2bbf259eede2c08fc9710a60a12c97b1c5c6e2ebc69cc5894b8900d5fb8"
   },
-  "source_map_sha256": "6e22cc88e66c4e23601fbf5381f3080eb4dde72ec7fded17bd886ac05d03d422"
+  "source_map_sha256": "dc8d206c8bd7644b718f9dfa07d36ab73fdc5957f8be0186090268f0b20e995c"
 }

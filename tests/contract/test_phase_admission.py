@@ -110,3 +110,31 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(sorted(policy['phases']),['1','2','3'])
         self.assertEqual((await self.resume())['task_id'],resumed['task_id'])
         self.assertEqual(len(self.sent),1)
+
+    async def test_post_commit_pipe_loss_is_uncertain_through_real_group_socket(self):
+        from unittest.mock import Mock
+        from nativepeers.supervisor import Group
+        captured=[]
+        class Pipe:
+            def write(self,wire):captured.append(json.loads(wire))
+            async def drain(self):raise BrokenPipeError('after write')
+        self.group.children[self.live]={'process':Mock(stdin=Pipe())}
+        async def handoff(worker,frame):return await Group.send_worker(self.group,worker,frame)
+        with patch.object(self.group,'send_worker',side_effect=handoff):
+            sent=await self.send()
+        self.assertEqual(sent['state'],'DELIVERY_UNKNOWN')
+        error=json.loads(sent['attempt']['error_json'])
+        self.assertTrue(error['may_have_received']);self.assertEqual(error['code'],'DELIVERY_UNKNOWN')
+        task=self.j.one('SELECT * FROM tasks WHERE request_message_id=?',(sent['message_id'],))
+        self.assertEqual(task['task_id'],error['details']['task_id'])
+        self.assertEqual(task['task_id'],captured[0]['task_id']);self.assertEqual(task['state'],'QUEUED')
+        retry=await self.send();self.assertEqual(retry['message_id'],sent['message_id']);self.assertEqual(len(captured),1)
+        peer=self.core.registry.get(self.target)
+        self.core.router.record(sent['message_id'],sent['attempt']['attempt_id'],{'stage':'INGESTED','evidence_kind':'late-native-turn'},peer)
+        self.assertEqual((await self.send())['state'],'INGESTED');self.assertEqual(len(captured),1)
+
+    async def test_pre_admission_validation_remains_definite(self):
+        self.j.db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=?",(self.live,))
+        sent=await self.send();self.assertEqual(sent['state'],'TARGET_OFFLINE')
+        self.assertFalse(json.loads(sent['attempt']['error_json'])['may_have_received'])
+        self.assertFalse(self.sent)
