@@ -19,6 +19,7 @@ class NestedCallerTests(unittest.TestCase):
     def invoke(self,owners,peers):
         registry=Mock();registry.list.side_effect=lambda provider:peers.get(provider,[])
         registry.for_owner.side_effect=lambda provider,owner:[p for p in peers.get(provider,[]) if p['owner']==owner]
+        registry.for_native.side_effect=lambda provider,native:[p for p in peers.get(provider,[]) if p['peer_key']['native_session_id']==native]
         with patch('nativepeers.caller.ancestry',return_value=[SimpleNamespace(json=lambda p=p:p) for p in owners]), \
              patch.dict(os.environ,{'NPEER_BINDING':'','NPEER_BOOTSTRAP':'','CODEX_THREAD_ID':'codex-native'}):
             return bind_caller(Mock(),registry,allow_external=False)
@@ -44,6 +45,11 @@ class NestedCallerTests(unittest.TestCase):
     def test_claude_without_a_binding_cannot_borrow_outer_codex_identity(self):
         claude=self.owner('claude',1);codex=self.owner('codex',2)
         with self.assertRaises(Exception) as error:self.invoke([claude,codex],{'codex':[self.peer(codex,'codex')]})
+        self.assertEqual(error.exception.code,'CALLER_UNBOUND')
+
+    def test_codex_child_cannot_borrow_outer_codex_thread_environment(self):
+        child=self.owner('codex',1);outer=self.owner('codex',2)
+        with self.assertRaises(Exception) as error:self.invoke([child,outer],{'codex':[self.peer(outer,'codex')]})
         self.assertEqual(error.exception.code,'CALLER_UNBOUND')
 
     def test_ambient_interactive_binding_rejects_an_enclosing_native_owner(self):

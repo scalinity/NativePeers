@@ -84,7 +84,8 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
     if nearest and binaries[Path(nearest['executable'])]=='claude':
         require(False,'CALLER_UNBOUND','Claude tool has no hook-provided binding')
     if native:
-        candidates = [p for p in registry.list("codex") if p["peer_key"]["native_session_id"] == native and native_ancestor(p["owner"],ancestors)]
+        candidates = [p for p in registry.for_native('codex',native) if native_ancestor(p['owner'],ancestors)
+                      and (nearest is None or native_ancestor(p['owner'],[nearest]))]
         require(len(candidates) == 1, "CALLER_UNBOUND", "Tool thread has no unique hook-observed native owner")
         p = candidates[0]
         return Caller("peer", p["handle"], p["incarnation_id"], p.get("policy", {}))

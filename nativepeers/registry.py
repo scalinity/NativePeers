@@ -52,6 +52,10 @@ class Registry:
         if not rows or not matches(owner):return []
         return [peer for row in rows if (peer:=json.loads(row['descriptor_json']))['owner']==owner]
 
+    def for_native(self,provider,native_id):
+        rows=self.journal.all("SELECT descriptor_json FROM peer_instances WHERE provider=? AND native_id=? AND status='live'",(provider,native_id))
+        return [peer for row in rows if matches((peer:=json.loads(row['descriptor_json']))['owner'])]
+
     def list(self, provider=None, include_offline=False):
         rows = self.journal.all("SELECT * FROM peer_instances ORDER BY last_seen DESC")
         claude_metadata={}
