@@ -54,7 +54,8 @@
     {
       "id": "S1",
       "description": "MCP acknowledgment and retained groups",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: 66 lane tests and 67 subtests; real MCP/CLI contracts, inactive bootstrap refusal, recipient and parent scope, unchanged completion claims"
     },
     {
       "id": "S2",

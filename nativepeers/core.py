@@ -53,7 +53,9 @@ class Core:
         if name=='peer_send':return await self.router.send(caller,args['target'],args['text'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_inbox':return self.router.inbox(caller,args.get('limit',20),args.get('unread',False),cursor=args.get('cursor'),paged=args.get('paged',False))
+        if name=='peer_ack':return self.router.ack(caller,args['message_id'])
         if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'])
+        if name=='task_groups':return self.delegation.groups(caller,args.get('limit',20),args.get('cursor'))
         if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False))
         if name=='task_result':return self.delegation.result(caller,args['handle'])
         if name=='task_wait':

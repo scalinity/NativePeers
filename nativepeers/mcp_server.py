@@ -29,7 +29,9 @@ TOOLS={
  'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
  'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'unread':{'type':'boolean'},'paged':{'type':'boolean'},'cursor':STRING})),
+ 'peer_ack':('Record this recipient\'s model-reported processing acknowledgment; this is not native ingestion evidence.',object_schema({'message_id':STRING},['message_id'])),
  'worker_spawn':('Launch independent native workers, with a provider-native model ID or alias per worker. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA},['spec'])),
+ 'task_groups':('List this bound parent\'s retained delegations without claiming notifications.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'cursor':STRING})),
  'task_status':('Read task/group or exact-message status; refresh observes native receipts without replay.',object_schema({'handle':STRING,'refresh':{'type':'boolean'}})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
  'task_result':('Read retained immutable attributed results.',object_schema({'handle':STRING},['handle'])),
@@ -66,7 +68,7 @@ class Facade:
         state=self.binding_state()
         if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity'):return ['task_status']
         granted=state.get('grants',{})
-        names=['peer_list','peer_send','peer_reply','peer_inbox','task_status','task_wait','task_result','artifact_read']
+        names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read']
         if granted.get('can_spawn'):names += ['worker_spawn','task_cancel']
         return names
 
