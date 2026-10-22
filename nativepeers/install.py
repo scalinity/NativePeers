@@ -13,7 +13,7 @@ import time
 import tomllib
 
 from .adapters.codex_app_server import AppServer
-from .compatibility import record_verified
+from .compatibility import fingerprint,record_verified
 from .errors import require
 from .files import advisory_lock,atomic_json,private_directory
 from .profiles import ROOT
@@ -85,6 +85,17 @@ class Installer:
         if remove and ours:operations.append({'path':str(self.command),'operation':'remove-owned-entrypoint'})
         if not remove and not collision:operations.append({'path':str(self.command),'operation':'install-entrypoint'})
         if self.native:
+            if not remove:
+                evidence=json.loads((ROOT/'evidence/capabilities.json').read_text())['providers']
+                receipt=self.journal.root/'compat/runtime.json'
+                current=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
+                expected={}
+                for provider in ('claude','codex'):
+                    info=evidence[provider];actual=fingerprint(info['executable'])
+                    require(info.get('executable_sha256')==actual['sha256'],'CAPABILITY_MISMATCH','Current binary differs from the executable integration evidence')
+                    expected[provider]=dict(actual,version=info['version'])
+                if any(current.get(provider)!=value for provider,value in expected.items()):
+                    operations.append({'path':str(receipt),'operation':'refresh-verified-compatibility-receipt'})
             manifest=json.loads(self.manifest.read_text()) if self.manifest.exists() else {}
             states=tomllib.loads(self.config.read_text()).get('hooks',{}).get('state',{}) if self.config.exists() else {}
             trust=manifest.get('trusted_hooks',{})
@@ -132,8 +143,9 @@ class Installer:
             plan=self.plan();prior=json.loads(self.manifest.read_text()) if self.manifest.exists() else {}
             current_state=tomllib.loads(self.config.read_text()).get('hooks',{}).get('state',{}) if self.config.exists() else {}
             trusted=all(current_state.get(k,{}).get('trusted_hash')==v for k,v in prior.get('trusted_hooks',{}).items())
-            if prior and not plan['operations'] and trusted and prior.get('state')=='INSTALLED' and not prior.get('uninstalled'):
-                return dict(plan,installed=True,changed=False,manifest=str(self.manifest))
+            if prior and not any(op['operation']!='refresh-verified-compatibility-receipt' for op in plan['operations']) and trusted and prior.get('state')=='INSTALLED' and not prior.get('uninstalled'):
+                if plan['operations']:record_verified(self.journal,ROOT/'evidence/capabilities.json')
+                return dict(plan,installed=True,changed=bool(plan['operations']),manifest=str(self.manifest))
             skill_inputs={}
             for provider,path in self.skills.items():
                 source=ROOT/'integrations'/provider/'skills/nativepeers/SKILL.md'
