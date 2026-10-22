@@ -56,3 +56,10 @@ Native contracts: [headless CLI](https://www.antigravity.google/docs/cli/headles
 ## Passive MCP readiness
 
 `npeer doctor --json` reports the owned global MCP definition, known disabled/tool restrictions, and relevant workspace definitions. Worker startup refuses missing, disabled, modified or conflicting definitions before model input. The installed `agy mcp list` confirms the global entry and its enabled/disabled field; it does not establish effective agent-turn workspace precedence or entitlement. A conflicting workspace entry remains unresolved availability. These checks do not repair or widen native configuration.
+
+
+## Fresh-process readiness
+
+Every serialized worker turn starts a fresh native process. Preparation and each turn recheck the pinned executable, owned profile, hooks and MCP definition before task input. Completion requires an owned native hook observation after that launch for the exact PID/start identity and native UUID; an earlier turn's hook cannot certify it.
+
+Passive readiness checks the launch directory and its ancestors through the nearest Git root, including project hooks and both documented same-name agent-profile layouts. Conflicting definitions are rejected with exact source paths. MCP definitions must be JSON objects; disabled definitions and arrays of pairs are refused. Identical owned definitions are accepted, but native same-name precedence has not been independently established by a model invocation. These fixes have offline process/contract coverage; affected current-source native acceptance remains NOT_RUN.

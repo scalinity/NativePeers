@@ -96,7 +96,8 @@
     {
       "id": "D1",
       "description": "Installed conventions and final published evidence",
-      "status": "TODO"
+      "status": "FIXED",
+      "verification": "PASS: new commands documented; global CLAUDE owned block installed with outside bytes unchanged; three skills installed; both second installers zero-operation; all current-source native checks explicitly NOT_RUN"
     }
   ],
   "tests": {

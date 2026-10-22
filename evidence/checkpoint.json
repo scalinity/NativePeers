@@ -148,9 +148,10 @@
       "S3",
       "S4",
       "S5",
-      "V1"
+      "V1",
+      "D1"
     ],
-    "last_completed": "V1",
+    "last_completed": "D1",
     "code_commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
     "native_batch": "NOT_RUN",
     "source_map_sha256": "5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832"
@@ -159,7 +160,7 @@
   "git": {
     "branch": "main",
     "code_commit": "7ad2d553affd62bdef6cf24b14d801b387542c8f",
-    "commit": "5554b3aa2ce474b17f04275bf166067dff42a8d1",
+    "commit": "93b98dac838048240603b00c8fd74a710f59e93d",
     "manager_preexisting_changes": [
       " M codex-launcher",
       "?? name_session.py",
@@ -188,7 +189,7 @@
     "sha256": "0bf4dc655914db8b999133f151099326204d70f52923a8bd40eebce01746ed35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Continue remaining review TODO: D1",
+  "next_action": "Continue remaining review TODO: ",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"

@@ -1,7 +1,9 @@
 # NativePeers progress
 
-Addressing every item in the independent review of `9e0cefb`: R1-R6, H1, I1-I2 and S1-S5. Authoritative TODO and current verification: `evidence/review-9e0cefb.json`. Previous product evidence remains historical in `evidence/pro-followup-review.json`.
+Every item in the independent review of `9e0cefb` is implemented: R1-R6, H1, I1-I2 and S1-S5. Product correction commit: `5554b3aa2ce474b17f04275bf166067dff42a8d1`; 44 Python source hashes, map `5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832`. Each focused fix was verified, committed and pushed.
 
-Start: clean main at `e17d8aa0d0d46afb5d899c24c6f635c708dca54a`. Protected baseline and interrupted-state recovery: `evidence/private/review-9e0cefb-20261022/`. No new native inputs; live ledger remains 148 consumed, 0 reserved, 3524.394974 / 3600 active seconds, zero outstanding.
+Current results: **334 tests / 523 subtests**, **23 manager/naming fixtures**, installed compatibility/readiness/preservation and both idempotent installers PASS. Authoritative record: `evidence/review-9e0cefb.json`; itemized report: `docs/REVIEW_9E0CEFB.md`. Global NativePeers conventions and three owned skills are installed. Outside global bytes and native configuration/auth/shell/package are preserved. Concurrent CodexMCP changes are retained.
 
-Next: make resume/enqueue completion-phase allocation transactional, then verify definite prelaunch settlement and terminal wait snapshot ownership. Independent provider and workspace fixes can proceed in isolated project worktrees.
+No new native inputs: **148 consumed, 0 reserved, 3524.394974 / 3600 active seconds, zero outstanding requests**. Current-source native acceptance is NOT_RUN; older observations retain their fingerprints. Fresh Claude was last reported quota-blocked and is untested here. Never replay uncertain work or reset the ledger.
+
+Close-out: retain the integrated lane histories on main, remove only the three verified clean owned review worktrees, publish the final current-source review prompt and confirm remote sync. No ZIP/release upload is authorized or planned.

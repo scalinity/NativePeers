@@ -18,8 +18,11 @@ A definite send failure returns `ok:false` and the documented nonzero exit code.
 | Page older inbox entries | `npeer inbox --unread --page --limit 20 --json`; continue with `--cursor CURSOR` |
 | Retained delegations for this parent | `npeer groups --mine --limit 20 --json`; continue with `--cursor CURSOR` |
 | Export a granted artifact to a new file | `npeer artifact-export ARTIFACT_ID --output /absolute/new.patch --json` |
+| Preview a worker-only delta | `npeer delta-preview WORKER_ID --task-id TASK_ID --json` |
+| Plan retained workspace cleanup | `npeer cleanup --plan --limit 20 --json`; narrow with repeated `--worker-id WORKER_ID` |
 | Explicit processing report | `npeer ack MESSAGE_ID --json` |
 | Message/task/group status | `npeer status HANDLE --json` |
+| Check a batch without reserving or launching workers | `npeer spawn --check --spec /absolute/path/batch.json --json` |
 | Launch independent workers | `npeer spawn --spec /absolute/path/batch.json --json` |
 | Current-tool wait, then push fallback | `npeer wait GROUP_ID --timeout-ms 30000 --on-timeout push --json` |
 | Retain after wait timeout | `npeer wait TASK_ID --timeout-ms 1000 --on-timeout retain --json` |
@@ -115,3 +118,28 @@ For a non-Git project, use `permission_profile:"workspace"` with `workspace:{"mo
 Doctor includes selected-home owned-integration checks as well as executable compatibility. `PRESENT` means a definition matches the owned installation; it does not establish entitlement or effective native precedence. Missing, modified and known-disabled definitions are reported. Antigravity startup refuses missing/restricted/conflicting NativePeers MCP definitions before model admission. A workspace conflict remains unresolved availability; a global `agy mcp list` is not proof that a native turn uses the same effective definition. Doctor performs no repair or inference. Install/uninstall pin Codex's helper to the same default home they edit, even when the shell selects an alternate `CODEX_HOME`.
 
 Ambient worker binding belongs to the exact current generation's recorded native process. Launching another native CLI from a worker does not inherit that worker's identity or grants. Ordinary child shells and serialized turns remain supported. Use an explicit owned delegation for a separate NativePeers worker instead of copying bootstrap bindings.
+
+
+## Batch checks and bounded artifact results
+
+`spawn --check` shares spawn validation and model/default selection, returns selected provider homes, immutable executable paths, profiles, input manifests and capacity, and creates no group, task, reservation or workspace. It reports any non-inference catalog helpers separately: Codex `model/list` and Antigravity `models`. A plan does not prove entitlement or freeze capacity, runtime tools or files for a later launch. An explicit model/profile or unsafe selection failure remains a structured error; executable/readiness failures appear in the plan's `failures` with `ready:false`.
+
+`result GROUP_ID --include-artifacts` and MCP `task_result` with `include_artifacts:true` include at most 16 authorized first pages, each at most 16 KiB (256 KiB total decoded bytes). Each page carries a digest and `next_offset` for `artifact-read`; additional handles remain in the result and `artifact_handles_omitted` reports the count beyond this batch. Ordinary result reads stay compact. These reads never claim a completion notification.
+
+The bound MCP surface also exposes `peer_ack` with `message_id` and `task_groups` with `limit`/`cursor`. Acknowledgment is the recipient's model-reported processing claim, not native ingestion proof. Retained group discovery remains parent-scoped and never claims completion.
+
+## Preview changes and retained workspace cleanup
+
+`delta-preview WORKER_ID [--task-id TASK_ID]` reads that exact owned worker generation's immutable worker-only delta. It reports its frozen base, affected paths, current input comparison and a bounded `git apply --check` result without changing the source or index. The full reconstruction patch is never substituted. `applicable:true` requires both matching relevant inputs and a clean application check; `source_changed` can coexist with `check_applicable:true`. Neither proves semantic correctness. Inspect and apply changes explicitly.
+
+`cleanup --plan` lists up to 20 released owned writing workspaces (maximum selection 100); repeated `--worker-id` selects exact workers. It inspects sizes, retained results, ownership and current content under a shared bounded deadline. It returns a normal Git worktree removal procedure or an exact-path selected-copy procedure only for unchanged, verified candidates. Active/resumed generations, unknown ownership, unique/unavailable changes and special or unaccounted content are refused. It deletes nothing and preserves native histories and artifacts. Rerun immediately before any separately authorized removal; never add `--force` or remove unrelated/tool-owned worktrees.
+
+## Older delivery evidence
+
+The default `status MESSAGE_ID --refresh` still scans the most recent 1 MiB. Its `reconciliation` reports half-open byte ranges and a `next_cursor`. To inspect an older window explicitly:
+
+```sh
+npeer status MESSAGE_ID --refresh --scan-cursor CURSOR --scan-max-bytes 1048576 --json
+```
+
+MCP `task_status` accepts `refresh:true`, `scan_cursor` and `scan_max_bytes`. Every continuation requires the same authorized sender/recipient and exact message. The total read cap, including identity guards, is 4 MiB per call. Cursors retain the original EOF and validate path/native/message identity plus file guards; appends are supported, detected replacement/truncation/edits invalidate the cursor. Bounded guards cannot certify all unsampled bytes during concurrent growth. Only complete exact native input envelopes advance receipts; missing history or a window without a match remains inconclusive. No new send or attempt is created.

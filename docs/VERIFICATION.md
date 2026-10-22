@@ -1,3 +1,9 @@
+# Review 9e0cefb verification
+
+Current product corrections: `5554b3aa2ce474b17f04275bf166067dff42a8d1`, source map `5fff1d29bdad36f2c414aabf1d4f1023fc06c0a3372f5102a350e642e95ec832` (44 Python files). **334 offline tests / 523 subtests PASS** (254 unit / 80 contract), **23 manager/naming fixture tests PASS**, and installed compatibility/owned readiness/idempotency/preservation checks **PASS**. All six defects, the workspace coverage concern, both discrepancies and all five capability suggestions are addressed. See [resolutions and remaining limits](REVIEW_9E0CEFB.md) and [current results/fingerprints](../evidence/review-9e0cefb.json).
+
+**Current-source native acceptance is NOT_RUN after these changes.** No new native model input was submitted; the ledger stays 148/148, zero reserved, 3524.394974/3600 active seconds, no outstanding requests. Fresh Claude was last reported quota-blocked and has not been retested. New copy writing and current native failure-window/sibling/cancel/resume/push/alternate-home/original-matrix variants remain unaccepted. The already-active context-display Codex package also differs from earlier native-test fingerprints. Historical sections below do not certify current code/runtime.
+
 # Second Pro review verification
 
 Current product correction code: `7ad2d553affd62bdef6cf24b14d801b387542c8f`. **268 offline tests and 388 subtests PASS**, **23 manager/naming fixture tests PASS**, installed owned-integration/idempotency/preservation checks PASS. A five-input Sol/Flash batch proves original-parent returns and actual bound status plus paged/unread inbox MCP calls for three distinct native workers. The mixed two-worker native intervals overlap by 10.130 seconds. All owned writers exited; cumulative ledger: 148 inputs, 0 reserved, 3524.394974/3600 active seconds, no outstanding requests.

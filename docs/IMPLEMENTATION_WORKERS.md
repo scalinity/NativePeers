@@ -117,3 +117,14 @@ and actual checks before integration. Preserve unique or uncommitted changes. Re
 owned copy after its changes are integrated or safely backed up. Git worktrees require
 `git worktree remove`, branch cleanup, and `git worktree prune`; copies are standalone
 repositories and must not be passed to `git worktree remove` on the non-Git source.
+
+
+## Check, preview and cleanup
+
+Use `npeer spawn --check --spec /absolute/batch.json --json` before a batch when defaults, input selection or native configuration are uncertain. It validates without reserving capacity, materializing workspaces or starting model input; catalog metadata helpers are identified in its response.
+
+Use `npeer delta-preview WORKER_ID --json` to compare a retained worker-only delta with current source. It checks relevant frozen inputs and bounded application without changing files or the source index. New files, deletions, binary patches and both isolated workspace types are supported. Applicability is a local content check, not a verified implementation result.
+
+Use `npeer cleanup --plan --worker-id WORKER_ID --json` for a conservative retained-workspace inspection. The planner executes no removal and never sweeps native histories/artifacts. Active or resumed generations, uncertain ownership and unique/unavailable changes are retained. Only verified unchanged candidates receive the appropriate Git-worktree or selected-copy procedure. Recheck immediately before any authorized removal.
+
+Copy capture and pre-admission revalidation exclude the canonical NativePeers journal root and every registered provider home, including offline and nonambient homes. Explicit selection does not override the private-native-state exclusion.
