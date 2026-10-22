@@ -95,7 +95,7 @@ async def parent(provider):
         imported=None if record['groups'] else Artifacts(journal).add_file(FIXTURE/'brief.txt',caller)
         workers=[]
         for child in ('codex','antigravity'):
-            task=('Read brief.txt and report its exact contents and product VALUE * 6. '
+            task=('Read '+str(FIXTURE/'brief.txt')+' and report its exact contents and product VALUE * 6. '
                   'Do not start agents or send peer messages. ')
             if editing:
                 task+='Create only answer_'+child+'.py defining answer() returning VALUE * 6 with VALUE taken from brief.txt. Run an actual Python check that answer()==42. Do not commit or modify base.py. '
@@ -179,7 +179,7 @@ Allow this same tool process up to 480 seconds and collect its output if it runs
     budget=LiveBudget(LEDGER);reservation=budget.reserve('Pro review '+provider+' parent input',tranche='pro_review');budget.admit(reservation)
     atomic_json(RUN/(provider+'-launch.json'),{'at':stamp(),'reservation':reservation,'owner_expected_after_exec':dict(identity(os.getpid()).json(),executable=str(binary))})
     env=launch_environment(provider);env.update(NPEER_HOME=str(STATE),PYTHONPATH=str(ROOT),TERM='xterm-256color')
-    os.chdir(FIXTURE);os.execve(binary,args,env)
+    os.chdir(ROOT if provider=='antigravity' else FIXTURE);os.execve(binary,args,env)
 
 
 if __name__=='__main__':
