@@ -17,7 +17,7 @@ from .launch import launch_environment
 from .models import bounded_text,new_id,title
 from .process import matches
 from .profiles import ROOT,PYTHON
-from .worktrees import prepare,snapshot
+from .worktrees import prepare,snapshot,freeze,validate_frozen
 
 TERMINAL={'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
 
@@ -166,12 +166,13 @@ class Delegation:
                 db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(worker['task_id'],worker['worker_id'],None,None,'QUEUED',None,None,1,canonical({'text':spec['task'],'initial':True}).decode()))
         directory=private_directory(self.journal.root/'groups'/group_id)
         try:
+            batch_workspace=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline)
             for worker in prepared:
-                cwd,worktree_id,baseline=await asyncio.to_thread(prepare,self.journal,parent['cwd'],worker['worker_id'],worker['workspace'],expected_baseline=batch_baseline)
+                cwd,worktree_id,baseline=await asyncio.to_thread(prepare,self.journal,parent['cwd'],worker['worker_id'],worker['workspace'],frozen=batch_workspace)
                 worker['lease']['spec']['cwd']=cwd;worker['lease']['baseline']=baseline
                 self.journal.db.execute('UPDATE workers SET cwd=?,worktree_id=?,lease_json=? WHERE worker_id=?',(cwd,worktree_id,canonical(worker['lease']).decode(),worker['worker_id']))
             if any(w['workspace'].get('mode')=='isolated-worktree' for w in prepared):
-                require(snapshot(parent['cwd'])==batch_baseline,'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout changed before writing-batch startup')
+                await asyncio.to_thread(validate_frozen,parent['cwd'],batch_workspace)
             await self.ensure_supervisor(group_id)
         except Exception as error:
             self.journal.event(group_id,'startup-error',{'type':type(error).__name__,'message':str(error)[:1000]})
@@ -179,6 +180,7 @@ class Delegation:
             if not (directory/'owner.json').exists():
                 self.journal.db.execute("UPDATE groups SET state='FAILED' WHERE group_id=?",(group_id,))
                 self.journal.db.execute("UPDATE workers SET state='FAILED' WHERE group_id=?",(group_id,))
+                self.journal.db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='STARTUP_FAILED_BEFORE_SUBMISSION' WHERE state='QUEUED' AND native_turn_id IS NULL AND worker_id IN (SELECT worker_id FROM workers WHERE group_id=?)",(group_id,))
             raise
         return dict(self.status(caller,group_id),client_request_id=request_id)
 
