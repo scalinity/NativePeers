@@ -12,7 +12,7 @@ import re
 
 from ..errors import PeerError,require
 from ..launch import launch_environment,home_environment
-from ..process import identity,matches,signal_owned
+from ..process import identity,matches,signal_owned,owned_status,signal_captured
 
 BROWSER_PROFILE='''(version 1)(allow default)
 (deny appleevent-send)
@@ -110,13 +110,13 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
             if process.poll() is None:
                 try:
                     current=identity(process.pid).json()
-                    if owner and all(current[k]==owner[k] for k in ('pid','start','uid','pgid')) or not owner and current['ppid']==os.getpid():owner=current
+                    if owner and all(current[k]==owner[k] for k in ('pid','start','uid')) or not owner and current['ppid']==os.getpid():owner=current
                 except ProcessLookupError:pass
             # Capture actual descendants while ancestry is still established.
             try:raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.4).stdout
             except subprocess.TimeoutExpired:return
             parents={int(p):int(pp) for p,pp in (line.split() for line in raw.decode().splitlines())}
-            roots=({process.pid} if owner and matches(owner) and process.poll() is None else set())|{p for p,r in owned.items() if matches(r)}
+            roots=({process.pid} if owner and owned_status(owner)=='LIVE' and process.poll() is None else set())|{p for p,r in owned.items() if owned_status(r)=='LIVE'}
             pending=list(parents)
             for _ in range(8):
                 selected=[p for p in pending if parents[p] in roots]
@@ -148,11 +148,11 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                 if owner and process.poll() is None:
                     with contextlib.suppress(ProcessLookupError):
                         current=identity(process.pid).json()
-                        if all(current[k]==owner[k] for k in ('pid','start','uid','pgid')):owner=current
+                        if all(current[k]==owner[k] for k in ('pid','start','uid')):owner=current
                 if owner and process.poll() is None:
-                    with contextlib.suppress(ProcessLookupError):signal_owned(owner,sig,group=True)
+                    with contextlib.suppress(ProcessLookupError):signal_captured(owner,sig)
                 for record in reversed(list(owned.values())):
-                    with contextlib.suppress(ProcessLookupError):signal_owned(record,sig)
+                    with contextlib.suppress(ProcessLookupError):signal_captured(record,sig)
                 deadline=asyncio.get_running_loop().time()+grace
                 while process.poll() is None and asyncio.get_running_loop().time()<deadline:await asyncio.sleep(.02)
             _,pending=await asyncio.wait(readers,timeout=.3)
@@ -161,7 +161,7 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
             if process.poll() is not None:
                 for stream in (process.stdout,process.stderr):
                     if stream:stream.close()
-            uncertain=process.poll() is None or bool(pending) or any(matches(r) for r in owned.values())
+            uncertain=process.poll() is None or any(r.cancelled() or r.exception() for r in readers) or bool(pending) or any(owned_status(r)!='DEAD' for r in owned.values())
             if master is not None:os.close(master)
             if capture_directory is not None:
                 from ..files import private_directory

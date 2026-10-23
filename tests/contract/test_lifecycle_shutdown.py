@@ -151,13 +151,15 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
         manifest=json.loads((self.root/'workers'/(self.worker+'.json')).read_text())
         try:
             self.assertTrue(signal_owned(child['owner'],signal.SIGKILL,group=True),child['owner'])
-            await asyncio.wait_for(child['process'].wait(),5);await child['reader']
+            await asyncio.wait_for(child['process'].wait(),5)
+            from nativepeers.errors import PeerError
+            with self.assertRaises(PeerError) as error:await child['reader']
+            self.assertEqual(error.exception.code,'CLEANUP_UNCERTAIN')
             first=self.j.one('SELECT * FROM tasks WHERE task_id=?',(self.first,))
             self.assertFalse(matches(manifest['native_process']), 'Production cleanup must stop the orphan before fixture teardown')
-            self.assertEqual(self.j.one('SELECT state FROM workers')['state'],'RELEASED_RESUMABLE')
+            self.assertNotEqual(self.j.one('SELECT state FROM workers')['state'],'RELEASED_RESUMABLE')
             self.assertEqual(first['state'],'INTERRUPTED')
             self.assertEqual(json.loads(first['terminal_reason'])['code'],'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS')
-            self.assertEqual(self.j.one('SELECT state FROM tasks WHERE task_id=?',(self.successor,))['state'],'FAILED')
             self.assertNotIn('must never reach the provider',self.binary.with_suffix('.inputs').read_text())
         finally:
             if manifest.get('native_process'):signal_owned(manifest['native_process'],signal.SIGKILL,group=True)

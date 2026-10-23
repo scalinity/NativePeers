@@ -61,3 +61,25 @@ class WorkerDescendants(unittest.IsolatedAsyncioTestCase):
                     await asyncio.wait_for(process.wait(),3)
                     if process._transport:process._transport.close()
                     j.close()
+
+    async def test_term_handler_session_change_does_not_escape_kill_or_claim_death(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();j=Journal(root/'state');group,worker,native=[new_id() for _ in range(3)]
+            lease={'spec':{'model':'sonnet'},'provider_home':str(root),'binding':str(root/'binding')}
+            j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RUNNING','{}'))
+            j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (worker,group,None,'claude',native,'fixture','sonnet',None,None,str(root),None,'RUNNING',1,canonical(lease).decode()))
+            w=Worker(j,worker);w.emit=Mock()
+            script='import signal,os,time\ndef change(*args):\n os.setsid();os.close(1);os.close(2)\nsignal.signal(signal.SIGTERM,change)\nprint("ready",flush=True)\nwhile True:time.sleep(.02)'
+            process=await asyncio.create_subprocess_exec(sys.executable,'-c',script,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+            try:
+                self.assertEqual(await asyncio.wait_for(process.stdout.readline(),3),b'ready\n')
+                birth=identity(process.pid).json();w.provider=process;w.provider_identity=birth
+                await asyncio.wait_for(w.close(),4)
+                from nativepeers.process import owned_status
+                self.assertEqual(owned_status(birth),'DEAD')
+                self.assertEqual(j.one('SELECT state FROM workers')['state'],'RELEASED_RESUMABLE')
+                self.assertTrue(json.loads((j.root/'workers'/(worker+'.json')).read_text())['cleanup']['output_eof'])
+            finally:
+                if process.returncode is None:process.kill()
+                await asyncio.wait_for(process.wait(),3);j.close()

@@ -133,7 +133,7 @@ class ResumeIdempotencyTests(unittest.IsolatedAsyncioTestCase):
         # Keep a real prior-generation manifest, as normal released histories do.
         owner=dict(self.parent['owner'],pid=99999999,pgid=99999999)
         atomic_json(self.journal.root/'workers'/(self.worker+'.json'),
-                    {'worker_id':self.worker,'generation':1,'native_id':row['native_id'],'owner':owner,'native_process':None})
+                    {'worker_id':self.worker,'generation':1,'native_id':row['native_id'],'owner':owner,'native_process':None,'cleanup':{'state':'CLOSED','output_eof':True}})
         atomic_json(self.journal.root/'groups'/row['group_id']/'owner.json',{'owner':owner,'generation':1})
         self.journal.db.execute("UPDATE workers SET provider='codex' WHERE worker_id=?",(self.worker,))
         self.released.side_effect=assert_released

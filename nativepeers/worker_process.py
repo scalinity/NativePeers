@@ -17,7 +17,7 @@ from .files import atomic_json,canonical
 from .journal import Journal
 from .launch import launch_environment,recorded_home,home_environment,apply_home
 from .models import new_id
-from .process import identity,matches,signal_owned,descendants,refresh_captured
+from .process import identity,matches,signal_owned,descendants,refresh_captured,owned_status,signal_captured
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
 from .registry import Registry
 from .compatibility import verify
@@ -117,6 +117,7 @@ class Worker:
             executable=Path(self.lease['executable']).resolve(strict=True)
             config=codex_config(self.journal,self.binding,self.spec['permission_profile'],home=self.home)
             self.client=AppServer(executable,config_arguments(config),cwd=Path(self.row['cwd']),
+                ownership_changed=self.app_server_ownership,
                 environment={**home_environment('codex',self.home),'NPEER_HOME':str(self.journal.root),'NPEER_BOOTSTRAP':str(self.binding),'PYTHONPATH':str(ROOT)})
             await self.client.start();self.provider=self.client.process;self.provider_identity=identity(self.provider.pid).json();self.manifest()
             catalog=(await self.client.call('model/list',{'includeHidden':True,'limit':100}))['data']
@@ -468,7 +469,14 @@ class Worker:
                 try:await self.client.call('turn/interrupt',{'threadId':self.native,'turnId':self.turn},timeout=5)
                 except Exception:pass
         elif self.provider_identity:
-            signal_owned(self.provider_identity,signal.SIGINT,group=True)
+            signal_captured(self.provider_identity,signal.SIGINT)
+
+    def app_server_ownership(self, client):
+        self.provider = client.process
+        self.provider_identity = client.owner
+        self.provider_descendants = dict(client.descendants)
+        self.provider_cleanup = client.cleanup
+        self.manifest()
 
     def refresh_provider_identity(self):
         for pid,record in list(self.provider_descendants.items()):
@@ -477,7 +485,7 @@ class Worker:
         if self.provider and self.provider.returncode is None and self.provider_identity and self.provider_identity['pid']!=os.getpid():
             try:
                 current=identity(self.provider.pid).json()
-                if current['ppid']==os.getpid() and all(current[k]==self.provider_identity[k] for k in ('pid','start','uid','pgid')):
+                if current['ppid']==os.getpid() and all(current[k]==self.provider_identity[k] for k in ('pid','start','uid')):
                     self.provider_identity=current
             except ProcessLookupError:pass
 
@@ -518,10 +526,10 @@ class Worker:
             for sig,grace in ((signal.SIGTERM,.5),(signal.SIGKILL,1)):
                 for record in [*reversed(list(self.provider_descendants.values())),self.provider_identity if process.returncode is None else None]:
                     if record and record['pid']!=os.getpid():
-                        try:signal_owned(record,sig)
+                        try:signal_captured(record,sig)
                         except ProcessLookupError:pass
                 deadline=time.monotonic()+grace
-                while time.monotonic()<deadline and (process.returncode is None or any(matches(r) for r in self.provider_descendants.values())):
+                while time.monotonic()<deadline and (process.returncode is None or any(owned_status(r)!='DEAD' for r in self.provider_descendants.values())):
                     await asyncio.sleep(.02)
             async def drain(stream):
                 if stream:
@@ -531,12 +539,14 @@ class Worker:
             failures=[r for r in readers if r.done() and not r.cancelled() and r.exception()]
             for reader in pending:reader.cancel()
             await asyncio.gather(*readers,return_exceptions=True)
-            uncertain=process.returncode is None or bool(pending or failures) or any(matches(r) for r in self.provider_descendants.values())
+            uncertain=process.returncode is None or bool(pending or failures) or any(owned_status(r)!='DEAD' for r in self.provider_descendants.values())
             self.provider_cleanup={'state':'UNCERTAIN' if uncertain else 'CLOSED','output_eof':not bool(pending or failures),
                                    'provider_exited':process.returncode is not None,'captured_descendants':len(self.provider_descendants)}
             self.manifest()
             if process.returncode is not None and hasattr(process,'_transport'):process._transport.close()
             require(not uncertain,'CLEANUP_UNCERTAIN','Owned native process/output closure is unproved; capacity remains reserved',details=self.provider_cleanup)
+        if not self.provider and not self.client and self.provider_cleanup is None:
+            self.provider_cleanup={'state':'CLOSED','output_eof':True,'provider_exited':True,'native_process_created':False}
         self.client=None;self.provider=None;self.provider_identity=None;self.provider_descendants={};self.turn=None
         self.manifest()
 

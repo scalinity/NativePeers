@@ -11,7 +11,8 @@ from .artifacts import _selected_file_bytes
 from .change_preview import _owned,_result,_workspace,_git,_inputs,_safe_paths
 from .errors import PeerError,require
 from .models import ARTIFACT_MAX
-from .process import matches
+from .process import matches,owned_status
+from .ownership import release_status
 
 
 def _released(journal,row):
@@ -30,14 +31,14 @@ def _released(journal,row):
         manifest=json.loads(_selected_file_bytes(path,65536))
         require(all(manifest.get(key)==row[key] for key in ('worker_id','group_id','native_id','generation'))
                 and manifest.get('owner'),'OWNERSHIP_UNKNOWN','Owned process manifest differs from this generation')
-        require(not matches(manifest['owner']) and not (manifest.get('native_process') and matches(manifest['native_process'])),
-                'OWNERSHIP_CONFLICT','An owned controller or native process is still alive')
+        closure=release_status(journal,row)
+        require(closure['released'],'CLEANUP_UNCERTAIN','Owned process/output closure is unproved',details=closure)
     tasks=journal.one("SELECT COUNT(*) total,SUM(state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')) unfinished FROM tasks WHERE worker_id=?",(row['worker_id'],))
     require(tasks['total'] and not tasks['unfinished'],'OWNERSHIP_CONFLICT','Worker has unfinished tasks')
     # Inspect only registry descriptors, without native discovery or metadata refresh writes.
     for peer in journal.all("SELECT descriptor_json FROM peer_instances WHERE provider=? AND native_id=? AND status='live'",(row['provider'],row['native_id'])):
         descriptor=json.loads(peer['descriptor_json'])
-        require(not matches(descriptor['owner']),'OWNERSHIP_CONFLICT','A registered runtime owns this native history')
+        require(owned_status(descriptor['owner'])=='DEAD','OWNERSHIP_CONFLICT','A registered runtime owns this native history')
     return manifest
 
 

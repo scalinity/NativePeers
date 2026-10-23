@@ -19,7 +19,7 @@ from .files import advisory_lock,async_advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
 from .notifications import claim_wait,wait_generations,wait_output,release_wait,settle_deferred
-from .process import refresh_captured,identity,matches,signal_owned
+from .process import refresh_captured,identity,matches,signal_owned,owned_status,signal_captured
 from .profiles import ROOT,PYTHON
 from .registry import Registry
 from .receipts import delivery_error
@@ -240,15 +240,15 @@ class Group:
         if not row or row['generation']!=child['row']['generation']:return
         require(manifest.get('worker_id')==worker_id and manifest.get('generation')==row['generation'] and manifest.get('native_id')==row['native_id'],'OWNERSHIP_UNKNOWN','Owned provider manifest differs from its generation; capacity remains reserved')
         owner=manifest.get('native_process')
-        records=[current for r in [owner,*manifest.get('native_descendants',[])] if r and (current:=refresh_captured(r))]
+        records=[r for r in [owner,*manifest.get('native_descendants',[])] if r]
         for sig,grace in ((signal.SIGTERM,1),(signal.SIGKILL,2)):
             for record in reversed(records):
-                try:signal_owned(record,sig)
+                try:signal_captured(record,sig)
                 except ProcessLookupError:pass
             deadline=time.monotonic()+grace
-            while any(matches(r) for r in records) and time.monotonic()<deadline:await asyncio.sleep(.02)
-        require(not any(matches(r) for r in records),'CLEANUP_UNCERTAIN','Owned native descendants did not stop; capacity remains reserved')
-        require((manifest.get('cleanup') or {}).get('state')!='UNCERTAIN' or (manifest.get('cleanup') or {}).get('output_eof'),
+            while any(owned_status(r)!='DEAD' for r in records) and time.monotonic()<deadline:await asyncio.sleep(.02)
+        require(not any(owned_status(r)!='DEAD' for r in records),'CLEANUP_UNCERTAIN','Owned native descendants did not stop; capacity remains reserved')
+        require((manifest.get('cleanup') or {}).get('state')=='CLOSED' and (manifest.get('cleanup') or {}).get('output_eof') is True,
                 'CLEANUP_UNCERTAIN','Native output closure was unproved; retained ownership requires inspection')
         if records:self.journal.event(worker_id,'orphan-provider-stopped',{'generation':row['generation'],'pids':[r['pid'] for r in records]})
 
@@ -268,17 +268,17 @@ class Group:
                 await asyncio.wait_for(child['process'].wait(),20)
         except asyncio.TimeoutError:
             await self.cleanup_native(worker_id,child)
-            signal_owned(child['owner'],signal.SIGTERM,group=True)
+            signal_captured(child['owner'],signal.SIGTERM)
             try:await asyncio.wait_for(child['process'].wait(),5)
             except asyncio.TimeoutError:
-                signal_owned(child['owner'],signal.SIGKILL,group=True)
+                signal_captured(child['owner'],signal.SIGKILL)
                 await asyncio.wait_for(child['process'].wait(),5)
         if child.get('lease_fd') is not None:
             os.close(child['lease_fd']);child['lease_fd']=None
         # A dead controller returns immediately from wait; its separately grouped
         # native process still needs exact, generation-fenced cleanup.
         await self.cleanup_native(worker_id,child)
-        require(not matches(child['owner']),'OWNERSHIP_CONFLICT','Worker controller still owns its process')
+        require(owned_status(child['owner'])=='DEAD','OWNERSHIP_CONFLICT','Worker controller still owns its process')
         self.journal.db.execute("UPDATE workers SET state=CASE WHEN native_id IS NULL THEN 'FAILED' ELSE 'RELEASED_RESUMABLE' END WHERE worker_id=? AND generation=?",(worker_id,child['row']['generation']))
 
     async def initialize(self):
@@ -558,7 +558,9 @@ class Group:
         self.journal.db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND state='UNCLAIMED' AND mode='push'",(self.id,))
         for route in self.journal.all("SELECT delivery_id FROM completion_routes WHERE group_id=? AND state='RETAINED'",(self.id,)):
             settle_deferred(self.journal,self.id,route['delivery_id'])
-        await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
+        outcomes=await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
+        unresolved=[{'worker_id':w,'reason':str(error)[:1000]} for w,error in zip(self.children,outcomes) if isinstance(error,BaseException)]
+        if unresolved:self.journal.event(self.id,'worker-cleanup-unresolved',{'workers':unresolved})
         # Writer exit can precede consumption of its final buffered events.
         # Finish readers before the caller closes the shared journal.
         readers={c['reader'] for c in self.children.values() if c.get('reader') and c['reader'] is not asyncio.current_task()}
@@ -568,10 +570,11 @@ class Group:
             await asyncio.gather(*readers,return_exceptions=True)
             if pending:self.journal.event(self.id,'controller-reader-cleanup-uncertain',{'readers':len(pending)})
         self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
-        atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=True))
+        atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=not bool(unresolved),cleanup_unresolved=unresolved))
         final='COMPLETED' if all(t['state']=='COMPLETED' for t in self.tasks()) else 'PARTIAL'
+        if unresolved:final='PARTIAL'
         self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(final,self.id))
-        self.journal.event(self.id,'supervisor-released',{'owner':self.owner})
+        self.journal.event(self.id,'supervisor-released',{'owner':self.owner,'cleanup_unresolved':unresolved})
 
 
 async def run(group_id):

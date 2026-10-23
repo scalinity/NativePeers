@@ -11,7 +11,8 @@ from .errors import SupervisorNotStarted,require
 from .files import async_advisory_lock,canonical,sha256
 from .models import bounded_text,new_id
 from .launch import recorded_home,home_environment
-from .process import matches
+from .process import matches,owned_status
+from .ownership import release_status
 from .registry import Registry
 from .worker_process import model_selection
 
@@ -34,13 +35,8 @@ def settle_stopped_tasks(db,worker_id,generation,reason):
 
 def assert_released(journal,row):
     require(row['state']=='RELEASED_RESUMABLE','OWNERSHIP_CONFLICT','Worker has not released its native writer')
-    path=journal.root/'workers'/(row['worker_id']+'.json')
-    require(path.exists(),'OWNERSHIP_UNKNOWN','Owned process manifest is missing')
-    manifest=json.loads(path.read_text())
-    require(manifest['worker_id']==row['worker_id'] and manifest['native_id']==row['native_id'],'OWNERSHIP_UNKNOWN','Owned process manifest differs from the native history')
-    require(not matches(manifest['owner']) and (not manifest.get('native_process') or not matches(manifest['native_process'])),
-            'OWNERSHIP_CONFLICT','Previous controller or provider writer is still alive')
-    require(not any(matches(r) for r in manifest.get('native_descendants',[])) and (manifest.get('cleanup') or {}).get('state')!='UNCERTAIN','CLEANUP_UNCERTAIN','Previous native descendant/output closure is unproved')
+    closure=release_status(journal,row)
+    require(closure['released'],'CLEANUP_UNCERTAIN','Previous process/output closure is unproved; inspect the retained release details',details=closure)
     home=recorded_home(journal,row)
     for peer in Registry(journal).list():
         require(peer['peer_key']['native_session_id']!=row['native_id'] or peer['peer_key']['provider']!=row['provider'] or peer['home']!=str(home),
@@ -51,8 +47,14 @@ def assert_released(journal,row):
                 'OWNERSHIP_CONFLICT','Claude native discovery reports an active writer for this history')
 
 
-def resume_command(journal,caller,worker_id):
-    row,_=owned_worker(journal,caller,worker_id);assert_released(journal,row)
+def resume_command(journal,caller,worker_id,*,explain=False):
+    row,_=owned_worker(journal,caller,worker_id)
+    if explain:
+        closure=release_status(journal,row)
+        return dict(worker_id=worker_id,native_id=row['native_id'],state=row['state'],closure=closure,
+                    resume_eligible=row['state']=='RELEASED_RESUMABLE' and closure['released'],launched=False,
+                    next_step='Use normal exact-history resume only after closure and native ownership checks pass' if closure['released'] else 'Retain ownership; inspect the listed live/unknown process births and pipe closure')
+    assert_released(journal,row)
     command=['codex','resume',row['native_id']] if row['provider']=='codex' else ['agy','--conversation',row['native_id']] if row['provider']=='antigravity' else ['claude','--resume',row['native_id']]
     model=model_selection(row)
     if model:command+=['--model',model]
@@ -101,9 +103,9 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
             # Idle shutdown claimed this lifetime before resume acquired the lock.
             # No new task is reserved until that exact finite owner has exited.
             deadline=time.monotonic()+30
-            while matches(manifest['owner']) and time.monotonic()<deadline:await asyncio.sleep(.03)
-            require(not matches(manifest['owner']),'OWNERSHIP_CONFLICT','Previous supervisor is still releasing; no resume input admitted')
-        supervisor_alive=bool(manifest and matches(manifest['owner']))
+            while owned_status(manifest['owner'])!='DEAD' and time.monotonic()<deadline:await asyncio.sleep(.03)
+            require(owned_status(manifest['owner'])=='DEAD','OWNERSHIP_CONFLICT','Previous supervisor is still releasing; no resume input admitted')
+        supervisor_alive=bool(manifest and owned_status(manifest['owner'])!='DEAD')
         controller_generation=manifest['generation'] if supervisor_alive else policy.get('controller_generation',1)+1
         task_id=new_id()
         lease.update(released_native=True,expires_at=time.time()+lease['spec']['wall_time_seconds']+600)
@@ -144,6 +146,7 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
                         db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=? AND state='RESERVED'",(worker_id,row['generation']+1))
                         db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state='UNCLAIMED'",(group['group_id'],phase))
                         db.execute("UPDATE groups SET state='FAILED' WHERE group_id=?",(group['group_id'],))
+                journal.event(worker_id,'controller-not-created',dict(worker_id=worker_id,generation=row['generation']+1,native_id=row['native_id'],cwd=row['cwd'],controller_created=False,supervisor_created=False))
                 journal.event(task_id,'resume-not-launched',error.json())
                 error.details.update(task_id=task_id,worker_id=worker_id,client_request_id=request_id)
                 raise
@@ -155,17 +158,12 @@ def reconcile_owned(journal,caller,group_id,*,dry_run=False):
     group=Delegation(journal,Registry(journal)).group(caller,group_id)
     require(caller.key==group['parent_key'],'APPROVAL_BLOCKED','Only the parent may reconcile owned lifecycle state')
     owner_path=journal.root/'groups'/group_id/'owner.json'
-    if owner_path.exists() and matches(json.loads(owner_path.read_text())['owner']):return []
+    if owner_path.exists() and owned_status(json.loads(owner_path.read_text())['owner'])!='DEAD':return []
     changes=[]
     for row in journal.all('SELECT * FROM workers WHERE group_id=?',(group_id,)):
         unfinished=journal.all('SELECT state FROM tasks WHERE worker_id=? AND generation=?',(row['worker_id'],row['generation']))
         if row['state']=='RELEASED_RESUMABLE' and all(t['state'] in TERMINAL for t in unfinished):continue
-        path=journal.root/'workers'/(row['worker_id']+'.json')
-        if not path.exists():continue
-        manifest=json.loads(path.read_text())
-        if manifest.get('worker_id')!=row['worker_id'] or manifest.get('generation')!=row['generation'] or manifest.get('native_id')!=row['native_id']:continue
-        if any(matches(r) for r in manifest.get('native_descendants',[])) or (manifest.get('cleanup') or {}).get('state')=='UNCERTAIN':continue
-        if matches(manifest['owner']) or (manifest.get('native_process') and matches(manifest['native_process'])):continue
+        if not release_status(journal,row)['released']:continue
         changes.append({'worker_id':row['worker_id'],'state':'RELEASED_RESUMABLE','unstarted_tasks':'CANCELED: OWNER_LOST_BEFORE_START','uncertain_tasks':'INTERRUPTED; no native input replayed'})
         if not dry_run:
             with journal.transaction() as db:

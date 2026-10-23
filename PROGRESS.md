@@ -1,8 +1,8 @@
 # Review 2551947 corrections
 
 - [x] R01 Pin every observed Claude model, including custom IDs.
-- [ ] R02 Track app-server descendants and prove pipe EOF independently.
-- [ ] R03 Use birth-based owned liveness and positive generation closure.
+- [x] R02 Track app-server descendants and prove pipe EOF independently.
+- [x] R03 Use birth-based owned liveness and positive generation closure.
 - [ ] R04 Remap active local quota demand during admission.
 - [ ] R05 Preserve quota proof measurement time through cached/suppressed paths.
 - [ ] R06 Resolve current home labels consistently after policy changes.
@@ -12,7 +12,7 @@
 - [ ] R10 Assess exact models independently of display limits.
 - [ ] R11 Reconcile refusals using the exact pool measurement clock.
 - [ ] H01/H02 Verify owned usage layout and usage-transport birth safety.
-- [ ] H03/H04 Inspect planner closure and group cleanup dispositions.
+- [x] H03/H04 Inspect planner closure and group cleanup dispositions.
 - [ ] H05/H06 Verify missing bindings and shared alias equivalence.
 - [ ] H07/H08 Measure and bound preparation/repeated local reads.
 - [ ] S01/S02 Explain resume blockers and exact pre-input selection.

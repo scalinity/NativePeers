@@ -25,7 +25,7 @@ class LifecycleRecoveryTests(unittest.TestCase):
             self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,self.worker,None,turn,state,artifact,reason,1,'{}'))
         owner=identity(os.getpid()).json()
         self.dead=dict(owner,pid=99999999,pgid=99999999)
-        self.manifest=dict(worker_id=self.worker,native_id=self.j.one('SELECT native_id FROM workers')['native_id'],generation=1,owner=self.dead,native_process=None)
+        self.manifest=dict(worker_id=self.worker,native_id=self.j.one('SELECT native_id FROM workers')['native_id'],generation=1,owner=self.dead,native_process=None,cleanup={'state':'CLOSED','output_eof':True})
         self.path=self.j.root/'workers'/(self.worker+'.json');atomic_json(self.path,self.manifest)
 
     def tasks(self):return self.j.all('SELECT * FROM tasks ORDER BY task_id')
@@ -74,3 +74,38 @@ class LifecycleRecoveryTests(unittest.TestCase):
         reconcile_owned(self.j,self.caller,self.group)
         task=self.j.one('SELECT * FROM tasks WHERE task_id=?',(self.queued,))
         self.assertEqual((task['state'],task['terminal_reason'],task['native_turn_id']),('INTERRUPTED','DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','possibly-submitted'))
+
+    def test_exec_or_session_transition_is_not_release_evidence(self):
+        import time
+        from nativepeers.process import owned_status, matches, signal_captured
+        from nativepeers.recovery import assert_released
+        from nativepeers.errors import PeerError
+        for transition in ['os.setsid(); print("changed",flush=True); time.sleep(30)',
+                           'os.execv("/bin/sleep",["sleep","30"])']:
+            with self.subTest(transition=transition):
+                process=subprocess.Popen([sys.executable,'-c',
+                    'import os,sys,time; print("ready",flush=True); sys.stdin.readline(); '+transition],
+                    stdin=subprocess.PIPE,stdout=subprocess.PIPE,text=True)
+                try:
+                    self.assertEqual(process.stdout.readline(),'ready\n')
+                    birth=identity(process.pid).json()
+                    process.stdin.write('go\n');process.stdin.flush()
+                    deadline=time.monotonic()+3
+                    while matches(birth) and time.monotonic()<deadline:time.sleep(.01)
+                    self.assertFalse(matches(birth));self.assertEqual(owned_status(birth),'LIVE')
+                    atomic_json(self.path,dict(self.manifest,native_process=birth))
+                    self.assertEqual(reconcile_owned(self.j,self.caller,self.group),[])
+                    with self.assertRaises(PeerError):assert_released(self.j,self.j.one('SELECT * FROM workers'))
+                    self.assertTrue(signal_captured(birth,9));process.wait(timeout=3)
+                    self.assertEqual(owned_status(birth),'DEAD')
+                finally:
+                    if process.poll() is None:process.kill();process.wait(timeout=3)
+                    process.stdin.close();process.stdout.close()
+
+    def test_missing_positive_closure_stays_unknown_and_explains_why(self):
+        from nativepeers.recovery import resume_command
+        manifest=dict(self.manifest);manifest.pop('cleanup');atomic_json(self.path,manifest)
+        self.assertEqual(reconcile_owned(self.j,self.caller,self.group),[])
+        report=resume_command(self.j,self.caller,self.worker,explain=True)
+        self.assertFalse(report['resume_eligible'])
+        self.assertIn('EOF',report['closure']['reasons'][0])

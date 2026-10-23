@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ctypes
+import errno
 from dataclasses import asdict, dataclass
 import os
 from pathlib import Path
@@ -41,7 +42,14 @@ def identity(pid: int) -> ProcessIdentity:
         count = library.proc_pidinfo(pid, 3, 0, ctypes.byref(info), ctypes.sizeof(info))
         executable = ctypes.create_string_buffer(4096)
         size = library.proc_pidpath(pid, executable, len(executable))
-        if count != ctypes.sizeof(info) or size <= 0 or info.status == 5:
+        if count != ctypes.sizeof(info):
+            error = ctypes.get_errno()
+            if error == errno.ESRCH:
+                raise ProcessLookupError(pid)
+            # A denied or incomplete inspection is not proof of process death.
+            os.kill(pid, 0)
+            raise PermissionError(error, "Process birth could not be inspected", pid)
+        if info.status == 5:
             raise ProcessLookupError(pid)
         return ProcessIdentity(pid, info.ppid, info.pgid, info.uid,
                                f"{info.seconds}:{info.microseconds}",
@@ -112,7 +120,7 @@ def terminal_owner(record: dict) -> bool:
 def descendants(records):
     """Capture birth identities only while a verified ancestor is still live."""
     import subprocess
-    roots={r['pid'] for r in records if r and matches(r)}
+    roots={r['pid'] for r in records if r and owned_status(r)=='LIVE'}
     if not roots:return []
     raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.5).stdout
     parents={int(p):int(pp) for p,pp in (line.split() for line in raw.decode().splitlines())}
@@ -133,3 +141,32 @@ def refresh_captured(record):
     try:current=identity(record['pid']).json()
     except (ProcessLookupError,FileNotFoundError,PermissionError):return None
     return current if all(current[k]==record[k] for k in ('pid','uid','start')) else None
+
+
+def owned_status(record):
+    """Liveness of a captured birth; mutable executable/group are not death evidence.
+
+    Caller authentication deliberately continues to use the stricter matches().
+    """
+    try:
+        current = identity(record['pid']).json()
+    except ProcessLookupError:
+        return 'DEAD'
+    except FileNotFoundError:
+        # Only disappearance of the process directory proves absence on Linux.
+        return 'DEAD' if sys.platform.startswith('linux') and not Path(f"/proc/{record['pid']}").exists() else 'UNKNOWN'
+    except OSError:
+        return 'UNKNOWN'
+    return 'LIVE' if all(current[k] == record[k] for k in ('pid', 'uid', 'start')) else 'DEAD'
+
+
+def signal_captured(record, sig):
+    """Signal one freshly verified captured birth, never a dead leader's group."""
+    current = refresh_captured(record)
+    if current is None:
+        return False
+    try:
+        os.kill(current['pid'], sig)
+    except ProcessLookupError:
+        return False
+    return True

@@ -52,7 +52,7 @@ class CleanupTests(unittest.TestCase):
         result=arts.put(canonical(record),self.caller.key)
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker,None,None,'COMPLETED',result,None,1,'{}'))
         atomic_json(self.j.root/'workers'/(worker+'.json'),{'worker_id':worker,'group_id':group,'native_id':native,
-            'generation':1,'owner':self.dead,'native_process':None})
+            'generation':1,'owner':self.dead,'native_process':None,'cleanup':{'state':'CLOSED','output_eof':True}})
         return worker,work,baseline
 
     def candidate(self,worker,**kw):return plan(self.j,self.caller,[worker],**kw)['candidates'][0]
@@ -125,7 +125,7 @@ class CleanupTests(unittest.TestCase):
         self.assertIn('Resumed',self.candidate(worker)['reason'])
         self.j.db.execute('UPDATE workers SET generation=1 WHERE worker_id=?',(worker,))
         path=self.j.root/'workers'/(worker+'.json');manifest=json.loads(path.read_bytes());manifest['owner']=identity(os.getpid()).json();atomic_json(path,manifest)
-        self.assertIn('still alive',self.candidate(worker)['reason'])
+        self.assertEqual(self.candidate(worker)['reason_code'],'CLEANUP_UNCERTAIN')
 
     def test_unknown_manifest_ownership_and_exact_worker_ids_are_guarded(self):
         worker,work,base=self.worker(copy=True)

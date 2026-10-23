@@ -37,3 +37,34 @@ class AppServerCleanupTests(unittest.IsolatedAsyncioTestCase):
    result=await asyncio.wait_for(server.close(),2)
    assert result['state']=='CLOSED' and server.reader.done() and server.error_reader.done()
    assert await server.close()==result
+
+ async def test_captured_escaped_descendant_and_parser_failure_require_real_closure(self):
+  from nativepeers.process import owned_status
+  for malformed,close_pipes in [(False,True),(True,False)]:
+   with self.subTest(malformed=malformed),tempfile.TemporaryDirectory() as directory:
+    root=Path(directory).resolve();script=root/'server.py';pidfile=root/'pid';ready=root/'ready'
+    code='import os,pathlib,time; '+('os.close(1);os.close(2);' if close_pipes else '')+f'pathlib.Path({str(ready)!r}).touch();time.sleep(30)'
+    script.write_text('import sys,json,subprocess,pathlib\n'
+     f'child=subprocess.Popen([sys.executable,"-c",{code!r}],start_new_session=True)\n'
+     f'pathlib.Path({str(pidfile)!r}).write_text(str(child.pid))\n'
+     'for line in sys.stdin:\n value=json.loads(line)\n if "id" in value:print(json.dumps({"id":value["id"],"result":{}}),flush=True)\n'
+     +(f' if value.get("method")=="break":print("invalid-json",flush=True)\n' if malformed else ''))
+    server=AppServer(Path(sys.executable),[str(script)]);child=None
+    try:
+     await asyncio.wait_for(server.start(),3)
+     async with asyncio.timeout(3):
+      while not ready.exists():await asyncio.sleep(.01)
+      child=identity(int(pidfile.read_text())).json()
+      while child['pid'] not in server.descendants:await asyncio.sleep(.01)
+     if malformed:
+      await server.write({'method':'break'})
+      await asyncio.wait_for(server.reader,1)
+      self.assertFalse(server.stdout_eof)
+      self.assertEqual(owned_status(child),'LIVE')
+     report=await asyncio.wait_for(server.close(exit_timeout=.1,kill_timeout=.2,reader_timeout=.2),2)
+     self.assertEqual(report['state'],'CLOSED');self.assertTrue(report['output_eof'])
+     self.assertEqual(owned_status(child),'DEAD')
+     self.assertEqual(report['captured_descendants'],1)
+    finally:
+     if child and owned_status(child)=='LIVE':signal_owned(identity(child['pid']).json(),signal.SIGKILL)
+     if server.process and server.process.returncode is None:server.process.kill()

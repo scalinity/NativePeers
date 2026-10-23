@@ -4,10 +4,13 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
+import signal
 from pathlib import Path
 
 from ..launch import launch_environment
 from ..errors import PeerError
+from ..process import identity, descendants, owned_status, signal_captured
 
 
 class ProviderError(RuntimeError):
@@ -17,7 +20,7 @@ class ProviderError(RuntimeError):
 
 
 class AppServer:
-    def __init__(self, executable: Path, arguments=(), *, cwd: Path | None = None, environment=None):
+    def __init__(self, executable: Path, arguments=(), *, cwd: Path | None = None, environment=None, ownership_changed=None):
         self.executable = executable.resolve(strict=True)
         self.arguments, self.cwd = list(arguments), cwd
         self.environment = environment or {}
@@ -27,6 +30,12 @@ class AppServer:
         self.process = None
         self.stderr_tail = bytearray()
         self.cleanup = None
+        self.owner = None
+        self.descendants = {}
+        self.ownership_changed = ownership_changed
+        self.stdout_eof = False
+        self.stderr_eof = False
+        self.monitor = None
 
     async def start(self):
         self.process = await asyncio.create_subprocess_exec(
@@ -35,12 +44,33 @@ class AppServer:
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True,
             limit=8 * 1024 * 1024)
+        self.owner = identity(self.process.pid).json()
+        self._publish_ownership()
+        self.monitor = asyncio.create_task(self._monitor())
         self.reader = asyncio.create_task(self._read())
         self.error_reader = asyncio.create_task(self._stderr())
         result = await self.call("initialize", {"clientInfo": {"name": "nativepeers", "version": "0.1"},
                                                 "capabilities": {"experimentalApi": True}})
         await self.write({"method": "initialized", "params": {}})
         return result
+
+    def _publish_ownership(self):
+        if self.ownership_changed:
+            self.ownership_changed(self)
+
+    async def _capture(self):
+        captured = await asyncio.to_thread(descendants, [self.owner, *self.descendants.values()])
+        if captured:
+            self.descendants.update({r['pid']: r for r in captured})
+            self._publish_ownership()
+
+    async def _monitor(self):
+        while True:
+            try:
+                await self._capture()
+            except (OSError, TimeoutError):
+                pass
+            await asyncio.sleep(.05)
 
     async def write(self, value):
         self.process.stdin.write(json.dumps(value, ensure_ascii=False).encode() + b"\n")
@@ -78,6 +108,8 @@ class AppServer:
                     self.events.put_nowait(message)
         except Exception as exception:
             error = exception
+        else:
+            self.stdout_eof = True
         finally:
             for future in self.pending.values():
                 if not future.done():
@@ -87,6 +119,7 @@ class AppServer:
         while chunk := await self.process.stderr.read(4096):
             self.stderr_tail.extend(chunk)
             del self.stderr_tail[:-65536]
+        self.stderr_eof = True
 
     async def next_event(self):
         task=asyncio.create_task(self.events.get())
@@ -104,27 +137,55 @@ class AppServer:
         if self.cleanup is not None:
             if self.cleanup['state']=='UNCERTAIN':raise PeerError('CLEANUP_UNCERTAIN',self.cleanup['message'],details=self.cleanup)
             return self.cleanup
-        if self.process.stdin:
-            self.process.stdin.close()
-        # Process.wait() can itself await inherited pipes after the leader exits.
-        # Observe the subprocess returncode separately from pipe EOF.
-        for timeout,action in ((exit_timeout,None),(kill_timeout,'terminate'),(kill_timeout,'kill')):
-            if self.process.returncode is not None:break
-            if action:
-                with contextlib.suppress(ProcessLookupError):getattr(self.process,action)()
-            deadline=asyncio.get_running_loop().time()+timeout
-            while self.process.returncode is None and asyncio.get_running_loop().time()<deadline:
-                await asyncio.sleep(.01)
-        readers=[task for task in (getattr(self,'reader',None),getattr(self,'error_reader',None)) if task]
-        _,pending=await asyncio.wait(readers,timeout=reader_timeout) if readers else (set(),set())
-        uncertain=bool(pending) or self.process.returncode is None
-        for task in pending:task.cancel()
-        await asyncio.gather(*readers,return_exceptions=True)
-        if self.process.returncode is not None:
-            # asyncio exposes no public close for subprocess output readers.
-            # Close only our local pipe transport, never a dead leader's group.
-            self.process._transport.close()
-        self.cleanup={'state':'UNCERTAIN' if uncertain else 'CLOSED','provider_exited':self.process.returncode is not None,
-            'pending_output_readers':len(pending),'message':'Provider exited without output-pipe EOF; descendant ownership is unresolved' if pending else 'Provider process did not confirm exit' if uncertain else 'Owned provider and output readers closed'}
-        if uncertain:raise PeerError('CLEANUP_UNCERTAIN',self.cleanup['message'],details=self.cleanup)
-        return self.cleanup
+        self.cleanup = {'state': 'UNCERTAIN', 'output_eof': False,
+                        'message': 'Owned provider cleanup has not completed'}
+        try:
+            if self.process.stdin:
+                self.process.stdin.close()
+            for timeout, sig in ((exit_timeout, None), (kill_timeout, signal.SIGTERM), (kill_timeout, signal.SIGKILL)):
+                with contextlib.suppress(OSError, TimeoutError):
+                    await self._capture()
+                records = [*self.descendants.values(), self.owner]
+                if sig:
+                    for record in records:
+                        if record and record['pid'] != os.getpid():
+                            with contextlib.suppress(ProcessLookupError):
+                                signal_captured(record, sig)
+                deadline = asyncio.get_running_loop().time() + timeout
+                while asyncio.get_running_loop().time() < deadline:
+                    if self.process.returncode is not None and all(owned_status(r) == 'DEAD' for r in records if r):
+                        break
+                    await asyncio.sleep(.01)
+                if self.process.returncode is not None and all(owned_status(r) == 'DEAD' for r in records if r):
+                    break
+            # A parser/queue failure ends _read without proving EOF. Drain the
+            # remaining bytes separately, bounded, without interpreting them.
+            async def remaining_stdout():
+                while await self.process.stdout.read(65536):
+                    pass
+                self.stdout_eof = True
+            if self.reader.done() and not self.stdout_eof:
+                self.reader = asyncio.create_task(remaining_stdout())
+            readers = [self.reader, self.error_reader]
+            _, pending = await asyncio.wait(readers, timeout=reader_timeout)
+            live = [dict(record=r, state=owned_status(r)) for r in [self.owner, *self.descendants.values()] if r and owned_status(r) != 'DEAD']
+            eof = self.stdout_eof and self.stderr_eof
+            uncertain = bool(live) or not eof or self.process.returncode is None
+            self.cleanup = {'state': 'UNCERTAIN' if uncertain else 'CLOSED', 'output_eof': eof,
+                'stdout_eof': self.stdout_eof, 'stderr_eof': self.stderr_eof,
+                'provider_exited': self.process.returncode is not None, 'unresolved_processes': live,
+                'captured_descendants': len(self.descendants), 'pending_output_readers': len(pending),
+                'message': 'Owned process or output closure is unproved' if uncertain else 'Owned processes and output pipes closed'}
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*readers, return_exceptions=True)
+            if uncertain:
+                raise PeerError('CLEANUP_UNCERTAIN', self.cleanup['message'], details=self.cleanup)
+            return self.cleanup
+        finally:
+            if self.monitor:
+                self.monitor.cancel()
+                await asyncio.gather(self.monitor, return_exceptions=True)
+            if self.process.returncode is not None:
+                self.process._transport.close()
+            self._publish_ownership()
