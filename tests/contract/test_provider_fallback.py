@@ -290,17 +290,23 @@ class FallbackTests(unittest.IsolatedAsyncioTestCase):
         # lease cleanup, artifacts and notification claims all execute.
         error=synthetic()
         self.claude.write_text('#!'+sys.executable+'\n'+'''
-import json,sys
+import json,sys,time
+from pathlib import Path
 args=sys.argv[1:];native=args[args.index('--session-id')+1];text=sys.stdin.read()
 def emit(value): print(json.dumps(dict(value,session_id=native)),flush=True)
 emit({'type':'system','subtype':'init','model':args[args.index('--model')+1],'tools':['Read']})
 if 'healthy sibling' in text:
+ Path(SIBLING_READY).touch()
  emit({'type':'assistant','message':{'model':args[args.index('--model')+1],'content':[{'type':'text','text':'sibling output'}]}})
  emit({'type':'result','subtype':'success','is_error':False,'result':'Healthy sibling result.'})
 else:
+ deadline=time.monotonic()+5
+ while not Path(SIBLING_READY).exists():
+  if time.monotonic()>=deadline:raise RuntimeError('Sibling input barrier timed out')
+  time.sleep(.01)
  emit(ERROR)
  emit({'type':'result','subtype':'error_during_execution','is_error':True,'errors':['usage limit'],'usage':{'input_tokens':0,'output_tokens':0}})
-'''.replace('ERROR',repr(error)))
+'''.replace('ERROR',repr(error)).replace('SIBLING_READY',repr(str(self.root/'sibling-admitted'))))
         fixture=self.root/'fake_antigravity.py'
         script=(ROOT/'tests/fixtures/fake_antigravity.py').read_text()
         script=script.replace("time.sleep(.15)","Path('main.py').write_text('VALUE=2\\n')\ntime.sleep(.15)")
@@ -381,6 +387,14 @@ int main(int argc, char **argv) {
         self.assertEqual(self.j.one('SELECT COUNT(*) n FROM tasks')['n'],1)
 
     async def test_non_git_editing_fallback_keeps_selected_frozen_bytes(self):
+        # Keep the fixture's existing identity when removing its only Git config.
+        # No host configuration or product commit identity is changed.
+        identities={}
+        for role in ('AUTHOR','COMMITTER'):
+            value=git(self.source,'var','GIT_'+role+'_IDENT').stdout.decode().rsplit(' ',2)[0]
+            name,email=value.rsplit(' <',1)
+            identities.update({'GIT_'+role+'_NAME':name,'GIT_'+role+'_EMAIL':email.removesuffix('>')})
+        self.enterContext(patch.dict(os.environ,identities))
         shutil.rmtree(self.source/'.git')
         request=self.request(editing=True);request['workers'][0]['workspace']={'mode':'isolated-copy','file_allowlist':['main.py']}
         worker,task,result=await self.setup_worker(request);pending=await self.primary_failure(worker,task)

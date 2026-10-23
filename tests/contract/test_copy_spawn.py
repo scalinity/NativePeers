@@ -13,7 +13,7 @@ from nativepeers.models import new_id
 from nativepeers.process import identity,matches
 from nativepeers.registry import Registry
 from nativepeers.supervisor import Group
-from nativepeers.worktrees import prepare
+from nativepeers.worktrees import prepare,git
 
 FAKE='''
 import json,sys,time
@@ -39,7 +39,11 @@ class CopySpawnTests(unittest.IsolatedAsyncioTestCase):
             async def start(group_id):
                 group=Group(journal,group_id);groups.append(group);await group.initialize()
             spec={'client_request_id':'copy-fixture','workers':[{'provider':'claude','title':str(i),'task':'edit only selected input','model':'claude-fixture','permission_profile':'workspace','workspace':{'mode':'isolated-copy','file_allowlist':['main.py']}} for i in range(2)],'completion_mode':'wait','limits':{'max_concurrent_workers':2,'wall_time_seconds':5,'followup_grace_seconds':0}}
-            with patch('nativepeers.supervisor.PYTHON',Path(sys.executable)),patch.dict(os.environ,{'NPEER_HOME':str(journal.root)}),patch('nativepeers.delegation.Path.home',return_value=home),patch.object(delegation,'ensure_supervisor',side_effect=start):
+            other=root/'unrelated';other.mkdir();(other/'original').write_text('preserve\n')
+            git(other,'init','-q');git(other,'add','original');git(other,'commit','-qm','Create unrelated routing fixture')
+            def inventory():return {str(p.relative_to(other)):p.read_bytes() for p in (other/'.git').rglob('*') if p.is_file()}
+            unrelated_before=inventory()
+            with patch('nativepeers.supervisor.PYTHON',Path(sys.executable)),patch.dict(os.environ,{'NPEER_HOME':str(journal.root),'GIT_INDEX_FILE':str(other/'.git/index'),'GIT_DIR':str(other/'.git'),'GIT_OBJECT_DIRECTORY':str(other/'.git/objects')}),patch('nativepeers.delegation.Path.home',return_value=home),patch.object(delegation,'ensure_supervisor',side_effect=start):
                 try:
                     status=await delegation.spawn(caller,spec)
                     await asyncio.wait_for(groups[0].monitor(),10)
@@ -47,6 +51,7 @@ class CopySpawnTests(unittest.IsolatedAsyncioTestCase):
                     value=await delegation.wait(caller,status['group_id'])
                 finally:
                     for group in groups:await group.close()
+            self.assertEqual(inventory(),unrelated_before)
             self.assertTrue(value['ready']);results=value['result']['results'];self.assertEqual(len(results),2)
             self.assertTrue(all(r['status']=='completed' for r in results),results)
             self.assertEqual(len({r['worker']['native_session_id'] for r in results}),2)
