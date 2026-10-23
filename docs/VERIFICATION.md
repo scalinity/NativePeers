@@ -1,3 +1,15 @@
+# Current review 2885497 verification
+
+The complete corrected source passed **568 tests and 619 subtests**, with no skips, in **365.63 seconds**, using `.venv/bin/python -m pytest -q` on Python 3.14.8/macOS. All 36 installed dependency distributions matched the lock. [Corrections and scope](REVIEW_2885497.md) · [Verification record](../evidence/review-2885497.json).
+
+Codex quota and real bound stdio MCP agreed through a legitimate Codex parent. Claude returned three fresh usage pools through its qualified usage-only PTY. The native Antigravity catalog listed Gemini 3.8 Flash variants. These checks submitted zero model inputs. Antigravity quota and Claude/Antigravity worker/inbox operations remain blocked by changed runtime fingerprints; they were not reapproved. Current all-provider inference/cancellation/resume acceptance and Claude/Antigravity MCP parent contexts remain NOT_RUN.
+
+The two original fixture prerequisites and four additional timing assumptions are corrected with deterministic scheduling or ordinary bounded startup allowances. Previous full-run failures and an interrupted metadata run remain distinct from the final complete pass. Installed Claude/Codex and Antigravity plans both had zero operations; the existing command resolves to the integrated source checkout.
+
+The review branch carries this record and its synchronized generated pointers. The other session owns the main checkout's pending worker-visibility publication files; they are preserved. Historical records below keep their original source/runtime/operation scope.
+
+---
+
 # Current verification
 
 Review 2551947 corrections cover all 11 confirmed findings, the eight investigated boundaries and six suggestions. See [the correction ledger](REVIEW_2551947.md), [machine-readable current record](../evidence/review-2551947.json) and [operation-scoped index](../evidence/current-index.json). The final offline suite passes **520 tests / 588 subtests** in **210.38 seconds**, with no skips; external manager/naming fixtures pass **23 tests / 22 subtests**. Exact source/runtime fingerprints live in that generated record.

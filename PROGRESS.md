@@ -10,7 +10,7 @@
 - [x] F08 Bound catalog descendants and output cleanup.
 - [x] F10 Enforce one combined frozen-input byte budget.
 - [x] Fix isolated-copy identity and sibling-order test prerequisites.
-- [ ] Full verification, scoped publication, installed checks and workspace cleanup.
+- [x] Full verification: 568 tests / 619 subtests; native metadata checks and zero-operation installed plans; review publication isolated from concurrent main evidence; session worktree cleanup.
 
 ---
 
