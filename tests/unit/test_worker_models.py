@@ -126,7 +126,7 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
 
     def test_manual_resume_keeps_model_and_codex_effort(self):
         for provider, selected in [('claude', 'claude-opus-5-5'), ('codex', 'gpt-fixture')]:
-            row = {'provider': provider, 'native_id': new_id(), 'model_requested': 'opus',
+            row = {'worker_id':'worker','provider': provider, 'native_id': new_id(), 'model_requested': 'opus',
                    'model_observed': selected, 'effort_requested': 'xhigh','cwd':str(self.home/'isolated worktree')}
             with self.subTest(provider=provider), \
                  patch('nativepeers.recovery.owned_worker', return_value=(row, {})), \

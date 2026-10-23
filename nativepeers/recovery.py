@@ -49,12 +49,18 @@ def assert_released(journal,row):
 
 def resume_command(journal,caller,worker_id,*,explain=False):
     row,_=owned_worker(journal,caller,worker_id)
+    from .worker_visibility import status as visibility_status
+    visibility=visibility_status(row)
     if explain:
         closure=release_status(journal,row)
-        return dict(worker_id=worker_id,native_id=row['native_id'],state=row['state'],closure=closure,
+        return dict(worker_id=worker_id,native_id=row['native_id'],state=row['state'],closure=closure,history_visibility=visibility,
                     resume_eligible=row['state']=='RELEASED_RESUMABLE' and closure['released'],launched=False,
                     next_step='Use normal exact-history resume only after closure and native ownership checks pass' if closure['released'] else 'Retain ownership; inspect the listed live/unknown process births and pipe closure')
     assert_released(journal,row)
+    archive_state={'archived':None,'checked':False}
+    if row['provider']=='codex':
+        from .history_cleanup import resume_archive_state
+        archive_state=resume_archive_state(journal,row)
     command=['codex','resume',row['native_id']] if row['provider']=='codex' else ['agy','--conversation',row['native_id']] if row['provider']=='antigravity' else ['claude','--resume',row['native_id']]
     model=model_selection(row)
     if model:command+=['--model',model]
@@ -63,8 +69,12 @@ def resume_command(journal,caller,worker_id,*,explain=False):
     elif row['effort_requested']:command+=['--effort',row['effort_requested']]
     environment=home_environment(row['provider'],recorded_home(journal,row),explicit=json.loads(row.get('lease_json') or '{}').get('provider_home_explicit'))
     prefix=('env -u CLAUDE_CONFIG_DIR ' if row['provider']=='claude' and not environment else '')+''.join(key+'='+shlex.quote(value)+' ' for key,value in environment.items())
-    return {'worker_id':worker_id,'native_id':row['native_id'],'cwd':row['cwd'],'native_argv':command,'native_env':environment,
-            'command':'cd '+shlex.quote(row['cwd'])+' && '+prefix+shlex.join(command),'launched':False,
+    unarchive=['codex','unarchive',row['native_id']] if archive_state['archived'] is True else None
+    launch=(prefix+shlex.join(unarchive)+' && ' if unarchive else '')+prefix+shlex.join(command)
+    return {'worker_id':worker_id,'native_id':row['native_id'],'cwd':row['cwd'],'native_argv':command,'native_env':environment,'history_visibility':visibility,
+            'command':'cd '+shlex.quote(row['cwd'])+' && '+launch,'launched':False,
+            'archive_state':archive_state,'unarchive_argv':unarchive,
+            'resume_visibility_note':'Native resume retains persisted classification; legacy unclassified histories can reappear in ordinary recents after unarchive.' if row['provider']=='codex' else None,
             'ownership_scope':'Verified released NativePeers writers and registered eligible local native runtimes; no private-backend takeover.'}
 
 

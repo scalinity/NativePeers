@@ -20,9 +20,10 @@ class ProviderError(RuntimeError):
 
 
 class AppServer:
-    def __init__(self, executable: Path, arguments=(), *, cwd: Path | None = None, environment=None, ownership_changed=None):
+    def __init__(self, executable: Path, arguments=(), *, cwd: Path | None = None, environment=None, ownership_changed=None, server_arguments=()):
         self.executable = executable.resolve(strict=True)
         self.arguments, self.cwd = list(arguments), cwd
+        self.server_arguments = list(server_arguments)
         self.environment = environment or {}
         self.pending = {}
         self.events = asyncio.Queue(maxsize=8192)
@@ -39,7 +40,7 @@ class AppServer:
 
     async def start(self):
         self.process = await asyncio.create_subprocess_exec(
-            str(self.executable), *self.arguments, "app-server", "--listen", "stdio://",
+            str(self.executable), *self.arguments, "app-server", *self.server_arguments, "--listen", "stdio://",
             cwd=self.cwd, env={**launch_environment("codex"),**self.environment},
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True,

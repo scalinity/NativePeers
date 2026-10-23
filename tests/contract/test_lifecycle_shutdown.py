@@ -28,10 +28,10 @@ for line in sys.stdin:
  request=json.loads(line);method=request.get('method');params=request.get('params',{})
  if 'id' not in request:continue
  result={}
- if method=='initialize':result={'userAgent':'lifecycle-fixture'}
+ if method=='initialize':result={'userAgent':'lifecycle-fixture','nativepeersWorkerSource':'--nativepeers-worker' in sys.argv}
  elif method=='model/list':result={'data':[{'model':'gpt-6.1-sol','supportedReasoningEfforts':[{'reasoningEffort':'xhigh'}]}]}
  elif method in ('thread/start','thread/resume'):
-  native=params.get('threadId',native);result={'thread':{'id':native},'model':params['model']}
+  native=params.get('threadId',native);result={'thread':{'id':native,'source':{'custom':'nativepeers-worker'} if '--nativepeers-worker' in sys.argv else 'cli'},'model':params['model']}
  elif method=='mcpServerStatus/list':result={'data':[{'name':'nativepeers','tools':{'peer_send':{}}}]}
  elif method=='turn/start':
   with Path(__file__).with_suffix('.inputs').open('a') as log:log.write(params['input'][0]['text']+'\\n')

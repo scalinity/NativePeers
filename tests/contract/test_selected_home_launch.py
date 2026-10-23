@@ -30,13 +30,13 @@ for line in sys.stdin:
  request=json.loads(line);method=request.get('method');params=request.get('params',{})
  if 'id' not in request:continue
  result={}
- if method=='initialize':result={'userAgent':'selected-home-fixture'}
+ if method=='initialize':result={'userAgent':'selected-home-fixture','nativepeersWorkerSource':'--nativepeers-worker' in sys.argv}
  elif method=='model/list':result={'data':[{'model':'gpt-fixture','supportedReasoningEfforts':[{'reasoningEffort':'xhigh'}]}]}
  elif method in ('thread/start','thread/resume'):
   native=params.get('threadId',native)
   with Path(__file__).with_suffix('.launches').open('a') as log:
    log.write(json.dumps({'home':os.environ.get('CODEX_HOME'),'argv':sys.argv[1:],'method':method,'native':native})+'\\n')
-  result={'thread':{'id':native},'model':params['model']}
+  result={'thread':{'id':native,'source':{'custom':'nativepeers-worker'} if '--nativepeers-worker' in sys.argv else 'cli'},'model':params['model']}
  elif method=='mcpServerStatus/list':result={'data':[{'name':'nativepeers','tools':{'peer_send':{}}}]}
  elif method=='turn/start':
   turn=str(uuid.uuid4());emit({'id':request['id'],'result':{'turn':{'id':turn}}})
@@ -100,6 +100,11 @@ class SelectedHomeLaunchTests(unittest.IsolatedAsyncioTestCase):
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
         self.assertEqual(row['generation'],generation);self.assertEqual(row['native_id'],native_id)
         self.assertEqual(json.loads(row['lease_json'])['provider_home'],str(self.homes[provider]))
+        if provider=='codex':
+            visibility=json.loads(row['lease_json'])['history_visibility']
+            self.assertEqual(visibility['state'],'CLASSIFIED')
+            self.assertEqual(visibility['persisted_source'],{'custom':'nativepeers-worker'})
+            self.assertEqual(visibility['desktop_verification'],'NOT_RUN')
         peer=Registry(self.journal).get(row['peer_key'])
         self.assertEqual(peer['home'],str(self.homes[provider]))
         self.assertEqual(peer['peer_key']['native_session_id'],native_id)
@@ -110,6 +115,7 @@ class SelectedHomeLaunchTests(unittest.IsolatedAsyncioTestCase):
     def assert_selected_profile(self,provider,launch):
         self.assertEqual(launch['home'],str(self.homes[provider]));args=launch['argv']
         if provider=='codex':
+            self.assertIn('--nativepeers-worker',args)
             values=[tomllib.loads(args[index+1]) for index,arg in enumerate(args) if arg=='-c']
             policy=next(value['mcp_server_policy'] for value in values if 'mcp_server_policy' in value)
             plugins=next(value['plugins'] for value in values if 'plugins' in value)

@@ -312,8 +312,10 @@ class Delegation:
         for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
         from .worker_process import task_slots
         for worker in result['workers']:
-            row=self.journal.one('SELECT generation,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],))
+            row=self.journal.one('SELECT generation,provider,native_id,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],))
             worker['logical_task_slots']=task_slots(row)
+            from .worker_visibility import status as visibility_status
+            worker['history_visibility']=visibility_status(row)
             if explain_selection:
                 from .launch import recorded_home
                 from .usage.service import Usage
