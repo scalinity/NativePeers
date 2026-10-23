@@ -49,6 +49,7 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
 
     async def spawn(self, request):
         client = AsyncMock()
+        client.start.return_value={'nativepeersWorkerSource':True}
         client.call.return_value = {'data': [{'model': 'gpt-fixture',
                                              'supportedReasoningEfforts': [{'reasoningEffort': 'high'}]}]}
         with patch('nativepeers.delegation.Path.home', return_value=self.home), \

@@ -174,6 +174,7 @@ class ArtifactAddTests(unittest.TestCase):
         executable=home/'.local/share/codex-mcp-manager/current/bin/codex'
         executable.parent.mkdir(parents=True);executable.write_text('fixture, never executed')
         client=AsyncMock();client.call.return_value={'data':[{'model':'fixture-model','supportedReasoningEfforts':[{'reasoningEffort':'medium'}]}]}
+        client.start.return_value={'nativepeersWorkerSource':True}
         delegation=Delegation(self.j,self.registry)
         request={'workers':[{'provider':'codex','title':'selected','task':'Read selected context','context_refs':[handle]},
                             {'provider':'codex','title':'unrelated','task':'No context reference'}]}

@@ -157,9 +157,11 @@ class SpawnCheckTests(unittest.IsolatedAsyncioTestCase):
         (self.home/'.codex').mkdir();(self.home/'.codex/config.toml').write_text('model="exact-fixture"\nmodel_reasoning_effort="xhigh"\n')
         providers=json.loads((self.j.root/'compat/runtime.json').read_text())['providers'];providers['codex']=fingerprint(binary);atomic_json(self.j.root/'compat/runtime.json',{'providers':providers})
         client=AsyncMock();client.call.return_value={'data':[{'model':'exact-fixture','supportedReasoningEfforts':[{'reasoningEffort':'xhigh'}]}]}
+        client.start.return_value={'nativepeersWorkerSource':True}
         request=self.request();request['workers'][0]['provider']='codex';before=self.rows()
-        with patch.dict(os.environ,{'CODEX_HOME':str(self.home/'.codex')}),patch('nativepeers.delegation.AppServer',return_value=client):
+        with patch.dict(os.environ,{'CODEX_HOME':str(self.home/'.codex')}),patch('nativepeers.delegation.AppServer',return_value=client) as app_server:
             plan=await self.delegation.spawn(self.caller,request,check=True)
+            self.assertEqual(app_server.call_args.kwargs['server_arguments'],['--nativepeers-worker'])
             self.assertTrue(plan['ready']);self.assertEqual(plan['workers'][0]['model'],'exact-fixture')
             self.assertEqual(plan['native_helpers'],[{'provider':'codex','operation':'model/list','model_input':False}])
             self.assertEqual(client.call.await_args.args[0],'model/list');client.close.assert_awaited_once()
@@ -167,6 +169,33 @@ class SpawnCheckTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(PeerError) as error:await self.delegation.spawn(self.caller,request,check=True)
             self.assertEqual(error.exception.code,'MODEL_UNAVAILABLE')
         self.assertEqual(self.rows(),before);self.start.assert_not_awaited()
+
+    async def test_unsupported_codex_visibility_fails_before_catalog_or_reservation(self):
+        binary=self.home/'.local/share/codex-mcp-manager/current/bin/codex';binary.parent.mkdir(parents=True);binary.write_text('unsupported fixture')
+        (self.home/'.codex').mkdir()
+        client=AsyncMock();request=self.request();request['workers'][0]['provider']='codex'
+        before=self.rows()
+        for check in (False,True):
+            for acknowledgment in (None,False,'true',1):
+                with self.subTest(check=check,acknowledgment=acknowledgment):
+                    client.reset_mock();client.start.return_value={'nativepeersWorkerSource':acknowledgment}
+                    with patch.dict(os.environ,{'CODEX_HOME':str(self.home/'.codex')}),patch('nativepeers.delegation.AppServer',return_value=client):
+                        with self.assertRaises(PeerError) as error:await self.delegation.spawn(self.caller,request,check=check)
+                    self.assertEqual(error.exception.code,'VISIBILITY_UNSUPPORTED')
+                    client.call.assert_not_awaited();client.close.assert_awaited_once()
+                    self.assertEqual(self.rows(),before)
+            for diagnostic,code in [(b'provider closed','VISIBILITY_UNVERIFIED'),
+                                    (b"error: unexpected argument '--nativepeers-worker' found",'VISIBILITY_UNSUPPORTED')]:
+                with self.subTest(check=check,diagnostic=diagnostic):
+                    client.reset_mock();client.stderr_tail=bytearray(diagnostic)
+                    client.start.side_effect=ConnectionError('closed before initialize')
+                    with patch.dict(os.environ,{'CODEX_HOME':str(self.home/'.codex')}),patch('nativepeers.delegation.AppServer',return_value=client):
+                        with self.assertRaises(PeerError) as error:await self.delegation.spawn(self.caller,request,check=check)
+                    self.assertEqual(error.exception.code,code)
+                    client.call.assert_not_awaited();client.close.assert_awaited_once()
+                    self.assertEqual(self.rows(),before)
+                    client.start.side_effect=None
+        self.start.assert_not_awaited()
 
     async def test_public_cold_index_check_does_not_refresh_index_or_staged_inputs(self):
         git(self.source,'init','-q');git(self.source,'add','main.py');git(self.source,'commit','-qm','Create cold index fixture')

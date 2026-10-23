@@ -98,8 +98,19 @@ class Delegation:
                 agy_catalog_error=error.json() if isinstance(error,PeerError) else {'code':'MODEL_UNAVAILABLE','message':'Antigravity native catalog is unavailable: '+type(error).__name__}
         catalog=None
         if any(w.get('provider')=='codex' for w in workers):
-            client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment=home_environment('codex',homes['codex']))
-            try:await client.start();catalog=(await client.call('model/list',{'includeHidden':True,'limit':100}))['data']
+            from .worker_visibility import FLAG
+            client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment=home_environment('codex',homes['codex']),server_arguments=[FLAG])
+            try:
+                try:capability=await client.start()
+                except Exception as error:
+                    diagnostic=client.stderr_tail
+                    unsupported=isinstance(diagnostic,(bytes,bytearray)) and b"unexpected argument '--nativepeers-worker' found" in diagnostic
+                    raise PeerError('VISIBILITY_UNSUPPORTED' if unsupported else 'VISIBILITY_UNVERIFIED',
+                        'Worker-only history capability could not be acknowledged during Codex startup; no worker was reserved or input submitted',
+                        details={'cause':type(error).__name__}) from error
+                require(capability.get('nativepeersWorkerSource') is True,'VISIBILITY_UNSUPPORTED',
+                        'The selected Codex runtime did not acknowledge worker-only history classification; no worker was reserved or input submitted')
+                catalog=(await client.call('model/list',{'includeHidden':True,'limit':100}))['data']
             finally:await client.close()
         if any(w.get('workspace',{}).get('mode')=='isolated-copy' for w in workers):
             from .isolated_copy import identity_preflight
