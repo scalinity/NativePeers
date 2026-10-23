@@ -46,12 +46,10 @@ class Usage:
             peer=Registry(self.journal).verify(caller.key,caller.incarnation)
             if peer['peer_key']['provider']==provider:default=Path(peer['home']);choices.add(str(default))
         if not label:return default
-        from ..policy import load as policy
-        from ..models import home_id
-        labels=policy(self.journal)['home_labels']
+        from ..policy import home_label
         for row in self.journal.all('SELECT descriptor_json FROM peer_instances WHERE provider=?',(provider,)):
             choices.add(json.loads(row['descriptor_json'])['home'])
-        matches=[Path(h) for h in choices if labels.get(home_id(Path(h)))==label]
+        matches=[h for h in {Path(h).resolve() for h in choices} if home_label(self.journal,h)==label]
         require(len(matches)==1,'AMBIGUOUS_TARGET' if matches else 'TARGET_OFFLINE','Usage home label must identify one known provider home')
         return matches[0]
 
@@ -72,6 +70,8 @@ class Usage:
         scope=store.scope(provider,home);key=sha256([provider,str(home),scope]);started=time.time()
         try:
             async with refresh_lock(self.journal.root/'locks'/('usage-'+key+'.lock')):
+                failed=store.latest(self.journal,provider,home,'refresh')
+                if failed and failed['payload'].get('code')=='SOURCE_RATE_LIMITED' and failed['payload'].get('cooldown_until',0)>time.time():return
                 current=store.latest(self.journal,provider,home,'snapshot',active=True)
                 if current and current['observation_id']!=initial_id and self.acquisition_fresh(current):return
                 try:
@@ -97,7 +97,12 @@ class Usage:
                         if isinstance(error.error,dict) and error.error.get('code')==-32601:code='CAPABILITY_MISMATCH'
                     elif code=='AUTH_REQUIRED':code='SOURCE_ACCESS_DENIED'
                     details=error.details if isinstance(error,PeerError) and isinstance(error.details,dict) else {}
-                    store.record(self.journal,provider,home,dict(code=code,message='Current quota could not be obtained: '+code,
+                    cooldown={}
+                    if code=='SOURCE_RATE_LIMITED':
+                        reported=details.get('retry_after_seconds')
+                        seconds=min(60,max(1,reported)) if type(reported) in (int,float) else 5
+                        cooldown={'cooldown_until':time.time()+seconds,'cooldown_basis':'local bounded reader backoff; not model quota or a provider reset'}
+                    store.record(self.journal,provider,home,dict(**cooldown,code=code,message='Current quota could not be obtained: '+code,
                         request_started_at=started,request_completed_at=time.time(),
                         **{k:details[k] for k in ('retry_at','retry_after_seconds','retry_note') if k in details}),kind='refresh',settings=self.settings)
         except TimeoutError:

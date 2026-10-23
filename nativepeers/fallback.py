@@ -57,24 +57,51 @@ def attempts(journal,task_id):
 
 
 def scope_limit(journal,row,home,task_id=None):
+    import time
+    from .usage.service import Usage,same_model
+    from .usage import store
+    spec=json.loads(row['lease_json']).get('spec',{})
+    if spec.get('quota_policy')=='warn':return None
     if task_id:
         task=journal.one('SELECT task_json FROM tasks WHERE task_id=?',(task_id,))
-        # A newly authorized follow-up/resume is a new operation, not a pending
-        # input from the exhausted spawn batch. Do not pin a quota forever.
         if not task or not json.loads(task['task_json']).get('initial'):return None
     value=journal.one('SELECT error_json FROM group_provider_limits WHERE group_id=? AND provider=? AND provider_home=?',
                       (row['group_id'],row['provider'],str(home)))
-    if value:
-        error=json.loads(value['error_json'])
+    if not value:return None
+    intelligence=Usage(journal);now=time.time();model=spec.get('model') or row['model_requested']
+    view=intelligence.snapshot(row['provider'],home,model=model)
+    ttl=intelligence.settings['provider_freshness'].get(row['provider'],intelligence.settings['freshness_seconds'])
+    for proof in json.loads(value['error_json']).get('limits',[]):
+        if proof['scope']!=store.scope(row['provider'],home) or not 0<=now-proof['at']<=ttl:continue
+        if proof.get('reset') is not None and now>=proof['reset']:continue
+        if not any(m=='*' or same_model(row['provider'],model,m) for m in proof['models']):continue
+        if proof.get('pool_id') and any(p['pool_id']==proof['pool_id'] and p['freshness']=='FRESH' and
+                p['state'] in ('AVAILABLE','LIMITED') and p.get('observed_at',view['observed_at'] or 0)>proof['at'] for p in view['pools']):continue
+        error=proof['error']
         return dict(error,may_have_received=False,suppressed=True,
-                    message=error['message']+' Another attempt in this batch already established this provider/home limit.',
+                    message=error.get('message','Native quota is exhausted.')+' A matching limit was already established in this batch.',
                     execution={'input_submitted':False,'definitive_no_execution':True})
 
 
 def remember_limit(journal,row,home,error):
-    if error and error.get('code')=='QUOTA_EXHAUSTED' and error.get('execution',{}).get('definitive_no_execution'):
-        journal.db.execute('INSERT OR IGNORE INTO group_provider_limits VALUES(?,?,?,?)',
-                           (row['group_id'],row['provider'],str(home),canonical(error).decode()))
+    import time
+    from .usage import store
+    from .usage.normalize import timestamp
+    if not error or error.get('code')!='QUOTA_EXHAUSTED' or not error.get('execution',{}).get('definitive_no_execution'):return
+    assessment=(error.get('details') or {}).get('usage',{})
+    pools=[p for p in assessment.get('pools',[]) if p['state']=='EXHAUSTED']
+    if not pools:pools=[dict(pool_id=error.get('limiting_scope') or error.get('pool_id'),
+        models=['*'] if error.get('scope')=='provider-wide' else [row['model_requested']],
+        resets_at=timestamp(error.get('resets_at') or error.get('reset_at')))]
+    proofs=[dict(pool_id=p.get('pool_id'),models=p.get('models') or [row['model_requested']],reset=p.get('resets_at'),
+        scope=store.scope(row['provider'],home),at=time.time(),error=error) for p in pools]
+    key=(row['group_id'],row['provider'],str(home))
+    with journal.transaction() as db:
+        previous=journal.one('SELECT error_json FROM group_provider_limits WHERE group_id=? AND provider=? AND provider_home=?',key)
+        limits=json.loads(previous['error_json']).get('limits',[]) if previous else []
+        identities={(p['pool_id'],tuple(p['models'])) for p in proofs}
+        limits=[p for p in limits if (p['pool_id'],tuple(p['models'])) not in identities]+proofs
+        db.execute('INSERT OR REPLACE INTO group_provider_limits VALUES(?,?,?,?)',(*key,canonical({'limits':limits[-64:]}).decode()))
 
 
 def clone_workspace(journal,old,new_id_value,expected):

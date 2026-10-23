@@ -17,7 +17,7 @@ from .files import atomic_json,canonical
 from .journal import Journal
 from .launch import launch_environment,recorded_home,home_environment,apply_home
 from .models import new_id
-from .process import identity,matches,signal_owned
+from .process import identity,matches,signal_owned,descendants
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
 from .registry import Registry
 from .compatibility import verify
@@ -35,6 +35,14 @@ def model_selection(row):
     return observed or selected
 
 
+def task_slots(row):
+    lease=json.loads(row.get('lease_json') or '{}');limit=lease.get('spec',{}).get('max_task_turns',8)
+    used=lease.get('logical_tasks_used',0) if lease.get('logical_tasks_generation')==row['generation'] else 0
+    used=min(limit,max(0,used))
+    return dict(limit=limit,used=used,remaining=max(0,limit-used),generation=row['generation'],
+                scope='logical task starts in this controller generation; native model/tool rounds are separate')
+
+
 class Worker:
     def __init__(self,journal,worker_id):
         self.journal=journal;self.row=journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
@@ -43,8 +51,8 @@ class Worker:
         self.home=recorded_home(journal,self.row);self.lease['provider_home']=str(self.home)
         journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),worker_id))
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
-        self.provider=None;self.provider_identity=None;self.client=None;self.native=self.row['native_id'];self.turn=None
-        self.stopping=False;self.shutdown_reason=None;self.running_task=None;self.tasks_started=0;self.retire_after_task=False
+        self.provider=None;self.provider_identity=None;self.provider_descendants={};self.provider_monitor=None;self.provider_cleanup=None;self.client=None;self.native=self.row['native_id'];self.turn=None
+        self.stopping=False;self.shutdown_reason=None;self.running_task=None;self.tasks_started=task_slots(self.row)['used'];self.retire_after_task=False
         self.canceling_task=None;self.turn_task=None
         self.expected_native=self.native;self.model_observed=self.row['model_observed']
         self.fallback_pending=False;self.input_submitted=False
@@ -59,7 +67,7 @@ class Worker:
 
     def manifest(self):
         atomic_json(self.journal.root/'workers'/(self.row['worker_id']+'.json'),dict(owner=self.owner,
-            native_process=self.provider_identity,native_id=self.native,worker_id=self.row['worker_id'],
+            native_process=self.provider_identity,native_descendants=list(self.provider_descendants.values()),cleanup=self.provider_cleanup,native_id=self.native,worker_id=self.row['worker_id'],
             group_id=self.row['group_id'],generation=self.row['generation']))
 
     def bind(self,native_id,*,model=None):
@@ -150,6 +158,8 @@ class Worker:
         claimed=self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
         if not claimed:return
         self.tasks_started+=1
+        self.lease.update(logical_tasks_used=min(self.tasks_started,self.spec.get('max_task_turns',8)),logical_tasks_generation=self.row['generation'])
+        self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=? AND generation=?',(canonical(self.lease).decode(),self.row['worker_id'],self.row['generation']))
         self.running_task=task_id;started=time.time();self.turn=None;self.input_submitted=False
         task_row=self.journal.one('SELECT task_json FROM tasks WHERE task_id=?',(task_id,))
         task_spec=json.loads(task_row['task_json']);deadline=task_spec.setdefault('deadline',started+self.spec.get('wall_time_seconds',1800))
@@ -167,17 +177,21 @@ class Worker:
                 from .fallback import workspace_image,image_digest
                 try:clean_input=image_digest(await asyncio.to_thread(workspace_image,self.row['cwd']))
                 except (PeerError,OSError):pass
+            from .usage.service import Usage
+            intelligence=Usage(self.journal)
+            require(time.time()<deadline,'BUDGET_EXHAUSTED','The original logical-task deadline has elapsed')
             try:
-                from .usage.service import Usage
-                intelligence=Usage(self.journal)
-                # Collection is task-driven, outside transactions and native startup.
-                require(time.time()<deadline,'BUDGET_EXHAUSTED','The original logical-task deadline has elapsed')
+                # Native acquisition is outside the admission transaction.
                 async with asyncio.timeout(deadline-time.time()):
                     await intelligence.refresh(self.row['provider'],self.home)
-                usage_assessment=intelligence.guard(self.row['provider'],self.home,self.spec)
             except PeerError as usage_error:
-                if usage_error.code=='QUOTA_EXHAUSTED':raise
+                if usage_error.code=='BUDGET_EXHAUSTED':raise
             except Exception:pass
+            with self.journal.transaction() as db:
+                usage_assessment=intelligence.guard(self.row['provider'],self.home,self.spec)
+                intelligence.admit_local_demand(self.lease,worker_id=self.row['worker_id'])
+                db.execute('UPDATE workers SET lease_json=? WHERE worker_id=? AND generation=?',
+                           (canonical(self.lease).decode(),self.row['worker_id'],self.row['generation']))
             if self.lease.get('live_budget_file'):
                 from .budget import LiveBudget
                 budget=LiveBudget(Path(self.lease['live_budget_file']))
@@ -248,7 +262,7 @@ class Worker:
             try:workspace_clean=clean_input==image_digest(await asyncio.to_thread(workspace_image,self.row['cwd'])) and record['changes'].get('worker_delta_empty',False) and not record['changes'].get('excluded_sensitive_or_symlink_files')
             except (OSError,PeerError):workspace_clean=False
         record['fallback_eligibility']={'definitive_no_execution':bool(eligible),'workspace_unchanged':workspace_clean,
-            'input_digest':clean_input,'remaining_task_turns':self.spec.get('max_task_turns',8)-self.tasks_started}
+            'input_digest':clean_input,'remaining_task_turns':max(0,self.spec.get('max_task_turns',8)-self.tasks_started)}
         pending=eligible and workspace_clean and bool(self.lease.get('fallback_candidates'))
         if eligible and not workspace_clean:
             record['summary']+=' Fallback was not attempted: unchanged frozen workspace input could not be established.'
@@ -338,12 +352,13 @@ class Worker:
         from .fallback import scope_limit
         suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
         if suppressed:return dict(status='failed',text=suppressed['message'],error=suppressed,native_turn_ids=[])
+        if self.provider:await self.close_provider()
         args=claude_arguments(self.journal,self.binding,self.spec,self.expected_native,resume=self.tasks_started>1 or self.lease.get('released_native',False),home=self.home)
         env=apply_home('claude',self.home,launch_environment('claude'),explicit=self.lease.get('provider_home_explicit'));env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
         self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*args,cwd=self.row['cwd'],env=env,
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
             start_new_session=True,close_fds=True,limit=8*1024*1024)
-        self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        self.provider_identity=identity(self.provider.pid).json();self.manifest();self.track_provider()
         self.check_submission()
         suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
         if suppressed:
@@ -387,6 +402,7 @@ class Worker:
                         native_turn_ids=[self.turn] if self.turn else [],error=error,usage=(terminal or {}).get('usage'))
         finally:
             if not drain.done():drain.cancel()
+            await asyncio.gather(drain,return_exceptions=True)
 
     def verify_antigravity(self):
         from .antigravity_install import verify_worker_ready
@@ -395,6 +411,7 @@ class Worker:
     async def antigravity_turn(self,text):
         from .antigravity import arguments
         self.check_submission()
+        if self.provider:await self.close_provider()
         env=launch_environment('antigravity')
         env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
         self.verify_antigravity()
@@ -404,7 +421,7 @@ class Worker:
         self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*arguments(self.spec,self.native),
             cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
-        self.provider_identity=identity(self.provider.pid).json();self.manifest()
+        self.provider_identity=identity(self.provider.pid).json();self.manifest();self.track_provider()
         self.check_submission()
         self.input_submitted=True
         self.provider.stdin.write(canonical({'event':'user','message':{'content':text}})+b'\n')
@@ -442,6 +459,7 @@ class Worker:
                     'error':None if status=='SUCCESS' and self.provider.returncode==0 else {'code':classify(terminal),'native_status':status,'message':terminal.get('error')}}
         finally:
             if not drain.done():drain.cancel()
+            await asyncio.gather(drain,return_exceptions=True)
 
     async def interrupt(self):
         if not self.provider or self.provider.returncode is not None:return
@@ -452,17 +470,67 @@ class Worker:
         elif self.provider_identity:
             signal_owned(self.provider_identity,signal.SIGINT,group=True)
 
+    def refresh_provider_identity(self):
+        if self.provider and self.provider.returncode is None and self.provider_identity and self.provider_identity['pid']!=os.getpid():
+            try:
+                current=identity(self.provider.pid).json()
+                if current['ppid']==os.getpid() and all(current[k]==self.provider_identity[k] for k in ('pid','start','uid','pgid')):
+                    self.provider_identity=current
+            except ProcessLookupError:pass
+
+    def track_provider(self):
+        self.provider_cleanup=None
+        if self.provider_identity['pid']==os.getpid():return
+        async def monitor():
+            while self.provider is not None:
+                try:
+                    self.refresh_provider_identity()
+                    captured=await asyncio.to_thread(descendants,[self.provider_identity,*self.provider_descendants.values()])
+                    if captured:
+                        self.provider_descendants.update({r['pid']:r for r in captured});self.manifest()
+                except (OSError,TimeoutError):pass
+                await asyncio.sleep(.05)
+        self.provider_monitor=asyncio.create_task(monitor())
+
     async def close_provider(self):
-        await self.interrupt()
-        if self.client:await self.client.close()
-        elif self.provider and self.provider.returncode is None:
-            try:await asyncio.wait_for(self.provider.wait(),15)
-            except asyncio.TimeoutError:
-                signal_owned(self.provider_identity,signal.SIGTERM,group=True)
-                try:await asyncio.wait_for(self.provider.wait(),5)
-                except asyncio.TimeoutError:
-                    signal_owned(self.provider_identity,signal.SIGKILL,group=True);await self.provider.wait()
-        self.client=None;self.provider=None;self.provider_identity=None;self.turn=None
+        if self.client:
+            await self.interrupt();await self.client.close()
+        elif self.provider:
+            process=self.provider
+            # Capture before interruption; after reparenting ancestry alone cannot
+            # establish ownership of a process that was never observed.
+            try:
+                self.refresh_provider_identity()
+                captured=await asyncio.to_thread(descendants,[self.provider_identity,*self.provider_descendants.values()])
+                self.provider_descendants.update({r['pid']:r for r in captured})
+            except (OSError,TimeoutError):pass
+            if process.stdin:process.stdin.close()
+            if self.provider_monitor:
+                self.provider_monitor.cancel();await asyncio.gather(self.provider_monitor,return_exceptions=True)
+                self.provider_monitor=None
+            for sig,grace in ((signal.SIGTERM,.5),(signal.SIGKILL,1)):
+                for record in [*reversed(list(self.provider_descendants.values())),self.provider_identity if process.returncode is None else None]:
+                    if record and record['pid']!=os.getpid():
+                        try:signal_owned(record,sig)
+                        except ProcessLookupError:pass
+                deadline=time.monotonic()+grace
+                while time.monotonic()<deadline and (process.returncode is None or any(matches(r) for r in self.provider_descendants.values())):
+                    await asyncio.sleep(.02)
+            async def drain(stream):
+                if stream:
+                    while await stream.read(65536):pass
+            readers=[asyncio.create_task(drain(stream)) for stream in (process.stdout,process.stderr)]
+            _,pending=await asyncio.wait(readers,timeout=1)
+            failures=[r for r in readers if r.done() and not r.cancelled() and r.exception()]
+            for reader in pending:reader.cancel()
+            await asyncio.gather(*readers,return_exceptions=True)
+            uncertain=process.returncode is None or bool(pending or failures) or any(matches(r) for r in self.provider_descendants.values())
+            self.provider_cleanup={'state':'UNCERTAIN' if uncertain else 'CLOSED','output_eof':not bool(pending or failures),
+                                   'provider_exited':process.returncode is not None,'captured_descendants':len(self.provider_descendants)}
+            self.manifest()
+            if process.returncode is not None and hasattr(process,'_transport'):process._transport.close()
+            require(not uncertain,'CLEANUP_UNCERTAIN','Owned native process/output closure is unproved; capacity remains reserved',details=self.provider_cleanup)
+        self.client=None;self.provider=None;self.provider_identity=None;self.provider_descendants={};self.turn=None
         self.manifest()
 
     async def close(self):

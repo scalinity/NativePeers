@@ -175,6 +175,7 @@ class Group:
         new_lease.pop('released_native',None)
         new_lease.pop('verified_runtime',None)
         new_lease.pop('usage_demand',None)
+        new_lease.pop('logical_tasks_used',None);new_lease.pop('logical_tasks_generation',None)
         # One logical task/phase; a replacement is a different native history and worker.
         with self.journal.transaction() as db:
             current=db.execute('SELECT state FROM tasks WHERE task_id=?',(task['task_id'],)).fetchone()
@@ -239,15 +240,17 @@ class Group:
         if not row or row['generation']!=child['row']['generation']:return
         require(manifest.get('worker_id')==worker_id and manifest.get('generation')==row['generation'] and manifest.get('native_id')==row['native_id'],'OWNERSHIP_UNKNOWN','Owned provider manifest differs from its generation; capacity remains reserved')
         owner=manifest.get('native_process')
-        if not owner or not matches(owner):return
-        signal_owned(owner,signal.SIGTERM,group=True)
-        deadline=time.monotonic()+1
-        while matches(owner) and time.monotonic()<deadline:await asyncio.sleep(.02)
-        if matches(owner):signal_owned(owner,signal.SIGKILL,group=True)
-        deadline=time.monotonic()+2
-        while matches(owner) and time.monotonic()<deadline:await asyncio.sleep(.02)
-        require(not matches(owner),'OWNERSHIP_CONFLICT','Owned native provider did not stop; worker capacity remains reserved')
-        self.journal.event(worker_id,'orphan-provider-stopped',{'generation':row['generation'],'pid':owner['pid']})
+        records=[r for r in [owner,*manifest.get('native_descendants',[])] if r]
+        for sig,grace in ((signal.SIGTERM,1),(signal.SIGKILL,2)):
+            for record in reversed(records):
+                try:signal_owned(record,sig)
+                except ProcessLookupError:pass
+            deadline=time.monotonic()+grace
+            while any(matches(r) for r in records) and time.monotonic()<deadline:await asyncio.sleep(.02)
+        require(not any(matches(r) for r in records),'CLEANUP_UNCERTAIN','Owned native descendants did not stop; capacity remains reserved')
+        require((manifest.get('cleanup') or {}).get('state')!='UNCERTAIN' or (manifest.get('cleanup') or {}).get('output_eof'),
+                'CLEANUP_UNCERTAIN','Native output closure was unproved; retained ownership requires inspection')
+        if records:self.journal.event(worker_id,'orphan-provider-stopped',{'generation':row['generation'],'pids':[r['pid'] for r in records]})
 
     async def release_worker(self,worker_id,*,expected=None):
         child=self.children[worker_id]

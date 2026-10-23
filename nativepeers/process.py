@@ -107,3 +107,22 @@ def terminal_owner(record: dict) -> bool:
         try:terminal=os.readlink('/proc/'+str(record['pid'])+'/fd/0').startswith(('/dev/pts/','/dev/tty'))
         except OSError:terminal=False
     return terminal and matches(record)
+
+
+def descendants(records):
+    """Capture birth identities only while a verified ancestor is still live."""
+    import subprocess
+    roots={r['pid'] for r in records if r and matches(r)}
+    if not roots:return []
+    raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.5).stdout
+    parents={int(p):int(pp) for p,pp in (line.split() for line in raw.decode().splitlines())}
+    result=[]
+    for _ in range(32):
+        selected=[p for p,pp in parents.items() if pp in roots and p not in roots]
+        if not selected:break
+        for pid in selected:
+            try:record=identity(pid).json()
+            except (ProcessLookupError,FileNotFoundError,PermissionError):continue
+            if record['uid']==os.getuid() and record['ppid'] in roots:
+                result.append(record);roots.add(pid)
+    return result

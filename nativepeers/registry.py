@@ -21,8 +21,8 @@ class Registry:
         require(matches(owner), "TARGET_GONE", "Native owner is no longer alive")
         key = PeerKey(self.journal.host_id, provider, home_id(home), native_id)
         incarnation = incarnation or new_id()
-        from .policy import load
-        label=load(self.journal)["home_labels"].get(str(home.resolve()),home.name)
+        from .policy import home_label
+        label=home_label(self.journal,home)
         descriptor = dict(schema_version=1, peer_key=key.json(), handle=key.handle,
                           incarnation_id=incarnation, title=title(native_title) if native_title else None,
                           title_source=("nativepeers-worker-role" if provider=='antigravity' and owner_kind=='owned-worker-controller' else "native-explicit") if native_title else "unknown", owner=owner,

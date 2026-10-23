@@ -3,23 +3,23 @@
 Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All findings and suggestions are in scope; native acceptance remains operation-specific.
 
 - [x] F01 Preserve implicit and explicit Claude configuration layouts.
-- [ ] F02 Retain descendant ownership through bounded worker cleanup.
-- [ ] F03 Scope and reconcile group quota suppression.
+- [x] F02 Retain descendant ownership through bounded worker cleanup.
+- [x] F03 Scope and reconcile group quota suppression.
 - [x] F04 Verify the first Claude alias family.
-- [ ] F05 Reconcile pool demand atomically before task input.
+- [x] F05 Reconcile pool demand atomically before task input.
 - [x] F06 Preserve authoritative terminal error precedence.
 - [x] F07 Classify Antigravity discovery/install failures accurately.
 - [ ] F08 Preserve passive measurement clocks per pool.
 - [x] F09 Retain definite logical-task budget failures.
 - [ ] F10 Reject invalid account-pace forecast samples.
-- [ ] F11 Share canonical home-label resolution.
+- [x] F11 Share canonical home-label resolution.
 - [ ] F12 Preserve independently approved runtime receipts.
 - [ ] F13 Require exact evidence for native pool membership.
 - [ ] S01 Show operation-specific readiness in doctor.
 - [ ] S02 Explain incomplete caller binding precisely.
 - [ ] S03 Expose remaining logical task slots.
 - [ ] S04 Generate and validate current evidence pointers.
-- [ ] S05 Coalesce quota-reader throttles with bounded retry hints.
+- [x] S05 Coalesce quota-reader throttles with bounded retry hints.
 - [ ] S06 Preflight isolated-copy Git identity.
 - [ ] Close out focused/full tests, installed preservation, scoped native checks, conventions and publication.
 

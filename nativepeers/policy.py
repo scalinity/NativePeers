@@ -18,3 +18,14 @@ def load(journal):
     from .usage.config import validate
     result['usage']=validate(result['usage'])
     return result
+
+
+def home_label(journal,home):
+    """Canonical path keys are current; hashed keys are explicit legacy support."""
+    from pathlib import Path
+    from .models import home_id
+    home=Path(home).resolve();labels=load(journal)['home_labels']
+    selected={value for key,value in labels.items() if Path(key).is_absolute() and Path(key).expanduser().resolve()==home}
+    if home_id(home) in labels:selected.add(labels[home_id(home)])
+    require(len(selected)<=1,'AMBIGUOUS_TARGET','Canonical and legacy provider-home labels disagree')
+    return next(iter(selected),home.name)

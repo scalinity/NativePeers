@@ -88,3 +88,25 @@ def test_forced_waiter_does_not_coalesce_with_catalog_or_passive_update(tmp_path
             await asyncio.wait_for(waiter,1)
     try:asyncio.run(run());assert calls==[1]
     finally:j.close()
+
+
+def test_concurrent_reader_throttles_share_short_cooldown_then_recover(tmp_path):
+    j=Journal(tmp_path/'state');home=tmp_path/'home';calls=[]
+    async def collect(*args):
+        calls.append(1)
+        if len(calls)==1:raise PeerError('SOURCE_RATE_LIMITED','Usage reader throttled',details={'retry_after_seconds':2})
+        return {'source':'native','pools':[pool('weekly',used=10)],'models':[]}
+    async def run():
+        collectors={'codex':type('C',(),{'collect':staticmethod(collect)})()}
+        with patch('nativepeers.usage.service.COLLECTORS',collectors):
+            await asyncio.gather(*(Usage(j).refresh('codex',home,force=True) for _ in range(4)))
+            assert calls==[1] and store.latest(j,'codex',home,'snapshot',active=True) is None
+            failure=store.latest(j,'codex',home,'refresh')
+            assert failure['payload']['cooldown_until']>time.time()
+            # Expire only the temporary fixture hint; there is no polling service.
+            value=failure['payload'];value['cooldown_until']=time.time()-1
+            store.record(j,'codex',home,value,kind='refresh')
+            await Usage(j).refresh('codex',home,force=True)
+            assert len(calls)==2 and store.latest(j,'codex',home,'snapshot',active=True)
+    try:asyncio.run(run())
+    finally:j.close()

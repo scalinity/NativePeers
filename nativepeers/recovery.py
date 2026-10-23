@@ -40,6 +40,7 @@ def assert_released(journal,row):
     require(manifest['worker_id']==row['worker_id'] and manifest['native_id']==row['native_id'],'OWNERSHIP_UNKNOWN','Owned process manifest differs from the native history')
     require(not matches(manifest['owner']) and (not manifest.get('native_process') or not matches(manifest['native_process'])),
             'OWNERSHIP_CONFLICT','Previous controller or provider writer is still alive')
+    require(not any(matches(r) for r in manifest.get('native_descendants',[])) and (manifest.get('cleanup') or {}).get('state')!='UNCERTAIN','CLEANUP_UNCERTAIN','Previous native descendant/output closure is unproved')
     home=recorded_home(journal,row)
     for peer in Registry(journal).list():
         require(peer['peer_key']['native_session_id']!=row['native_id'] or peer['peer_key']['provider']!=row['provider'] or peer['home']!=str(home),
@@ -163,6 +164,7 @@ def reconcile_owned(journal,caller,group_id,*,dry_run=False):
         if not path.exists():continue
         manifest=json.loads(path.read_text())
         if manifest.get('worker_id')!=row['worker_id'] or manifest.get('generation')!=row['generation'] or manifest.get('native_id')!=row['native_id']:continue
+        if any(matches(r) for r in manifest.get('native_descendants',[])) or (manifest.get('cleanup') or {}).get('state')=='UNCERTAIN':continue
         if matches(manifest['owner']) or (manifest.get('native_process') and matches(manifest['native_process'])):continue
         changes.append({'worker_id':row['worker_id'],'state':'RELEASED_RESUMABLE','unstarted_tasks':'CANCELED: OWNER_LOST_BEFORE_START','uncertain_tasks':'INTERRUPTED; no native input replayed'})
         if not dry_run:
