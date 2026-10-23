@@ -1,5 +1,13 @@
 # Current verification
 
+Review 2551947 corrections cover all 11 confirmed findings, the eight investigated boundaries and six suggestions. See [the correction ledger](REVIEW_2551947.md), [machine-readable current record](../evidence/review-2551947.json) and [operation-scoped index](../evidence/current-index.json). Final offline counts and exact source/runtime fingerprints live in that generated record.
+
+Fresh no-inference Claude quota collection and native Codex quota/stdio MCP agreement through a legitimate Codex parent passed. Antigravity is now 1.4.6 and does not match its retained 1.4.5 approval; current-runtime worker/quota checks and independent Flash review are BLOCKED on requalification. Claude worker/inbox approval remains stale. Native inference/delegation failure-window acceptance and Claude/Antigravity parent MCP contexts remain NOT_RUN. Quota approval is separate from worker/inbox approval. The native cumulative input/time ceilings are disabled; historical ledger bytes remain retained.
+
+All sections below preserve historical observations at their named source/runtime fingerprints. A historical “current” or “final” label is local to that recorded run; use the operation-scoped index for this publication.
+
+# Historical ff8c8c2 correction verification
+
 The ff8c8c2 corrections address all 13 reported defects and six improvements. The full locked offline suite passes **483 tests / 574 subtests** in 230.25 seconds; external manager/naming fixtures pass **23 tests**. Fresh authenticated native quota reads and actual CLI/stdio MCP observation agreement pass for all three providers through a legitimate Codex caller. No model turn was used for usage collection. See [current record](../evidence/review-ff8c8c2.json) and [resolution details](REVIEW_FF8C8C2.md).
 
 A quota receipt remains separate from worker/inbox approval. Claude's current quota reader is approved while its broader worker/inbox executable approval is stale. MCP calls from Claude and Antigravity parent contexts and the complete current-source inference/editing/cancellation/fallback matrix remain unaccepted. A bounded Flash review is recorded separately from quota acceptance. Histories, authentication, provider settings, runtime receipts, Codex TOML and shell behavior are preserved.

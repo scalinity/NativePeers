@@ -40,3 +40,19 @@ def test_generated_current_pointers_and_actual_sources_agree():
     source_hash=hashlib.sha256(json.dumps(evidence['source'],sort_keys=True,separators=(',',':')).encode()).hexdigest()
     assert source_hash==evidence['source_map_sha256']==cp['current_review']['source_map_sha256']
     for runtime in evidence.get('runtime_scopes',[]):assert runtime.get('operation') and runtime.get('sha256')
+
+
+def test_operation_index_separates_file_classes_and_native_check_scope():
+    cp=json.loads((ROOT/'evidence/checkpoint.json').read_text())
+    index=json.loads((ROOT/cp['current_evidence_index']).read_text())
+    assert index['code_commit']==cp['current_review']['code_commit']
+    assert set(index['file_classes'])=={'product','launchers','integrations','tests'}
+    for category,group in index['file_classes'].items():
+        assert group['file_count']==len(group['files']) and group['files'],category
+        for path,digest in group['files'].items():assert hashlib.sha256((ROOT/path).read_bytes()).hexdigest()==digest,path
+        assert hashlib.sha256(json.dumps(group['files'],sort_keys=True,separators=(',',':')).encode()).hexdigest()==group['sha256']
+    assert index['operation_checks']
+    for check in index['operation_checks']:
+        assert check['operation'] and check['parent_context'] and check['status'] in ('PASS','BLOCKED','NOT_RUN')
+        if check.get('provider'):assert len(check['runtime_sha256'])==64
+    assert 'documentation' in index['excluded_classes']

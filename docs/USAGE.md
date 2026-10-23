@@ -50,7 +50,7 @@ Waiting for one task in a multi-task batch leaves the batch notification unchang
 
 For writing tasks use `permission_profile:"workspace"` and `workspace:{"mode":"isolated-worktree"}`. Each worker gets a separate branch/worktree and an exact baseline. Dirty tracked changes are captured into that worktree, selected untracked files require `untracked_allowlist`, and secrets are excluded. NativePeers does not stash, reset, clean or automatically merge the source checkout. Results retain the owned worktree path for inspection.
 
-The optional private state `policy.json` follows [the example](../examples/policy.json). It sets concurrency, depth, task/group duration, pending-message and hop limits and maps absolute native-home paths to short labels. A task request may narrow these limits. Changes are local operator configuration, not authority granted by an inbound message. Verification uses its own durable cumulative allowance in `evidence/live-budget.json`; explicit input extensions do not reset its eight-worker or 60-active-minute ceilings. These verification limits do not restrict ordinary NativePeers use.
+The optional private state `policy.json` follows [the example](../examples/policy.json). It sets concurrency, depth, task/group duration, pending-message and hop limits and maps absolute native-home paths to short labels. A task request may narrow these limits. Changes are local operator configuration, not authority granted by an inbound message. Historical verification counts remain in `evidence/live-budget.json`; cumulative input and active-time ceilings are disabled. Each operation still has explicit deadlines and concurrency limits. Historical counts do not block new authorized tests.
 
 ## Per-worker models and Gemini
 
@@ -172,3 +172,10 @@ Post-admission controller handoff failures retain `DELIVERY_UNKNOWN`, original t
 Usage intelligence and its exact commands, native sources, installation, freshness, quota overrides, recommendation constraints and forecast limitations are documented in [USAGE_INTELLIGENCE.md](USAGE_INTELLIGENCE.md). `install --usage` composes only owned status-line capture; it preserves existing display commands and does not update worker/inbox runtime approval.
 
 `doctor --json` includes `operation_readiness`, with selected home/configuration layout and separate quota, worker, inbox and MCP states. An approved usage collector does not approve inference or establish a live bound MCP client. Worker rows in status/groups include `logical_task_slots` (`limit`, `used`, `remaining`, `generation`), separate from native internal rounds. Isolated-copy preflight returns `GIT_IDENTITY_REQUIRED` before creating a copy when Git lacks author/committer identity. Integration updates preserve independently verified runtime receipts. See [review corrections](REVIEW_FF8C8C2.md).
+
+
+## Explain selection and release
+
+Use `npeer status GROUP_ID --explain-selection --json` (MCP `task_status` with `explain_selection:true`) to inspect canonical home/layout, requested and observed models, effort, current cached pool measurements, local demand and release closure. This inspection does not refresh usage or reserve quota. Use `npeer resume-command WORKER_ID --explain --json` for an ownership-only resume prerequisite report; live/unknown captured births and missing pipe proof retain ownership. A normal resume still verifies external native ownership and exact history.
+
+Isolated input preparation is limited to 20 seconds across capture, revalidation and materialization. Git dirty/selected input bytes are bounded at 10 MiB and explicit Git selections at 1024 files; selected non-Git copies retain their 256-file/10 MiB bounds. Plans show selected bytes/files and dirty patch size. Oversized inputs must be narrowed before dispatch. Retained unique workspaces are never swept automatically.
