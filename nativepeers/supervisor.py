@@ -548,6 +548,14 @@ class Group:
         for route in self.journal.all("SELECT delivery_id FROM completion_routes WHERE group_id=? AND state='RETAINED'",(self.id,)):
             settle_deferred(self.journal,self.id,route['delivery_id'])
         await asyncio.gather(*[self.release_worker(w) for w in self.children],return_exceptions=True)
+        # Writer exit can precede consumption of its final buffered events.
+        # Finish readers before the caller closes the shared journal.
+        readers={c['reader'] for c in self.children.values() if c.get('reader') and c['reader'] is not asyncio.current_task()}
+        if readers:
+            _,pending=await asyncio.wait(readers,timeout=2)
+            for reader in pending:reader.cancel()
+            await asyncio.gather(*readers,return_exceptions=True)
+            if pending:self.journal.event(self.id,'controller-reader-cleanup-uncertain',{'readers':len(pending)})
         self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
         atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=True))
         final='COMPLETED' if all(t['state']=='COMPLETED' for t in self.tasks()) else 'PARTIAL'

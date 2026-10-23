@@ -90,6 +90,19 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn('must never reach the provider',self.binary.with_suffix('.inputs').read_text())
         self.assertTrue(all(t['state']!='QUEUED' for t in self.group.tasks()))
 
+    async def test_close_settles_delayed_reader_before_journal_can_be_closed(self):
+        await self.start()
+        child=self.group.children[self.worker];original=child['reader'];finished=asyncio.Event()
+        async def delayed_reader():
+            await original
+            await asyncio.sleep(.05)
+            self.j.event(self.worker,'fixture-final-reader-event',{})
+            finished.set()
+        child['reader']=asyncio.create_task(delayed_reader())
+        await self.group.close()
+        self.assertTrue(finished.is_set());self.assertTrue(child['reader'].done())
+        self.assertIsNotNone(self.j.one("SELECT sequence FROM events WHERE kind='fixture-final-reader-event'"))
+
     async def test_parent_loss_settles_buffered_successor_with_cause(self):
         await self.start()
         self.group.policy['parent_owner']=dict(self.policy['parent_owner'],pid=99999999,pgid=99999999)
