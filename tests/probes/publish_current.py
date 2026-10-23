@@ -54,6 +54,14 @@ def generate(record_path,verified_commit,branch):
         prior={key:cp.get(key) for key in ('stage','updated_at','git','publication','current_review')}
         history=cp.setdefault('publication_history',[])
         if prior not in history:history.append(prior)
+    # Hashes describe the current documents; a historical read claim cannot be
+    # silently transferred when a concurrent feature changed a contract.
+    for name,document in cp.get('canonical_documents',{}).items():
+        actual=digest(ROOT/'docs'/name)
+        if document.get('sha256')!=actual:
+            document['previous_read_sha256']=document.get('sha256')
+            document['read_entirely']=False
+        document['sha256']=actual
     cp.update(stage=record['stage'],updated_at=at,tests_current=record['tests'],
         current_review=dict(branch=branch,code_commit=commit,evidence=relative,source_map_sha256=source_hash,status=record['status']))
     cp['git']=dict(base_commit=record['reviewed_commit'],branch=branch,code_commit=commit,last_verified_publication=commit,owned_uncommitted_changes=[])
