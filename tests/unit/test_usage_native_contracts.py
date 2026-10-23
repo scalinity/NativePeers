@@ -45,7 +45,9 @@ def test_antigravity_alternate_home_is_refused_before_native_process(tmp_path):
 def test_missing_usage_executable_and_source_denial_never_claim_native_logout(tmp_path):
     j=Journal(tmp_path/'state');home=tmp_path/'home'
     try:
-        for failure,expected in [(FileNotFoundError(),'EXECUTABLE_NOT_FOUND'),(PeerError('AUTH_REQUIRED','source read denied'),'SOURCE_ACCESS_DENIED')]:
+        for failure,expected in [(PeerError('EXECUTABLE_NOT_FOUND','launcher resolution failed'),'EXECUTABLE_NOT_FOUND'),
+                                 (FileNotFoundError('unrelated missing source file'),'SOURCE_UNAVAILABLE'),
+                                 (PeerError('AUTH_REQUIRED','source read denied'),'SOURCE_ACCESS_DENIED')]:
             collect=AsyncMock(side_effect=failure)
             with patch('nativepeers.usage.service.COLLECTORS',{'claude':type('C',(),{'collect':collect})()}):asyncio.run(Usage(j).refresh('claude',home,force=True))
             view=Usage(j).snapshot('claude',home)
