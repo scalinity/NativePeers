@@ -174,7 +174,7 @@
     "Historical acceptance and removed cumulative test limits remain unchanged.",
     "Worker history visibility remains separate."
   ],
-  "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+  "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -250,5 +250,5 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
-  "updated_at": "2026-10-22T23:11:36.543950-04:00"
+  "updated_at": "2026-10-22T23:12:46.086752-04:00"
 }

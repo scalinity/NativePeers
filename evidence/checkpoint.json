@@ -130,8 +130,8 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/review-ff8c8c2",
-    "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "branch": "main",
+    "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
     "evidence": "evidence/review-ff8c8c2.json",
     "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
     "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits"
@@ -148,9 +148,9 @@
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "ff8c8c20770e79317d807336c2ad6258889984ef",
-    "branch": "fix/review-ff8c8c2",
-    "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
-    "last_verified_publication": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "branch": "main",
+    "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+    "last_verified_publication": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,11 +210,11 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/review-ff8c8c2",
+    "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
-    "verified_remote_code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "verified_remote_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+    "verified_remote_code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -302,7 +302,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-22T23:11:36.543950-04:00",
+  "updated_at": "2026-10-22T23:12:46.086752-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -335,6 +335,33 @@
         "evidence": "evidence/live-usage-sources.json",
         "source_map_sha256": "ddbd84098355d99e82faddf9bc55f66222a5425eda606e6b8810bd2e85534b17",
         "status": "IMPLEMENTED_AND_INSTALLED; native quota PASS; native MCP context BLOCKED; inference NOT_RUN"
+      }
+    },
+    {
+      "stage": "REVIEW_FF8C8C2_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-22T23:11:36.543950-04:00",
+      "git": {
+        "base_commit": "ff8c8c20770e79317d807336c2ad6258889984ef",
+        "branch": "fix/review-ff8c8c2",
+        "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+        "last_verified_publication": "07753d5c8cba5906149be7a3fb992f159f406997",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-ff8c8c2",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+        "verified_remote_code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-ff8c8c2",
+        "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+        "evidence": "evidence/review-ff8c8c2.json",
+        "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
+        "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits"
       }
     }
   ]
