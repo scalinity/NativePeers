@@ -43,7 +43,8 @@ class GroupReplyTests(unittest.IsolatedAsyncioTestCase):
 
     async def cleanup_sockets(self):
         for client in self.clients:client.close()
-        for writer in self.writers:writer.transport.abort()
+        for writer in self.writers:
+            if not writer.is_closing() or writer.transport.get_write_buffer_size():writer.transport.abort()
         for task in self.handlers:
             if not task.done():task.cancel()
         await asyncio.gather(*self.handlers,return_exceptions=True)

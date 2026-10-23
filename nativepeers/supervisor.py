@@ -30,6 +30,12 @@ CONTROL_REPLY_SECONDS=1
 CONTROL_CLOSE_SECONDS=1
 
 
+def _abort_reply(writer):
+    # Python 3.12 can clear a fully closed selector transport's loop. Re-abort
+    # only an open transport or one still retaining buffered output.
+    if not writer.is_closing() or writer.transport.get_write_buffer_size():writer.transport.abort()
+
+
 class Group:
     def __init__(self,journal,group_id):
         self.journal,self.id=journal,group_id
@@ -336,16 +342,16 @@ class Group:
             # A lost reply does not reverse committed admission or authorize
             # replay. The caller retains its request/task identity as uncertain.
             self.journal.event(self.id,'control-reply-unconfirmed',{})
-            writer.transport.abort()
+            _abort_reply(writer)
         except asyncio.CancelledError:
-            writer.transport.abort()
+            _abort_reply(writer)
             raise
         finally:
             writer.close()
             try:await asyncio.wait_for(writer.wait_closed(),CONTROL_CLOSE_SECONDS)
-            except (ConnectionError,OSError,TimeoutError):writer.transport.abort()
+            except (ConnectionError,OSError,TimeoutError):_abort_reply(writer)
             except asyncio.CancelledError:
-                writer.transport.abort();raise
+                _abort_reply(writer);raise
             finally:self.connections.pop(handler,None)
 
     async def respond(self,reader,writer):
@@ -618,7 +624,7 @@ class Group:
         await asyncio.sleep(0)
         clients=list(self.connections.items())
         for task,writer in clients:
-            writer.transport.abort()
+            _abort_reply(writer)
             if task is not asyncio.current_task():task.cancel()
         handlers={task for task,_ in clients if task is not asyncio.current_task()}
         if handlers:

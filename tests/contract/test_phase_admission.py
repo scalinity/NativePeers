@@ -139,6 +139,30 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(json.loads(sent['attempt']['error_json'])['may_have_received'])
         self.assertFalse(self.sent)
 
+    async def test_shutdown_after_admission_before_reply_retains_uncertainty_without_replay(self):
+        admitted=asyncio.Event();enqueue=self.group.enqueue
+        async def pause_reply(payload):
+            await enqueue(payload)
+            admitted.set()
+            await asyncio.Future()
+        self.group.server=self.server
+        with patch.object(self.group,'enqueue',side_effect=pause_reply):
+            request=asyncio.create_task(self.send())
+            try:
+                await asyncio.wait_for(admitted.wait(),2)
+                committed=self.other.one('SELECT message_id,task_id FROM messages')
+                self.assertTrue(committed['task_id']);self.assertEqual(len(self.sent),1)
+                await asyncio.wait_for(self.group.close(),2)
+                response=await asyncio.wait_for(request,2)
+            finally:
+                if not request.done():request.cancel();await asyncio.gather(request,return_exceptions=True)
+        self.assertEqual(response['state'],'DELIVERY_UNKNOWN')
+        self.assertTrue(json.loads(response['attempt']['error_json'])['may_have_received'])
+        retry=await self.send()
+        self.assertEqual(retry['message_id'],committed['message_id'])
+        self.assertEqual(self.other.one('SELECT task_id FROM messages')['task_id'],committed['task_id'])
+        self.assertEqual(len(self.sent),1)
+
     async def test_live_supervisor_positive_controller_failure_releases_exact_generation(self):
         from nativepeers.errors import PeerError
         previous=subprocess.Popen(['/bin/sleep','30'])
