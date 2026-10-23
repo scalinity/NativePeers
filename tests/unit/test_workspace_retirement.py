@@ -42,7 +42,7 @@ class RetirementTests(unittest.TestCase):
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)', (new_id(), self.worker, None, None, 'COMPLETED', None, None, 1, '{}'))
         self.manifest = self.j.root/'workers'/(self.worker+'.json')
         atomic_json(self.manifest, {'worker_id': self.worker, 'group_id': self.group, 'native_id': self.native, 'generation': 1,
-                                  'owner': self.dead, 'native_process': None, 'cleanup': {'state': 'UNCERTAIN', 'output_eof': False}})
+                                  'owner': self.dead, 'native_process': None, 'cleanup': {'state': 'CLOSED', 'output_eof': True}})
         atomic_json(self.j.root/'groups'/self.group/'owner.json', {'owner': self.dead, 'group_id': self.group, 'generation': 1})
         retain_processes(self.j, self.worker, 1, self.native, [self.dead])
 
@@ -64,7 +64,7 @@ class RetirementTests(unittest.TestCase):
         original_manifest = self.manifest.read_bytes(); tasks = self.j.all('SELECT * FROM tasks')
         result = self.retire(); self.assertEqual(result['state'], 'retired'); self.assertFalse(self.work.exists())
         self.assertEqual(self.manifest.read_bytes(), original_manifest); self.assertEqual(self.j.all('SELECT * FROM tasks'), tasks)
-        self.assertFalse(json.loads(self.manifest.read_bytes())['cleanup']['output_eof'])
+        self.assertTrue(json.loads(self.manifest.read_bytes())['cleanup']['output_eof'])
         self.assertNotEqual(git(self.source, 'show-ref', '--verify', 'refs/heads/npeer/'+self.worker, check=False).returncode, 0)
         recovered = self.root/'recovered'; recovered.mkdir()
         with tarfile.open(result['archive']) as archive:
@@ -87,6 +87,21 @@ class RetirementTests(unittest.TestCase):
         with self.assertRaises(PeerError) as error: assert_released(self.j, self.j.one('SELECT * FROM workers'))
         self.assertEqual(error.exception.code, 'WORKSPACE_RETIRED')
 
+    def test_complete_captured_births_do_not_replace_unproved_output_closure(self):
+        value = json.loads(self.manifest.read_bytes()); value['cleanup'] = {'state': 'UNCERTAIN', 'output_eof': False}; atomic_json(self.manifest, value)
+        with patch('nativepeers.workspace_retirement._previous_boot', return_value=None):
+            self.refuse('CLEANUP_UNCERTAIN')
+            archived = archive_retire(self.j, self.caller, self.worker, archive_only=True)
+        self.assertEqual(archived['state'], 'archived'); self.assertTrue(self.work.exists())
+        with patch('nativepeers.workspace_retirement._previous_boot', return_value={'basis': 'previous-boot-ended'}):
+            self.assertEqual(self.retire()['state'], 'retired')
+        self.assertFalse(json.loads(self.manifest.read_bytes())['cleanup']['output_eof'])
+
+    def test_later_boot_does_not_override_a_known_live_writer(self):
+        value = json.loads(self.manifest.read_bytes()); value['owner'] = identity(os.getpid()).json(); atomic_json(self.manifest, value)
+        with patch('nativepeers.workspace_retirement._previous_boot', return_value={'basis': 'previous-boot-ended'}):
+            self.refuse('OWNERSHIP_CONFLICT')
+
     def test_conflict_index_blobs_and_uncommitted_frozen_input_tree_are_recoverable(self):
         blobs = [git(self.work, 'hash-object', '-w', '--stdin', input=value).stdout.decode().strip()
                  for value in (b'conflict base', b'conflict ours', b'conflict theirs', b'frozen dirty input')]
@@ -103,6 +118,38 @@ class RetirementTests(unittest.TestCase):
         for n, expected in enumerate((b'conflict base', b'conflict ours', b'conflict theirs'), 1):
             self.assertEqual(git(restored, 'show', ':'+str(n)+':input').stdout, expected)
         self.assertEqual(git(restored, 'show', tree+':input').stdout, b'frozen dirty input')
+
+    def test_owned_branch_reflog_and_private_worktree_ref_roots_survive_retirement(self):
+        base = git(self.work, 'rev-parse', 'HEAD').stdout.decode().strip()
+        tree = git(self.work, 'rev-parse', 'HEAD^{tree}').stdout.decode().strip()
+        def commit(message):
+            return git(self.work, 'commit-tree', tree, '-p', base, input=message.encode()).stdout.decode().strip()
+        branch_only = commit('branch reflog only')
+        private_old = commit('private reflog old')
+        private_current = commit('private ref current')
+        branch = 'refs/heads/npeer/'+self.worker
+        # Change the branch directly; this intentionally does not touch HEAD's reflog.
+        git(self.source, 'update-ref', '-m', 'retain branch-only object', branch, branch_only)
+        git(self.source, 'update-ref', '-m', 'restore branch', branch, base)
+        private_ref = 'refs/worktree/recovery-fixture'
+        git(self.work, 'update-ref', '--create-reflog', private_ref, private_old)
+        git(self.work, 'update-ref', '-m', 'retain old private object', private_ref, private_current)
+        git(self.work, 'symbolic-ref', 'refs/rewritten/recovery-symbolic', private_ref)
+        head_log = git(self.work, 'reflog', 'show', '--format=%H', 'HEAD').stdout.decode()
+        self.assertNotIn(branch_only, head_log)
+        result = self.retire(); recovery = self.root/'refs-recovery'; recovery.mkdir()
+        with tarfile.open(result['archive']) as archive: archive.extractall(recovery, filter='data')
+        restored = recovery/'workspace'; (restored/'.git').unlink(); git(restored, 'init', '-q')
+        git(restored, 'unpack-objects', input=(recovery/'git/objects.pack').read_bytes())
+        for oid in (branch_only, private_old, private_current):
+            self.assertEqual(git(restored, 'cat-file', '-t', oid).stdout, b'commit\n')
+        refs = json.loads((recovery/'git/worktree-refs.json').read_bytes())
+        for name, value in refs.items():
+            if value['symbolic_target']: git(restored, 'symbolic-ref', name, value['symbolic_target'])
+            else: git(restored, 'update-ref', name, value['oid'])
+        self.assertEqual(git(restored, 'rev-parse', private_ref).stdout.decode().strip(), private_current)
+        self.assertEqual(git(restored, 'symbolic-ref', 'refs/rewritten/recovery-symbolic').stdout.decode().strip(), private_ref)
+        self.assertIn(branch_only, (recovery/'git/metadata/logs'/branch).read_text())
 
     def test_live_and_unknown_captured_births_refuse(self):
         value = json.loads(self.manifest.read_bytes()); value['owner'] = identity(os.getpid()).json(); atomic_json(self.manifest, value)
@@ -252,6 +299,21 @@ class RetirementTests(unittest.TestCase):
         with patch.object(module, '_git', side_effect=fail_remove), self.assertRaises(RuntimeError): self.retire()
         (self.work/'input').write_text('late stage'); git(self.work, 'add', 'input'); (self.work/'input').write_text('base\n')
         self.refuse('WORKSPACE_CHANGED')
+
+    def test_branch_reflog_change_blocks_reuse_even_when_branch_head_is_restored(self):
+        archive_retire(self.j, self.caller, self.worker, archive_only=True)
+        base = git(self.work, 'rev-parse', 'HEAD').stdout.decode().strip()
+        tree = git(self.work, 'rev-parse', 'HEAD^{tree}').stdout.decode().strip()
+        extra = git(self.work, 'commit-tree', tree, '-p', base, input=b'late branch-only object').stdout.decode().strip()
+        branch = 'refs/heads/npeer/'+self.worker
+        git(self.source, 'update-ref', branch, extra); git(self.source, 'update-ref', branch, base)
+        self.refuse('BACKUP_CHANGED')
+
+    def test_private_ref_change_blocks_reuse(self):
+        archive_retire(self.j, self.caller, self.worker, archive_only=True)
+        base = git(self.work, 'rev-parse', 'HEAD').stdout.decode().strip()
+        git(self.work, 'update-ref', 'refs/bisect/recovery-fixture', base)
+        self.refuse('BACKUP_CHANGED')
 
     def test_receipt_tamper_and_other_parent_are_refused(self):
         result = self.retire(); receipt = Path(result['receipt_path']); receipt.write_text('{}')

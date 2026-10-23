@@ -20,7 +20,7 @@ import time
 from .change_preview import _git, _owned, _workspace
 from .cleanup import _inventory
 from .errors import require
-from .files import advisory_lock, atomic_json, private_directory
+from .files import advisory_lock, atomic_json, canonical, private_directory
 from .process import owned_status
 
 TERMINAL = {'COMPLETED', 'FAILED', 'CANCELED', 'TIMED_OUT', 'PARTIAL', 'INTERRUPTED'}
@@ -132,9 +132,13 @@ def _stopped(journal, row, *, allow_incomplete=False):
     for record in records:
         checked = _record(record)
         processes[checked['start']+':'+str(checked['pid'])] = checked
-    boot = _previous_boot(records) if missing else None
+    cleanup = manifest.get('cleanup') or {}
+    closed = cleanup.get('state') == 'CLOSED' and cleanup.get('output_eof') is True
+    boot = _previous_boot(records) if missing or not closed else None
     require(not missing or boot or allow_incomplete, 'OWNERSHIP_UNKNOWN',
             'Historical captured-process sets were not retained; archive only now, then retire after a normal reboot ends all old descendants')
+    require(closed or boot or allow_incomplete, 'CLEANUP_UNCERTAIN',
+            'Native process/output closure is unproved; archive only now, then retire after a normal reboot ends all old descendants')
     return {'processes': list(processes.values()), 'historical_cleanup': manifest.get('cleanup'),
             'capture_history_complete': not missing, 'missing_capture_generations': missing, 'later_boot': boot,
             'native_output_eof_proved': (manifest.get('cleanup') or {}).get('output_eof') is True,
@@ -180,15 +184,25 @@ def _snapshot(work, deadline):
     # _inventory deliberately omits .git; retain the exact worktree pointer too.
     raw = (work/'.git').read_bytes()
     files['.git'] = {'sha256': hashlib.sha256(raw).hexdigest(), 'mode': stat.S_IMODE((work/'.git').stat().st_mode)}
+    refs = _git(work, ['for-each-ref', '--format=%(refname) %(objectname) %(symref)',
+                       'refs/worktree/', 'refs/bisect/', 'refs/rewritten/'], deadline)
+    require(refs.returncode == 0, 'BACKUP_UNAVAILABLE', 'Per-worktree references cannot be read')
+    worktree_refs = {}
+    for line in refs.stdout.decode().splitlines():
+        name, oid, target = line.split(' ', 2)
+        worktree_refs[name] = {'oid': oid, 'symbolic_target': target or None}
     git_state = {}
-    for name in ('index', 'HEAD', 'logs/HEAD'):
+    names = ('index', 'HEAD', 'logs/HEAD', 'logs/refs/heads/npeer/'+work.name,
+             *('logs/'+name for name in worktree_refs))
+    for name in names:
         result = _git(work, ['rev-parse', '--git-path', name], deadline)
         require(result.returncode == 0, 'OWNERSHIP_UNKNOWN', 'Git metadata path cannot be read')
         path = Path(os.fsdecode(result.stdout).strip()); path = work/path if not path.is_absolute() else path
         require(not path.is_symlink(), 'OWNERSHIP_UNKNOWN', 'Git metadata is redirected')
         git_state[name] = _hash(path) if path.exists() else None
     return {'files': files, 'directories': {p: stat.S_IMODE((work/p).stat().st_mode) for p in sorted(directories)},
-            'root_mode': stat.S_IMODE(work.stat().st_mode), 'git_state': git_state, 'size': sizes}
+            'root_mode': stat.S_IMODE(work.stat().st_mode), 'git_state': git_state,
+            'worktree_refs': worktree_refs, 'size': sizes}
 
 
 def _hash(path):
@@ -219,10 +233,22 @@ def _archive(source, work, baseline, destination, row, stopped, deadline):
     # frozen input trees and staged/conflict blobs that are not branch-reachable.
     roots = {oid, baseline['input_tree']}
     stages = _git(work, ['ls-files', '--stage', '-z'], deadline)
-    reflog = _git(work, ['reflog', 'show', '--format=%H', 'HEAD'], deadline)
-    require(stages.returncode == reflog.returncode == 0, 'BACKUP_UNAVAILABLE', 'Git recovery roots cannot be read')
+    require(stages.returncode == 0, 'BACKUP_UNAVAILABLE', 'Git recovery roots cannot be read')
     roots.update(v.split(b'\t', 1)[0].split()[1].decode() for v in stages.stdout.split(b'\0') if v)
-    roots.update(reflog.stdout.decode().splitlines())
+    roots.update(value['oid'] for value in snapshot['worktree_refs'].values())
+    metadata = {}
+    for name, digest in snapshot['git_state'].items():
+        if not name.startswith('logs/') or digest is None: continue
+        location = _git(work, ['rev-parse', '--git-path', name], deadline)
+        require(location.returncode == 0, 'BACKUP_UNAVAILABLE', 'Git reflog path cannot be read')
+        path = Path(os.fsdecode(location.stdout).strip()); path = work/path if not path.is_absolute() else path
+        raw = path.read_bytes()
+        require(hashlib.sha256(raw).hexdigest() == digest, 'WORKSPACE_CHANGED', 'Git reflog changed before backup')
+        metadata['git/metadata/'+name] = raw
+        for line in raw.splitlines():
+            for reflog_oid in line.split(b' ', 2)[:2]:
+                require(re.fullmatch(rb'[0-9a-f]{40}|[0-9a-f]{64}', reflog_oid), 'BACKUP_UNAVAILABLE', 'Git reflog object identity is malformed')
+                if set(reflog_oid) != {ord('0')}: roots.add(reflog_oid.decode())
     packed = _git(work, ['pack-objects', '--stdout', '--revs'], deadline, raw=('\n'.join(sorted(roots))+'\n').encode(), max_output_bytes=MAX_BYTES)
     require(packed.returncode == 0, 'BACKUP_UNAVAILABLE', 'Git recovery object pack failed')
     index = _git(work, ['rev-parse', '--git-path', 'index'], deadline)
@@ -236,7 +262,8 @@ def _archive(source, work, baseline, destination, row, stopped, deadline):
         bundled = _git(work, ['bundle', 'create', str(branch), 'HEAD'], deadline)
         verified = _git(work, ['bundle', 'verify', str(branch)], deadline)
         require(bundled.returncode == verified.returncode == 0 and branch.is_file(), 'BACKUP_UNAVAILABLE', 'Unique commit bundle could not be verified')
-        aux = {'git/branch.bundle': branch.read_bytes(), 'git/objects.pack': packed.stdout, 'git/index': index_bytes}
+        aux = {'git/branch.bundle': branch.read_bytes(), 'git/objects.pack': packed.stdout, 'git/index': index_bytes,
+               'git/worktree-refs.json': canonical(snapshot['worktree_refs']), **metadata}
         require(sum(len(v) for v in aux.values())+snapshot['size']['size_bytes'] <= MAX_BYTES, 'BACKUP_UNAVAILABLE', 'Combined workspace and Git recovery backup exceeds the byte limit')
         entries = {'workspace/'+k: v for k, v in snapshot['files'].items()}
         entries.update({k: {'sha256': hashlib.sha256(v).hexdigest(), 'mode': 0o600} for k, v in aux.items()})
@@ -252,7 +279,7 @@ def _archive(source, work, baseline, destination, row, stopped, deadline):
         receipt = {'version': 1, 'worker_id': row['worker_id'], 'generation': row['generation'], 'source': str(source), 'workspace': str(work),
                    'archive': str(destination/'workspace.tar.gz'), 'archive_sha256': _hash(archive), 'head': oid, 'baseline': baseline,
                    'entries': entries, 'snapshot': snapshot, 'stopped': stopped,
-                   'recovery': 'Extract workspace files to a new folder, replace its .git pointer with git init, unpack git/objects.pack using git unpack-objects, set HEAD to the recorded head, then restore git/index. Create empty directories/modes from snapshot.directories. Internal symlinks are archived as inert regular files containing their targets: restore only snapshot.files entries with link_target as symlinks. The original source refs and native histories are not needed to recover the archived files.'}
+                   'recovery': 'Extract workspace files to a new folder, replace its .git pointer with git init, unpack git/objects.pack using git unpack-objects, set HEAD to the recorded head, then restore git/index. Recreate refs from git/worktree-refs.json using git update-ref or git symbolic-ref; raw owned-branch/HEAD/per-worktree reflogs are under git/metadata/logs. Create empty directories/modes from snapshot.directories. Internal symlinks are archived as inert regular files containing their targets: restore only snapshot.files entries with link_target as symlinks. The original source refs and native histories are not needed to recover the archived files.'}
         _verify(archive, receipt)
         os.link(archive, destination/'workspace.tar.gz')  # exclusive publication; never overwrite a prior backup
         atomic_json(destination/'receipt.json', receipt)
