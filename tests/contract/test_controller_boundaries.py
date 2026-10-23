@@ -84,3 +84,15 @@ class ControllerBoundaryTests(unittest.IsolatedAsyncioTestCase):
                 self.assertFalse(self.j.one("SELECT * FROM events WHERE kind='controller-not-created'"))
                 from nativepeers.ownership import release_status
                 self.assertFalse(release_status(self.j,self.j.one('SELECT * FROM workers'))['released'])
+
+    async def test_cancellation_during_backpressure_closes_lease_without_release_claim(self):
+        read,write=os.pipe();process=await self.fixture(read);os.close(read)
+        child=dict(process=process,owner=identity(process.pid).json(),lease_fd=write,row=self.j.one('SELECT * FROM workers'))
+        self.group.children={self.wid:child}
+        sends=[asyncio.create_task(self.group.send_worker(self.wid,dict(operation='task',task_id=new_id(),text='x'*12000))) for _ in range(16)]
+        await asyncio.sleep(.05)
+        releasing=asyncio.create_task(self.group.release_worker(self.wid));await asyncio.sleep(.05);releasing.cancel()
+        with self.assertRaises(asyncio.CancelledError):await releasing
+        self.assertIsNone(child['lease_fd']);await asyncio.wait_for(process.wait(),2)
+        self.assertEqual(self.j.one('SELECT state FROM workers')['state'],'RELEASING')
+        await asyncio.gather(*sends,return_exceptions=True)

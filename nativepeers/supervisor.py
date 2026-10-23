@@ -273,8 +273,13 @@ class Group:
         child=self.children[worker_id]
         if expected is not None and child is not expected:return
         self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND generation=? AND state!='RELEASED_RESUMABLE'",(worker_id,child['row']['generation']))
-        try:await self.send_worker(worker_id,dict(operation='release',**({'reason':self.shutdown_reason} if self.shutdown_reason else {})))
-        except (BrokenPipeError,ConnectionError,asyncio.TimeoutError):pass
+        try:
+            try:await self.send_worker(worker_id,dict(operation='release',**({'reason':self.shutdown_reason} if self.shutdown_reason else {})))
+            except (BrokenPipeError,ConnectionError,asyncio.TimeoutError):pass
+        except BaseException:
+            if child.get('lease_fd') is not None:
+                os.close(child['lease_fd']);child['lease_fd']=None
+            raise
         # Lease closure does not depend on a writable control pipe or successful
         # process inspection. Post-write failures never establish nondelivery.
         try:

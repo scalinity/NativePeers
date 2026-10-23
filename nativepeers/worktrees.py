@@ -149,7 +149,8 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
 # These select a repository/index/object store independently of git -C. Configuration
 # and author/committer settings remain native; private index overrides are explicit.
 GIT_ROUTING={'GIT_DIR','GIT_WORK_TREE','GIT_COMMON_DIR','GIT_INDEX_FILE','GIT_OBJECT_DIRECTORY',
-             'GIT_ALTERNATE_OBJECT_DIRECTORIES','GIT_NAMESPACE','GIT_PREFIX','GIT_SHALLOW_FILE'}
+             'GIT_ALTERNATE_OBJECT_DIRECTORIES','GIT_NAMESPACE','GIT_PREFIX','GIT_SHALLOW_FILE','GIT_IMPLICIT_WORK_TREE',
+             'GIT_GRAFT_FILE','GIT_REPLACE_REF_BASE','GIT_NO_REPLACE_OBJECTS'}
 
 
 def git_environment(overrides=None):

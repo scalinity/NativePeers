@@ -97,3 +97,19 @@ def test_owned_usage_layout_intent_wins_over_opposite_collector_environment(tmp_
             result=asyncio.run(run_native('claude',path,[],tmp_path/'.claude',timeout=3))
         assert scope('claude',tmp_path/'.claude')==ambient and intended!=ambient
     assert result['stdout']==(str(tmp_path/'.claude').encode() if explicit else b'unset')
+
+
+def test_first_birth_inspection_failure_still_runs_owned_teardown(tmp_path):
+    import sys
+    from nativepeers.process import identity as actual_identity,owned_status
+    binary=tmp_path/'native';binary.write_text('#!'+sys.executable+'\nimport time\ntime.sleep(30)\n');binary.chmod(0o700)
+    captured=[];calls=0
+    def inspect(pid):
+        nonlocal calls
+        calls+=1
+        if calls==1:raise PermissionError('fixture first inspection')
+        result=actual_identity(pid);captured.append(result.json());return result
+    with patch('nativepeers.usage.native_command.guarded_argv',side_effect=lambda b,a:[str(b),*a]),patch('nativepeers.usage.native_command.identity',side_effect=inspect):
+        with pytest.raises(PeerError) as error:asyncio.run(run_native('antigravity',binary,[],tmp_path,timeout=3))
+    assert error.value.code=='OWNERSHIP_UNKNOWN' and captured
+    assert all(owned_status(record)=='DEAD' for record in captured)

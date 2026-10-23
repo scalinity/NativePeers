@@ -45,11 +45,19 @@ class AppServer:
             stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True,
             limit=8 * 1024 * 1024)
-        self.owner = identity(self.process.pid).json()
-        self._publish_ownership()
-        self.monitor = asyncio.create_task(self._monitor())
         self.reader = asyncio.create_task(self._read())
         self.error_reader = asyncio.create_task(self._stderr())
+        try:self.owner = identity(self.process.pid).json()
+        except OSError as error:
+            # Creation succeeded. Close input and retain the handle/readers before
+            # reporting inspection failure; this is never a not-created outcome.
+            self.process.stdin.close()
+            try:await self.close(exit_timeout=.5,kill_timeout=.2,reader_timeout=.3)
+            except PeerError:raise
+            raise PeerError('OWNERSHIP_UNKNOWN','Created app-server identity inspection failed',
+                details={'controller_created':True,'pid':self.process.pid,'cause':type(error).__name__}) from error
+        self._publish_ownership()
+        self.monitor = asyncio.create_task(self._monitor())
         result = await self.call("initialize", {"clientInfo": {"name": "nativepeers", "version": "0.1"},
                                                 "capabilities": {"experimentalApi": True}})
         await self.write({"method": "initialized", "params": {}})
@@ -60,6 +68,9 @@ class AppServer:
             self.ownership_changed(self)
 
     async def _capture(self):
+        if self.owner is None and self.process.returncode is None:
+            current=identity(self.process.pid).json()
+            if current['ppid']==os.getpid():self.owner=current;self._publish_ownership()
         captured = await asyncio.to_thread(descendants, [self.owner, *self.descendants.values()])
         if captured:
             self.descendants.update({r['pid']: r for r in captured})
@@ -171,7 +182,7 @@ class AppServer:
             _, pending = await asyncio.wait(readers, timeout=reader_timeout)
             live = [dict(record=r, state=owned_status(r)) for r in [self.owner, *self.descendants.values()] if r and owned_status(r) != 'DEAD']
             eof = self.stdout_eof and self.stderr_eof
-            uncertain = bool(live) or not eof or self.process.returncode is None
+            uncertain = self.owner is None or bool(live) or not eof or self.process.returncode is None
             self.cleanup = {'state': 'UNCERTAIN' if uncertain else 'CLOSED', 'output_eof': eof,
                 'stdout_eof': self.stdout_eof, 'stderr_eof': self.stderr_eof,
                 'provider_exited': self.process.returncode is not None, 'unresolved_processes': live,

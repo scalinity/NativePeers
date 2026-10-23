@@ -88,3 +88,22 @@ class AppServerCleanupTests(unittest.IsolatedAsyncioTestCase):
     if server.owner:signal_captured(server.owner,signal.SIGKILL)
     await asyncio.gather(server.reader,server.error_reader,return_exceptions=True)
     await asyncio.wait_for(server.process.wait(),3)
+
+ async def test_initial_inspection_failure_still_closes_created_handle_and_readers(self):
+  from unittest.mock import patch
+  from nativepeers.process import identity as actual_identity
+  with tempfile.TemporaryDirectory() as directory:
+   script=Path(directory)/'server.py';received=Path(directory)/'input'
+   script.write_text('import sys,pathlib\npathlib.Path('+repr(str(received))+').write_text(sys.stdin.read())\n')
+   server=AppServer(Path(sys.executable),[str(script)]);calls=0
+   def inspect(pid):
+    nonlocal calls
+    calls+=1
+    if calls==1:raise PermissionError('fixture first inspection')
+    return actual_identity(pid)
+   with patch('nativepeers.adapters.codex_app_server.identity',side_effect=inspect):
+    with pytest.raises(PeerError) as error:await asyncio.wait_for(server.start(),2)
+   assert error.value.code in ('OWNERSHIP_UNKNOWN','CLEANUP_UNCERTAIN')
+   assert server.process.returncode==0 and received.read_text()==''
+   assert server.reader.done() and server.error_reader.done()
+   assert server.stdout_eof and server.stderr_eof

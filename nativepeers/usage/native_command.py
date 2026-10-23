@@ -65,8 +65,9 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
         if not terminal:
             for stream in (process.stdout,process.stderr):os.set_blocking(stream.fileno(),False)
         owner=None;owned={};total=0;output=[bytearray(),bytearray()];eof=[False,False]
+        inspection_failure=None
         try:owner=identity(process.pid).json()
-        except ProcessLookupError:pass
+        except OSError as error:inspection_failure=error
 
         async def drain(stream,index,capture=True):
             nonlocal total
@@ -136,6 +137,7 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
         readers=[asyncio.create_task(drain_terminal())] if terminal else [asyncio.create_task(drain(process.stdout,0)),asyncio.create_task(drain(process.stderr,1))]
         failure=None
         try:
+            if inspection_failure:raise PeerError('OWNERSHIP_UNKNOWN','Created usage process identity inspection failed',details={'pid':process.pid,'controller_created':True})
             async with asyncio.timeout(max(.1,timeout-2)):
                 while process.poll() is None:
                     if ready.is_set() and asyncio.get_running_loop().time()-last_output>=.25:break
@@ -151,10 +153,10 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
             # Never signal a dead/reused leader's group. Captured descendants
             # retain their own PID/start/executable identities after reparenting.
             for sig,grace in ((signal.SIGTERM,.5),(signal.SIGKILL,.5)):
-                if owner and process.poll() is None:
-                    with contextlib.suppress(ProcessLookupError):
+                if process.poll() is None:
+                    with contextlib.suppress(OSError):
                         current=identity(process.pid).json()
-                        if all(current[k]==owner[k] for k in ('pid','start','uid')):owner=current
+                        if owner and all(current[k]==owner[k] for k in ('pid','start','uid')) or not owner and current['ppid']==os.getpid():owner=current
                 if owner and process.poll() is None:
                     with contextlib.suppress(ProcessLookupError):signal_captured(owner,sig)
                 for record in reversed(list(owned.values())):
@@ -169,10 +171,9 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
             _,pending=await asyncio.wait(readers,timeout=.3)
             for reader in pending:reader.cancel()
             await asyncio.gather(*readers,return_exceptions=True)
-            if process.poll() is not None:
-                for stream in (process.stdout,process.stderr):
-                    if stream:stream.close()
-            uncertain=process.poll() is None or not all(eof) or bool(pending) or any(owned_status(r)!='DEAD' for r in owned.values())
+            for stream in (process.stdout,process.stderr):
+                if stream:stream.close()
+            uncertain=owner is None or process.poll() is None or not all(eof) or bool(pending) or any(owned_status(r)!='DEAD' for r in owned.values())
             if master is not None:os.close(master)
             if capture_directory is not None:
                 from ..files import private_directory
@@ -180,7 +181,8 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                 for filename,data in [('native-screen.txt',screen.text().encode() if screen else bytes(output[0])),('native-stderr.txt',bytes(output[1]))]:
                     path=capture/filename;path.write_bytes(data);path.chmod(0o600)
         if isinstance(failure,asyncio.CancelledError):raise failure
-        require(not uncertain,'CLEANUP_UNCERTAIN','Native usage command did not prove owned process/output cleanup')
+        require(not uncertain,'CLEANUP_UNCERTAIN','Native usage command did not prove owned process/output cleanup',
+            details={'pid':process.pid,'owner':owner,'captured_descendants':list(owned.values()),'output_eof':eof,'provider_exited':process.poll() is not None})
         if isinstance(failure,TimeoutError):raise PeerError('SOURCE_TIMEOUT','Native usage read exceeded its bounded deadline',
             details={'submitted_commands':commands,'cleanup':'CLOSED'})
         if failure:raise failure
