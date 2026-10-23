@@ -219,10 +219,8 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
             atomic_json(manifest_path,manifest)
         compatibility_updated=False
         if not remove:
-            receipt_path=journal.root/'compat/runtime.json'
-            receipt=json.loads(receipt_path.read_text()) if receipt_path.exists() else {'schema_version':1,'providers':{}}
-            if actual is not None and 'antigravity' not in receipt['providers']:
+            if actual is not None:
                 from .compatibility import update_verified
-                update_verified(journal,{'antigravity':actual});compatibility_updated=True
+                compatibility_updated=bool(update_verified(journal,{'antigravity':actual},initialize=True))
         return dict(plan,installed=not remove,changed=bool(operations) or recovered or compatibility_updated,
                     compatibility_updated=compatibility_updated,manifest=str(manifest_path))

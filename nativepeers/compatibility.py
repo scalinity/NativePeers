@@ -36,13 +36,16 @@ def verify(journal,provider,executable,*,worker_id=None):
     return actual
 
 
-def update_verified(journal,replacements):
+def update_verified(journal,replacements,*,initialize=False):
     """Retire only explicit approvals, scoped to leases already verified with them."""
     receipt=journal.root/'compat/runtime.json'
     with advisory_lock(journal.root/'locks/runtime.lock'):
         document=json.loads(receipt.read_text()) if receipt.exists() else {'schema_version':1,'providers':{}}
+        changed=[]
         for provider,actual in replacements.items():
             old=document['providers'].get(provider)
+            if initialize and old is not None:continue
+            changed.append(provider)
             if old and old['sha256']!=actual['sha256']:
                 workers=[]
                 for row in journal.all('SELECT worker_id,lease_json FROM workers WHERE provider=?',(provider,)):
@@ -53,7 +56,8 @@ def update_verified(journal,replacements):
                 history[old['sha256']]={'fingerprint':old,'workers':sorted(set(workers+prior.get('workers',[]))),
                                        'revoked':prior.get('revoked',False)}
             document['providers'][provider]=actual
-        atomic_json(receipt,document)
+        if changed:atomic_json(receipt,document)
+        return changed
 
 
 def revoke(journal,provider,digest):
@@ -80,7 +84,7 @@ def record_verified(journal,source,*,preserve_existing=False,selected=None):
         actual=fingerprint((selected or {}).get(provider,info['executable']))
         require(info.get('executable_sha256')==actual['sha256'],'CAPABILITY_MISMATCH','Current binary differs from the executable integration evidence')
         providers[provider]=dict(actual,version=info['version'])
-    if providers:update_verified(journal,providers)
+    if providers:update_verified(journal,providers,initialize=preserve_existing)
 
 
 def diagnose(journal, executables=None):
