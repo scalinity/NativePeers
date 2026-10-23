@@ -130,11 +130,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
-    "evidence": "evidence/worker-visibility.json",
-    "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
-    "status": "Worker-only managed runtime active; native and separate bundled Desktop reader visibility verified; exact released-history archival complete; direct Desktop UI observation blocked"
+    "branch": "fix/review-1211303",
+    "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+    "evidence": "evidence/review-1211303.json",
+    "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
+    "status": "Both product defects and the cleanup fixture corrected; complete offline suite passed; native acceptance remains operation-specific"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -147,10 +147,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
-    "branch": "main",
-    "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
-    "last_verified_publication": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
+    "base_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
+    "branch": "fix/review-1211303",
+    "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+    "last_verified_publication": "701d8209a86dc0b7faae09aa93661343aced8d03",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,324 +210,52 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/review-1211303",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
-    "verified_remote_code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
+    "verified_remote_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+    "verified_remote_code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "WORKER_VISIBILITY_NATIVE_VERIFIED_DESKTOP_BLOCKED",
+  "stage": "REVIEW_1211303_CORRECTIONS_VERIFIED",
   "tests_current": {
-    "baseline_offline": {
+    "git_focused": {
       "status": "PASS",
-      "command": "uv sync --frozen --extra test; .venv/bin/python -m pytest -q tests/unit tests/contract",
-      "tests": 520,
-      "subtests": 588,
-      "seconds": 406.39,
-      "python": "3.14.8"
+      "tests": 55,
+      "subtests": 38,
+      "seconds": 74.29
+    },
+    "layout_focused": {
+      "status": "PASS",
+      "tests": 89,
+      "subtests": 39,
+      "seconds": 4.9
+    },
+    "cleanup_focused": {
+      "status": "PASS",
+      "tests": 5,
+      "subtests": 4,
+      "seconds": 1.5
     },
     "offline": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
-      "tests": 568,
-      "subtests": 619,
-      "seconds": 236.08,
-      "python": "3.14.8",
-      "locked_distributions": 36,
-      "source_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
-      "scope": "Coordinator final full suite on integrated worker visibility plus independently authored concurrent review corrections; no skips",
-      "log_sha256": "3c14b4e4cc937a6898de25aff2cdecd18a982e191a95b177a8c3e4cf0ba97203"
-    },
-    "focused_integration": {
-      "status": "PASS",
-      "tests": 44,
-      "subtests": 22,
-      "seconds": 1.84,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_history_cleanup.py tests/unit/test_worker_visibility.py tests/unit/test_routing.py"
-    },
-    "manager_candidate": {
-      "status": "PASS",
-      "identity": "rust-v0.164.0-0614fb827ab5",
-      "binary_sha256": "3efe3b03f4846704ae49f404500c1ca7bd22d40f13358bca43e392416c80e08c",
-      "source_version": "rust-v0.164.0",
-      "rust": "1.99.1",
-      "target": "aarch64-apple-darwin",
-      "mcp_tui": {
-        "passed": 153,
-        "seconds": 3.71
-      },
-      "disconnect": {
-        "passed": 15,
-        "seconds": 0.63
-      },
-      "release_status_only": {
-        "passed": 1,
-        "seconds": 2.65
-      },
-      "app_server_protocol": {
-        "passed": 318,
-        "ignored": 1,
-        "seconds": 4.52
-      },
-      "package_smoke": "PASS: IPC, V8, dynamic MCP, plugin/skill/policy controls, compaction-budget persistence, exact resume and PTY80/60/40",
-      "activation": "PASS",
-      "remaining": null,
-      "installed_package": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.164.0-0614fb827ab5-1792748492017830000",
-      "preserved_predecessor": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.164.0-c252c635a74b-1792742231316910000",
-      "source_patch_sha256": "3139ec07ed6380cef0bec6bf3fc6e94d3f585bf14421bed0ffd6fc453a6d7d46",
-      "packaged_files": 42,
-      "source_proof_files": 9454,
-      "build": "Rust1.99.1 standard release product; final upstream-supported prebuilt assembly reuses exact tested production bytes, exhaustive comparison differs only in two cfg(test) fixture files",
-      "python": "3.15.0",
-      "startup_defaults": {
-        "passed": 7,
-        "seconds": 5.22
-      },
-      "retained_client_shutdown": {
-        "passed": 1,
-        "seconds": 0.11
-      }
-    },
-    "native_archival": {
-      "status": "PASS",
-      "archived": 11,
-      "already_archived_on_retry": 11,
+      "tests": 606,
+      "subtests": 620,
       "failed": 0,
-      "skipped": 77,
-      "histories_deleted": false,
-      "active_conversations_stopped": false,
-      "scope": "58 main-journal workers plus23 fixture workers and7 exact synthetic-parent records; no private identities published"
-    },
-    "desktop_ui": {
-      "status": "BLOCKED",
-      "reason": "Computer-use tool refuses com.openai.codex"
-    },
-    "native_model_inference": {
-      "status": "NOT_RUN",
-      "scope": "No paid native model input submitted solely for acceptance"
-    },
-    "initial_integrated": {
-      "status": "FAIL",
-      "passed": 547,
-      "failed": 1,
-      "subtests_passed": 604,
-      "seconds": 315.73,
-      "failure": "Legacy cancellation result lacked a history_visibility receipt; corrected in6eaff4a with existing regression assertions"
-    },
-    "legacy_cancellation_fix": {
-      "status": "PASS",
-      "tests": 32,
-      "subtests": 34,
-      "seconds": 3.27,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_cancellation.py tests/unit/test_worker_visibility.py tests/unit/test_worker_models.py"
-    },
-    "busy_host_integrated": {
-      "status": "FAIL",
-      "passed": 542,
-      "failed": 6,
-      "subtests_passed": 600,
-      "seconds": 424.88,
-      "scope": "Four5-second MCP initialization timeouts, one5-second fake-provider followup deadline, one150ms overlap assertion during concurrent Rust compilation; no source or timeout changes made"
-    },
-    "busy_host_failure_retry": {
-      "status": "PASS",
-      "tests": 6,
-      "subtests": 4,
-      "seconds": 9.87,
-      "scope": "Exact six failed nodes rerun unchanged; does not replace failed full-suite result"
-    },
-    "guarded_runtime_restore": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_antigravity.py",
-      "tests": 24,
-      "subtests": 27,
-      "seconds": 1.04,
-      "scope": "Final02cf37a optional guarded approval restoration; full548test suite predates this guarded-only API extension"
-    },
-    "activation_failure_fixtures": {
-      "status": "PASS",
-      "tests": 10,
-      "seconds": 1.336,
-      "scope": "Coordinator rerun of isolated temporary manager/state: source drift, real Git context, newer approval, partial activation, exact failure restoration"
-    },
-    "runtime_rollback_fixtures": {
-      "status": "PASS",
-      "tests": 10,
-      "seconds": 0.743,
-      "scope": "Coordinator rerun of isolated manager/NativePeers state, exact revoke and newer-qualification races; no production rollback executed"
-    },
-    "final_source_focused": {
-      "status": "PASS",
-      "tests": 40,
-      "subtests": 14,
-      "seconds": 2.3,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_history_cleanup.py tests/unit/test_worker_visibility.py tests/unit/test_cancellation.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py",
-      "source_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
-      "scope": "Final integrated source includes independently committed neighboring review corrections; no duplicate usage implementation"
-    },
-    "activation_and_rollback_current_source": {
-      "status": "PASS",
-      "tests": 20,
-      "seconds": 0.367,
-      "command": "/opt/homebrew/bin/python3 -m unittest -q test_activate test_rollback",
-      "scope": "Temporary-state activation and rollback fixtures against current NativePeers guarded approval API; no production rollback"
-    },
-    "native_visibility_matrix": {
-      "status": "PASS",
-      "scope": "Candidate3cd source/native metadata and actual installed Desktop bundled0.163.0-alpha.11 reader using observed recents request parameters; not visual Desktop UI",
-      "checks": [
-        "creation source",
-        "durable named empty",
-        "normal NP title visible",
-        "loaded worker excluded",
-        "rename source retained",
-        "exact read",
-        "ordinary server exact resume retains source",
-        "archive/unarchive/exact resume",
-        "held local turn excluded",
-        "completed local turn excluded",
-        "bundled Desktop reader during local turn"
-      ],
-      "external_model_inputs": 0,
-      "metadata_model_inputs": 0,
-      "running_fixture_logical_local_inputs": 1,
-      "running_fixture_actual_local_requests": 2,
-      "desktop_ui_observation": "NOT_RUN",
-      "final_package_identity": "rust-v0.164.0-0614fb827ab5",
-      "runtime_sha256": "3efe3b03f4846704ae49f404500c1ca7bd22d40f13358bca43e392416c80e08c"
-    },
-    "startup_fixture_before_correction": {
-      "status": "FAIL",
-      "grouped": {
-        "passed": 6,
-        "failed": 1,
-        "seconds": 19.5
-      },
-      "isolated_case": "FAIL:15-second proxy join; exact unchanged retry also passed once and did not establish correction",
-      "trace": "Both native thread/start and skills/list returned promptly; second proxy did not observe remote connection close after canceled App::run",
-      "scope": "Owned recording proxy fixture; no production input behavior, timeout, snapshot or assertion change"
-    },
-    "startup_fixture_correction": {
-      "status": "PASS",
-      "retained_client_regression": {
-        "passed": 1,
-        "seconds": 0.11
-      },
-      "startup_defaults": {
-        "passed": 7,
-        "seconds": 5.22
-      },
-      "scope": "Explicit fixture-owned stop selected between complete requests, original15-second native shutdown join retained; future manager builds run deterministic regression"
-    },
-    "installed_manager_and_naming": {
-      "status": "PASS",
-      "command": "/opt/homebrew/bin/python3 -m unittest -q test_manager.py test_name_session.py",
-      "tests": 29,
-      "seconds": 1.445
-    },
-    "installed_native_compatibility": {
-      "status": "PASS",
-      "runtime_sha256": "3efe3b03f4846704ae49f404500c1ca7bd22d40f13358bca43e392416c80e08c",
-      "checks": {
-        "private_app_server": "PASS",
-        "optional_usage_notification": "PASS",
-        "native_hook_inventory": "PASS",
-        "native_session_start_registration": "PASS",
-        "native_queue_ingestion": "PASS",
-        "owned_tui_ended": true,
-        "manual_native_resume_source": "PASS",
-        "manual_native_resume_no_new_model_input": "PASS",
-        "zero_input_resume_registration": "DEFERRED_UNTIL_FIRST_TURN",
-        "owned_quiet_resume_tui_ended": true,
-        "manual_native_resume_registration": "PASS",
-        "manual_native_resume_registration_trigger": "FIRST_LOCAL_FIXTURE_TURN",
-        "registered_resume_local_model_requests": 1,
-        "owned_resume_tui_ended": true,
-        "external_model_inputs": 0,
-        "local_model_requests": 4
-      },
-      "scope": "Isolated native home/localhost model; quiet resume submits no input; native registration separately checked after first explicit local fixture turn",
-      "harness_sha256": "9cd13b9fd99996e0e5cac8e7b9d75eacd3b883dd1a2ed1d8cf25e1d4caa0b14b"
-    },
-    "activation_attempt_01": {
-      "status": "RESTORED_AFTER_FAILURE",
-      "scope": "Harness incorrectly required a deferred native SessionStart registration during zero-input resume. Previous package/source/approval restored; split verification phases then passed unchanged runtime. No paid inference."
-    },
-    "final_integrated_offline": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
-      "tests": 568,
-      "subtests": 619,
-      "seconds": 236.08,
+      "skipped": 0,
+      "seconds": 300.36,
+      "command": ".venv/bin/python -m pytest -q",
       "python": "3.14.8",
-      "locked_distributions": 36,
-      "source_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
-      "scope": "Coordinator final full suite on integrated worker visibility plus independently authored concurrent review corrections; no skips",
-      "log_sha256": "3c14b4e4cc937a6898de25aff2cdecd18a982e191a95b177a8c3e4cf0ba97203"
+      "platform": "macOS",
+      "outer_deadline_seconds": 900
     },
-    "offline_before_concurrent_review": {
+    "full_run_completion": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit tests/contract",
-      "tests": 548,
-      "subtests": 604,
-      "seconds": 233.94,
-      "python": "3.14.8",
-      "scope": "548test full suite at6eaff4a; final02cf37a guard covered by focused compatibility/Antigravity checks"
-    },
-    "post_activation_codex_quota": {
-      "status": "PASS",
-      "command": ".venv/bin/python tests/probes/usage_source_verify.py collect --provider codex --deadline-ms 15000 --json",
-      "runtime_sha256": "3efe3b03f4846704ae49f404500c1ca7bd22d40f13358bca43e392416c80e08c",
-      "outcome": "FRESH",
-      "freshness_basis": "native-quota-rpc",
-      "model_inputs": 0,
-      "scope": "Single Codex-only existing native collector; no approval/configuration update, paid input, account change or usage feature redesign; private account metadata omitted"
-    },
-    "guarded_rollback_preflight": {
-      "status": "PASS",
-      "command": "/opt/homebrew/bin/python3 artifacts/worker-visibility/rollback.py --check",
-      "scope": "Exact active0614 and saved qualified predecessor0.164c252; no production rollback executed"
-    },
-    "post_activation_history_preservation": {
-      "status": "PASS",
-      "selected_histories": 11,
-      "all_native_ids_present": true,
-      "all_archived": true,
-      "all_history_files_exist": true,
-      "genuine_parent_source": "cli",
-      "genuine_parent_archived": false,
-      "scope": "Read-only exact-ID native metadata and selected file existence/stat only"
-    },
-    "publication_checkpoint_before_concurrent_update": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
-      "tests": 3,
-      "seconds": 0.08,
-      "scope": "Generated current source/checkpoint/fingerprints and operation index after final integrated result publication"
-    },
-    "concurrent_source_publication_guard": {
-      "status": "CORRECTED",
-      "scope": "Remote/source guard rejected stalec1bcb09 publication after independent workspace-retirement commits8431361/c1f1b1f; three stale metadata checks failed before regeneration. Runtime results retain their executed commit; no unrelated source changes reverted."
-    },
-    "final_concurrent_boundaries": {
-      "status": "PASS",
-      "tests": 97,
-      "subtests": 20,
-      "seconds": 81.23,
-      "source_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_workspace_retirement.py tests/unit/test_lifecycle_recovery.py tests/unit/test_worker_visibility.py tests/unit/test_history_cleanup.py tests/unit/test_cancellation.py tests/unit/test_cleanup.py tests/contract/test_worker_lease_cleanup.py tests/unit/test_change_preview.py",
-      "scope": "Affected source boundaries after independently authored workspace-retirement changes landed during final publication; no duplicated feature implementation"
-    },
-    "publication_checkpoint": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
-      "tests": 3,
-      "seconds": 0.07,
-      "source_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
-      "scope": "Regenerated current source/checkpoint/fingerprints and operation index after concurrent workspace changes"
+      "exit_code": 0,
+      "elapsed_seconds": 300.746278708044,
+      "timeout": false
     }
   },
   "transports": {
@@ -536,7 +264,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T05:59:38.220696-04:00",
+  "updated_at": "2026-10-23T06:07:26.021257-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -809,6 +537,33 @@
       "current_review": {
         "branch": "main",
         "code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+        "evidence": "evidence/worker-visibility.json",
+        "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
+        "status": "Worker-only managed runtime active; native and separate bundled Desktop reader visibility verified; exact released-history archival complete; direct Desktop UI observation blocked"
+      }
+    },
+    {
+      "stage": "WORKER_VISIBILITY_NATIVE_VERIFIED_DESKTOP_BLOCKED",
+      "updated_at": "2026-10-23T05:59:38.220696-04:00",
+      "git": {
+        "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
+        "branch": "main",
+        "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
+        "last_verified_publication": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
+        "verified_remote_code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
         "evidence": "evidence/worker-visibility.json",
         "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
         "status": "Worker-only managed runtime active; native and separate bundled Desktop reader visibility verified; exact released-history archival complete; direct Desktop UI observation blocked"

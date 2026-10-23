@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-23T05:59:38.220696-04:00",
+  "at": "2026-10-23T06:07:26.021257-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,8 +60,8 @@
     "schemas/usage.v1.json": "64d3ea88da52474f4296152b8612b9c00861c4cb4c111336f60dfb17c20e0839",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
-  "current_verification": "evidence/worker-visibility.json",
+  "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+  "current_verification": "evidence/review-1211303.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
     "acceptance": "evidence/acceptance.json extensions.models_antigravity_implementation",
@@ -141,7 +141,7 @@
     "nativepeers/artifacts.py": "e44d0a323f082d5b108b1269906f7d59f2e726042fb616f64b3693e78fc51cb5",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
     "nativepeers/caller.py": "0a0d5af0c28627db2cc06fe6c972fd2f40d229db03b1ec0e3021c52d896b2da0",
-    "nativepeers/change_preview.py": "83d045df1186c85392828d8db121abcb4610187decb98c9283a1fb7ad27dae5e",
+    "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
     "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
     "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
     "nativepeers/cli.py": "4834827b83a6df5d68ec02c9de60645a649883c8c7b1c591bf89397a24d37b39",
@@ -188,7 +188,7 @@
     "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
     "nativepeers/usage/native_command.py": "be4e1549ae2304c3eecd0607f7b882d6bc2f04f9dca48fb528dd821c8b037bfd",
     "nativepeers/usage/normalize.py": "08283b5e80011d832e7112beceba169eed94a25313ccf79013dc1883212e959b",
-    "nativepeers/usage/service.py": "1cb1a73204c919f0b2b48561d97b329601cf2770bd726d8b3d0f5d0f39d776f7",
+    "nativepeers/usage/service.py": "5239ba426dcb7e6b795f6f79d5e8c8c23913b218e36c609f7ad0c9b94820b066",
     "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
     "nativepeers/usage/store.py": "41f86cc51ef1f9141719a8ad9c6f515ff264c63cac2a4c8e84bfd5c6d93a17a0",
     "nativepeers/worker_process.py": "9b8ce6169bc957a7f0ab46c3182520251eede27a1d1fce1c46970328b862cac0",

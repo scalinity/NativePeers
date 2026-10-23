@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
-  "reviewed_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
-  "publication_branch": "main",
-  "updated_at": "2026-10-23T05:59:38.220696-04:00",
-  "current_record": "evidence/worker-visibility.json",
+  "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+  "reviewed_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
+  "publication_branch": "fix/review-1211303",
+  "updated_at": "2026-10-23T06:07:26.021257-04:00",
+  "current_record": "evidence/review-1211303.json",
   "file_classes": {
     "product": {
       "files": {
@@ -19,7 +19,7 @@
         "nativepeers/artifacts.py": "e44d0a323f082d5b108b1269906f7d59f2e726042fb616f64b3693e78fc51cb5",
         "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
         "nativepeers/caller.py": "0a0d5af0c28627db2cc06fe6c972fd2f40d229db03b1ec0e3021c52d896b2da0",
-        "nativepeers/change_preview.py": "83d045df1186c85392828d8db121abcb4610187decb98c9283a1fb7ad27dae5e",
+        "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
         "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
         "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
         "nativepeers/cli.py": "4834827b83a6df5d68ec02c9de60645a649883c8c7b1c591bf89397a24d37b39",
@@ -66,7 +66,7 @@
         "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
         "nativepeers/usage/native_command.py": "be4e1549ae2304c3eecd0607f7b882d6bc2f04f9dca48fb528dd821c8b037bfd",
         "nativepeers/usage/normalize.py": "08283b5e80011d832e7112beceba169eed94a25313ccf79013dc1883212e959b",
-        "nativepeers/usage/service.py": "1cb1a73204c919f0b2b48561d97b329601cf2770bd726d8b3d0f5d0f39d776f7",
+        "nativepeers/usage/service.py": "5239ba426dcb7e6b795f6f79d5e8c8c23913b218e36c609f7ad0c9b94820b066",
         "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
         "nativepeers/usage/store.py": "41f86cc51ef1f9141719a8ad9c6f515ff264c63cac2a4c8e84bfd5c6d93a17a0",
         "nativepeers/worker_process.py": "9b8ce6169bc957a7f0ab46c3182520251eede27a1d1fce1c46970328b862cac0",
@@ -86,7 +86,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 76,
-      "sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0"
+      "sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899"
     },
     "launchers": {
       "files": {
@@ -157,7 +157,7 @@
         "tests/probes/usage_source_verify.py": "28dfc5557e1c96f6ef57bc443eed3be993f03ffec89dc112cdacd0c76217f0a6",
         "tests/probes/usage_statusline.py": "1a0615477c487d587eb60779ed26bae17b6a1193d058a9bda57835d1d22e1272",
         "tests/unit/test_antigravity.py": "e21a2904b30ddcd018c884ea6be0bd29f96f95813969ca4903d0d789e016f95d",
-        "tests/unit/test_app_server_cleanup.py": "864ff283b19e124cfc65ef7b321efeaaa62bde37a399e8f45fabaf6239d0d2ff",
+        "tests/unit/test_app_server_cleanup.py": "37222e019d6bd39caa84f3fcca86668d27de09df0f65adf0372380e88b6a728d",
         "tests/unit/test_artifact_export.py": "42c2fa5f04259775526fc1c4361196f54386f45c878d6da44355b4d12ef4ce43",
         "tests/unit/test_artifacts_and_authority.py": "5465da5fafca65ca3685b13087bd523ce46399f2bde93bd5fe604ad42cbb1fed",
         "tests/unit/test_budget.py": "3c34925d914c003748e934f0ee33103f1843e5e36a7ff6a8ef112eb00600967c",
@@ -171,6 +171,7 @@
         "tests/unit/test_delivery_envelopes.py": "5956afa44b8389943d4ee736e58e200462e742cb1e1a941584c7bf059fe3ac56",
         "tests/unit/test_evidence_checkpoint.py": "87c2b76831b606f85182f169cb60a7876025d215fd0b1c84dbc06ee37ad866e2",
         "tests/unit/test_gemini_shell.py": "cbfbff7e3f1882dfef7062ec2d82b6175aab392b009f9a93d0e05932a3c605a4",
+        "tests/unit/test_git_configuration.py": "a6cce905eb55164a4b68b61ec211e53798734c1a18e9b77b2073c3b61c57b156",
         "tests/unit/test_git_routing.py": "af431bcc5f52e036e394fc9aaf5d5b7152ccb1f347aa09e837921e192019f218",
         "tests/unit/test_group_discovery.py": "fd2cf97503f7db9d7692a9febdcc5e594eab3e6240b205b7ab607f700e35b417",
         "tests/unit/test_history_cleanup.py": "755ae913316ebb36c10b7d801b06abbd9b43125b0be43608cfea93e31c36c87d",
@@ -200,6 +201,7 @@
         "tests/unit/test_runtime_initialization.py": "5d80859721558b9e9a5a81fc91bbd3e019c3d68689d4b88889d7ca9500412e7a",
         "tests/unit/test_spawn_check.py": "ba7332618fc6e2ed5a9f05d0f7cdd3a5fb68a49957ffbdfc9724a757244c455e",
         "tests/unit/test_usage.py": "a71c89de019e4c8fd603c3de78de2bde36660c8619523370e2378c10c0618b7d",
+        "tests/unit/test_usage_batch_layout.py": "c27d5138d25ceb4bcf5f0083c08abfc2330dcc64a27d3813ceea074ed453cd61",
         "tests/unit/test_usage_forecasts.py": "2d1f68aa68cb70854ecc3d462594536cc5583381077cc38bf0823eebdcd5401a",
         "tests/unit/test_usage_import.py": "e3005b9f10a85f3c38f537ec26556b727e50c1f838b11c1862daa12dd6a2c4ef",
         "tests/unit/test_usage_native_contracts.py": "e3a39d48bb18a117c178b28e66ac6789d7d97bde10744a0cebb172c4416b0de3",
@@ -215,41 +217,30 @@
         "tests/unit/test_worktrees_and_contracts.py": "33f40047f20a47c59ac9aa918e7ef1faabf2f36431721f49d23c3f9371918f22",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 105,
-      "sha256": "1f2aa2eb4d3d064b70d160741e38b1944df0402810615ebf3ff390065fa70ba5"
+      "file_count": 107,
+      "sha256": "4eb87b7223c55166d3a67caf00afcffb406eedeee32435a54421dd56541a802c"
     }
   },
   "operation_checks": [
     {
-      "operation": "worker source/capability/lifecycle fake-provider contracts",
-      "parent_context": "isolated offline controllers and temporary homes",
-      "status": "PASS"
+      "operation": "authenticated quota retrieval",
+      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "status": "NOT_RUN"
     },
     {
-      "operation": "native history archive and idempotent exact retry",
-      "parent_context": "released journal-owned histories only",
-      "provider": "codex",
-      "runtime_sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
-      "status": "PASS"
+      "operation": "native CLI/MCP and worker inference/cancel/resume matrix",
+      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "status": "NOT_RUN"
     },
     {
-      "operation": "classified native worker metadata matrix",
-      "parent_context": "isolated candidate home",
-      "status": "PASS",
-      "scope": "Exact3efe production binary shared by final0614 package and separately installed Desktop bundled reader; actual UI blocked",
-      "runtime_sha256": "3efe3b03f4846704ae49f404500c1ca7bd22d40f13358bca43e392416c80e08c"
+      "operation": "Desktop worker visibility and native archive/resume",
+      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "status": "NOT_RUN"
     },
     {
-      "operation": "Desktop sidebar observation",
-      "parent_context": "ChatGPT26.1016.51333 build21161",
-      "status": "BLOCKED"
-    },
-    {
-      "operation": "installed app-server, hooks, native queue and exact manual resume",
-      "provider": "codex",
-      "runtime_sha256": "3efe3b03f4846704ae49f404500c1ca7bd22d40f13358bca43e392416c80e08c",
-      "status": "PASS",
-      "parent_context": "Isolated local fixture only; quiet resume versus first-turn registration separately verified"
+      "operation": "external CodexMCP manager/naming fixtures",
+      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "status": "NOT_RUN"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

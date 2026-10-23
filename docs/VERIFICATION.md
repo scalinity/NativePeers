@@ -1,4 +1,14 @@
-# Current review 2885497 verification
+# Current review 1211303 verification
+
+The complete corrected development source passed **606 tests and 620 subtests**, with zero failures or skips, in **300.36 seconds** using `.venv/bin/python -m pytest -q` on macOS/Python 3.14.8. All 36 installed dependency versions matched the lock. [Corrections and scope](REVIEW_1211303.md) · [Verification record](../evidence/review-1211303.json).
+
+The run includes both product corrections, explicit captured/uncaptured inherited-pipe fixture schedules, and the merged worker-visibility/workspace-retirement baseline. The frozen independent review's 567-pass/one-failure/619-subtest result remains separate. Current native provider, authenticated quota, Desktop/archive/resume and external manager operations are NOT_RUN for this correction session; no model input, host configuration change or runtime approval transition occurred. Existing records retain their original operation/runtime/parent scope.
+
+Generated current pointers preserve the preceding worker-visibility publication as history. The installed command uses the project main checkout after integration; source corrections require no integration reinstall. Historical sections below retain the state and publication ownership of their own runs.
+
+---
+
+# Historical review 2885497 verification
 
 The complete corrected source passed **568 tests and 619 subtests**, with no skips, in **365.63 seconds**, using `.venv/bin/python -m pytest -q` on Python 3.14.8/macOS. All 36 installed dependency distributions matched the lock. [Corrections and scope](REVIEW_2885497.md) · [Verification record](../evidence/review-2885497.json).
 
@@ -10,7 +20,7 @@ The review branch carries this record and its synchronized generated pointers. T
 
 ---
 
-# Current verification
+# Historical review 2551947 verification
 
 Review 2551947 corrections cover all 11 confirmed findings, the eight investigated boundaries and six suggestions. See [the correction ledger](REVIEW_2551947.md), [machine-readable current record](../evidence/review-2551947.json) and [operation-scoped index](../evidence/current-index.json). The final offline suite passes **520 tests / 588 subtests** in **210.38 seconds**, with no skips; external manager/naming fixtures pass **23 tests / 22 subtests**. Exact source/runtime fingerprints live in that generated record.
 
