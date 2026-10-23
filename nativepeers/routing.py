@@ -197,8 +197,8 @@ class Router:
         peer=self.registry.get(caller.key)
         if peer['owner_kind']!='interactive-standalone':return message
         receipt=self.outcome(message['message_id'])
-        known=receipt['state'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED','REPLY_SUBMITTED') or any(
-            r['stage'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED') for r in receipt['receipts'])
+        # Acknowledgment/reply correlation is a model claim, not native admission.
+        known=receipt['state']=='INGESTED' or any(r['stage']=='INGESTED' for r in receipt['receipts'])
         return message if known else {'message_id':message['message_id'],'delivery_state':receipt['state'],
             'body_available':False,'reason':'Native admission or inbound policy has not established ingestion.'}
 
