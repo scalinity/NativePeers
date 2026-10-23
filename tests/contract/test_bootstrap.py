@@ -53,7 +53,8 @@ class BootstrapTests(unittest.IsolatedAsyncioTestCase):
             atomic_json(binding,{'state':'RESERVED_UNBOUND','worker_id':'reserved','owner':identity(os.getpid()).json()})
             parameters=StdioServerParameters(command=sys.executable,args=['-m','nativepeers.mcp_server','--binding',str(binding)],cwd=ROOT,env={'NPEER_HOME':directory,'PYTHONPATH':str(ROOT)})
             async with stdio_client(parameters) as (reader,writer):
-                async with ClientSession(reader,writer,read_timeout_seconds=3) as session:
+                # This exercises grants and handshake, not a three-second startup SLA.
+                async with ClientSession(reader,writer,read_timeout_seconds=15) as session:
                     await session.initialize()
                     tools=await session.list_tools();self.assertEqual([t.name for t in tools.tools],['task_status'])
                     result=await session.call_tool('peer_send',{'target':'anything','text':'no','client_request_id':'x'})

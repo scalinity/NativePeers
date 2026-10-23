@@ -100,9 +100,11 @@ int main(int argc, char **argv) {
             if compiler is None:self.skipTest('A C compiler is required for the native owner fixture')
             subprocess.run([compiler,'-DPYTHON='+json.dumps(sys.executable),'-DSCRIPT='+json.dumps(str(binary)),
                 str(source),'-o',str(native_binary)],check=True,capture_output=True,timeout=30)
-            spec={'provider':'antigravity','model':'gemini-fixture-high','title':'fixture','cwd':str(cwd),'permission_profile':'analysis','max_task_turns':2,'wall_time_seconds':5}
+            # Ordinary stream/MCP startup has a bounded completion allowance;
+            # deadline behavior is exercised separately, without cold-start timing assumptions.
+            spec={'provider':'antigravity','model':'gemini-fixture-high','title':'fixture','cwd':str(cwd),'permission_profile':'analysis','max_task_turns':2,'wall_time_seconds':30}
             if scenario=='display-model':spec['model_display_name']='Gemini Fixture High'
-            lease={'spec':spec,'parent_key':'parent','binding':str(j.root/'bindings'/new_id()),'grants':{'group_id':group,'worker_id':worker},'expires_at':time.time()+60,'executable':str(native_binary)}
+            lease={'spec':spec,'parent_key':'parent','binding':str(j.root/'bindings'/new_id()),'grants':{'group_id':group,'worker_id':worker},'expires_at':time.time()+120,'executable':str(native_binary)}
             j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RESERVED','{}'))
             j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker,group,None,'antigravity',None,'fixture',spec['model'],None,None,str(cwd),None,'RESERVED',1,canonical(lease).decode()))
             for task in ([first] if resume else [first,second]):
