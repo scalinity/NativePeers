@@ -30,9 +30,23 @@ def provider_home(provider):
     return Path(os.environ.get(variable,Path.home()/default)).expanduser().resolve()
 
 
-def home_environment(provider,home):
+def home_environment(provider,home,*,explicit=None):
     variable={'codex':'CODEX_HOME','claude':'CLAUDE_CONFIG_DIR'}.get(provider)
+    if provider=='claude':
+        from pathlib import Path
+        if explicit is None:
+            explicit='CLAUDE_CONFIG_DIR' in os.environ or Path(home).resolve()!=(Path.home()/'.claude').resolve()
+        if not explicit:return {}
     return {variable:str(home)} if variable else {}
+
+
+def apply_home(provider,home,environment,*,explicit=None):
+    """Replace ambient selection while preserving Claude's implicit config layout."""
+    environment=dict(environment)
+    variable={'claude':'CLAUDE_CONFIG_DIR','codex':'CODEX_HOME'}.get(provider)
+    if variable:environment.pop(variable,None)
+    environment.update(home_environment(provider,home,explicit=explicit))
+    return environment
 
 
 def recorded_home(journal,row):

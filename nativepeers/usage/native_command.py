@@ -31,12 +31,8 @@ def guarded_argv(binary,arguments):
 async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=1048576,terminal=False,capture_directory=None,cwd_parent=None):
     """Only adapters supply arguments. This is not an exposed arbitrary command tool."""
     try:
-        environment=launch_environment(provider)
-        # An absent Claude override uses ~/.claude.json; explicitly setting
-        # CLAUDE_CONFIG_DIR=~/.claude selects a different startup config file.
-        # Preserve the normal default layout, and preserve deliberate overrides.
-        if not (provider=='claude' and 'CLAUDE_CONFIG_DIR' not in environment and Path(home).resolve()==(Path.home()/'.claude').resolve()):
-            environment.update(home_environment(provider,home))
+        from ..launch import apply_home
+        environment=apply_home(provider,home,launch_environment(provider))
     except RuntimeError:raise PeerError('CAPABILITY_MISMATCH','The native nested-launch contract does not permit this usage collector') from None
     if provider=='claude':environment.update(DISABLE_AUTOUPDATER='1',CLAUDE_CODE_SKIP_PROMPT_HISTORY='1')
     with tempfile.TemporaryDirectory(prefix='npeer-usage-',dir=cwd_parent) as name:

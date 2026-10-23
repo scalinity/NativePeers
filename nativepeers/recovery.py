@@ -46,7 +46,7 @@ def assert_released(journal,row):
                 'OWNERSHIP_CONFLICT','A registered native runtime currently owns this history')
     if row['provider']=='claude':
         from .adapters.metadata import claude_sessions
-        require(not any(s.get('sessionId')==row['native_id'] for s in claude_sessions(home)),
+        require(not any(s.get('sessionId')==row['native_id'] for s in claude_sessions(home,explicit=json.loads(row.get('lease_json') or '{}').get('provider_home_explicit'))),
                 'OWNERSHIP_CONFLICT','Claude native discovery reports an active writer for this history')
 
 
@@ -58,8 +58,8 @@ def resume_command(journal,caller,worker_id):
     if row['provider']=='codex' and row['effort_requested']:
         command+=['--config','model_reasoning_effort='+json.dumps(row['effort_requested'])]
     elif row['effort_requested']:command+=['--effort',row['effort_requested']]
-    environment=home_environment(row['provider'],recorded_home(journal,row))
-    prefix=''.join(key+'='+shlex.quote(value)+' ' for key,value in environment.items())
+    environment=home_environment(row['provider'],recorded_home(journal,row),explicit=json.loads(row.get('lease_json') or '{}').get('provider_home_explicit'))
+    prefix=('env -u CLAUDE_CONFIG_DIR ' if row['provider']=='claude' and not environment else '')+''.join(key+'='+shlex.quote(value)+' ' for key,value in environment.items())
     return {'worker_id':worker_id,'native_id':row['native_id'],'cwd':row['cwd'],'native_argv':command,'native_env':environment,
             'command':'cd '+shlex.quote(row['cwd'])+' && '+prefix+shlex.join(command),'launched':False,
             'ownership_scope':'Verified released NativePeers writers and registered eligible local native runtimes; no private-backend takeover.'}

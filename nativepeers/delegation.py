@@ -140,7 +140,7 @@ class Delegation:
                 can_spawn=depth<limits.get('max_depth',1),max_concurrent_workers=limits.get('max_concurrent_workers',4),
                 message_targets=[caller.key],allow_sibling_messages=policy['allow_sibling_messages'])
             executable=(Path.home()/{'claude':'.local/bin/claude','codex':'.local/share/codex-mcp-manager/current/bin/codex','antigravity':'.local/bin/agy'}[spec['provider']]).resolve(strict=True)
-            lease=dict(provider_home=str(homes[spec['provider']]),spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
+            lease=dict(provider_home=str(homes[spec['provider']]),provider_home_explicit=('CLAUDE_CONFIG_DIR' in os.environ) if spec['provider']=='claude' else True,spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
                 executable=str(executable),live_budget_file=test_budget.get('path'),live_tranche=test_budget.get('tranche','first_cross_provider_delegations'))
             fallbacks=spec.get('fallbacks',[])
             require(not fallbacks or spec['provider']=='claude','PROTOCOL_ERROR','Explicit Gemini fallback is supported for Claude worker tasks')

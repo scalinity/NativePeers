@@ -22,9 +22,10 @@ def codex_name(home: Path, native_id):
     return None
 
 
-def claude_sessions(home: Path):
+def claude_sessions(home: Path,*,explicit=None):
     import os
-    env = dict(os.environ, CLAUDE_CONFIG_DIR=str(home))
+    from ..launch import apply_home
+    env = apply_home('claude',home,os.environ,explicit=explicit)
     process = subprocess.run([str(Path.home()/".local/bin/claude"), "agents", "--json"],
                              env=env, capture_output=True, text=True, timeout=3)
     return json.loads(process.stdout) if process.returncode == 0 else []

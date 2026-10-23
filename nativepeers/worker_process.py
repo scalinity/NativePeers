@@ -15,7 +15,7 @@ from .artifacts import Artifacts
 from .errors import PeerError,require
 from .files import atomic_json,canonical
 from .journal import Journal
-from .launch import launch_environment,recorded_home,home_environment
+from .launch import launch_environment,recorded_home,home_environment,apply_home
 from .models import new_id
 from .process import identity,matches,signal_owned
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
@@ -71,6 +71,15 @@ class Worker:
             if self.row['provider']=='antigravity' and model==self.spec.get('model_display_name'):model=requested
             if self.row['provider']=='claude':model=model.removesuffix('[1m]')
             expected=(self.model_observed or requested).removesuffix('[1m]') if self.row['provider']=='claude' else requested
+            if self.row['provider']=='claude' and not self.model_observed and not expected.startswith('claude-'):
+                families={'sonnet':('sonnet',),'opus':('opus',),'haiku':('haiku',),'fable':('fable',),
+                          'best':('fable','opus'),'opusplan':('sonnet',)}
+                # Owned turns run outside plan mode. Default is intentionally
+                # account-selected; unknown alias semantics are not verified.
+                if expected!='default':
+                    require(expected in families,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
+                    require(any(model.startswith('claude-'+family+'-') for family in families[expected]),
+                            'MODEL_UNAVAILABLE','Provider selected a different Claude model family',details={'requested':requested,'observed':model})
             if self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
                 require(model==expected,'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
                         details={'requested':requested,'observed':model})
@@ -141,7 +150,6 @@ class Worker:
         claimed=self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
         if not claimed:return
         self.tasks_started+=1
-        require(self.tasks_started<=self.spec.get('max_task_turns',8),'BUDGET_EXHAUSTED','Worker task-turn limit reached')
         self.running_task=task_id;started=time.time();self.turn=None;self.input_submitted=False
         task_row=self.journal.one('SELECT task_json FROM tasks WHERE task_id=?',(task_id,))
         task_spec=json.loads(task_row['task_json']);deadline=task_spec.setdefault('deadline',started+self.spec.get('wall_time_seconds',1800))
@@ -154,6 +162,7 @@ class Worker:
         clean_input=None
         usage_assessment=None
         try:
+            require(self.tasks_started<=self.spec.get('max_task_turns',8),'BUDGET_EXHAUSTED','Worker logical task-turn limit reached',details={'input_submitted':False})
             if self.row['worktree_id'] and self.lease.get('fallback_candidates'):
                 from .fallback import workspace_image,image_digest
                 try:clean_input=image_digest(await asyncio.to_thread(workspace_image,self.row['cwd']))
@@ -330,7 +339,7 @@ class Worker:
         suppressed=scope_limit(self.journal,self.row,self.home,self.running_task)
         if suppressed:return dict(status='failed',text=suppressed['message'],error=suppressed,native_turn_ids=[])
         args=claude_arguments(self.journal,self.binding,self.spec,self.expected_native,resume=self.tasks_started>1 or self.lease.get('released_native',False),home=self.home)
-        env=launch_environment('claude');env.update(home_environment('claude',self.home));env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
+        env=apply_home('claude',self.home,launch_environment('claude'),explicit=self.lease.get('provider_home_explicit'));env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
         self.provider=await asyncio.create_subprocess_exec(self.lease['executable'],*args,cwd=self.row['cwd'],env=env,
             stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE,
             start_new_session=True,close_fds=True,limit=8*1024*1024)

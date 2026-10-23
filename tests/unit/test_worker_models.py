@@ -278,3 +278,31 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
                     with self.assertRaises(PeerError) as error:
                         resumed.bind(worker.native, model='claude-sonnet-5-5')
                     self.assertEqual(error.exception.code, 'MODEL_UNAVAILABLE')
+
+    async def test_first_alias_observation_verifies_family(self):
+        for requested, observed, valid in [('sonnet','claude-sonnet-5-5',True),
+                ('sonnet[1m]','claude-sonnet-5-5[1m]',True),('sonnet','claude-opus-5-5',False),
+                ('sonnet','claude-haiku-5-5',False),('best','claude-fable-5-1',True),
+                ('opusplan','claude-sonnet-5-5',True),('unknown','claude-opus-5-5',False)]:
+            with self.subTest(requested=requested,observed=observed):
+                worker=await self.worker(requested)
+                if valid:worker.bind(worker.native,model=observed)
+                else:
+                    with self.assertRaises(PeerError) as error:worker.bind(worker.native,model=observed)
+                    self.assertEqual(error.exception.code,'MODEL_UNAVAILABLE')
+                    self.assertIsNone(worker.model_observed)
+
+    async def test_extra_logical_task_retains_definite_budget_failure(self):
+        worker=await self.worker();worker.spec['max_task_turns']=1;worker.emit=Mock()
+        worker.claude_turn=AsyncMock(return_value={'status':'completed','text':'last allowed task'})
+        tasks=[new_id(),new_id()]
+        for task in tasks:
+            self.journal.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,worker.row['worker_id'],None,None,'QUEUED',None,None,1,'{}'))
+            await worker.task(task,'fixture')
+        row=self.journal.one('SELECT * FROM tasks WHERE task_id=?',(tasks[1],))
+        result=json.loads((self.journal.root/'artifacts'/row['result_artifact_id']).read_text())
+        self.assertEqual(row['state'],'FAILED');self.assertEqual(result['error']['code'],'BUDGET_EXHAUSTED')
+        self.assertFalse(result['error']['may_have_received']);self.assertEqual(result['native_turn_ids'],[])
+        worker.claude_turn.assert_awaited_once()
+        await worker.task(tasks[1],'exact retry')
+        self.assertEqual(self.journal.one('SELECT * FROM tasks WHERE task_id=?',(tasks[1],)),row)
