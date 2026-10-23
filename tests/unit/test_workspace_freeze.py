@@ -132,3 +132,33 @@ class WorkspaceFreezeTests(unittest.TestCase):
         secret.write_text('FIXTURE=dirty\n');before=snapshot(self.repo)
         with self.assertRaises(PeerError):freeze(self.repo,[self.workspace()])
         self.assertEqual(snapshot(self.repo),before);self.assertFalse((self.repo/'.worktrees').exists())
+
+    def test_oversized_dirty_or_selected_inputs_refuse_before_materialization(self):
+        from nativepeers.models import ARTIFACT_MAX
+        for tracked in (True,False):
+            with self.subTest(tracked=tracked):
+                path=self.repo/('tracked.txt' if tracked else 'selected.bin')
+                with path.open('wb') as stream:stream.truncate(ARTIFACT_MAX+1)
+                try:
+                    with self.assertRaises(PeerError) as error:freeze(self.repo,[self.workspace(*([] if tracked else ['selected.bin']))])
+                    self.assertIn('10 MiB',error.exception.message)
+                    self.assertFalse((self.repo/'.worktrees').exists())
+                finally:
+                    if tracked:path.write_text('baseline\n')
+                    else:path.unlink()
+
+    def test_slow_git_and_expired_shared_preparation_refuse_without_workspace(self):
+        import subprocess,time
+        from nativepeers import change_preview
+        original=subprocess.Popen
+        def slow(*args,**kwargs):
+            time.sleep(.08)
+            return original(*args,**kwargs)
+        with patch('nativepeers.change_preview.subprocess.Popen',side_effect=slow):
+            with self.assertRaises(PeerError):freeze(self.repo,[self.workspace()],timeout=.03)
+        self.assertFalse((self.repo/'.worktrees').exists())
+        frozen=freeze(self.repo,[self.workspace()],timeout=1)
+        from dataclasses import replace
+        frozen=replace(frozen,deadline=time.monotonic()-.01)
+        with self.assertRaises(PeerError):prepare(self.journal,self.repo,'expired',self.workspace(),frozen=frozen)
+        self.assertFalse((self.repo/'.worktrees').exists())

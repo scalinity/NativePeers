@@ -14,13 +14,13 @@
 - [x] H01/H02 Verify owned usage layout and usage-transport birth safety.
 - [x] H03/H04 Inspect planner closure and group cleanup dispositions.
 - [x] H05/H06 Verify missing bindings and shared alias equivalence.
-- [ ] H07/H08 Measure and bound preparation/repeated local reads.
+- [x] H07/H08 Measure and bound preparation/repeated local reads.
 - [x] S01/S02 Explain resume blockers and exact pre-input selection.
-- [ ] S03 Generate an operation-scoped evidence index with full file-class coverage.
-- [ ] S04 Bound isolated-input preparation and report selected size.
+- [x] S03 Generate an operation-scoped evidence index with full file-class coverage.
+- [x] S04 Bound isolated-input preparation and report selected size.
 - [x] S05 Complete missing-binding diagnostics.
-- [ ] S06 Benchmark repeated reads and apply only supported optimizations.
-- [ ] Correct stale budget and historical summary wording.
+- [x] S06 Benchmark repeated reads and apply only supported optimizations.
+- [x] Correct stale budget and historical summary wording.
 - [ ] Full tests, scoped native checks, conventions, publication and cleanup.
 
 ---

@@ -128,39 +128,42 @@ class Artifacts:
         if caller.grants.get('worker_id') or peer['owner_kind']=='owned-worker-controller':
             require('workspace' in caller.grants.get('profiles',[]) and path.is_relative_to(Path(peer['cwd'])),
                     'APPROVAL_BLOCKED','Worker export requires its writing profile and owned cwd')
-        def page(offset):
-            try:return self.read(handle,caller.key,offset,RESULT_PAGE)
-            except PeerError as error:
-                if error.code!='APPROVAL_BLOCKED' or not caller.grants.get('worker_id'):raise
-                return self.read(handle,caller.grants['worker_id'],offset,RESULT_PAGE)
-        first=page(0)  # Check the reader grant before opening an output directory.
+        row=self.journal.one('SELECT * FROM artifacts WHERE artifact_id=?',(handle,))
+        require(row is not None,'PROTOCOL_ERROR','Unknown artifact handle')
+        readers=[caller.key]+([caller.grants['worker_id']] if caller.grants.get('worker_id') else [])
+        require(any(reader==row['owner_key'] or reader in json.loads(row['allowed_readers_json']) for reader in readers),
+                'APPROVAL_BLOCKED','Artifact is outside caller reader grant')
+        require(row['relative_path']==handle and handle.startswith('art_'),'PROTOCOL_ERROR','Invalid stored artifact path')
+        require(0<=row['byte_size']<=ARTIFACT_MAX,'PAYLOAD_TOO_LARGE','Artifact export exceeds its bounds')
+        source=os.open(self.journal.root/'artifacts'/handle,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK)
         directory=None;temporary='.npeer-export-'+new_id()
         try:
+            info=os.fstat(source)
+            require(stat.S_ISREG(info.st_mode) and info.st_size==row['byte_size'],'PROTOCOL_ERROR','Artifact source shape or size changed')
             directory=os.open(path.anchor,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
             for part in path.parts[1:-1]:
                 following=os.open(part,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW,dir_fd=directory)
                 os.close(directory);directory=following
             fd=os.open(temporary,os.O_CREAT|os.O_EXCL|os.O_WRONLY|os.O_NOFOLLOW,0o600,dir_fd=directory)
-            digest=hashlib.sha256();offset=0;current=first
+            digest=hashlib.sha256();offset=0
             with os.fdopen(fd,'wb') as stream:
                 while True:
-                    require(current['offset']==offset and current['sha256']==first['sha256'] and current['byte_size']==first['byte_size'],
-                            'PROTOCOL_ERROR','Artifact changed during export')
-                    raw=base64.b64decode(current['data_base64'],validate=True)
-                    require(len(raw)<=RESULT_PAGE and offset+len(raw)<=ARTIFACT_MAX,'PAYLOAD_TOO_LARGE','Artifact export exceeds its bounds')
+                    raw=os.read(source,RESULT_PAGE)
+                    if not raw:break
+                    require(offset+len(raw)<=row['byte_size'],'PROTOCOL_ERROR','Artifact grew during export')
                     stream.write(raw);digest.update(raw);offset+=len(raw)
-                    if current['next_offset'] is None:break
-                    require(raw and current['next_offset']==offset,'PROTOCOL_ERROR','Artifact page did not advance')
-                    current=page(offset)
-                require(offset==first['byte_size'] and digest.hexdigest()==first['sha256'],'PROTOCOL_ERROR','Exported artifact digest differs')
+                require(offset==row['byte_size'] and digest.hexdigest()==row['sha256'],'PROTOCOL_ERROR','Exported artifact digest differs')
+                current=self.journal.one('SELECT * FROM artifacts WHERE artifact_id=?',(handle,))
+                require(current==row,'PROTOCOL_ERROR','Artifact metadata or reader grant changed during export')
                 stream.flush();os.fsync(stream.fileno())
             # A hard link publishes the complete file without replacing an existing target.
             os.link(temporary,path.name,src_dir_fd=directory,dst_dir_fd=directory,follow_symlinks=False)
             metadata=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='worker-delta-artifact' ORDER BY sequence DESC LIMIT 1",(handle,))
-            result=dict(artifact_id=handle,path=str(path),sha256=first['sha256'],byte_size=offset)
+            result=dict(artifact_id=handle,path=str(path),sha256=row['sha256'],byte_size=offset)
             if metadata:result['worker_delta_base']=json.loads(metadata['payload_json'])['input_tree']
             return result
         finally:
+            os.close(source)
             if directory is not None:
                 try:os.unlink(temporary,dir_fd=directory)
                 except FileNotFoundError:pass

@@ -214,6 +214,7 @@ class Delegation:
             pool_blocked=[d for d in quota['demands'] if d['ceiling'] is not None and d['active_workers']+d['proposed_workers']>d['ceiling']]
             return dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
                 workers=planned,baseline=frozen.baseline,failures=failures,
+                input_preparation=dict(selected_files=len(frozen.untracked)+frozen.baseline.get('dirty_input_files',0),selected_bytes=sum(len(data) for data,mode in frozen.untracked.values())+frozen.baseline.get('dirty_input_bytes',0),dirty_patch_bytes=len(frozen.patch or b''),time_limit_seconds=20,input_limit_bytes=10485760),
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
                 native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
                                 for provider in ('codex','antigravity') if provider in homes],

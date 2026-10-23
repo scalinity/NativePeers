@@ -45,6 +45,9 @@ def _capture(root,selected,*,journal=None):
     require(len(selected)<=MAX_FILES,'WORKSPACE_SNAPSHOT_REQUIRED','Copy batch exceeds 256 selected files')
     captured={};remaining=ARTIFACT_MAX;private_roots=_private_roots(journal)
     for relative in sorted(selected):
+        from .worktrees import _preparation_deadline
+        import time
+        require(time.monotonic()<(_preparation_deadline.get() or float('inf')),'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed')
         require(not any((root/relative).is_relative_to(home) for home in private_roots),
                 'WORKSPACE_SNAPSHOT_REQUIRED','Private native state cannot be selected for copying')
         directory=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)

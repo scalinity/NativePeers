@@ -2,6 +2,7 @@
 import hashlib
 import contextlib
 from dataclasses import dataclass,field
+from contextvars import ContextVar
 import os
 from pathlib import Path
 import selectors
@@ -16,6 +17,21 @@ from .profiles import ROOT
 from .models import ARTIFACT_MAX
 
 SECRET_NAMES={'.env','.credentials.json','auth.json','id_rsa','id_ed25519'}
+
+
+PREPARATION_SECONDS=20
+MAX_INPUT_FILES=1024
+_preparation_deadline=ContextVar('nativepeers_preparation_deadline',default=None)
+
+
+@contextlib.contextmanager
+def preparation(deadline=None):
+    current=_preparation_deadline.get()
+    deadline=min(current,deadline) if current and deadline else current or deadline or time.monotonic()+PREPARATION_SECONDS
+    require(time.monotonic()<deadline,'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed before materialization')
+    token=_preparation_deadline.set(deadline)
+    try:yield deadline
+    finally:_preparation_deadline.reset(token)
 
 
 def sensitive(path):
@@ -131,6 +147,10 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
 
 
 def git(cwd,*args,input=None,stdin=None,env=None,check=True,timeout=None):
+    deadline=_preparation_deadline.get()
+    if deadline is not None:
+        require(time.monotonic()<deadline,'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed')
+        timeout=min(timeout,deadline-time.monotonic()) if timeout else deadline-time.monotonic()
     result=subprocess.run(['git','-C',str(cwd),*args],input=input,stdin=stdin,env=env,capture_output=True,timeout=timeout)
     if check and result.returncode:
         raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED',result.stderr.decode(errors='replace')[:800])
@@ -141,11 +161,19 @@ def read_git(cwd,*args,**kwargs):
     """Inspect without index refreshes, hooks, monitors or external filters."""
     options=['--no-optional-locks','-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null',
              '-c','diff.autoRefreshIndex=false']
-    filters=git(cwd,*options,'config','--null','--name-only','--get-regexp',r'^filter\..*\.(clean|smudge|process|required)$',check=False)
+    deadline=_preparation_deadline.get() or time.monotonic()+PREPARATION_SECONDS
+    def bounded(*args,**kw):
+        from .change_preview import _git
+        try:result=_git(cwd,list(args),deadline,raw=kw.pop('input',None))
+        except (subprocess.TimeoutExpired,PeerError) as error:
+            raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED','Input inspection exceeded its shared time or byte limit') from error
+        if kw.get('check',True) and result.returncode:raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED',result.stderr.decode(errors='replace')[:800])
+        return result
+    filters=bounded(*options,'config','--null','--name-only','--get-regexp',r'^filter\..*\.(clean|smudge|process|required)$',check=False)
     require(filters.returncode in (0,1),'WORKSPACE_SNAPSHOT_REQUIRED','Git filter configuration could not be read')
     for key in filters.stdout.decode().split('\0'):
         if key:options.extend(['-c',key+'='+('false' if key.endswith('.required') else '')])
-    return git(cwd,*options,*args,**kwargs)
+    return bounded(*options,*args,**kwargs)
 
 
 @contextlib.contextmanager
@@ -215,8 +243,10 @@ def _capture_untracked(root,selected,*,journal=None):
     from .isolated_copy import _private_roots,private_path
     private_roots=_private_roots(journal)
     untracked=set(git(root,'ls-files','--others','--exclude-standard','-z').stdout.decode().split('\0'))-{''}
-    captured={}
+    require(len(set(selected))<=MAX_INPUT_FILES,'WORKSPACE_SNAPSHOT_REQUIRED','Too many selected input files')
+    captured={};remaining=ARTIFACT_MAX
     for relative in sorted(set(selected)):
+        require(time.monotonic()<(_preparation_deadline.get() or float('inf')),'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed')
         path=Path(relative)
         require(not path.is_absolute() and '..' not in path.parts and relative in untracked and not private_path(path)
                 and not any((root/path).is_relative_to(home) for home in private_roots),
@@ -231,7 +261,10 @@ def _capture_untracked(root,selected,*,journal=None):
             with os.fdopen(fd,'rb') as stream:
                 before=os.fstat(stream.fileno())
                 require(stat.S_ISREG(before.st_mode),'WORKSPACE_SNAPSHOT_REQUIRED','Selected untracked inputs must be regular files')
-                data=stream.read();after=os.fstat(stream.fileno())
+                require(before.st_size<=remaining,'WORKSPACE_SNAPSHOT_REQUIRED','Selected inputs exceed the 10 MiB input limit')
+                data=stream.read(remaining+1);after=os.fstat(stream.fileno())
+                require(len(data)<=remaining,'WORKSPACE_SNAPSHOT_REQUIRED','Selected inputs exceed the 10 MiB input limit')
+                remaining-=len(data)
             require((before.st_mode,before.st_size,before.st_mtime_ns,before.st_ctime_ns)==
                     (after.st_mode,after.st_size,after.st_mtime_ns,after.st_ctime_ns),
                     'WORKSPACE_SNAPSHOT_REQUIRED','Selected untracked input changed during capture')
@@ -246,6 +279,10 @@ def _input_metadata(captured):
 
 
 def snapshot(cwd,*,untracked_allowlist=(),journal=None):
+    with preparation():return _snapshot(cwd,untracked_allowlist=untracked_allowlist,journal=journal)
+
+
+def _snapshot(cwd,*,untracked_allowlist=(),journal=None):
     root=read_git(cwd,'rev-parse','--show-toplevel',check=False)
     if root.returncode:return {'git':False,'cwd':str(Path(cwd).resolve())}
     root=Path(root.stdout.decode().strip())
@@ -254,7 +291,17 @@ def snapshot(cwd,*,untracked_allowlist=(),journal=None):
         attributes=read_git(root,'check-attr','-z','--stdin','filter',input=tracked).stdout.split(b'\0')
         require(all(value in (b'unspecified',b'unset') for value in attributes[2::3]),
                 'WORKSPACE_SNAPSHOT_REQUIRED','Custom Git filter normalization is unavailable in a read-only snapshot')
-    result={'git':True,'root':str(root),'head':read_git(root,'rev-parse','HEAD').stdout.decode().strip(),
+    dirty=read_git(root,'diff','--no-ext-diff','--no-textconv','--no-renames','--name-only','HEAD','-z').stdout.split(b'\0')
+    dirty=[os.fsdecode(name) for name in dirty if name]
+    require(len(dirty)<=MAX_INPUT_FILES,'WORKSPACE_SNAPSHOT_REQUIRED','Too many dirty input files')
+    size=0
+    for name in dirty:
+        require(time.monotonic()<_preparation_deadline.get(),'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed')
+        path=root/name
+        try:size+=path.lstat().st_size
+        except FileNotFoundError:pass
+        require(size<=ARTIFACT_MAX,'WORKSPACE_SNAPSHOT_REQUIRED','Dirty inputs exceed the 10 MiB input limit')
+    result={'git':True,'dirty_input_files':len(dirty),'dirty_input_bytes':size,'root':str(root),'head':read_git(root,'rev-parse','HEAD').stdout.decode().strip(),
             'branch':read_git(root,'branch','--show-current').stdout.decode().strip(),
             'status_hex':read_git(root,'status','--porcelain=v1','-z','--untracked-files=all').stdout.hex(),
             'patch_sha256':hashlib.sha256(read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout).hexdigest()}
@@ -268,9 +315,15 @@ class FrozenWorkspace:
     patch:bytes|None
     untracked:dict
     journal:object=field(default=None,repr=False,compare=False)
+    deadline:float|None=field(default=None,repr=False,compare=False)
 
 
-def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
+def freeze(cwd,workspaces,*,expected_baseline=None,journal=None,timeout=PREPARATION_SECONDS):
+    with preparation(time.monotonic()+timeout):
+        return _freeze(cwd,workspaces,expected_baseline=expected_baseline,journal=journal)
+
+
+def _freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
     """Capture the union of explicit writing inputs once, before admitting a batch.
 
     Keep this object in memory; only its JSON-safe baseline belongs in worker leases.
@@ -282,10 +335,10 @@ def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
         from .isolated_copy import capture
         require(not writing and not baseline['git'],'WORKSPACE_SNAPSHOT_REQUIRED','Isolated copies require a non-Git source; Git sources use isolated-worktree')
         baseline,captured=capture(cwd,copying,baseline,expected_baseline=expected_baseline,journal=journal)
-        frozen=FrozenWorkspace(baseline,None,captured,journal)
+        frozen=FrozenWorkspace(baseline,None,captured,journal,_preparation_deadline.get())
         validate_frozen(cwd,frozen)
         return frozen
-    if not writing:return FrozenWorkspace(baseline,None,{})
+    if not writing:return FrozenWorkspace(baseline,None,{},journal,_preparation_deadline.get())
     require(baseline['git'],'WORKSPACE_SNAPSHOT_REQUIRED','Concurrent writing in a non-Git directory requires an explicit isolated copy')
     root=Path(baseline['root']);selected=[]
     for workspace in writing:
@@ -305,12 +358,16 @@ def freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout differs from the shared writing-batch baseline')
     require(hashlib.sha256(patch).hexdigest()==baseline['patch_sha256'],
             'WORKSPACE_SNAPSHOT_REQUIRED','Original checkout changed during patch capture')
-    frozen=FrozenWorkspace(baseline,patch,captured,journal)
+    frozen=FrozenWorkspace(baseline,patch,captured,journal,_preparation_deadline.get())
     validate_frozen(cwd,frozen)
     return frozen
 
 
 def validate_frozen(cwd,frozen,*,journal=None):
+    with preparation(frozen.deadline):return _validate_frozen(cwd,frozen,journal=journal)
+
+
+def _validate_frozen(cwd,frozen,*,journal=None):
     """Recheck all batch inputs immediately before native worker admission."""
     if 'copy_inputs' in frozen.baseline:
         from .isolated_copy import validate_source
@@ -321,6 +378,11 @@ def validate_frozen(cwd,frozen,*,journal=None):
 
 
 def prepare(journal,cwd,worker_id,workspace,*,expected_baseline=None,frozen=None):
+    with preparation(frozen.deadline if frozen else None):
+        return _prepare(journal,cwd,worker_id,workspace,expected_baseline=expected_baseline,frozen=frozen)
+
+
+def _prepare(journal,cwd,worker_id,workspace,*,expected_baseline=None,frozen=None):
     mode=workspace.get('mode','inherit-read-only')
     if mode=='inherit-read-only':return str(Path(cwd).resolve()),None,snapshot(cwd)
     require(mode in ('isolated-worktree','isolated-copy'),'WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require isolated-worktree or isolated-copy mode')

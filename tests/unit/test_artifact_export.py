@@ -40,13 +40,13 @@ class ArtifactExportTests(unittest.TestCase):
         self.assertEqual(value['path'],str(self.root/'nested'));self.assertEqual((self.root/'nested').read_bytes(),self.raw);self.assertFalse(list(self.root.glob('.npeer-export-*')))
 
     def test_interrupted_or_corrupt_export_leaves_no_output(self):
-        read=self.service.read;calls=0
+        read=os.read;calls=0
         def interrupted(*args,**kwargs):
             nonlocal calls
             calls+=1
             if calls==2:raise OSError('fixture interrupted read')
             return read(*args,**kwargs)
-        with patch.object(self.service,'read',side_effect=interrupted):
+        with patch('nativepeers.artifacts.os.read',side_effect=interrupted):
             with self.assertRaises(OSError):self.service.export(self.handle,self.path,self.caller)
         self.assertFalse(self.path.exists());self.assertFalse(list(self.root.glob('.npeer-export-*')))
         (self.j.root/'artifacts'/self.handle).write_bytes(b'corrupt')
