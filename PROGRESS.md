@@ -8,7 +8,7 @@
 - [x] F06/F09 Share authoritative model-scoped quota supersession.
 - [x] F07 Preserve selected Claude layout through general usage lookup.
 - [x] F08 Bound catalog descendants and output cleanup.
-- [ ] F10 Enforce one combined frozen-input byte budget.
+- [x] F10 Enforce one combined frozen-input byte budget.
 - [ ] Fix isolated-copy identity and sibling-order test prerequisites.
 - [ ] Full verification, scoped publication, installed checks and workspace cleanup.
 

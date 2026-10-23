@@ -248,7 +248,7 @@ def _working_tree(cwd,head,paths,deadline,*,tracked_paths=(),options=()):
         return command('write-tree').stdout.decode().strip()
 
 
-def _capture_untracked(root,selected,*,journal=None):
+def _capture_untracked(root,selected,*,journal=None,max_bytes=ARTIFACT_MAX):
     require(isinstance(selected,(list,tuple)) and all(isinstance(p,str) for p in selected),
             'WORKSPACE_SNAPSHOT_REQUIRED','Untracked-file selection must be an explicit list of paths')
     if not selected:return {}
@@ -256,7 +256,7 @@ def _capture_untracked(root,selected,*,journal=None):
     private_roots=_private_roots(journal)
     untracked=set(git(root,'ls-files','--others','--exclude-standard','-z').stdout.decode().split('\0'))-{''}
     require(len(set(selected))<=MAX_INPUT_FILES,'WORKSPACE_SNAPSHOT_REQUIRED','Too many selected input files')
-    captured={};remaining=ARTIFACT_MAX
+    captured={};remaining=max_bytes
     for relative in sorted(set(selected)):
         require(time.monotonic()<(_preparation_deadline.get() or float('inf')),'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed')
         path=Path(relative)
@@ -317,7 +317,7 @@ def _snapshot(cwd,*,untracked_allowlist=(),journal=None):
             'branch':read_git(root,'branch','--show-current').stdout.decode().strip(),
             'status_hex':read_git(root,'status','--porcelain=v1','-z','--untracked-files=all').stdout.hex(),
             'patch_sha256':hashlib.sha256(read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout).hexdigest()}
-    if untracked_allowlist:result['untracked_inputs']=_input_metadata(_capture_untracked(root,untracked_allowlist,journal=journal))
+    if untracked_allowlist:result['untracked_inputs']=_input_metadata(_capture_untracked(root,untracked_allowlist,journal=journal,max_bytes=ARTIFACT_MAX-size))
     return result
 
 
@@ -361,7 +361,7 @@ def _freeze(cwd,workspaces,*,expected_baseline=None,journal=None):
     names=read_git(root,'diff','--no-ext-diff','--no-textconv','--name-only','HEAD','-z').stdout.split(b'\0')
     require(not any(sensitive(n.decode()) for n in names if n),
             'WORKSPACE_SNAPSHOT_REQUIRED','Dirty secret files are not copied into worker worktrees')
-    captured=_capture_untracked(root,selected,journal=journal)
+    captured=_capture_untracked(root,selected,journal=journal,max_bytes=ARTIFACT_MAX-baseline['dirty_input_bytes'])
     patch=read_git(root,'diff','--no-ext-diff','--no-textconv','HEAD','--binary').stdout
     expected=baseline
     if captured:baseline=dict(baseline,untracked_inputs=_input_metadata(captured))
