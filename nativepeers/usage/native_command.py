@@ -1,6 +1,7 @@
 """Finite native read commands, private cwd, no stdin, bounded owned teardown."""
 import asyncio
 import contextlib
+import errno
 import os
 from pathlib import Path
 import signal
@@ -32,7 +33,8 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
     """Only adapters supply arguments. This is not an exposed arbitrary command tool."""
     try:
         from ..launch import apply_home
-        environment=apply_home(provider,home,launch_environment(provider))
+        from .store import _home_layout
+        environment=apply_home(provider,home,launch_environment(provider),explicit=_home_layout.get() if provider=='claude' else None)
     except RuntimeError:raise PeerError('CAPABILITY_MISMATCH','The native nested-launch contract does not permit this usage collector') from None
     if provider=='claude':environment.update(DISABLE_AUTOUPDATER='1',CLAUDE_CODE_SKIP_PROMPT_HISTORY='1')
     with tempfile.TemporaryDirectory(prefix='npeer-usage-',dir=cwd_parent) as name:
@@ -62,29 +64,33 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
         if slave is not None:os.close(slave)
         if not terminal:
             for stream in (process.stdout,process.stderr):os.set_blocking(stream.fileno(),False)
-        owner=None;owned={};total=0;output=[bytearray(),bytearray()]
+        owner=None;owned={};total=0;output=[bytearray(),bytearray()];eof=[False,False]
         try:owner=identity(process.pid).json()
         except ProcessLookupError:pass
 
-        async def drain(stream,index):
+        async def drain(stream,index,capture=True):
             nonlocal total
             while True:
                 try:chunk=os.read(stream.fileno(),16384)
                 except BlockingIOError:await asyncio.sleep(.02);continue
-                if not chunk:return
+                if not chunk:eof[index]=True;return
+                if not capture:continue
                 total+=len(chunk)
                 require(total<=max_bytes,'SOURCE_OUTPUT_LIMIT','Native usage output exceeds 1 MiB')
                 output[index].extend(chunk)
 
-        async def drain_terminal():
+        async def drain_terminal(capture=True):
             nonlocal total,commands,last_output
             from .claude_native import parse
             decoder=codecs.getincrementaldecoder('utf-8')('replace')
             while True:
                 try:chunk=os.read(master,16384)
                 except BlockingIOError:await asyncio.sleep(.02);continue
-                except OSError:return
-                if not chunk:return
+                except OSError as error:
+                    if error.errno==errno.EIO:eof[:]=[True,True];return
+                    raise
+                if not chunk:eof[:]=[True,True];return
+                if not capture:continue
                 total+=len(chunk);require(total<=max_bytes,'SOURCE_OUTPUT_LIMIT','Native usage terminal exceeds 1 MiB')
                 screen.feed(decoder.decode(chunk));last_output=asyncio.get_running_loop().time();text=screen.text()
                 # No trust/login/permission screen is acknowledged by this reader.
@@ -155,13 +161,18 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                     with contextlib.suppress(ProcessLookupError):signal_captured(record,sig)
                 deadline=asyncio.get_running_loop().time()+grace
                 while process.poll() is None and asyncio.get_running_loop().time()<deadline:await asyncio.sleep(.02)
+            # Failed parsing/cap checks do not establish pipe EOF. Finish a
+            # bounded discard drain after stopping the captured processes.
+            for index,reader in enumerate(readers):
+                if reader.done() and not eof[index]:
+                    readers[index]=asyncio.create_task(drain_terminal(False) if terminal else drain((process.stdout,process.stderr)[index],index,False))
             _,pending=await asyncio.wait(readers,timeout=.3)
             for reader in pending:reader.cancel()
             await asyncio.gather(*readers,return_exceptions=True)
             if process.poll() is not None:
                 for stream in (process.stdout,process.stderr):
                     if stream:stream.close()
-            uncertain=process.poll() is None or any(r.cancelled() or r.exception() for r in readers) or bool(pending) or any(owned_status(r)!='DEAD' for r in owned.values())
+            uncertain=process.poll() is None or not all(eof) or bool(pending) or any(owned_status(r)!='DEAD' for r in owned.values())
             if master is not None:os.close(master)
             if capture_directory is not None:
                 from ..files import private_directory

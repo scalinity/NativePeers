@@ -43,7 +43,7 @@ def parser():
     q=command('spawn');q.add_argument('--spec',type=Path,required=True);q.add_argument('--check',action='store_true')
     for name in ['status','result','wait','cancel']:
         q=command(name);q.add_argument('handle')
-        if name=='status':q.add_argument('--refresh',action='store_true');q.add_argument('--scan-cursor');q.add_argument('--scan-max-bytes',type=int)
+        if name=='status':q.add_argument('--explain-selection',action='store_true');q.add_argument('--refresh',action='store_true');q.add_argument('--scan-cursor');q.add_argument('--scan-max-bytes',type=int)
         if name=='result':q.add_argument('--include-artifacts',action='store_true')
         if name=='wait':q.add_argument('--timeout-ms',type=int,default=30000);q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
@@ -95,7 +95,7 @@ async def dispatch(args,journal):
     if name=='ack':return core.router.ack(caller,args.message_id)
     if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
     if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)),check=args.check)
-    if name=='status':return await core.status(caller,args.handle,refresh=args.refresh,scan_cursor=args.scan_cursor,scan_max_bytes=args.scan_max_bytes)
+    if name=='status':return await core.status(caller,args.handle,refresh=args.refresh,scan_cursor=args.scan_cursor,scan_max_bytes=args.scan_max_bytes,explain_selection=args.explain_selection)
     if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)

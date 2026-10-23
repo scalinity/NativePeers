@@ -6,7 +6,7 @@ from pathlib import Path
 import stat
 import time
 
-from .errors import require
+from .errors import require,PeerError
 from .process import ancestry, matches
 
 
@@ -43,7 +43,11 @@ def binding_readiness(journal,value):
 
 def read_binding(journal, binding: Path, *, allow_reserved=False):
     require(binding.parent.resolve() == (journal.root/"bindings").resolve(), "CALLER_UNBOUND", "Binding is outside the private binding directory")
-    fd = os.open(binding, os.O_RDONLY | os.O_NOFOLLOW)
+    try:fd = os.open(binding, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError as error:
+        raise PeerError('CALLER_UNBOUND','Configured native binding is unavailable',details={
+            'state':'UNKNOWN','reason':'BINDING_MISSING' if isinstance(error,FileNotFoundError) else 'BINDING_UNREADABLE',
+            'next_binding_event':'Use the next normal native launch/resume or first native turn to register this conversation. Do not manufacture a binding or replay a task.'}) from None
     try:
         info = os.fstat(fd)
         require(stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid() and not info.st_mode & 0o077,

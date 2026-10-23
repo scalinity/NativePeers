@@ -36,7 +36,7 @@ class Core:
         self.router.adapters['owned-worker']=owned
         self.delegation=Delegation(journal,self.registry)
 
-    async def status(self,caller,handle,*,refresh=False,scan_cursor=None,scan_max_bytes=None):
+    async def status(self,caller,handle,*,refresh=False,scan_cursor=None,scan_max_bytes=None,explain_selection=False):
         require(refresh or (scan_cursor is None and scan_max_bytes is None),'PROTOCOL_ERROR','Receipt scan options require refresh')
         message=self.journal.one('SELECT * FROM messages WHERE message_id=?',(handle,))
         if message:
@@ -47,7 +47,7 @@ class Core:
                 return await observe(self.journal,self.registry,self.router,handle,cursor=scan_cursor,max_bytes=1048576 if scan_max_bytes is None else scan_max_bytes)
             return dict(self.router.outcome(handle),message=json.loads(message['payload_json']))
         require(not refresh,'PROTOCOL_ERROR','Receipt refresh requires an exact message ID')
-        return self.delegation.status(caller,handle)
+        return self.delegation.status(caller,handle,explain_selection=explain_selection)
 
     async def tool(self,caller,name,args):
         if name=='usage_status':
@@ -65,7 +65,7 @@ class Core:
             from .recovery import resume_worker
             return await resume_worker(self.journal,caller,args['worker_id'],args['task'],args.get('completion_mode'),args['client_request_id'])
         if name=='task_groups':return self.delegation.groups(caller,args.get('limit',20),args.get('cursor'))
-        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False),scan_cursor=args.get('scan_cursor'),scan_max_bytes=args.get('scan_max_bytes'))
+        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False),scan_cursor=args.get('scan_cursor'),scan_max_bytes=args.get('scan_max_bytes'),explain_selection=args.get('explain_selection',False))
         if name=='task_result':return self.delegation.result(caller,args['handle'],include_artifacts=args.get('include_artifacts',False))
         if name=='task_wait':
             group=self.delegation.group(caller,args['handle'])

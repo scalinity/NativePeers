@@ -82,3 +82,18 @@ def test_claude_default_startup_layout_is_preserved_without_overriding_deliberat
     with patch.dict(os.environ,environment,clear=True),patch('nativepeers.usage.native_command.guarded_argv',side_effect=lambda b,a:[str(b),*a]):
         result=asyncio.run(run_native('claude',path,[],tmp_path/'.claude',timeout=3))
     assert result['stdout'].decode()==str(tmp_path/'.claude') if explicit else result['stdout']==b'unset'
+
+
+@pytest.mark.parametrize('explicit',[False,True])
+def test_owned_usage_layout_intent_wins_over_opposite_collector_environment(tmp_path,explicit):
+    from nativepeers.usage.store import home_layout,scope
+    path=tmp_path/'native';path.write_text('#!/bin/sh\nprintf "%s" "${CLAUDE_CONFIG_DIR-unset}"\n');path.chmod(0o700)
+    environment={'HOME':str(tmp_path),'PATH':os.environ['PATH']}
+    if not explicit:environment['CLAUDE_CONFIG_DIR']=str(tmp_path/'.claude')
+    with patch.dict(os.environ,environment,clear=True),patch('nativepeers.usage.native_command.guarded_argv',side_effect=lambda b,a:[str(b),*a]):
+        ambient=scope('claude',tmp_path/'.claude')
+        with home_layout(explicit):
+            intended=scope('claude',tmp_path/'.claude')
+            result=asyncio.run(run_native('claude',path,[],tmp_path/'.claude',timeout=3))
+        assert scope('claude',tmp_path/'.claude')==ambient and intended!=ambient
+    assert result['stdout']==(str(tmp_path/'.claude').encode() if explicit else b'unset')

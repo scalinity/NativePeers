@@ -35,7 +35,7 @@ TOOLS={
  'worker_spawn':('Check or launch independent native workers with exact selections and optional explicit Claude-to-Gemini fallbacks. check:true plans without reserving or launching workers; catalog helpers are reported. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA,'check':{'type':'boolean'}},['spec'])),
  'worker_resume':('Resume an exact released owned native worker. Reuse the same request ID and identical arguments after a lost response; input is never replayed.',object_schema({'worker_id':STRING,'task':STRING,'completion_mode':{'enum':['push','wait']},'client_request_id':STRING},['worker_id','task','client_request_id'])),
  'task_groups':('List this bound parent\'s retained delegations without claiming notifications.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'cursor':STRING})),
- 'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
+ 'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'explain_selection':{'type':'boolean'},'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
  'task_result':('Read retained immutable attributed results; optionally include up to 16 authorized artifact pages of 16 KiB.',object_schema({'handle':STRING,'include_artifacts':{'type':'boolean'}},['handle'])),
  'task_cancel':('Cancel only work owned by this caller.',object_schema({'handle':STRING,'reason':STRING},['handle','reason'])),
@@ -65,7 +65,10 @@ class Facade:
                     return dict(value,state='RESERVED_UNBOUND')
                 if bootstrap or os.getenv('NPEER_BINDING'):raise
                 return {'state':'RESERVED_UNBOUND','provider':None,'grants':{'can_spawn':False}}
-        return json.loads(self.binding.read_text())
+        try:return json.loads(self.binding.read_text())
+        except OSError:
+            # Reuse the bound CLI diagnostic and never fall back to another caller.
+            return read_binding(self.journal,self.binding,allow_reserved=True)
 
     def names(self):
         state=self.binding_state()

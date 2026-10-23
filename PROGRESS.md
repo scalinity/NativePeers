@@ -5,20 +5,20 @@
 - [x] R03 Use birth-based owned liveness and positive generation closure.
 - [x] R04 Remap active local quota demand during admission.
 - [x] R05 Preserve quota proof measurement time through cached/suppressed paths.
-- [ ] R06 Resolve current home labels consistently after policy changes.
-- [ ] R07 Retain Claude layout intent for registry discovery.
+- [x] R06 Resolve current home labels consistently after policy changes.
+- [x] R07 Retain Claude layout intent for registry discovery.
 - [x] R08 Require compatible forecast window duration/type.
 - [x] R09 Preserve Antigravity approvals during integration maintenance.
 - [x] R10 Assess exact models independently of display limits.
 - [x] R11 Reconcile refusals using the exact pool measurement clock.
-- [ ] H01/H02 Verify owned usage layout and usage-transport birth safety.
+- [x] H01/H02 Verify owned usage layout and usage-transport birth safety.
 - [x] H03/H04 Inspect planner closure and group cleanup dispositions.
-- [ ] H05/H06 Verify missing bindings and shared alias equivalence.
+- [x] H05/H06 Verify missing bindings and shared alias equivalence.
 - [ ] H07/H08 Measure and bound preparation/repeated local reads.
-- [ ] S01/S02 Explain resume blockers and exact pre-input selection.
+- [x] S01/S02 Explain resume blockers and exact pre-input selection.
 - [ ] S03 Generate an operation-scoped evidence index with full file-class coverage.
 - [ ] S04 Bound isolated-input preparation and report selected size.
-- [ ] S05 Complete missing-binding diagnostics.
+- [x] S05 Complete missing-binding diagnostics.
 - [ ] S06 Benchmark repeated reads and apply only supported optimizations.
 - [ ] Correct stale budget and historical summary wording.
 - [ ] Full tests, scoped native checks, conventions, publication and cleanup.

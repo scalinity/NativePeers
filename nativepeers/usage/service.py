@@ -17,7 +17,8 @@ from . import store
 def same_model(provider,wanted,actual):
     if not isinstance(wanted,str) or not isinstance(actual,str):return False
     wanted=wanted.removesuffix('[1m]');actual=actual.removesuffix('[1m]')
-    return wanted==actual or provider=='claude' and any(alias in ('sonnet','opus','haiku') and full.startswith('claude-'+alias+'-') for alias,full in ((wanted,actual),(actual,wanted)))
+    from ..models import claude_model_matches
+    return wanted==actual or provider=='claude' and any(claude_model_matches(alias,full) for alias,full in ((wanted,actual),(actual,wanted)))
 
 
 @asynccontextmanager

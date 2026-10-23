@@ -17,18 +17,21 @@ class Registry:
 
     def register(self, provider, home: Path, native_id, native_title, owner, cwd,
                  transport, *, owner_kind="interactive-standalone", policy=None,
-                 incarnation=None, capabilities=None):
+                 incarnation=None, capabilities=None, home_explicit=None):
         require(matches(owner), "TARGET_GONE", "Native owner is no longer alive")
         key = PeerKey(self.journal.host_id, provider, home_id(home), native_id)
         incarnation = incarnation or new_id()
         from .policy import home_label
         label=home_label(self.journal,home)
+        if provider=='claude' and home_explicit is None:
+            from .launch import home_environment
+            home_explicit=bool(home_environment(provider,home))
         descriptor = dict(schema_version=1, peer_key=key.json(), handle=key.handle,
                           incarnation_id=incarnation, title=title(native_title) if native_title else None,
                           title_source=("nativepeers-worker-role" if provider=='antigravity' and owner_kind=='owned-worker-controller' else "native-explicit") if native_title else "unknown", owner=owner,
                           owner_kind=owner_kind, cwd=str(Path(cwd).resolve()), transport=transport,
                           lifecycle="unknown", policy=policy or {}, capabilities=capabilities or {},
-                          home=str(home.resolve()), home_label=label, last_evidence_at=time.time())
+                          home=str(home.resolve()), home_label=label, provider_home_explicit=home_explicit, last_evidence_at=time.time())
         with self.journal.transaction() as db:
             db.execute("UPDATE peer_instances SET status='replaced' WHERE (peer_key=? OR (pid=? AND process_start=?)) AND status='live'",
                        (key.handle, owner["pid"], owner["start"]))
@@ -37,13 +40,17 @@ class Registry:
                         descriptor["title"], owner_kind, canonical(descriptor).decode(), "live", time.time()))
         return descriptor
 
+    def current_labels(self,peer):
+        from .policy import home_label
+        return dict(peer,home_label=home_label(self.journal,peer['home']))
+
     def get(self, handle, *, live=True):
         row = self.journal.one("SELECT * FROM peer_instances WHERE peer_key=? ORDER BY last_seen DESC LIMIT 1", (handle,))
         require(row is not None, "TARGET_OFFLINE", "Peer is not registered")
         descriptor = json.loads(row["descriptor_json"])
         if live:
             require(row["status"] == "live" and matches(descriptor["owner"]), "TARGET_OFFLINE", "Registered native owner is offline")
-        return descriptor
+        return self.current_labels(descriptor)
 
     def for_owner(self,provider,owner,native_id=None):
         rows=self.journal.all('SELECT descriptor_json FROM peer_instances WHERE provider=? AND pid=? AND process_start=? AND status=\'live\''+
@@ -61,17 +68,18 @@ class Registry:
         claude_metadata={}
         if provider in (None,'claude') and any(r['provider']=='claude' and r['status']=='live' and r['owner_kind']=='interactive-standalone' for r in rows):
             from .adapters.metadata import claude_sessions
-            homes={json.loads(r['descriptor_json'])['home'] for r in rows if r['provider']=='claude' and r['status']=='live' and r['owner_kind']=='interactive-standalone'}
-            for home in homes:
+            homes={(p['home'],p.get('provider_home_explicit')) for r in rows if r['provider']=='claude' and r['status']=='live' and r['owner_kind']=='interactive-standalone' for p in [json.loads(r['descriptor_json'])]}
+            for home,explicit in homes:
+                if explicit is None:continue  # Legacy layout intent is unknown; do not borrow the lister's environment.
                 try:
-                    for s in claude_sessions(Path(home)):claude_metadata[(home,s.get('sessionId'),s.get('pid'))]=s.get('name')
+                    for s in claude_sessions(Path(home),explicit=explicit):claude_metadata[(home,explicit,s.get('sessionId'),s.get('pid'))]=s.get('name')
                 except Exception:pass
         peers, seen = [], set()
         for row in rows:
             if row["peer_key"] in seen:
                 continue
             seen.add(row["peer_key"])
-            peer = json.loads(row["descriptor_json"])
+            peer = self.current_labels(json.loads(row["descriptor_json"]))
             alive = row["status"] == "live" and matches(peer["owner"])
             if alive and peer['owner_kind']=='interactive-standalone':
                 if peer['peer_key']['provider']=='codex':
@@ -81,7 +89,7 @@ class Registry:
                     from .antigravity import summaries
                     names=summaries(native_id=peer['peer_key']['native_session_id'],home=Path(peer['home']))
                     native_title=names[0]['title'] if names else None
-                else:native_title=claude_metadata.get((peer['home'],peer['peer_key']['native_session_id'],peer['owner']['pid']))
+                else:native_title=claude_metadata.get((peer['home'],peer.get('provider_home_explicit'),peer['peer_key']['native_session_id'],peer['owner']['pid']))
                 if native_title and native_title!=peer['title']:
                     peer['title']=title(native_title);peer['title_source']='native-explicit'
                     self.journal.db.execute('UPDATE peer_instances SET title=?,descriptor_json=? WHERE incarnation_id=?',(peer['title'],canonical(peer).decode(),peer['incarnation_id']))

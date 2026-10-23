@@ -165,3 +165,45 @@ def test_current_labels_change_without_rebinding_identity(tmp_path):
             with pytest.raises(PeerError) as error:operation()
             assert error.value.code=='AMBIGUOUS_TARGET'
     finally:j.close()
+
+
+@pytest.mark.parametrize('explicit',[False,True])
+def test_owned_task_refresh_uses_recorded_claude_layout(tmp_path,explicit):
+    from nativepeers.usage.store import _home_layout
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();w,task=worker(j,home)
+    w.lease['provider_home_explicit']=explicit
+    async def refresh(*args,**kwargs):assert _home_layout.get() is explicit
+    w.claude_turn=AsyncMock(return_value={'status':'completed','text':'done'})
+    try:
+        with patch.object(Usage,'refresh',new=refresh):asyncio.run(w.task(task,'fixture'))
+        w.claude_turn.assert_awaited_once()
+        assert _home_layout.get() is None
+    finally:j.close()
+
+
+@pytest.mark.parametrize('alias,model,expected',[('fable','claude-fable-5-1',True),('opusplan','claude-sonnet-5-5',True),('best','claude-opus-5-5',False),('default','claude-opus-5-5',False),('sonnet','claude-opus-5-5',False)])
+def test_usage_aliases_require_deterministic_known_family(alias,model,expected):
+    from nativepeers.usage.service import same_model
+    assert same_model('claude',alias,model) is expected
+
+
+def test_opt_in_selection_explanation_is_shared_by_cli_and_mcp(tmp_path):
+    from nativepeers.caller import Caller
+    from nativepeers.cli import parser,dispatch
+    from nativepeers.core import Core
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();w,_=worker(j,home);caller=Caller('peer','parent','fixture')
+    try:
+        store.record(j,'claude',home,dict(source='native',pools=[pool('weekly',remaining=40,models=['sonnet'])]))
+        now=time.time();before=j.db.total_changes
+        with patch('time.time',return_value=now),patch('nativepeers.cli.bind_caller',return_value=caller):
+            cli=asyncio.run(dispatch(parser().parse_args(['status',w.row['group_id'],'--explain-selection','--json']),j))
+            mcp=asyncio.run(Core(j).tool(caller,'task_status',{'handle':w.row['group_id'],'explain_selection':True}))
+        assert cli==mcp and j.db.total_changes==before
+        selected=cli['workers'][0]['selection']
+        assert selected['home']==str(home) and selected['requested_model']=='sonnet'
+        assert selected['quota']['pools'][0]['observed_at'] is not None
+        assert selected['vendor_quota_reserved'] is False
+        assert not cli['workers'][0]['release']['released']
+        plain=asyncio.run(Core(j).status(caller,w.row['group_id']))
+        assert 'selection' not in plain['workers'][0]
+    finally:j.close()

@@ -63,3 +63,16 @@ class PeerKey:
 
 def home_id(path: Path):
     return hashlib.sha256(str(path.expanduser().resolve()).encode()).hexdigest()
+
+
+CLAUDE_ALIAS_FAMILIES={'sonnet':('sonnet',),'opus':('opus',),'haiku':('haiku',),'fable':('fable',),
+                       'best':('fable','opus'),'opusplan':('sonnet',)}
+
+
+def claude_model_matches(selection,observed,*,allow_multiple=False):
+    """Known execution aliases; ambiguous account-selected aliases stay unknown."""
+    selection=selection.removesuffix('[1m]');observed=observed.removesuffix('[1m]')
+    if selection==observed:return True
+    families=CLAUDE_ALIAS_FAMILIES.get(selection,())
+    return bool(families and (allow_multiple or len(families)==1) and
+                any(observed.startswith('claude-'+family+'-') for family in families))

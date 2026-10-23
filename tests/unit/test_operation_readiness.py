@@ -45,3 +45,24 @@ def test_binding_diagnosis_distinguishes_reserved_expired_and_generation(tmp_pat
         assert binding_readiness(j,dict(value,state='BOUND',expires_at=0))['reason']=='LEASE_EXPIRED'
         assert binding_readiness(j,dict(value,state='BOUND',owner=dict(owner,start='wrong')))['reason']=='OWNER_GONE'
     finally:j.close()
+
+
+def test_missing_configured_binding_is_structured_in_cli_and_mcp(tmp_path,capsys):
+    import asyncio,json
+    from types import SimpleNamespace
+    from nativepeers.cli import main
+    from nativepeers.mcp_server import Facade
+    j=Journal(tmp_path/'state');missing=j.root/'bindings/missing'
+    try:
+        with patch.dict(os.environ,{'NPEER_BINDING':str(missing),'NPEER_HOME':str(j.root)}),patch('sys.argv',['npeer','whoami','--json']):
+            with pytest.raises(SystemExit) as exit:main()
+            assert exit.value.code!=0
+            reply=json.loads(capsys.readouterr().out)
+            assert reply['error']['code']=='CALLER_UNBOUND'
+            assert reply['error']['details']['reason']=='BINDING_MISSING'
+            for facade in (Facade(j,None),Facade(j,missing)):
+                result=asyncio.run(facade.call(None,SimpleNamespace(name='usage_status',arguments={})))
+                error=json.loads(result.content[0].text)['error']
+                assert error['code']=='CALLER_UNBOUND' and error['details']['reason']=='BINDING_MISSING'
+                assert 'normal native' in error['details']['next_binding_event']
+    finally:j.close()

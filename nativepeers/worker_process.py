@@ -16,7 +16,7 @@ from .errors import PeerError,require
 from .files import atomic_json,canonical
 from .journal import Journal
 from .launch import launch_environment,recorded_home,home_environment,apply_home
-from .models import new_id
+from .models import new_id,CLAUDE_ALIAS_FAMILIES,claude_model_matches
 from .process import identity,matches,signal_owned,descendants,refresh_captured,owned_status,signal_captured
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
 from .registry import Registry
@@ -80,13 +80,11 @@ class Worker:
             if self.row['provider']=='claude':model=model.removesuffix('[1m]')
             expected=(self.model_observed or requested).removesuffix('[1m]') if self.row['provider']=='claude' else requested
             if self.row['provider']=='claude' and not self.model_observed and not expected.startswith('claude-'):
-                families={'sonnet':('sonnet',),'opus':('opus',),'haiku':('haiku',),'fable':('fable',),
-                          'best':('fable','opus'),'opusplan':('sonnet',)}
                 # Owned turns run outside plan mode. Default is intentionally
                 # account-selected; unknown alias semantics are not verified.
                 if expected!='default':
-                    require(expected in families or model==expected,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
-                    require(model==expected or any(model.startswith('claude-'+family+'-') for family in families.get(expected,())),
+                    require(expected in CLAUDE_ALIAS_FAMILIES or model==expected,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
+                    require(claude_model_matches(expected,model,allow_multiple=True),
                             'MODEL_UNAVAILABLE','Provider selected a different Claude model family',details={'requested':requested,'observed':model})
             if self.model_observed or self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
                 require(model==expected,'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
@@ -101,7 +99,7 @@ class Worker:
         if existing.get('state')=='BOUND':return
         peer=Registry(self.journal).register(self.row['provider'],self.home,native_id,self.row['role_title'],self.owner,
             self.row['cwd'],{'kind':'owned-worker','group_id':self.row['group_id'],'worker_id':self.row['worker_id']},
-            owner_kind='owned-worker-controller',policy=self.lease['grants'])
+            owner_kind='owned-worker-controller',policy=self.lease['grants'],home_explicit=self.lease.get('provider_home_explicit'))
         self.journal.db.execute('UPDATE workers SET peer_key=?,native_id=?,model_observed=? WHERE worker_id=?',
             (peer['handle'],native_id,self.model_observed,self.row['worker_id']))
         atomic_json(self.binding,dict(state='BOUND',kind='peer',peer_key=peer['handle'],incarnation_id=peer['incarnation_id'],
@@ -156,6 +154,11 @@ class Worker:
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
 
     async def task(self,task_id,text):
+        from .usage.store import home_layout
+        with home_layout(self.lease.get('provider_home_explicit') if self.row['provider']=='claude' else None):
+            return await self._task(task_id,text)
+
+    async def _task(self,task_id,text):
         claimed=self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
         if not claimed:return
         self.tasks_started+=1

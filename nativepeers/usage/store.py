@@ -1,11 +1,23 @@
 """Bounded observations in the existing journal; raw native inputs are not stored."""
 import json
+from contextvars import ContextVar
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import time
 
 from ..files import canonical,sha256
 from .collectors import executable
+
+
+_home_layout = ContextVar('nativepeers_usage_home_layout', default=None)
+
+
+@contextmanager
+def home_layout(explicit):
+    token=_home_layout.set(explicit)
+    try:yield
+    finally:_home_layout.reset(token)
 
 
 def scope(provider,home):
@@ -25,6 +37,7 @@ def scope(provider,home):
     flags={k:bool(os.environ.get(k)) for k in {
         'claude':('CLAUDE_CONFIG_DIR','ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','ANTHROPIC_BASE_URL','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY'),
         'codex':('OPENAI_API_KEY','OPENAI_BASE_URL'),'antigravity':()}[provider]}
+    if provider=='claude' and _home_layout.get() is not None:flags['CLAUDE_CONFIG_DIR']=_home_layout.get()
     return sha256(dict(provider=provider,home=str(Path(home).resolve()),markers=markers,runtime=runtime,route_flags=flags))
 
 

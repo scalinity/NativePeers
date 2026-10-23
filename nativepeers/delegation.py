@@ -294,7 +294,7 @@ class Delegation:
                 await asyncio.sleep(.03)
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 
-    def status(self,caller,handle):
+    def status(self,caller,handle,*,explain_selection=False):
         group=self.group(caller,handle)
         result=dict(group_id=group['group_id'],state=group['state'],workers=self.journal.all(
             'SELECT worker_id,peer_key,provider,native_id,role_title,model_requested,model_observed,effort_requested,state,generation FROM workers WHERE group_id=?',(group['group_id'],)),
@@ -313,6 +313,20 @@ class Delegation:
         for worker in result['workers']:
             row=self.journal.one('SELECT generation,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],))
             worker['logical_task_slots']=task_slots(row)
+            if explain_selection:
+                from .launch import recorded_home
+                from .usage.service import Usage
+                from .usage.store import home_layout
+                full=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker['worker_id'],))
+                lease=json.loads(full['lease_json']);home=recorded_home(self.journal,full)
+                with home_layout(lease.get('provider_home_explicit') if full['provider']=='claude' else None):
+                    quota=Usage(self.journal).assessment(full['provider'],home,full['model_observed'] or lease['spec']['model'],full['effort_requested'])
+                worker['selection']=dict(home=str(home),home_explicit=lease.get('provider_home_explicit'),
+                    requested_model=full['model_requested'],observed_model=full['model_observed'],
+                    reasoning_effort=full['effort_requested'],quota=quota,local_demand=lease.get('usage_demand',[]),
+                    vendor_quota_reserved=False)
+                from .ownership import release_status
+                worker['release']=release_status(self.journal,full)
         result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn')
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         return result
