@@ -13,7 +13,7 @@ Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All find
 - [x] F09 Retain definite logical-task budget failures.
 - [x] F10 Reject invalid account-pace forecast samples.
 - [x] F11 Share canonical home-label resolution.
-- [ ] F12 Preserve independently approved runtime receipts.
+- [x] F12 Preserve independently approved runtime receipts.
 - [x] F13 Require exact evidence for native pool membership.
 - [ ] S01 Show operation-specific readiness in doctor.
 - [ ] S02 Explain incomplete caller binding precisely.

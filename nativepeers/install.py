@@ -96,10 +96,14 @@ class Installer:
                 current=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
                 expected={}
                 for provider in ('claude','codex'):
-                    info=evidence[provider];actual=fingerprint(info['executable'])
+                    if provider in current:continue
+                    info=evidence[provider]
+                    selected=Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
+                    require(selected.is_file(),'EXECUTABLE_NOT_FOUND','The selected native executable is unavailable')
+                    actual=fingerprint(selected)
                     require(info.get('executable_sha256')==actual['sha256'],'CAPABILITY_MISMATCH','Current binary differs from the executable integration evidence')
                     expected[provider]=dict(actual,version=info['version'])
-                if any(current.get(provider)!=value for provider,value in expected.items()):
+                if expected:
                     operations.append({'path':str(receipt),'operation':'refresh-verified-compatibility-receipt'})
             manifest=json.loads(self.manifest.read_text()) if self.manifest.exists() else {}
             states=tomllib.loads(self.config.read_text()).get('hooks',{}).get('state',{}) if self.config.exists() else {}
@@ -153,7 +157,7 @@ class Installer:
             current_state=tomllib.loads(self.config.read_text()).get('hooks',{}).get('state',{}) if self.config.exists() else {}
             trusted=all(current_state.get(k,{}).get('trusted_hash')==v for k,v in prior.get('trusted_hooks',{}).items())
             if prior and not any(op['operation']!='refresh-verified-compatibility-receipt' for op in plan['operations']) and trusted and prior.get('state')=='INSTALLED' and not prior.get('uninstalled'):
-                if plan['operations']:record_verified(self.journal,ROOT/'evidence/capabilities.json')
+                if plan['operations']:record_verified(self.journal,ROOT/'evidence/capabilities.json',preserve_existing=True,selected={'claude':Path.home()/'.local/bin/claude','codex':Path.home()/'.local/share/codex-mcp-manager/current/bin/codex'})
                 return dict(plan,installed=True,changed=bool(plan['operations']),manifest=str(self.manifest))
             skill_inputs={}
             for provider,path in self.skills.items():
@@ -188,7 +192,7 @@ class Installer:
                 atomic_json(backup/'codex-trust-blocks.json',{'path':str(self.config),'before_sha256':file_hash(self.config),
                     'before_state':tomllib.loads(self.config.read_text()).get('hooks',{}).get('state',{})})
                 manifest['trusted_hooks']=await self.trust()
-                record_verified(self.journal,ROOT/'evidence/capabilities.json')
+                record_verified(self.journal,ROOT/'evidence/capabilities.json',preserve_existing=True,selected={'claude':Path.home()/'.local/bin/claude','codex':Path.home()/'.local/share/codex-mcp-manager/current/bin/codex'})
             manifest['state']='INSTALLED'
             atomic_json(self.manifest,manifest)
         return dict(plan,installed=True,manifest=str(self.manifest),backup=str(backup))

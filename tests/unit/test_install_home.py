@@ -26,6 +26,7 @@ class InstallHomeTests(unittest.IsolatedAsyncioTestCase):
         binary.parent.mkdir(parents=True)
         fixture=Path(__file__).parents[1]/'fixtures/fake_install_app_server.py'
         binary.write_text('#!'+sys.executable+'\n'+fixture.read_text());binary.chmod(0o755)
+        claude=self.default/'.local/bin/claude';claude.parent.mkdir(parents=True,exist_ok=True);claude.symlink_to(binary)
         for home in (self.selected/'.codex',self.default/'.codex',self.ambient):
             home.mkdir(parents=True)
             (home/'config.toml').write_text('model="retained"\n[features]\ndaemon_auto_start=false\n')

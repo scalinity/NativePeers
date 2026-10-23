@@ -14,7 +14,7 @@ from nativepeers.journal import Journal
 
 class InstallTests(unittest.IsolatedAsyncioTestCase):
     async def test_noop_install_refreshes_only_verified_receipts(self):
-        for scenario in ('missing', 'updated', 'unchanged', 'unverified'):
+        for scenario in ('missing', 'updated', 'unchanged', 'unverified','superseded','historical-removed'):
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as directory:
                 root=Path(directory);home=private_directory(root/'home');project=private_directory(root/'project')
                 journal=Journal(root/'state');self.addCleanup(journal.close)
@@ -24,10 +24,12 @@ class InstallTests(unittest.IsolatedAsyncioTestCase):
                     skill.parent.mkdir(parents=True);skill.write_text('fixture skill\n')
                     executable=root/provider;executable.write_text('verified '+provider)
                     providers[provider]={'executable':str(executable),'executable_sha256':fingerprint(executable)['sha256'],'version':'fixture'}
+                    launcher=home/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
+                    launcher.parent.mkdir(parents=True,exist_ok=True);launcher.symlink_to(executable)
                 (project/'bin').mkdir()
                 for name in ('npeer','npeer-hook'):(project/'bin'/name).write_text('#!/bin/sh\n')
                 evidence=project/'evidence/capabilities.json';atomic_json(evidence,{'providers':providers})
-                with patch('nativepeers.install.ROOT',project):
+                with patch('nativepeers.install.ROOT',project),patch('nativepeers.install.Path.home',return_value=home):
                     installer=Installer(journal,home=home,native=False);await installer.install()
                     trusted={'fixture-start':'start-hash','fixture-end':'end-hash'}
                     manifest=json.loads(installer.manifest.read_text());manifest['trusted_hooks']=trusted
@@ -42,18 +44,31 @@ class InstallTests(unittest.IsolatedAsyncioTestCase):
                         if scenario=='updated':
                             providers['claude']['executable_sha256']=fingerprint(providers['claude']['executable'])['sha256']
                             atomic_json(evidence,{'providers':providers})
+                    if scenario in ('superseded','historical-removed'):
+                        newer=root/'newer-claude';newer.write_text('independently verified new runtime')
+                        current=json.loads(receipt.read_text());current['providers']['claude']=dict(fingerprint(newer),version='newer')
+                        atomic_json(receipt,current)
+                        if scenario=='historical-removed':Path(providers['claude']['executable']).unlink()
                     before={p:p.read_bytes() for p in [installer.manifest,installer.config,*installer.targets.values(),*installer.skills.values()]}
                     receipt_before=receipt.read_bytes() if receipt.exists() else None
                     backups=list((project/'backups').iterdir())
                     installer.native=True
                     with patch.object(installer,'lock',side_effect=nullcontext),patch.object(installer,'trust',new_callable=AsyncMock) as trust,\
                          patch('nativepeers.install.AppServer',side_effect=AssertionError('must remain offline')):
-                        if scenario=='unverified':
-                            with self.assertRaises(PeerError) as error:await installer.install()
-                            self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+                        if scenario in ('superseded','historical-removed'):
+                            self.assertEqual((await installer.install(dry_run=True))['operations'],[])
+                            self.assertFalse((await installer.install())['changed'])
+                            self.assertEqual(receipt.read_bytes(),receipt_before)
+                            verify(journal,'claude',newer)
+                        elif scenario in ('unverified','updated'):
+                            self.assertFalse((await installer.install())['changed'])
                             self.assertEqual(receipt.read_bytes(),receipt_before)
                             with self.assertRaises(PeerError):verify(journal,'claude',providers['claude']['executable'])
                             self.assertTrue(installer.plan(remove=True)['operations'])
+                            if scenario=='updated':
+                                from nativepeers.compatibility import record_verified
+                                record_verified(journal,evidence)
+                                verify(journal,'claude',providers['claude']['executable'])
                         else:
                             plan=await installer.install(dry_run=True)
                             self.assertEqual([op['operation'] for op in plan['operations']],

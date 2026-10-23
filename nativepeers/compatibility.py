@@ -68,15 +68,19 @@ def revoke(journal,provider,digest):
     return {'provider':provider,'sha256':digest,'revoked':True,'current_approval_unchanged':True}
 
 
-def record_verified(journal,source):
+def record_verified(journal,source,*,preserve_existing=False,selected=None):
     value=json.loads(Path(source).read_text())
     receipt=journal.root/'compat/runtime.json'
+    current=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
     providers={}
     for provider in ('claude','codex'):
-        info=value['providers'][provider];actual=fingerprint(info['executable'])
+        if preserve_existing and provider in current:continue
+        info=value['providers'][provider]
+        require(info.get('executable') and info.get('executable_sha256'),'CAPABILITY_MISMATCH','This source does not contain a worker/inbox runtime approval')
+        actual=fingerprint((selected or {}).get(provider,info['executable']))
         require(info.get('executable_sha256')==actual['sha256'],'CAPABILITY_MISMATCH','Current binary differs from the executable integration evidence')
         providers[provider]=dict(actual,version=info['version'])
-    update_verified(journal,providers)
+    if providers:update_verified(journal,providers)
 
 
 def diagnose(journal, executables=None):
