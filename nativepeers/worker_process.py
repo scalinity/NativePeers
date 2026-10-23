@@ -138,7 +138,7 @@ class Worker:
                 if archived['archived'] is True:
                     self.check_submission()
                     await self.client.call('thread/unarchive',{'threadId':self.native})
-                    self.journal.event(self.row['worker_id'],'history-unarchived',dict(archived,generation=self.row['generation'],operation='owned-resume'))
+                    self.journal.event(self.row['worker_id'],'history-unarchived',dict(archived,archived=False,generation=self.row['generation'],operation='owned-resume'))
                 self.check_submission()
                 response=await self.client.call('thread/resume',{'threadId':self.native,'cwd':self.row['cwd'],'model':self.spec['model'],'approvalPolicy':'never','sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
             else:

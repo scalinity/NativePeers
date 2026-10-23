@@ -140,6 +140,8 @@ class WorkerVisibilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(unarchive.args[1],{'threadId':self.native})
         self.assertNotIn('thread/start',methods)
         self.assertEqual(self.worker.lease['history_visibility']['state'],'CLASSIFIED')
+        receipt=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='history-unarchived'",(self.worker.row['worker_id'],))
+        self.assertFalse(json.loads(receipt['payload_json'])['archived'])
 
     async def test_uncertain_unarchive_is_not_retried_or_followed_by_resume(self):
         self.worker.native=self.native;self.worker.row['native_id']=self.native;self.worker.lease['released_native']=True
