@@ -5,23 +5,58 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
+EXACT={
+    'AUTH_REQUIRED':('auth_required','authentication_error','authentication_failed','invalid_api_key','unauthorized','not_authenticated'),
+    'QUOTA_EXHAUSTED':('quota_exhausted','insufficient_quota','usage_limit_reached','enforced_spend_limit_reached','billing_hard_limit_reached'),
+    'RATE_LIMITED':('rate_limit_error','rate_limited','too_many_requests'),
+    'MODEL_UNAVAILABLE':('model_not_found','model_unavailable'),
+    'EFFORT_UNSUPPORTED':('effort_unsupported',),
+    'BUDGET_EXHAUSTED':('error_max_turns','max_turns','max_budget'),
+}
+
+
 def classify(error):
-    text=json.dumps(error,ensure_ascii=False).lower()
-    for code,terms in [
-        ('AUTH_REQUIRED',('unauthorized','authentication','invalid_api_key','not logged in')),
-        ('MODEL_UNAVAILABLE',('model_not_found','model unavailable','model is not available','unknown model')),
-        ('EFFORT_UNSUPPORTED',('unsupported reasoning','unsupported effort')),
-        ('QUOTA_EXHAUSTED',('usage limit','quota','insufficient_quota','credit balance',"you've hit your limit",'usage exhausted','limit reached · resets')),
-        ('RATE_LIMITED',('rate_limit','rate limit')),
-        ('APPROVAL_BLOCKED',('permission denied','approval required','tool denied')),
-        ('BUDGET_EXHAUSTED',('max_turns','max turns','max_budget')),
-    ]:
-        if any(term in text for term in terms):return code
-    # Bare digits also occur in native UUIDs/timestamps. Only a stated HTTP
-    # status can supply a numeric diagnosis.
-    status=re.search(r'(?:\bhttp(?:\s+(?:status|error))?\s+|"(?:status|status_code|http_status|code)"\s*:\s*"?)(401|429)(?!\d)',text)
-    if status:return {'401':'AUTH_REQUIRED','429':'RATE_LIMITED'}[status[1]]
-    return 'PROVIDER_TASK_FAILED'
+    """Classify the terminal error, not logging/context serialized beside it."""
+    if isinstance(error,dict):
+        nested_rate=False
+        # A caller-supplied terminal wrapper has precedence over earlier events.
+        for key in ('terminal','error','details','cause'):
+            child=error.get(key)
+            if isinstance(child,dict):
+                code=classify(child)
+                if code not in ('PROVIDER_TASK_FAILED','RATE_LIMITED'):return code
+                nested_rate=nested_rate or code=='RATE_LIMITED'
+        codes=[error.get(k) for k in ('error_code','code','type','error')]
+        exact=next((code for item in codes if isinstance(item,str)
+            for code,values in EXACT.items() if item.lower() in values),None)
+        if exact and exact!='RATE_LIMITED':return exact
+        # Only diagnostic fields are text. Account IDs, stack traces, context
+        # and successful-auth banners cannot become an error diagnosis.
+        messages=[error[k] for k in ('message','result','description','error') if isinstance(error.get(k),str)]
+        message=error.get('message')
+        if isinstance(message,dict):
+            messages.extend(c['text'] for c in message.get('content',[]) if isinstance(c,dict) and c.get('type')=='text' and isinstance(c.get('text'),str))
+        text=' '.join(messages).lower()
+        status=next((error[k] for k in ('status','status_code','http_status','code') if error.get(k) in (401,429)),None)
+    else:
+        text=error.lower() if isinstance(error,str) else '';exact=None;status=None;nested_rate=False
+    patterns=[
+        ('AUTH_REQUIRED',r'\b(?:unauthorized|invalid_api_key|not logged in|authentication (?:failed|required|error)|please (?:sign in|log in|run /login))\b'),
+        ('MODEL_UNAVAILABLE',r'model_not_found|model unavailable|model is not available|unknown model'),
+        ('EFFORT_UNSUPPORTED',r'unsupported reasoning|unsupported effort'),
+        ('QUOTA_EXHAUSTED',r'usage limit(?: reached| exceeded)?|insufficient_quota|quota (?:exhausted|exceeded|limit exceeded)|credit balance (?:is )?(?:too low|exhausted)|you.ve hit your limit|usage exhausted|limit reached · resets'),
+        ('RATE_LIMITED',r'rate_limit|rate limit'),
+        ('APPROVAL_BLOCKED',r'permission denied|approval required|tool denied'),
+        ('BUDGET_EXHAUSTED',r'max_turns|max turns|max_budget'),
+    ]
+    matched={code for code,pattern in patterns if re.search(pattern,text)}
+    if len(matched-{'RATE_LIMITED'})>1:return 'PROVIDER_TASK_FAILED'
+    if matched:return next(code for code,_ in patterns if code in matched)
+    if exact:return exact
+    if nested_rate:return 'RATE_LIMITED'
+    if status:return {401:'AUTH_REQUIRED',429:'RATE_LIMITED'}[status]
+    http=re.search(r'\bhttp(?:\s+(?:status|error))?\s+(401|429)(?!\d)',text)
+    return {'401':'AUTH_REQUIRED','429':'RATE_LIMITED'}[http[1]] if http else 'PROVIDER_TASK_FAILED'
 
 
 def reset_time(error):
@@ -50,11 +85,12 @@ def reset_time(error):
     return None
 
 
-def diagnostic(error,*,submitted=False):
+def diagnostic(error,*,submitted=False,code=None,provider='claude'):
     """Bounded structured provider error, distinct from model output."""
-    code=classify(error)
-    messages={'AUTH_REQUIRED':'Claude authentication is required; use the native login flow.',
-              'QUOTA_EXHAUSTED':'Claude usage limit reached.', 'RATE_LIMITED':'The provider rate-limited this task.'}
+    code=code or classify(error)
+    name={'claude':'Claude','antigravity':'Antigravity','codex':'Codex'}.get(provider,'The provider')
+    messages={'AUTH_REQUIRED':name+' native login is unavailable for the selected home.',
+              'QUOTA_EXHAUSTED':name+' usage limit reached.', 'RATE_LIMITED':'The provider rate-limited this task.'}
     raw=json.dumps(error,ensure_ascii=False)
     value={'code':code,'message':messages.get(code,'The native provider could not complete this task.'),
            'may_have_received':submitted,'native_diagnostic':json.loads(raw) if len(raw)<=16000 else {'text':raw[:8000],'truncated':True}}

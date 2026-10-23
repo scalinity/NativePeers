@@ -1,5 +1,5 @@
 """Separate native Claude API errors from inference model observations."""
-from .provider_errors import diagnostic
+from .provider_errors import diagnostic,classify
 
 
 class Evidence:
@@ -24,7 +24,10 @@ class Evidence:
         if not terminal_failed and self.model_output:return None
         failed=self.synthetic or terminal.get('is_error') or terminal.get('subtype')!='success' or exit_code!=0
         if not failed:return None
-        error=diagnostic({'api_errors':self.synthetic,'terminal':terminal,'exit_code':exit_code},submitted=True)
+        code=classify(terminal)
+        if code=='PROVIDER_TASK_FAILED':
+            code=next((value for event in reversed(self.synthetic) if (value:=classify(event))!='PROVIDER_TASK_FAILED'),code)
+        error=diagnostic({'api_errors':self.synthetic,'terminal':terminal,'exit_code':exit_code},submitted=True,code=code)
         usages=[e.get('message',{}).get('usage',{}) for e in self.synthetic]
         terminal_usage=terminal.get('usage')
         if terminal_usage is not None:usages.append(terminal_usage)

@@ -132,7 +132,7 @@ class Worker:
         elif self.row['provider']=='antigravity':self.verify_antigravity()
         else:
             # Preflight validates argv/environment. Native initialization begins only after first input.
-            require(Path(self.lease['executable']).is_file(),'AUTH_REQUIRED','Installed Claude executable is unavailable')
+            require(Path(self.lease['executable']).is_file(),'EXECUTABLE_NOT_FOUND','Installed Claude executable is unavailable')
             launch_environment('claude');claude_arguments(self.journal,self.binding,self.spec,self.expected_native,home=self.home)
         self.journal.db.execute("UPDATE workers SET state='READY' WHERE worker_id=?",(self.row['worker_id'],))
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
