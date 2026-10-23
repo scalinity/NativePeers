@@ -71,6 +71,8 @@ def estimate(journal,provider,home,model,effort,requirements,profile):
 def runway(journal,provider,home,scope,current_pool,now,ttl):
     if current_pool['state'] not in ('AVAILABLE','LIMITED') or current_pool.get('unit')!='percent' or current_pool.get('resolution') is None:
         return dict(state='UNKNOWN',reason='Fresh compatible percentage observations with known precision are required.')
+    if current_pool.get('window_seconds') is None or current_pool.get('window_type') in (None,'unknown'):
+        return dict(state='UNKNOWN',reason='The quota window duration/type is unknown.')
     if current_pool.get('resets_at') is None:return dict(state='UNKNOWN',reason='The reset-window identity is unknown.')
     rows=journal.all("SELECT observed_at,payload_json FROM usage_observations WHERE provider=? AND home=? AND scope=? AND kind='snapshot' AND observed_at>=? ORDER BY observed_at DESC LIMIT 32",(provider,str(home),scope,now-86400))
     points=[];provenance=None
@@ -79,6 +81,8 @@ def runway(journal,provider,home,scope,current_pool,now,ttl):
         if payload.get('collection',{}).get('outcome') in ('CACHED','UNVERIFIED','UNAVAILABLE'):continue
         p=next((p for p in payload.get('pools',[]) if p['pool_id']==current_pool['pool_id']),None)
         if not p or p.get('resets_at')!=current_pool.get('resets_at') or p.get('used') is None:break
+        if (p.get('window_seconds'),p.get('window_type'))!=(current_pool.get('window_seconds'),current_pool.get('window_type')):
+            return dict(state='UNKNOWN',reason='Quota window duration/type changed between samples.')
         measured=p.get('observed_at',row['observed_at'])
         if row['observed_at']>now or measured>now:
             return dict(state='UNKNOWN',reason='A quota measurement is in the future.')

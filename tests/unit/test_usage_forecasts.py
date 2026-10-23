@@ -32,7 +32,7 @@ def test_account_pace_requires_compatible_observations_and_preserves_attribution
     j=Journal(tmp_path/'state');home=tmp_path/'home';now=time.time();reset=now+1000
     try:
         for offset,used in [(-120,10),(-60,12),(0,14)]:
-            store.record(j,'codex',home,dict(source='native',pools=[pool('shared',used=used,reset=reset,resolution=1,models=['*'])],models=[]),at=now+offset)
+            store.record(j,'codex',home,dict(source='native',pools=[pool('shared',used=used,reset=reset,resolution=1,duration=18000,models=['*'])],models=[]),at=now+offset)
         view=Usage(j).snapshot('codex',home,now=now)
         forecast=view['pools'][0]['runway']
         assert forecast['state']=='ESTIMATE' and forecast['seconds_at_recent_pace']==pytest.approx(2580)
@@ -67,5 +67,20 @@ def test_account_pace_rejects_unproven_history(tmp_path,case):
             source='other' if case=='source-change' and index==0 else 'native'
             resolution=2 if case=='precision-change' and index==0 else 1
             store.record(j,'codex',home,dict(source=source,pools=[pool('shared',used=used,reset=reset,resolution=resolution,models=['*'])],models=[]),at=now+offset)
+        assert Usage(j).snapshot('codex',home,now=now)['pools'][0]['runway']['state']=='UNKNOWN'
+    finally:j.close()
+
+
+@pytest.mark.parametrize('change',['duration','type','unknown'])
+def test_account_pace_rejects_changed_or_unknown_window_identity(tmp_path,change):
+    j=Journal(tmp_path/'state');home=tmp_path/'home';now=time.time();reset=now+1000
+    try:
+        for index,(offset,used) in enumerate([(-120,10),(-60,12),(0,14)]):
+            p=pool('shared',used=used,reset=reset,resolution=1,duration=604800,models=['*'])
+            if index==2:
+                if change=='duration':p['window_seconds']=18000
+                elif change=='type':p['window_type']='rolling'
+                else:p['window_type']='unknown'
+            store.record(j,'codex',home,dict(source='native',pools=[p]),at=now+offset)
         assert Usage(j).snapshot('codex',home,now=now)['pools'][0]['runway']['state']=='UNKNOWN'
     finally:j.close()

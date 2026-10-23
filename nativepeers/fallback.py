@@ -87,14 +87,14 @@ def remember_limit(journal,row,home,error):
     import time
     from .usage import store
     from .usage.normalize import timestamp
-    if not error or error.get('code')!='QUOTA_EXHAUSTED' or not error.get('execution',{}).get('definitive_no_execution'):return
+    if not error or error.get('suppressed') or error.get('code')!='QUOTA_EXHAUSTED' or not error.get('execution',{}).get('definitive_no_execution'):return
     assessment=(error.get('details') or {}).get('usage',{})
     pools=[p for p in assessment.get('pools',[]) if p['state']=='EXHAUSTED']
     if not pools:pools=[dict(pool_id=error.get('limiting_scope') or error.get('pool_id'),
         models=['*'] if error.get('scope')=='provider-wide' else [row['model_requested']],
         resets_at=timestamp(error.get('resets_at') or error.get('reset_at')))]
     proofs=[dict(pool_id=p.get('pool_id'),models=p.get('models') or [row['model_requested']],reset=p.get('resets_at'),
-        scope=store.scope(row['provider'],home),at=time.time(),error=error) for p in pools]
+        scope=store.scope(row['provider'],home),at=p.get('observed_at',assessment.get('observed_at',time.time())),error=error) for p in pools]
     key=(row['group_id'],row['provider'],str(home))
     with journal.transaction() as db:
         previous=journal.one('SELECT error_json FROM group_provider_limits WHERE group_id=? AND provider=? AND provider_home=?',key)

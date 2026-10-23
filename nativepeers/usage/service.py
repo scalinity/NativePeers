@@ -132,9 +132,9 @@ class Usage:
                 if p['pool_id'] in seen:continue
                 seen.add(p['pool_id'])
                 scope=p.get('limiting_scope')
-                if scope and selected and selected['observed_at']>row['observed_at'] and any(
-                    q['pool_id']==scope and q['freshness']=='FRESH' and q['state'] in ('AVAILABLE','LIMITED','EXHAUSTED') for q in pools):continue
-                pools.append(assess_pool(p,now,ttl,row['observed_at'],self.settings))
+                if scope and selected and any(
+                    q['pool_id']==scope and q.get('observed_at',selected['observed_at'])>p.get('observed_at',row['observed_at']) and q['freshness']=='FRESH' and q['state'] in ('AVAILABLE','LIMITED','EXHAUSTED') for q in pools):continue
+                pools.append(assess_pool(p,now,ttl,p.get('observed_at',row['observed_at']),self.settings))
         for mapping in self.settings['pool_memberships']:
             if mapping['provider']!=provider:continue
             for p in pools:
@@ -153,7 +153,7 @@ class Usage:
                 if name:models.setdefault(name,dict(model=name,capability_source='retained-native-worker',support='OBSERVED_NATIVE' if name==row['model_observed'] else 'REQUESTED_ONLY',entitlement='UNVERIFIED'))
         if model:models.setdefault(model,dict(model=model,capability_source='requested',entitlement='UNVERIFIED'))
         model_rows=[]
-        for name,metadata in list(models.items())[:64]:
+        for name,metadata in ([(model,models[model])] if model else list(models.items())[:64]):
             if model and not same_model(provider,model,name):continue
             applicable=[p for p in pools if p.get('limiting',True) and ('*' in p['models'] or any(same_model(provider,name,m) for m in p['models']))]
             state=aggregate(applicable)
@@ -231,16 +231,28 @@ class Usage:
                 d=demand.setdefault(key,dict(provider=item['provider'],home=item['home'],pool_id=p['pool_id'],proposed_workers=0,
                     active_workers=0,ceiling=self.settings['pool_concurrency'].get(item['provider']+':'+p['pool_id'])))
                 d['proposed_workers']+=1
-        for row in self.journal.all("SELECT lease_json FROM workers w WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED') AND EXISTS (SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.generation=w.generation AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED','FALLBACK_PENDING'))"):
-            for key in json.loads(row['lease_json']).get('usage_demand',[]):
+        for row in self.journal.all("SELECT worker_id,lease_json,EXISTS (SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.generation=w.generation AND t.state IN ('RUNNING','WAITING','APPROVAL_BLOCKED')) executing FROM workers w WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED') AND EXISTS (SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.generation=w.generation AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED','FALLBACK_PENDING'))"):
+            for key in (self.demand_keys(json.loads(row['lease_json'])) if row['executing'] else json.loads(row['lease_json']).get('usage_demand',[])):
                 if key in demand:demand[key]['active_workers']+=1
         return dict(workers=assessments,demands=[dict(v,demand_key=k) for k,v in demand.items()],shared_pools=[dict(v,demand_key=k) for k,v in demand.items() if v['proposed_workers']+v['active_workers']>1 or v['ceiling']],
             warnings=['Local demand is advisory and cannot reserve vendor quota.'],
             inference_submitted=False)
 
+    def demand_keys(self,lease):
+        spec=lease['spec'];home=lease['provider_home']
+        view=self.assessment(spec['provider'],home,spec['model'],spec.get('reasoning_effort'))
+        return [sha256([spec['provider'],str(Path(home).resolve()),view['scope'],p['pool_id']]) for p in view['pools']]
+
     def admit_local_demand(self,lease,*,worker_id=None):
         """Call inside the existing admission transaction, before reserving new work."""
         if not self.settings['pool_concurrency']:return None
+        # Membership may have become known after another task started. Remap
+        # every active lease from this transaction's current observations.
+        for row in self.journal.all("SELECT worker_id,lease_json,EXISTS (SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.generation=w.generation AND t.state IN ('RUNNING','WAITING','APPROVAL_BLOCKED')) executing FROM workers w WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED') AND EXISTS (SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.generation=w.generation AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED','FALLBACK_PENDING'))"):
+            active=json.loads(row['lease_json'])
+            if row['executing']:active['usage_demand']=self.demand_keys(active)
+            self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(active).decode(),row['worker_id']))
+            if row['worker_id']==worker_id:lease['usage_demand']=active['usage_demand']
         plan=self.batch([{'lease':lease}]);old_keys=lease.get('usage_demand',[])
         existing=self.journal.one("SELECT 1 active FROM tasks t JOIN workers w USING(worker_id) WHERE w.worker_id=? AND t.generation=w.generation AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED','FALLBACK_PENDING') LIMIT 1",(worker_id,)) if worker_id else None
         for demand in plan['demands']:

@@ -50,12 +50,17 @@ def test_group_suppression_keeps_model_pool_reset_and_policy_scope(tmp_path):
     finally:j.close()
 
 
-def test_task_refresh_reserves_newly_discovered_pool_before_input(tmp_path):
+@pytest.mark.parametrize('discover_later',[False,True])
+def test_task_refresh_reserves_newly_discovered_pool_before_input(tmp_path,discover_later):
     async def run():
         j=Journal(tmp_path/'state');home=tmp_path.resolve();entered=asyncio.Event();release=asyncio.Event();calls=[]
         atomic_json(j.root/'policy.json',{'usage':{'pool_concurrency':{'claude:shared':1}}})
         first,a=worker(j,home);second,b=worker(j,home,first.row['group_id'])
+        refreshes=0
         async def refresh(*args,**kwargs):
+            nonlocal refreshes
+            refreshes+=1
+            if discover_later and refreshes==1:return
             store.record(j,'claude',home,{'source':'native','pools':[pool('shared',remaining=90,models=['*'])]})
         async def turn(text):
             calls.append(text);entered.set();await release.wait();return {'status':'completed','text':'done'}
@@ -94,4 +99,69 @@ def test_home_labels_share_canonical_and_legacy_resolution(tmp_path):
         atomic_json(j.root/'policy.json',{'home_labels':{str(home):'WORK',home_id(home):'CONFLICT'}})
         with pytest.raises(PeerError) as e:Usage(j).home('codex',label='WORK')
         assert e.value.code=='AMBIGUOUS_TARGET'
+    finally:j.close()
+
+
+def test_suppression_and_cached_guard_keep_original_measurement_age(tmp_path):
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();start=time.time()
+    atomic_json(j.root/'policy.json',{'usage':{'freshness_seconds':120}})
+    try:
+        w,task=worker(j,home)
+        store.record(j,'claude',home,dict(source='native',pools=[pool('weekly',remaining=0,models=['sonnet'])]),at=start)
+        with patch('time.time',return_value=start+100):
+            with pytest.raises(PeerError) as failure:Usage(j).guard('claude',home,w.spec)
+            cached=failure.value.json();cached['execution']=cached['details']['execution']
+            remember_limit(j,w.row,home,cached)
+            suppressed=scope_limit(j,w.row,home,task)
+            assert suppressed['suppressed']
+            remember_limit(j,w.row,home,suppressed)
+        proof=json.loads(j.one('SELECT error_json FROM group_provider_limits')['error_json'])['limits'][0]
+        assert proof['at']==start
+        with patch('time.time',return_value=start+150):assert scope_limit(j,w.row,home,task) is None
+    finally:j.close()
+
+
+def test_passive_wrapper_cannot_clear_a_newer_matching_refusal(tmp_path):
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();now=time.time()
+    try:
+        original=pool('weekly',remaining=80,models=['sonnet'],observed_at=now-20)
+        store.record(j,'claude',home,dict(source='native',pools=[original]),at=now-20)
+        store.record(j,'claude',home,dict(source='native-task-error',pools=[pool('task-refusal/sonnet',state='EXHAUSTED',models=['sonnet'],limiting_scope='weekly')]),kind='native-error',at=now-10)
+        for extra in ({'model':{'id':'new'}},{'pools':[original,pool('other',remaining=90)]}):
+            store.record(j,'claude',home,dict(source='passive',pools=[original],**{k:v for k,v in extra.items() if k!='pools'}) if 'pools' not in extra else dict(source='passive',**extra),at=now,dedupe=True)
+            assert Usage(j).assessment('claude',home,'sonnet')['blockable']
+        store.record(j,'claude',home,dict(source='native',pools=[pool('weekly',remaining=80,models=['sonnet'])]),at=now+1)
+        assert not Usage(j).snapshot('claude',home,model='sonnet',now=now+1)['models'][0]['state']=='EXHAUSTED'
+    finally:j.close()
+
+
+@pytest.mark.parametrize('scope',['*','requested-exact'])
+def test_exact_model_is_assessed_beyond_display_limit(tmp_path,scope):
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();wanted='requested-exact'
+    try:
+        store.record(j,'codex',home,dict(source='native',models=[{'model':'catalog-'+str(i)} for i in range(65)],pools=[pool('limit',remaining=0,models=[scope])]))
+        assert len(Usage(j).snapshot('codex',home)['models'])==64
+        view=Usage(j).snapshot('codex',home,model=wanted)
+        assert [m['model'] for m in view['models']]==[wanted]
+        assert Usage(j).assessment('codex',home,wanted)['blockable']
+    finally:j.close()
+
+
+def test_current_labels_change_without_rebinding_identity(tmp_path):
+    from nativepeers.registry import Registry
+    from nativepeers.process import identity
+    from nativepeers.models import home_id
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();r=Registry(j)
+    try:
+        atomic_json(j.root/'policy.json',{'home_labels':{str(home):'WORK'}})
+        peer=r.register('codex',home,new_id(),'fixture',identity(os.getpid()).json(),home,{'kind':'fixture'})
+        atomic_json(j.root/'policy.json',{'home_labels':{str(home):'PERSONAL'}})
+        current=r.resolve('codex@PERSONAL:fixture')
+        assert (current['handle'],current['incarnation_id'])==(peer['handle'],peer['incarnation_id'])
+        assert Usage(j).home('codex',label='PERSONAL')==home
+        with pytest.raises(PeerError):r.resolve('codex@WORK:fixture')
+        atomic_json(j.root/'policy.json',{'home_labels':{str(home):'PERSONAL',home_id(home):'WORK'}})
+        for operation in (lambda:r.resolve('codex@WORK:fixture'),lambda:Usage(j).home('codex',label='WORK')):
+            with pytest.raises(PeerError) as error:operation()
+            assert error.value.code=='AMBIGUOUS_TARGET'
     finally:j.close()

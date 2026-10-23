@@ -3,14 +3,14 @@
 - [x] R01 Pin every observed Claude model, including custom IDs.
 - [x] R02 Track app-server descendants and prove pipe EOF independently.
 - [x] R03 Use birth-based owned liveness and positive generation closure.
-- [ ] R04 Remap active local quota demand during admission.
-- [ ] R05 Preserve quota proof measurement time through cached/suppressed paths.
+- [x] R04 Remap active local quota demand during admission.
+- [x] R05 Preserve quota proof measurement time through cached/suppressed paths.
 - [ ] R06 Resolve current home labels consistently after policy changes.
 - [ ] R07 Retain Claude layout intent for registry discovery.
-- [ ] R08 Require compatible forecast window duration/type.
+- [x] R08 Require compatible forecast window duration/type.
 - [ ] R09 Preserve Antigravity approvals during integration maintenance.
-- [ ] R10 Assess exact models independently of display limits.
-- [ ] R11 Reconcile refusals using the exact pool measurement clock.
+- [x] R10 Assess exact models independently of display limits.
+- [x] R11 Reconcile refusals using the exact pool measurement clock.
 - [ ] H01/H02 Verify owned usage layout and usage-transport birth safety.
 - [x] H03/H04 Inspect planner closure and group cleanup dispositions.
 - [ ] H05/H06 Verify missing bindings and shared alias equivalence.

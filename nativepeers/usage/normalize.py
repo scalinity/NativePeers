@@ -65,7 +65,7 @@ def assess_pool(value, now, freshness, observed_at, settings):
         state='EXHAUSTED' if remaining == 0 else 'UNKNOWN' if remaining is None else 'AVAILABLE'
         if state=='AVAILABLE' and value.get('unit')=='percent' and remaining <= settings['low_remaining_percent']:
             state='LIMITED'
-    result.update(state=state, age_seconds=max(0, age), freshness='STALE' if stale else 'FRESH',
+    result.update(state=state, observed_at=observed_at, age_seconds=max(0, age), freshness='STALE' if stale else 'FRESH',
                   reset_eastern=eastern(reset), seconds_until_reset=max(0,reset-now) if reset is not None else None)
     warnings=[]
     if not stale and result.get('limiting',True) and value.get('unit')=='percent' and remaining is not None:
