@@ -109,3 +109,10 @@ class LifecycleRecoveryTests(unittest.TestCase):
         report=resume_command(self.j,self.caller,self.worker,explain=True)
         self.assertFalse(report['resume_eligible'])
         self.assertIn('EOF',report['closure']['reasons'][0])
+
+    def test_unknown_inspection_cannot_prove_death_or_authorize_a_signal(self):
+        from unittest.mock import patch
+        from nativepeers.process import owned_status,signal_captured
+        with patch('nativepeers.process.identity',side_effect=PermissionError('inspection denied')),patch('nativepeers.process.os.kill') as kill:
+            self.assertEqual(owned_status(self.dead),'UNKNOWN')
+            self.assertFalse(signal_captured(self.dead,9));kill.assert_not_called()

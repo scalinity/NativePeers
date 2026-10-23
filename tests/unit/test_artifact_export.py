@@ -62,3 +62,23 @@ class ArtifactExportTests(unittest.TestCase):
         workspace=Caller('peer',self.caller.key,self.caller.incarnation,{'worker_id':'worker','profiles':['workspace']})
         with self.assertRaises(PeerError):self.service.export(self.handle,self.root.parent/'outside',workspace)
         self.service.export(self.handle,self.path,workspace);self.assertEqual(self.path.read_bytes(),self.raw)
+
+    def test_source_corruption_or_grant_change_during_stream_prevents_publication(self):
+        original=os.read
+        for change in ('content','grant'):
+            with self.subTest(change=change):
+                (self.j.root/'artifacts'/self.handle).write_bytes(self.raw)
+                before=self.j.one('SELECT * FROM artifacts WHERE artifact_id=?',(self.handle,))
+                calls=0
+                def mutate(fd,size):
+                    nonlocal calls
+                    raw=original(fd,size);calls+=1
+                    if calls==1:
+                        if change=='content':
+                            with (self.j.root/'artifacts'/self.handle).open('r+b') as stream:stream.seek(-1,2);stream.write(b'!')
+                        else:self.j.db.execute("UPDATE artifacts SET allowed_readers_json='[\"changed\"]' WHERE artifact_id=?",(self.handle,))
+                    return raw
+                with patch('nativepeers.artifacts.os.read',side_effect=mutate):
+                    with self.assertRaises(PeerError):self.service.export(self.handle,self.path,self.caller)
+                self.assertFalse(self.path.exists());self.assertFalse(list(self.root.glob('.npeer-export-*')))
+                self.j.db.execute('UPDATE artifacts SET allowed_readers_json=? WHERE artifact_id=?',(before['allowed_readers_json'],self.handle))

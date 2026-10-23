@@ -134,7 +134,7 @@ class Usage:
                 seen.add(p['pool_id'])
                 scope=p.get('limiting_scope')
                 if scope and selected and any(
-                    q['pool_id']==scope and q.get('observed_at',selected['observed_at'])>p.get('observed_at',row['observed_at']) and q['freshness']=='FRESH' and q['state'] in ('AVAILABLE','LIMITED','EXHAUSTED') for q in pools):continue
+                    q['pool_id']==scope and q.get('observed_at',selected['observed_at'])>p.get('observed_at',row['observed_at']) and q['freshness']=='FRESH' and q['state'] in ('AVAILABLE','LIMITED','EXHAUSTED') and all('*' in q['models'] or any(same_model(provider,m,n) for n in q['models']) for m in p['models']) for q in pools):continue
                 pools.append(assess_pool(p,now,ttl,p.get('observed_at',row['observed_at']),self.settings))
         for mapping in self.settings['pool_memberships']:
             if mapping['provider']!=provider:continue
@@ -241,7 +241,8 @@ class Usage:
 
     def demand_keys(self,lease):
         spec=lease['spec'];home=lease['provider_home']
-        view=self.assessment(spec['provider'],home,spec['model'],spec.get('reasoning_effort'))
+        with store.home_layout(lease.get('provider_home_explicit') if spec['provider']=='claude' else None):
+            view=self.assessment(spec['provider'],home,spec['model'],spec.get('reasoning_effort'))
         return [sha256([spec['provider'],str(Path(home).resolve()),view['scope'],p['pool_id']]) for p in view['pools']]
 
     def admit_local_demand(self,lease,*,worker_id=None):

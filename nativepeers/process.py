@@ -39,11 +39,13 @@ def identity(pid: int) -> ProcessIdentity:
     if sys.platform == "darwin":
         library = ctypes.CDLL("/usr/lib/libproc.dylib", use_errno=True)
         info = _BsdInfo()
+        ctypes.set_errno(0)
         count = library.proc_pidinfo(pid, 3, 0, ctypes.byref(info), ctypes.sizeof(info))
+        inspection_error=ctypes.get_errno()
         executable = ctypes.create_string_buffer(4096)
         size = library.proc_pidpath(pid, executable, len(executable))
         if count != ctypes.sizeof(info):
-            error = ctypes.get_errno()
+            error = inspection_error
             if error == errno.ESRCH:
                 raise ProcessLookupError(pid)
             # A denied or incomplete inspection is not proof of process death.
@@ -53,7 +55,7 @@ def identity(pid: int) -> ProcessIdentity:
             raise ProcessLookupError(pid)
         return ProcessIdentity(pid, info.ppid, info.pgid, info.uid,
                                f"{info.seconds}:{info.microseconds}",
-                               str(Path(os.fsdecode(executable.value)).resolve()))
+                               str(Path(os.fsdecode(executable.value)).resolve()) if size > 0 else "")
     if sys.platform.startswith("linux"):
         root = Path(f"/proc/{pid}")
         fields = (root / "stat").read_text().rsplit(")", 1)[1].split()
@@ -120,7 +122,8 @@ def terminal_owner(record: dict) -> bool:
 def descendants(records):
     """Capture birth identities only while a verified ancestor is still live."""
     import subprocess
-    roots={r['pid'] for r in records if r and owned_status(r)=='LIVE'}
+    births={r['pid']:r for r in records if r and owned_status(r)=='LIVE'}
+    roots=set(births)
     if not roots:return []
     raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.5).stdout
     parents={int(p):int(pp) for p,pp in (line.split() for line in raw.decode().splitlines())}
@@ -131,8 +134,8 @@ def descendants(records):
         for pid in selected:
             try:record=identity(pid).json()
             except (ProcessLookupError,FileNotFoundError,PermissionError):continue
-            if record['uid']==os.getuid() and record['ppid'] in roots:
-                result.append(record);roots.add(pid)
+            if record['uid']==os.getuid() and record['ppid'] in roots and owned_status(births[record['ppid']])=='LIVE':
+                result.append(record);roots.add(pid);births[pid]=record
     return result
 
 

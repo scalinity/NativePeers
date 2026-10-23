@@ -217,3 +217,12 @@ class CleanupTests(unittest.TestCase):
         self.assertFalse(self.candidate(row['worker_id'])['safe_candidate'])
         self.j.db.execute('DELETE FROM events WHERE kind=\'controller-not-created\'')
         self.assertFalse(self.candidate(row['worker_id'])['safe_candidate'])
+
+    def test_retained_descendants_and_unproved_pipe_closure_refuse_cleanup(self):
+        worker,work,base=self.worker(copy=True)
+        path=self.j.root/'workers'/(worker+'.json');manifest=json.loads(path.read_bytes())
+        for override in [{'native_descendants':[identity(os.getpid()).json()]},{'cleanup':{'state':'UNCERTAIN','output_eof':False}},{'cleanup':None}]:
+            with self.subTest(override=override):
+                atomic_json(path,dict(manifest,**override))
+                self.assertEqual(self.candidate(worker)['reason_code'],'CLEANUP_UNCERTAIN')
+                self.assertTrue(work.exists())

@@ -320,6 +320,8 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reconcile_owned(self.j,self.group.parent,self.id),[])
         owner=dict(owner,pid=99999999,pgid=99999999)
         atomic_json(manifest,{'worker_id':self.worker,'native_id':row['native_id'],'generation':1,'owner':owner,'native_process':None})
+        self.assertEqual(reconcile_owned(self.j,self.group.parent,self.id,dry_run=True),[])
+        atomic_json(manifest,{'worker_id':self.worker,'native_id':row['native_id'],'generation':1,'owner':owner,'native_process':None,'cleanup':{'state':'CLOSED','output_eof':True}})
         self.assertTrue(reconcile_owned(self.j,self.group.parent,self.id,dry_run=True))
         self.assertEqual(self.j.one('SELECT state FROM tasks')['state'],'RUNNING')
         reconcile_owned(self.j,self.group.parent,self.id)

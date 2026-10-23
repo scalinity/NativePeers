@@ -207,3 +207,12 @@ def test_opt_in_selection_explanation_is_shared_by_cli_and_mcp(tmp_path):
         plain=asyncio.run(Core(j).status(caller,w.row['group_id']))
         assert 'selection' not in plain['workers'][0]
     finally:j.close()
+
+
+def test_newer_measurement_for_other_model_does_not_clear_refusal(tmp_path):
+    j=Journal(tmp_path/'state');home=tmp_path.resolve();now=time.time()
+    try:
+        store.record(j,'claude',home,dict(source='native-task-error',pools=[pool('refusal',state='EXHAUSTED',models=['sonnet'],limiting_scope='weekly')]),kind='native-error',at=now-10)
+        store.record(j,'claude',home,dict(source='native',pools=[pool('weekly',remaining=80,models=['opus'])]),at=now)
+        assert Usage(j).assessment('claude',home,'sonnet')['blockable']
+    finally:j.close()

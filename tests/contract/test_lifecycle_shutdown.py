@@ -251,3 +251,15 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(unrelated.returncode)
         finally:
             unrelated.terminate();await asyncio.wait_for(unrelated.wait(),3)
+
+    async def test_group_close_reports_unresolved_release_instead_of_clean_completion(self):
+        from nativepeers.errors import PeerError
+        from unittest.mock import AsyncMock
+        await self.start(unconfirmed=True)
+        with patch.object(self.group,'release_worker',new=AsyncMock(side_effect=PeerError('CLEANUP_UNCERTAIN','captured birth remains live'))):
+            await self.group.close()
+        self.assertEqual(self.j.one('SELECT state FROM groups')['state'],'PARTIAL')
+        owner=json.loads((self.root/'groups'/self.id/'owner.json').read_text())
+        self.assertFalse(owner['released'])
+        self.assertEqual(owner['cleanup_unresolved'][0]['worker_id'],self.worker)
+        self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE kind='worker-cleanup-unresolved'"))
