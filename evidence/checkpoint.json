@@ -90,9 +90,10 @@
   "canonical_documents": {
     "IMPLEMENTATION.md": {
       "path": "/Users/danny/Documents/Tools/NativePeers/docs/IMPLEMENTATION.md",
-      "read_entirely": true,
+      "read_entirely": false,
       "revision": "1.1",
-      "sha256": "615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb8160e"
+      "sha256": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
+      "previous_read_sha256": "615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb8160e"
     },
     "KICKOFF_PROMPT.md": {
       "path": "/Users/danny/Documents/Tools/NativePeers/docs/KICKOFF_PROMPT.md",
@@ -130,11 +131,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
-    "evidence": "evidence/review-2551947.json",
-    "source_map_sha256": "e904393d079de2cc4ed51665a4e55e5a33f26f0df13f808e038cbe476fe5a0f0",
-    "status": "All 11 findings, eight investigated boundaries and six suggestions addressed; offline verification passed; native acceptance remains operation-specific"
+    "branch": "fix/review-2885497",
+    "code_commit": "3b033626f6e688a9246310e95e1910dfd4f84d50",
+    "evidence": "evidence/review-2885497.json",
+    "source_map_sha256": "e6b1a7ef2d1ca998bd87d55493da44bd5b17639ba19806984c24230e63888394",
+    "status": "All ten findings and fixture prerequisites corrected; complete offline suite passed; native acceptance remains operation-specific"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -147,10 +148,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "25519473e39f3d4891ab81c9413e5698c9b228ee",
-    "branch": "main",
-    "code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
-    "last_verified_publication": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+    "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
+    "branch": "fix/review-2885497",
+    "code_commit": "3b033626f6e688a9246310e95e1910dfd4f84d50",
+    "last_verified_publication": "3b033626f6e688a9246310e95e1910dfd4f84d50",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,45 +211,73 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/review-2885497",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
-    "verified_remote_code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+    "verified_remote_commit": "3b033626f6e688a9246310e95e1910dfd4f84d50",
+    "verified_remote_code_commit": "3b033626f6e688a9246310e95e1910dfd4f84d50",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "REVIEW_2551947_CORRECTIONS_VERIFIED",
+  "stage": "REVIEW_2885497_CORRECTIONS_VERIFIED",
   "tests_current": {
     "offline": {
       "status": "PASS",
-      "tests": 520,
-      "subtests": 588,
-      "seconds": 210.38,
+      "tests": 568,
+      "subtests": 619,
+      "seconds": 365.63,
       "skips": 0,
       "command": ".venv/bin/python -m pytest -q",
       "python": "3.14.8",
       "locked_dependency_distributions": 36,
-      "lock_version_mismatches": []
+      "lock_version_mismatches": [],
+      "log_sha256": "960c8d50a4dd61213a15564b43b77e98538cf5e3a4c41f1690d985ee20c0ce95"
     },
-    "external_manager": {
-      "status": "PASS",
-      "tests": 23,
-      "subtests": 22,
-      "seconds": 0.99
-    },
-    "installed": {
-      "status": "PASS",
-      "owned_skills_updated": 3,
-      "second_plan_operations": 0,
-      "outside_instruction_bytes_preserved": true,
-      "protected_settings_auth_toml_shell_receipts_unchanged": true,
-      "command_uses_development_checkout": true
+    "pre_publication_offline": {
+      "status": "FAIL",
+      "tests_passed": 564,
+      "tests_failed": 3,
+      "subtests": 616,
+      "seconds": 295.96,
+      "scope": "Only stale publication fingerprint/checkpoint tests failed; all runtime tests passed"
     },
     "native_usage": {
       "status": "PASS",
-      "scope": "Claude quota and Codex quota/stdio MCP through legitimate Codex caller only; Antigravity current runtime is BLOCKED; no inference"
+      "scope": "Codex fresh quota/stdio MCP and Claude usage-only PTY through a legitimate Codex parent; Antigravity catalog only"
+    },
+    "installed": {
+      "status": "PASS",
+      "command_uses_development_checkout": true,
+      "source_commit": "3b033626f6e688a9246310e95e1910dfd4f84d50",
+      "scope": "Existing entrypoint resolves to integrated source; no integration settings or approval changed",
+      "second_plan_operations": 0,
+      "antigravity_plan_operations": 0,
+      "settings_or_approval_writes": 0
+    },
+    "external_manager": {
+      "status": "NOT_RUN",
+      "scope": "Manager source unaffected; no historical result counted as current"
+    },
+    "post_metadata_suite": {
+      "status": "FAIL",
+      "tests_passed": 566,
+      "tests_failed": 2,
+      "subtests": 619,
+      "seconds": 388.32,
+      "scope": "Ordinary setup used an unnecessary one-second deadline; overlap fixture relied on a short sleep. Focused diagnostic passed; both fixture schedules were corrected."
+    },
+    "loaded_machine_suite": {
+      "status": "FAIL",
+      "tests_passed": 565,
+      "reported_failures": 15,
+      "subtests_passed": 607,
+      "seconds": 681.79,
+      "scope": "12 Antigravity subcases plus three test failures under load above 40; ordinary five-second worker and three-second MCP fixture allowances expired. Focused corrected run: 29 tests, 44 subtests, 69.95 seconds."
+    },
+    "interrupted_metadata_attempt": {
+      "status": "INTERRUPTED",
+      "scope": "A stale canonical-document hash was identified; the partial attempt was stopped and retained. It is not a pass."
     }
   },
   "transports": {
@@ -257,7 +286,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T00:59:08.917605-04:00",
+  "updated_at": "2026-10-23T04:13:49.591656-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -371,6 +400,114 @@
         "evidence": "evidence/review-2551947.json",
         "source_map_sha256": "e904393d079de2cc4ed51665a4e55e5a33f26f0df13f808e038cbe476fe5a0f0",
         "status": "All 11 findings, eight investigated boundaries and six suggestions addressed; offline verification passed; native acceptance remains operation-specific"
+      }
+    },
+    {
+      "stage": "REVIEW_2551947_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-23T00:59:08.917605-04:00",
+      "git": {
+        "base_commit": "25519473e39f3d4891ab81c9413e5698c9b228ee",
+        "branch": "main",
+        "code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+        "last_verified_publication": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+        "verified_remote_code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
+        "evidence": "evidence/review-2551947.json",
+        "source_map_sha256": "e904393d079de2cc4ed51665a4e55e5a33f26f0df13f808e038cbe476fe5a0f0",
+        "status": "All 11 findings, eight investigated boundaries and six suggestions addressed; offline verification passed; native acceptance remains operation-specific"
+      }
+    },
+    {
+      "stage": "REVIEW_2885497_CORRECTIONS",
+      "updated_at": "2026-10-23T03:36:47.793220-04:00",
+      "git": {
+        "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
+        "branch": "fix/review-2885497",
+        "code_commit": "9f942e6ea651f5f0ac6fa813872e147766636935",
+        "last_verified_publication": "9f942e6ea651f5f0ac6fa813872e147766636935",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-2885497",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "9f942e6ea651f5f0ac6fa813872e147766636935",
+        "verified_remote_code_commit": "9f942e6ea651f5f0ac6fa813872e147766636935",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-2885497",
+        "code_commit": "9f942e6ea651f5f0ac6fa813872e147766636935",
+        "evidence": "evidence/review-2885497.json",
+        "source_map_sha256": "5bb41ce926827c2d7e2f91fccd745c18676f6a058521d07785992681cf72678c",
+        "status": "All ten findings corrected with focused offline regressions; full publication verification pending"
+      }
+    },
+    {
+      "stage": "REVIEW_2885497_CORRECTIONS",
+      "updated_at": "2026-10-23T03:39:40.032901-04:00",
+      "git": {
+        "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
+        "branch": "fix/review-2885497",
+        "code_commit": "93adb76ea155063b40ebdcf7e094fad4a3385629",
+        "last_verified_publication": "93adb76ea155063b40ebdcf7e094fad4a3385629",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-2885497",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "93adb76ea155063b40ebdcf7e094fad4a3385629",
+        "verified_remote_code_commit": "93adb76ea155063b40ebdcf7e094fad4a3385629",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-2885497",
+        "code_commit": "93adb76ea155063b40ebdcf7e094fad4a3385629",
+        "evidence": "evidence/review-2885497.json",
+        "source_map_sha256": "5bb41ce926827c2d7e2f91fccd745c18676f6a058521d07785992681cf72678c",
+        "status": "All ten findings corrected with focused offline regressions; full publication verification pending"
+      }
+    },
+    {
+      "stage": "REVIEW_2885497_CORRECTIONS",
+      "updated_at": "2026-10-23T03:49:34.677149-04:00",
+      "git": {
+        "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
+        "branch": "fix/review-2885497",
+        "code_commit": "da681e0ce92d9e6b67af332451c3553d7e90b3fd",
+        "last_verified_publication": "da681e0ce92d9e6b67af332451c3553d7e90b3fd",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-2885497",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "da681e0ce92d9e6b67af332451c3553d7e90b3fd",
+        "verified_remote_code_commit": "da681e0ce92d9e6b67af332451c3553d7e90b3fd",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-2885497",
+        "code_commit": "da681e0ce92d9e6b67af332451c3553d7e90b3fd",
+        "evidence": "evidence/review-2885497.json",
+        "source_map_sha256": "5bb41ce926827c2d7e2f91fccd745c18676f6a058521d07785992681cf72678c",
+        "status": "All ten findings corrected with focused offline regressions; full publication verification pending"
       }
     }
   ],
