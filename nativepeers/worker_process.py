@@ -178,6 +178,8 @@ class Worker:
     async def _task(self,task_id,text):
         claimed=self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
         if not claimed:return
+        from .worker_visibility import requested
+        requested(self.row,self.lease)
         self.tasks_started+=1
         self.lease.update(logical_tasks_used=min(self.tasks_started,self.spec.get('max_task_turns',8)),logical_tasks_generation=self.row['generation'])
         self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=? AND generation=?',(canonical(self.lease).decode(),self.row['worker_id'],self.row['generation']))

@@ -73,6 +73,7 @@ class CancellationTests(unittest.IsolatedAsyncioTestCase):
   with tempfile.TemporaryDirectory() as d:
    j=Journal(Path(d));self.addCleanup(j.close);group,w,a,b=fixture(j)
    w.row['provider']='codex';j.db.execute("UPDATE tasks SET state='QUEUED' WHERE task_id=?",(a,))
+   self.assertNotIn('history_visibility',w.lease)
    started=asyncio.Event();closed=asyncio.Event();native=w.native
    async def stalled(text):started.set();await asyncio.Future()
    async def close():closed.set()
@@ -82,6 +83,13 @@ class CancellationTests(unittest.IsolatedAsyncioTestCase):
    w.prepare=AsyncMock(side_effect=prepare);w.emit=Mock()
    task=asyncio.create_task(w.task(a,'first'));await started.wait();await w.cancel_task(a);await task
    self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(a,))['state'],'CANCELED')
+   terminal=j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(a,))
+   result=json.loads((j.root/'artifacts'/terminal['result_artifact_id']).read_text())
+   self.assertEqual(result['history_visibility']['state'],'LEGACY_UNVERIFIED')
+   self.assertEqual(result['history_visibility']['capability'],'UNKNOWN')
+   self.assertFalse(result['history_visibility']['runtime_acknowledged'])
+   self.assertIsNone(result['history_visibility']['persisted_source'])
+   self.assertEqual(result['history_visibility']['desktop_verification'],'NOT_RUN')
    self.assertFalse(w.retire_after_task);w.prepare.assert_awaited_once()
    self.assertEqual(j.one('SELECT state FROM tasks WHERE task_id=?',(b,))['state'],'QUEUED')
    w.codex_turn=AsyncMock(return_value={'status':'completed','text':'pending finding'});await w.task(b,'second')
