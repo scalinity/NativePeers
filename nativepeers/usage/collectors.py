@@ -2,10 +2,11 @@
 import asyncio
 from pathlib import Path
 
-from ..adapters.codex_app_server import AppServer
+from ..adapters.codex_app_server import AppServer,ProviderError
 from ..compatibility import verify,fingerprint
 from ..errors import PeerError,require
 import json
+import time
 from ..launch import home_environment
 from .normalize import codex
 
@@ -48,38 +49,75 @@ class CodexCollector:
         path=executable('codex').resolve(strict=True);runtime=verify(journal,'codex',path)
         server=AppServer(path,environment=home_environment('codex',home))
         try:
-            async with asyncio.timeout(8):
+            async with asyncio.timeout(6):
                 await server.start()
-                account=(await server.call('account/read',{'refreshToken':False},timeout=3)).get('account') or {}
-                if account.get('type')=='apiKey':
-                    models=(await server.call('model/list',{'includeHidden':True,'limit':100},timeout=3))['data']
-                    return dict(source=self.source,source_version=runtime,route='api-key',pools=[],models=model_metadata(models),
-                        coverage='unknown',limitations=['Subscription allowance is unavailable on this native API-key billing route; local token metrics are separate.'])
-                value=await server.call('account/rateLimits/read',{'excludeResetCreditDetails':True},timeout=5)
-                models=(await server.call('model/list',{'includeHidden':True,'limit':100},timeout=3))['data']
-            return dict(source=self.source,source_version=runtime,route='subscription' if account.get('type')=='chatgpt' else
-                'api-key' if account.get('type')=='apiKey' else 'native-auth-unknown',
-                pools=codex(value),models=model_metadata(models),coverage='partial',
-                limitations=['The native model catalog does not establish entitlement or complete bucket membership.',
-                    'Reset credits are reported only; no credit is consumed or billing setting changed.'])
+                account=(await server.call('account/read',{'refreshToken':False},timeout=2)).get('account') or {}
+                api_key=account.get('type')=='apiKey'
+                value={} if api_key else await server.call('account/rateLimits/read',{'excludeResetCreditDetails':True},timeout=5)
+            # Optional enrichment has its own small budget and cannot discard quota.
+            try:
+                async with asyncio.timeout(1):models=(await server.call('model/list',{'includeHidden':True,'limit':100},timeout=1))['data']
+            except (ProviderError,ConnectionError,TimeoutError,KeyError):models=[]
+            return dict(source=self.source,source_version=runtime,route='api-key' if api_key else 'subscription' if account.get('type')=='chatgpt' else 'native-auth-unknown',
+                pools=codex(value),models=model_metadata(models),coverage='unknown' if api_key else 'partial',
+                collection=dict(outcome='UNAVAILABLE' if api_key else 'FRESH',freshness_basis='native-quota-rpc',provider_observed_at=None),
+                limitations=['API-key billing has no subscription allowance.' if api_key else 'The native model catalog does not establish entitlement or complete bucket membership.',
+                    'Reset credits are reported only; no credit is consumed or billing setting changed.']+
+                    ([] if models else ['Optional model catalog unavailable; quota result retained.']))
         finally:
             await server.close(exit_timeout=1,kill_timeout=1,reader_timeout=.5)
 
 
-class TelemetryCollector:
-    def __init__(self,provider):self.provider=provider;self.source=provider+'-statusline'
+
+class NativeCollector:
+    def __init__(self,provider):self.provider=provider
 
     async def collect(self,journal,home):
-        # There is no supported independent quota RPC for these installed CLIs.
-        # A refresh reads the last captured native payload; it never automates /usage.
-        runtime=verify_usage(journal,self.provider,executable(self.provider))
+        from .contracts import verified
+        from .native_command import run_native
+        binary=executable(self.provider).resolve(strict=True);receipt=verified(journal,self.provider,binary)
         if self.provider=='antigravity':
-            from ..antigravity import catalog
-            values=await catalog(executable(self.provider),timeout=5)
-            return dict(kind='catalog',source='antigravity-models',source_version=runtime,
-                models=[dict(model=k,display_name=v,capability_source='native-model-catalog',support='NATIVE_CATALOG',entitlement='UNVERIFIED') for k,v in list(values.items())[:64]])
-        return None
+            from ..launch import provider_home
+            from .antigravity_native import parse
+            require(Path(home).resolve()==provider_home('antigravity'),'SOURCE_HOME_MISMATCH','Antigravity quota reader has no alternate-home launch contract')
+            started=time.monotonic()
+            result=await run_native(self.provider,binary,['-p','/usage','--output-format','json','--print-timeout','15s'],home,timeout=20)
+            payload=parse(result['stdout'],fresh_verified=receipt.get('fresh_fetch_contract')=='native-print-usage-force-refresh-v1')
+            require(result['exit_code']==0,'SOURCE_UNAVAILABLE','Native usage command exited unsuccessfully')
+            measured=time.time();payload['collection']['quota_completed_at']=measured
+            for item in payload['pools']:item.setdefault('observed_at',measured)
+            if receipt.get('credits_contract')=='remaining_credits-v1' and 20-(time.monotonic()-started)>3:
+                from .antigravity_native import credits
+                try:
+                    remaining=20-(time.monotonic()-started)
+                    credit_result=await run_native(self.provider,binary,['-p','/credits','--output-format','json',
+                        '--print-timeout',str(max(1,int(min(15,remaining-2))))+'s'],home,timeout=remaining)
+                    require(credit_result['exit_code']==0,'SOURCE_UNAVAILABLE','Native credits command exited unsuccessfully')
+                    payload['pools'].append(dict(credits(credit_result['stdout']),observed_at=time.time()))
+                    payload['collection'].update(credits_coverage='REPORTED',credits_cleanup=credit_result['cleanup'])
+                    payload['limitations'][-1]='Additional credits are separate; they do not override exhausted included-usage pools.'
+                except PeerError as error:
+                    payload['collection']['credits_error']=error.code
+                    payload['limitations'].append('Optional credits read failed; measured quota was retained.')
+        else:
+            from .claude_native import parse
+            import uuid
+            collector_id=str(uuid.uuid4())
+            args=['--safe-mode','--tools','','--strict-mcp-config','--settings','{"remoteControlAtStartup":false,"disableAllHooks":true}',
+                '--session-id',collector_id]
+            result=await run_native(self.provider,binary,args,home,timeout=15,terminal=True)
+            require(result['submitted_commands']==1,'SOURCE_NOT_QUALIFIED','Collector did not invoke exactly one native usage command')
+            payload=parse(result['stdout'].decode(errors='replace'),fresh_transport=True)
+            # Read only exact collector history names, never another conversation.
+            retained=any((Path(home)/'projects').glob('*/'+collector_id+'.jsonl'))
+            require(not retained,'SOURCE_PERSISTENCE_DETECTED','Native usage collector retained a conversation; it was preserved',
+                details={'collector_uuid':collector_id})
+            payload['collection'].update(collector_uuid=collector_id,conversation_created=False,num_turns=None,
+                no_inference_basis='inspected-local-command-dispatch; one usage command; no task/prompt',
+                history_check='exact-collector-uuid-in-selected-home')
+        payload['source_version']=receipt['runtime'];payload['collection']['cleanup']=result['cleanup']
+        return payload
 
 
-COLLECTORS={'codex':CodexCollector(),'claude':TelemetryCollector('claude'),
-            'antigravity':TelemetryCollector('antigravity')}
+COLLECTORS={'codex':CodexCollector(),'claude':NativeCollector('claude'),
+            'antigravity':NativeCollector('antigravity')}

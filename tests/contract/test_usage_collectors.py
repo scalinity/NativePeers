@@ -16,7 +16,8 @@ from nativepeers.usage.service import Usage
 from nativepeers.usage import store
 
 
-def test_real_read_only_rpc_transport_has_no_inference_or_account_mutation(tmp_path):
+@pytest.mark.parametrize("catalog_available",[True,False])
+def test_real_read_only_rpc_transport_has_no_inference_or_account_mutation(tmp_path,catalog_available):
     j=Journal(tmp_path/'state');home=tmp_path/'native-home';home.mkdir();log=tmp_path/'calls'
     binary=tmp_path/'provider'
     binary.write_text('#!'+sys.executable+'\n'+'''
@@ -36,13 +37,16 @@ for line in sys.stdin:
   assert x['params']['excludeResetCreditDetails'] is True
   r={'rateLimits':{'limitId':'native','primary':{'usedPercent':20,'windowDurationMins':300}},'accountId':'PRIVATE_ACCOUNT'}
  else:r={'data':[{'model':'native-model','displayName':'Native','supportedReasoningEfforts':[{'reasoningEffort':'xhigh'}],'inputModalities':['text']}],'nextCursor':None}
- print(json.dumps({'id':x['id'],'result':r}),flush=True)
+ if m=='model/list' and not '''+repr(catalog_available)+''':
+  print(json.dumps({'id':x['id'],'error':{'code':-32601,'message':'Optional catalog unavailable'}}),flush=True)
+ else:print(json.dumps({'id':x['id'],'result':r}),flush=True)
 ''');binary.chmod(0o700)
     atomic_json(j.root/'compat/runtime.json',{'providers':{'codex':fingerprint(binary)}})
     try:
         with patch('nativepeers.usage.collectors.executable',return_value=binary):
             result=asyncio.run(CodexCollector().collect(j,home))
-        assert result['pools'][0]['used']==20 and result['models'][0]['efforts']==['xhigh']
+        assert result['pools'][0]['used']==20
+        assert result['models'][0]['efforts']==['xhigh'] if catalog_available else result['models']==[]
         assert 'PRIVATE_' not in json.dumps(result)
         calls=log.read_text().splitlines()
         assert calls==['initialize','initialized','account/read','account/rateLimits/read','model/list']
