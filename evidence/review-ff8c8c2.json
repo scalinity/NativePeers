@@ -1,0 +1,254 @@
+{
+  "schema_version": 1,
+  "feature": "review-ff8c8c2-corrections",
+  "reviewed_commit": "ff8c8c20770e79317d807336c2ad6258889984ef",
+  "stage": "REVIEW_FF8C8C2_CORRECTIONS_VERIFIED",
+  "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits",
+  "findings": {
+    "F01": "FIXED",
+    "F02": "FIXED",
+    "F03": "FIXED",
+    "F04": "FIXED",
+    "F05": "FIXED",
+    "F06": "FIXED",
+    "F07": "FIXED",
+    "F08": "FIXED",
+    "F09": "FIXED",
+    "F10": "FIXED",
+    "F11": "FIXED",
+    "F12": "FIXED",
+    "F13": "FIXED"
+  },
+  "suggestions": {
+    "S01": "IMPLEMENTED",
+    "S02": "IMPLEMENTED",
+    "S03": "IMPLEMENTED",
+    "S04": "IMPLEMENTED",
+    "S05": "IMPLEMENTED",
+    "S06": "IMPLEMENTED"
+  },
+  "runtime_scopes": [
+    {
+      "provider": "claude",
+      "operation": "quota",
+      "sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "claude",
+      "operation": "worker_turns",
+      "sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "state": "CAPABILITY_MISMATCH",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "claude",
+      "operation": "inbox",
+      "sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "state": "CAPABILITY_MISMATCH",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "codex",
+      "operation": "quota",
+      "sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "codex",
+      "operation": "worker_turns",
+      "sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "codex",
+      "operation": "inbox",
+      "sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "quota",
+      "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "worker_turns",
+      "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "inbox",
+      "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
+      "state": "APPROVED",
+      "scope": "Runtime receipt only; see separate native acceptance statuses"
+    }
+  ],
+  "tests": {
+    "offline": {
+      "status": "PASS",
+      "tests": 483,
+      "subtests": 574,
+      "seconds": 230.25,
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8",
+      "scope": "Final current product source, full locked unit and contract suite"
+    },
+    "native_quota_reads": {
+      "status": "PASS",
+      "providers": [
+        "claude",
+        "codex",
+        "antigravity"
+      ],
+      "model_inputs": 0,
+      "scope": "Fresh authenticated native reads; exact current runtime receipts."
+    },
+    "native_mcp": {
+      "status": "PASS",
+      "providers": [
+        "claude",
+        "codex",
+        "antigravity"
+      ],
+      "model_inputs": 0,
+      "scope": "Real stdio transport from legitimate Codex caller, actual inherited identity context, same retained observation IDs as CLI. Claude/Antigravity parent contexts NOT_RUN."
+    },
+    "native_inference": {
+      "status": "NOT_RUN",
+      "scope": "The complete current-source native messaging/editing/cancellation/fallback matrix is not reaccepted by quota reads or the scoped Flash review/resume."
+    },
+    "independent_flash_review": {
+      "status": "COMPLETE_NO_FINDINGS",
+      "group_id": "8661a2a4-c835-48d8-8fce-447a175387cb",
+      "model_requested": "gemini-3.8-flash-medium",
+      "submitted_inputs": 2,
+      "initial_outcome": "TIMED_OUT after 300 seconds; retained without replay",
+      "resume_task_id": "af158f47-3da7-42cc-9ab9-8b5160d98de1",
+      "scope": "Native reviewer reports no actionable defects from static inspection. Initial 300-second timeout is retained. Exact-history follow-up delivered the report. Worker-reported review is not an independent test pass.",
+      "model_observed": "gemini-3.8-flash-medium",
+      "native_session_id": "8a07c8de-0337-4128-9bb8-f3085a73d40d",
+      "cleanup": "RELEASED_RESUMABLE; exact recorded controller/provider/descendants stopped"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py",
+      "scope": "External temporary fixtures; no package activation"
+    },
+    "installed": {
+      "status": "PASS",
+      "second_operations": [
+        0,
+        0
+      ],
+      "outside_owned_instruction_bytes_unchanged": true,
+      "entrypoint_uses_checkout": true,
+      "skills_match": true
+    },
+    "preservation": {
+      "status": "PASS",
+      "protected_file_hashes_match": true,
+      "daemon_auto_start": false,
+      "scope": "Native settings/auth, Codex TOML, shell files and runtime receipts unchanged; owned skills and instruction section updated"
+    },
+    "native_review_and_resume": {
+      "status": "PASS",
+      "provider": "antigravity",
+      "model": "gemini-3.8-flash-medium",
+      "submitted_inputs": 2,
+      "scope": "Independent analysis, same-history owned resume, exact original-parent wait return and verified owned cleanup only; no editing or unsafe fallback acceptance implied."
+    }
+  },
+  "limitations": [
+    "Claude worker/inbox runtime approval remains stale while its separate quota receipt is current.",
+    "The screenshot incident remains unattributed.",
+    "Historical acceptance and removed cumulative test limits remain unchanged.",
+    "Worker history visibility remains separate."
+  ],
+  "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "9f14e06a128a2ea392ac136c1caedc42d3303182f310bee2da0b991572b3c698",
+    "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
+    "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
+    "nativepeers/antigravity.py": "130b4ff440f1230d0cafc01d49b5626936090562913289aa8aad87044cb890b6",
+    "nativepeers/antigravity_install.py": "f677e03b951403c2eb459ef93dab6eb958803fb04f9e5c317af8f1dba57494c4",
+    "nativepeers/artifacts.py": "4161379e5d874c668c2e62eb0147565cfec0a67ed253e47dbc9cce8e95e53a40",
+    "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
+    "nativepeers/caller.py": "f24de70068b6afa84f79bb57333ff2197b9053f72f5c4e8cc218ea789ddd2ec6",
+    "nativepeers/change_preview.py": "3ded04e7a5d14fc1baea4cca5de844d429772f559448c6a60a28848412257422",
+    "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
+    "nativepeers/cleanup.py": "fbf0a9fe4c79b81edf19c89bca9fd4b8e17d81f4d61a8e66cd02540095d29ac0",
+    "nativepeers/cli.py": "e7dbf2f1cf2ecb8f4a6889d3afea37a220669122670644f68b95b0a7646d3692",
+    "nativepeers/compatibility.py": "008ea78afaeb629ffb0eebce6f34a8ad07f2f4d9bff06732d1c9739c857974fd",
+    "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
+    "nativepeers/core.py": "9a95b6ea93e3a5935064632e3395fd98d3ed74d1148e184f7a17c21aac16f083",
+    "nativepeers/delegation.py": "46eba446934dcfb5d5812d27b583eff9479743e6acb98c17151a9a3f77549880",
+    "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
+    "nativepeers/fallback.py": "85c381766765e66771100fc32beffd385999612b95c18f7d8b0f463a433f5228",
+    "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
+    "nativepeers/hooks.py": "456ba4f1cc9da27e0601fea9319180f56f8ff24bcbfa608090016c6a4b6fe421",
+    "nativepeers/install.py": "e7e03d3b8866c06702a07ff2da4e124805c2d0c619f6f8b3439b08586b386579",
+    "nativepeers/isolated_copy.py": "cf474d289fe17a94a60d315179a7c2fdcafd65a072f17a4e55b01f6d5a3150cf",
+    "nativepeers/journal.py": "8f375b654a6998a893ab5d77f2210863914f51f1c0bd3fad3576e665bdfcf783",
+    "nativepeers/launch.py": "01fb4d96602ca42aa8f47c6d4bcd4d064416acf1e594a3aa59fe4919dae99512",
+    "nativepeers/mcp_server.py": "df5fe3d384f4c97fbcdf53219aeb441246caba610a25bf08eb5f45be092b7837",
+    "nativepeers/models.py": "440f0e4ed691e399df5a07a5b7aac451f135f1c4e5e9763a1506a7e55bf60087",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "bb890667ed5219febd70f306094424a1106f81bbafbd327b288ce66ee32d505b",
+    "nativepeers/presentation.py": "dea4b873f78d0002d3b0bf9ee6c5807cdd221739be8cb6b609458b2869ea0e80",
+    "nativepeers/process.py": "b1ff34ee3cdf1bbb807df912c6a6bf8c104e9ea008af09502e02d1fddb747a64",
+    "nativepeers/profiles.py": "5b9a8bdca866a240c7875dcc0bdd3148fc7101b88dc2c832760b68f7a6982111",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "49b49bcf600e2433a401011894d6d1cfd9854ebe38f06fd8fe9446e161a9f629",
+    "nativepeers/readiness.py": "f80dfac5f3df7f4579080981aa4e992576a5008f3006f8ab974375f64422829d",
+    "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
+    "nativepeers/reconcile.py": "71ef7f185cb6ba9a7aafa4c93ac8d51e988feb06a649ed47ae744e0e0b8776a9",
+    "nativepeers/recovery.py": "d6cc93f0403dd53dbd2f6a455b8cbc5b326bc0244d2ee34868d5e179e6042b38",
+    "nativepeers/registry.py": "d9ff284d1ce559eacf76847f81f9bf0a8ccad78e83fb58d16fe617dbf4d4bc24",
+    "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
+    "nativepeers/supervisor.py": "d4a8e96d7925f7dfa9a60b4a9222a5c8d040678cabe73532448a6dcdc611027d",
+    "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
+    "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
+    "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
+    "nativepeers/usage/collectors.py": "3253b577c8a04bb1e5ccfdd3638f0f0d83823db825f4cbd92a6fe8af6b36e7df",
+    "nativepeers/usage/config.py": "0bea94af652729c7749e4846d8de3acc6ca24bff3babae9b53b6368212a01d1d",
+    "nativepeers/usage/contracts.py": "40d99b98a5496733097df005af303a4abefe0108e0da85160fb438e80ebea5e6",
+    "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
+    "nativepeers/usage/forecast.py": "347ffca7081c554fb3152769d3b0970172d538544b8adbfe262c446ea55eaa80",
+    "nativepeers/usage/import_snapshot.py": "d952602ae271dcc076b7b268e9e96c216b186f53ddbf481a2b4310e0a60a17d3",
+    "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
+    "nativepeers/usage/native_command.py": "4ad3b4cfed868dca48b0fce2fb4346a40aa08bb5655a4a28f5243a45bf62f006",
+    "nativepeers/usage/normalize.py": "4fe96763e07fdf17867702f1efbc2cef4cbc4feb0c00be15ccd3133041dfe2d6",
+    "nativepeers/usage/service.py": "56fc5a13067598c12d1109f7919575260688f6552871a0d4fd5096c93805e3bf",
+    "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
+    "nativepeers/usage/store.py": "2613b51f93c2733ed636087b4f44d2a81c6aafcf8b614aaf755d5245229f050a",
+    "nativepeers/worker_process.py": "7eb4d66dd040aaf24e3062fbe211524228e8c89921444bf6b55c22ca7d5c8446",
+    "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
+    "nativepeers/worktrees.py": "1abe0a6890c1ed989bdb29ff949f24b4508d4351ebd58ea1bc88112a2b1f0a99",
+    "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
+    "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
+    "schemas/peer.v1.json": "f92135c15ecc1372d7eda7e8d3afe09d27a6aa09da53c91b68e389f9b6008024",
+    "schemas/receipt.v1.json": "bd1568d47c1046ea5503a5adf38cd8bec7118a289206c6af44da276395e73511",
+    "schemas/requirements.v1.json": "326106aac17bbe21e5ec8a79f8896f31e72321beb8c113cfd886fb685ea9ced1",
+    "schemas/result.v1.json": "5e068908cec9b218ef912da8b4b22118a1015fb5f3be9001dff68b889a932990",
+    "schemas/spawn.v1.json": "f9974cf253f37b509d5a43bd1301cefe3405e430b6a403e0125b6f976bd23ba9",
+    "schemas/usage-import.v1.json": "f2e89c190867815e84bd679d016db29e85297042078b4d56b8879aad81db949b",
+    "schemas/usage.v1.json": "64d3ea88da52474f4296152b8612b9c00861c4cb4c111336f60dfb17c20e0839",
+    "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
+  },
+  "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
+  "updated_at": "2026-10-22T23:11:36.543950-04:00"
+}

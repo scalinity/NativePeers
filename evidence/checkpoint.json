@@ -130,11 +130,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
-    "evidence": "evidence/live-usage-sources.json",
-    "source_map_sha256": "ddbd84098355d99e82faddf9bc55f66222a5425eda606e6b8810bd2e85534b17",
-    "status": "IMPLEMENTED_AND_INSTALLED; native quota PASS; native MCP context BLOCKED; inference NOT_RUN"
+    "branch": "fix/review-ff8c8c2",
+    "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "evidence": "evidence/review-ff8c8c2.json",
+    "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
+    "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -147,16 +147,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
-    "branch": "main",
-    "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
-    "last_verified_publication": "6d62637515d4e8951fea5e8571eb6acc18d75525",
-    "manager_preexisting_changes": [
-      " M codex-launcher",
-      "?? name_session.py",
-      "?? patches/session-naming-native.patch",
-      "?? test_name_session.py"
-    ],
+    "base_commit": "ff8c8c20770e79317d807336c2ad6258889984ef",
+    "branch": "fix/review-ff8c8c2",
+    "code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "last_verified_publication": "07753d5c8cba5906149be7a3fb992f159f406997",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -206,7 +200,7 @@
     "sha256": "98ae8d7bf55a18435a220d5792b2ea7897efb3e5a80f59543a6ce22f188a5b35"
   },
   "manager_concurrent_work": "Additional IMPLEMENTATION.md/README.md/smoke.py modifications observed; retained, not attributed; no manager checkout writes",
-  "next_action": "Await independent frozen Pro review; worker visibility remains a separate proposed feature.",
+  "next_action": "Use operation-specific readiness and retained verification limits; independent review may inspect this complete source.",
   "original_protected_baseline": {
     "evidence": "evidence/baseline.json",
     "inventory": "evidence/protected-files.json"
@@ -216,30 +210,25 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/review-ff8c8c2",
     "repository": "https://github.com/scalinity/NativePeers",
-    "scope": "Product and verification commits confirmed on origin/main; publishing metadata commits are descendants of this verified revision.",
-    "source_zip_uploaded": false,
     "status": "PUSHED",
-    "verified_remote_code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
-    "verified_remote_commit": "6d62637515d4e8951fea5e8571eb6acc18d75525"
+    "verified_remote_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "verified_remote_code_commit": "07753d5c8cba5906149be7a3fb992f159f406997",
+    "source_zip_uploaded": false,
+    "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "USAGE_INTELLIGENCE_COMPLETE",
+  "stage": "REVIEW_FF8C8C2_CORRECTIONS_VERIFIED",
   "tests_current": {
     "offline": {
       "status": "PASS",
-      "tests": 460,
-      "subtests": 556,
-      "seconds": 155.98,
+      "tests": 483,
+      "subtests": 574,
+      "seconds": 230.25,
       "command": ".venv/bin/python -m pytest -q",
-      "python": "3.14.8"
-    },
-    "manager_and_naming": {
-      "status": "PASS",
-      "tests": 23,
-      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
-      "scope": "Temporary external fixture tests; no package activation"
+      "python": "3.14.8",
+      "scope": "Final current product source, full locked unit and contract suite"
     },
     "native_quota_reads": {
       "status": "PASS",
@@ -248,45 +237,63 @@
         "codex",
         "antigravity"
       ],
-      "scope": "Authenticated native metadata only; current code/runtime. No inference or credit redemption."
-    },
-    "native_cli": {
-      "status": "PASS",
-      "scope": "Combined usage --refresh plus each provider; outer envelopes and acquisition states checked separately"
-    },
-    "native_exhausted_account": {
-      "status": "PASS",
-      "scope": "Naturally exhausted Claude weekly window and Antigravity additional weekly pool; no quota manufactured"
+      "model_inputs": 0,
+      "scope": "Fresh authenticated native reads; exact current runtime receipts."
     },
     "native_mcp": {
-      "status": "BLOCKED",
-      "code": "CALLER_NOT_READY",
-      "scope": "Real stdio MCP process rejected the inherited reserved identity; no fabricated binding or model prompt. Offline protocol/caller parity passes."
-    },
-    "native_spawn_check": {
       "status": "PASS",
-      "scope": "Actual bound cached preflight returned CHECKED, two quota blockers, no reservation or model input"
+      "providers": [
+        "claude",
+        "codex",
+        "antigravity"
+      ],
+      "model_inputs": 0,
+      "scope": "Real stdio transport from legitimate Codex caller, actual inherited identity context, same retained observation IDs as CLI. Claude/Antigravity parent contexts NOT_RUN."
     },
     "native_inference": {
       "status": "NOT_RUN",
-      "submitted_inputs": 0,
-      "scope": "Quota-only acceptance does not reaccept the full native delegation/messaging failure matrix"
+      "scope": "The complete current-source native messaging/editing/cancellation/fallback matrix is not reaccepted by quota reads or the scoped Flash review/resume."
+    },
+    "independent_flash_review": {
+      "status": "COMPLETE_NO_FINDINGS",
+      "group_id": "8661a2a4-c835-48d8-8fce-447a175387cb",
+      "model_requested": "gemini-3.8-flash-medium",
+      "submitted_inputs": 2,
+      "initial_outcome": "TIMED_OUT after 300 seconds; retained without replay",
+      "resume_task_id": "af158f47-3da7-42cc-9ab9-8b5160d98de1",
+      "scope": "Native reviewer reports no actionable defects from static inspection. Initial 300-second timeout is retained. Exact-history follow-up delivered the report. Worker-reported review is not an independent test pass.",
+      "model_observed": "gemini-3.8-flash-medium",
+      "native_session_id": "8a07c8de-0337-4128-9bb8-f3085a73d40d",
+      "cleanup": "RELEASED_RESUMABLE; exact recorded controller/provider/descendants stopped"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py",
+      "scope": "External temporary fixtures; no package activation"
     },
     "installed": {
       "status": "PASS",
-      "outside_owned_instruction_bytes_unchanged": true,
-      "second_install_operations": [
+      "second_operations": [
         0,
         0
       ],
-      "skills_match": true,
-      "entrypoint_uses_checkout": true
+      "outside_owned_instruction_bytes_unchanged": true,
+      "entrypoint_uses_checkout": true,
+      "skills_match": true
     },
     "preservation": {
       "status": "PASS",
       "protected_file_hashes_match": true,
       "daemon_auto_start": false,
-      "scope": "Native settings/auth files, Codex TOML and shell hashes match; three owned skills/global owned paragraph updated with outside bytes preserved. Native startup caches may update normally."
+      "scope": "Native settings/auth, Codex TOML, shell files and runtime receipts unchanged; owned skills and instruction section updated"
+    },
+    "native_review_and_resume": {
+      "status": "PASS",
+      "provider": "antigravity",
+      "model": "gemini-3.8-flash-medium",
+      "submitted_inputs": 2,
+      "scope": "Independent analysis, same-history owned resume, exact original-parent wait return and verified owned cleanup only; no editing or unsafe fallback acceptance implied."
     }
   },
   "transports": {
@@ -295,5 +302,40 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-22T19:02:35.358075-04:00"
+  "updated_at": "2026-10-22T23:11:36.543950-04:00",
+  "publication_history": [
+    {
+      "stage": "USAGE_INTELLIGENCE_COMPLETE",
+      "updated_at": "2026-10-22T19:02:35.358075-04:00",
+      "git": {
+        "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
+        "branch": "main",
+        "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
+        "last_verified_publication": "6d62637515d4e8951fea5e8571eb6acc18d75525",
+        "manager_preexisting_changes": [
+          " M codex-launcher",
+          "?? name_session.py",
+          "?? patches/session-naming-native.patch",
+          "?? test_name_session.py"
+        ],
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "scope": "Product and verification commits confirmed on origin/main; publishing metadata commits are descendants of this verified revision.",
+        "source_zip_uploaded": false,
+        "status": "PUSHED",
+        "verified_remote_code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+        "verified_remote_commit": "6d62637515d4e8951fea5e8571eb6acc18d75525"
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
+        "evidence": "evidence/live-usage-sources.json",
+        "source_map_sha256": "ddbd84098355d99e82faddf9bc55f66222a5425eda606e6b8810bd2e85534b17",
+        "status": "IMPLEMENTED_AND_INSTALLED; native quota PASS; native MCP context BLOCKED; inference NOT_RUN"
+      }
+    }
+  ]
 }

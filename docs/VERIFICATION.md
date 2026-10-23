@@ -1,4 +1,12 @@
-# Live native quota source verification
+# Current verification
+
+The ff8c8c2 corrections address all 13 reported defects and six improvements. The full locked offline suite passes **483 tests / 574 subtests** in 230.25 seconds; external manager/naming fixtures pass **23 tests**. Fresh authenticated native quota reads and actual CLI/stdio MCP observation agreement pass for all three providers through a legitimate Codex caller. No model turn was used for usage collection. See [current record](../evidence/review-ff8c8c2.json) and [resolution details](REVIEW_FF8C8C2.md).
+
+A quota receipt remains separate from worker/inbox approval. Claude's current quota reader is approved while its broader worker/inbox executable approval is stale. MCP calls from Claude and Antigravity parent contexts and the complete current-source inference/editing/cancellation/fallback matrix remain unaccepted. A bounded Flash review is recorded separately from quota acceptance. Histories, authentication, provider settings, runtime receipts, Codex TOML and shell behavior are preserved.
+
+The following section is historical live-usage verification at its named product/runtime fingerprints.
+
+## Historical live quota source verification
 
 Native quota collection is implemented and installed at product commit `58b6a4b627cec652c785d787996c79d5ef776122`. The settled full suite passes **460 tests / 556 subtests** (155.98 seconds); external manager/naming fixtures pass **23 tests**. Actual authenticated `npeer usage --refresh` returns fresh quota for **Claude 2.1.309, managed Codex 0.163.0 and Antigravity 1.4.5** without model inference. [Current source/runtime record](../evidence/live-usage-sources.json), [resolutions and limits](LIVE_USAGE_SOURCES.md).
 

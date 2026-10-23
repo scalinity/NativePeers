@@ -1,4 +1,4 @@
-# Review ff8c8c2 corrections
+# Review ff8c8c2 corrections — complete
 
 Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All findings and suggestions are in scope; native acceptance remains operation-specific.
 
@@ -21,7 +21,7 @@ Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All find
 - [x] S04 Generate and validate current evidence pointers.
 - [x] S05 Coalesce quota-reader throttles with bounded retry hints.
 - [x] S06 Preflight isolated-copy Git identity.
-- [ ] Close out focused/full tests, installed preservation, scoped native checks, conventions and publication.
+- [x] Full suite 483/574, manager fixtures 23, native CLI/MCP quota parity, exact-history Flash review delivery, owned cleanup, installed preservation and conventions. Publication follows the generated current source pointer.
 
 ---
 
