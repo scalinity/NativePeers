@@ -130,8 +130,8 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/review-ce4a4ac",
-    "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+    "branch": "main",
+    "code_commit": "94db52910df37264d16213091ef7e570ec62f974",
     "evidence": "evidence/review-ce4a4ac.json",
     "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
     "status": "C01-C03 corrected; complete Mac suite and focused Linux usage/socket schedules passed; native acceptance remains operation-specific"
@@ -148,9 +148,9 @@
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
-    "branch": "fix/review-ce4a4ac",
-    "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
-    "last_verified_publication": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+    "branch": "main",
+    "code_commit": "94db52910df37264d16213091ef7e570ec62f974",
+    "last_verified_publication": "94db52910df37264d16213091ef7e570ec62f974",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,11 +210,11 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/review-ce4a4ac",
+    "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
-    "verified_remote_code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+    "verified_remote_commit": "94db52910df37264d16213091ef7e570ec62f974",
+    "verified_remote_code_commit": "94db52910df37264d16213091ef7e570ec62f974",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -285,6 +285,16 @@
       "skipped": 4,
       "seconds": 0.29,
       "skip_reason": "Linux gates already executed separately"
+    },
+    "installed_entrypoint": {
+      "status": "PASS",
+      "scope": "Installed launcher resolves to integrated main; all tested product fingerprints agree; no reinstall or receipt transition"
+    },
+    "publication_consistency": {
+      "status": "PASS",
+      "tests": 3,
+      "seconds": 0.19,
+      "scope": "Current pointers, source/file classes and historical canonical read claims"
     }
   },
   "transports": {
@@ -293,7 +303,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T07:35:20.426237-04:00",
+  "updated_at": "2026-10-23T07:36:32.494266-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -677,6 +687,33 @@
         "evidence": "evidence/review-ce4a4ac.json",
         "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
         "status": "C01-C03 corrected with focused Mac and Linux fixtures; complete suite pending"
+      }
+    },
+    {
+      "stage": "REVIEW_CE4A4AC_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-23T07:35:20.426237-04:00",
+      "git": {
+        "base_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
+        "branch": "fix/review-ce4a4ac",
+        "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+        "last_verified_publication": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-ce4a4ac",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+        "verified_remote_code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-ce4a4ac",
+        "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+        "evidence": "evidence/review-ce4a4ac.json",
+        "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
+        "status": "C01-C03 corrected; complete Mac suite and focused Linux usage/socket schedules passed; native acceptance remains operation-specific"
       }
     }
   ],
