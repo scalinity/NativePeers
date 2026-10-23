@@ -1,33 +1,56 @@
 """Real inherited output pipes cannot hold metadata/worker teardown indefinitely."""
 import asyncio,json,os,signal,sys,tempfile,time
 from pathlib import Path
+from unittest.mock import patch
 import pytest,unittest
 from nativepeers.adapters.codex_app_server import AppServer
 from nativepeers.errors import PeerError
-from nativepeers.process import identity,matches,signal_owned
+from nativepeers.process import identity,signal_owned,owned_status,signal_captured
 
 class AppServerCleanupTests(unittest.IsolatedAsyncioTestCase):
  async def test_exited_leader_with_inherited_pipes_reports_bounded_uncertainty(self):
   with tempfile.TemporaryDirectory() as directory:
    root=Path(directory);pidfile=root/'child';script=root/'server.py';ready=root/'child-ready'
    script.write_text('import sys,json,subprocess,pathlib\n'
-     f'child=subprocess.Popen([sys.executable,"-c",{("import pathlib,time;pathlib.Path("+repr(str(ready))+").touch();time.sleep(30)")!r}])\n'
-     f'pathlib.Path({str(pidfile)!r}).write_text(str(child.pid))\n'
-     'for line in sys.stdin:\n value=json.loads(line)\n if "id" in value:print(json.dumps({"id":value["id"],"result":{}}),flush=True)\n')
+     'for line in sys.stdin:\n value=json.loads(line)\n'
+     ' if value.get("method")=="finish":\n'
+     f'  child=subprocess.Popen([sys.executable,"-c",{("import pathlib,time;pathlib.Path("+repr(str(ready))+").touch();time.sleep(30)")!r}],start_new_session=True)\n'
+     f'  pathlib.Path({str(pidfile)!r}).write_text(str(child.pid))\n'
+     ' if "id" in value:print(json.dumps({"id":value["id"],"result":{}}),flush=True)\n'
+     ' if value.get("method")=="finish":break\n')
    server=AppServer(Path(sys.executable),[str(script)]);child=None
+   capture_allowed=asyncio.Event();capture_waiting=asyncio.Event();capture=server._capture
+   async def delayed_capture():
+    capture_waiting.set();await capture_allowed.wait();await capture()
    try:
-    await asyncio.wait_for(server.start(),3)
-    async with asyncio.timeout(3):
-     while not ready.exists():await asyncio.sleep(.005)
-    child=identity(int(pidfile.read_text())).json()
-    started=time.monotonic()
-    with pytest.raises(PeerError) as error:await asyncio.wait_for(server.close(exit_timeout=.3,kill_timeout=.2,reader_timeout=.1),2)
-    assert time.monotonic()-started<2 and error.value.code=='CLEANUP_UNCERTAIN'
-    assert server.process.returncode==0 and server.cleanup['pending_output_readers']==2
-    assert server.reader.done() and server.error_reader.done() and matches(child)
-    with pytest.raises(PeerError):await server.close()
+    # Block ancestry capture until the parent is positively dead. A ready file
+    # alone cannot establish this schedule: the ordinary monitor may win first.
+    with patch.object(server,'_capture',new=delayed_capture):
+     await asyncio.wait_for(server.start(),3)
+     await asyncio.wait_for(capture_waiting.wait(),3)
+     await server.call('finish',{},timeout=3)
+     async with asyncio.timeout(3):
+      while not ready.exists() or server.process.returncode is None or owned_status(server.owner)!='DEAD':await asyncio.sleep(.005)
+     child=identity(int(pidfile.read_text())).json()
+     assert not server.descendants and owned_status(child)=='LIVE'
+     capture_allowed.set();await capture()
+     assert not server.descendants
+     started=time.monotonic()
+     with pytest.raises(PeerError) as error:await asyncio.wait_for(server.close(exit_timeout=.3,kill_timeout=.2,reader_timeout=.1),2)
+     assert time.monotonic()-started<2 and error.value.code=='CLEANUP_UNCERTAIN'
+     assert server.process.returncode==0 and server.cleanup['pending_output_readers']==2
+     assert not server.stdout_eof and not server.stderr_eof
+     assert server.reader.done() and server.error_reader.done() and owned_status(child)=='LIVE'
+     with pytest.raises(PeerError):await server.close()
    finally:
-    if child and matches(child):signal_owned(child,signal.SIGTERM)
+    capture_allowed.set()
+    if child:signal_captured(child,signal.SIGKILL)
+    if server.process and server.process.returncode is None:server.process.kill()
+    if server.process:
+     async with asyncio.timeout(3):
+      while child and owned_status(child)!='DEAD':await asyncio.sleep(.01)
+     await asyncio.wait_for(server.process.wait(),3)
+     if server.cleanup is None:await server.close(exit_timeout=.1,kill_timeout=.1,reader_timeout=.1)
  
  async def test_normal_close_finishes_readers_and_is_idempotent(self):
   with tempfile.TemporaryDirectory() as directory:
@@ -40,7 +63,7 @@ class AppServerCleanupTests(unittest.IsolatedAsyncioTestCase):
 
  async def test_captured_escaped_descendant_and_parser_failure_require_real_closure(self):
   from nativepeers.process import owned_status
-  for malformed,close_pipes in [(False,True),(True,False),('queue',False)]:
+  for malformed,close_pipes in [(False,False),(False,True),(True,False),('queue',False)]:
    with self.subTest(malformed=malformed),tempfile.TemporaryDirectory() as directory:
     root=Path(directory).resolve();script=root/'server.py';pidfile=root/'pid';ready=root/'ready'
     code='import os,pathlib,time; '+('os.close(1);os.close(2);' if close_pipes else '')+f'pathlib.Path({str(ready)!r}).touch();time.sleep(30)'
@@ -65,6 +88,7 @@ class AppServerCleanupTests(unittest.IsolatedAsyncioTestCase):
       self.assertEqual(owned_status(child),'LIVE')
      report=await asyncio.wait_for(server.close(exit_timeout=.1,kill_timeout=.2,reader_timeout=.2),2)
      self.assertEqual(report['state'],'CLOSED');self.assertTrue(report['output_eof'])
+     self.assertTrue(report['stdout_eof']);self.assertTrue(report['stderr_eof'])
      self.assertEqual(owned_status(child),'DEAD')
      self.assertEqual(report['captured_descendants'],1)
     finally:

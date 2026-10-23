@@ -2,7 +2,7 @@
 
 - [x] Preserve legitimate Git configuration during inspection and normalization (55 focused tests / 38 subtests).
 - [x] Preserve retained Claude layout during batch admission and recommendations (89 focused tests / 39 subtests).
-- [ ] Force captured and uncaptured inherited-pipe cleanup schedules.
+- [x] Force captured and uncaptured inherited-pipe cleanup schedules (5 focused tests / 4 subtests).
 - [ ] Complete verification, scoped publication, review ZIP and session cleanup.
 
 ---
