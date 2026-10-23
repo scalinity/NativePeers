@@ -128,3 +128,5 @@ Use `npeer delta-preview WORKER_ID --json` to compare a retained worker-only del
 Use `npeer cleanup --plan --worker-id WORKER_ID --json` for a conservative retained-workspace inspection. The planner executes no removal and never sweeps native histories/artifacts. Active or resumed generations, uncertain ownership and unique/unavailable changes are retained. Only verified unchanged candidates receive the appropriate Git-worktree or selected-copy procedure. Recheck immediately before any authorized removal.
 
 Copy capture and pre-admission revalidation exclude the canonical NativePeers journal root and every registered provider home, including offline and nonambient homes. Explicit selection does not override the private-native-state exclusion.
+
+Git workspace input has one 10 MiB byte budget across dirty tracked files and explicitly selected untracked files. Each component consumes the remaining shared allowance before materialization. Workspace Git mutations and patch capture remove ambient repository/index/object routing variables, preserving ordinary Git configuration and author/committer identity; a private index is an explicit owned override.

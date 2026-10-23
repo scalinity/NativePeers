@@ -49,3 +49,7 @@ Usage intelligence and its exact commands, native sources, installation, freshne
 
 
 Owned release requires a matching-generation positive native-process and stdout/stderr EOF record. Captured PID/start/UID births remain owned across exec and session/group changes; unknown inspection is not death. Caller authentication separately retains executable and group checks. Codex parser completion cannot stand in for output EOF. Failed group cleanup stays visible and reserved. See [review 2551947](REVIEW_2551947.md) for tested schedules and current runtime boundaries.
+
+Controller control writes have a one-second drain deadline. Release closes the exact lease even when control delivery stalls or the release coroutine is canceled. A frame already written remains an uncertain handoff. A successfully created controller is tracked before initial identity inspection; unknown inspection keeps ownership counted until closure is established. Native model-catalog reads independently bound process exit, captured descendants and stdout/stderr EOF.
+
+Interactive recipients receive message bodies and context references through inbox or status only after native ingestion is established. The recorded sender retains access to its own message. Integration initialization checks the runtime approval under the same lock as its write and preserves an approval recorded concurrently.
