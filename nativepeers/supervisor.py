@@ -87,8 +87,21 @@ class Group:
         finally:
             if read_fd is not None:os.close(read_fd)
             if log is not None:log.close()
-        child={'process':process,'owner':identity(process.pid).json(),'lease_fd':write_fd,'ready':asyncio.get_running_loop().create_future(),'row':row}
-        self.children[row['worker_id']]=child;child['reader']=asyncio.create_task(self.read_worker(row['worker_id']))
+        # Successful creation owns a handle and lease even if birth inspection fails.
+        child={'process':process,'owner':None,'lease_fd':write_fd,'ready':asyncio.get_running_loop().create_future(),'row':row}
+        self.children[row['worker_id']]=child
+        try:child['owner']=identity(process.pid).json()
+        except (OSError,ValueError) as error:
+            self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND generation=?",(row['worker_id'],row['generation']))
+            os.close(write_fd);child['lease_fd']=None
+            process.stdin.close()
+            try:await asyncio.wait_for(process.wait(),2)
+            except asyncio.TimeoutError:pass
+            details=dict(worker_id=row['worker_id'],generation=row['generation'],controller_created=True,
+                         pid=process.pid,exit_observed=process.returncode is not None,cause=type(error).__name__)
+            self.journal.event(row['worker_id'],'controller-inspection-failed',details)
+            raise PeerError('OWNERSHIP_UNKNOWN','Created controller identity could not be inspected; its lease is closed and ownership remains reserved',details=details) from error
+        child['reader']=asyncio.create_task(self.read_worker(row['worker_id']))
         await asyncio.wait_for(asyncio.shield(child['ready']),30)
         # macOS Python may exec its application binary during startup. Pin the ready
         # controller, retaining the exact birth identity used for the child we launched.
@@ -282,7 +295,7 @@ class Group:
         # A dead controller returns immediately from wait; its separately grouped
         # native process still needs exact, generation-fenced cleanup.
         await self.cleanup_native(worker_id,child)
-        require(owned_status(child['owner'])=='DEAD','OWNERSHIP_CONFLICT','Worker controller still owns its process')
+        require(child.get('owner') and owned_status(child['owner'])=='DEAD','OWNERSHIP_CONFLICT','Worker controller still owns its process')
         self.journal.db.execute("UPDATE workers SET state=CASE WHEN native_id IS NULL THEN 'FAILED' ELSE 'RELEASED_RESUMABLE' END WHERE worker_id=? AND generation=?",(worker_id,child['row']['generation']))
 
     async def initialize(self):

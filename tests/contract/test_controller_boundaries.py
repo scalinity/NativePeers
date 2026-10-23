@@ -58,3 +58,29 @@ class ControllerBoundaryTests(unittest.IsolatedAsyncioTestCase):
                     if child.get('lease_fd') is not None:os.close(child['lease_fd']);child['lease_fd']=None
                     await asyncio.wait_for(process.wait(),2)
                     await asyncio.gather(*sends,return_exceptions=True)
+
+    async def test_created_controller_is_tracked_when_initial_identity_fails(self):
+        create=asyncio.create_subprocess_exec
+        for failure in (PermissionError('inspection denied'),ProcessLookupError('already exited')):
+            with self.subTest(failure=type(failure).__name__):
+                captured=[]
+                async def fixture(*args,**kwargs):
+                    fd=kwargs['pass_fds'][0]
+                    process=await create(sys.executable,'-c','pass' if isinstance(failure,ProcessLookupError) else 'import os,sys; os.read(int(sys.argv[1]),1)',str(fd),
+                        stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,pass_fds=(fd,),start_new_session=True)
+                    captured.append(process)
+                    if isinstance(failure,ProcessLookupError):await process.wait()
+                    return process
+                row=self.j.one('SELECT * FROM workers')
+                with patch('nativepeers.supervisor.asyncio.create_subprocess_exec',side_effect=fixture),patch('nativepeers.supervisor.identity',side_effect=failure):
+                    with self.assertRaises(PeerError) as error:await self.group.start_worker(row)
+                self.assertEqual(error.exception.code,'OWNERSHIP_UNKNOWN')
+                self.assertTrue(error.exception.details['controller_created'])
+                child=self.group.children[self.wid]
+                self.assertIs(child['process'],captured[0]);self.assertIsNone(child['lease_fd'])
+                self.assertEqual(await asyncio.wait_for(captured[0].wait(),2),0)
+                self.group.fail_worker(self.wid,{'code':'OWNERSHIP_UNKNOWN'})
+                self.assertEqual(self.j.one('SELECT state FROM workers')['state'],'RELEASING')
+                self.assertFalse(self.j.one("SELECT * FROM events WHERE kind='controller-not-created'"))
+                from nativepeers.ownership import release_status
+                self.assertFalse(release_status(self.j,self.j.one('SELECT * FROM workers'))['released'])

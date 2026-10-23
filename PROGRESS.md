@@ -2,7 +2,7 @@
 
 - [x] F01 Isolate every Git mutation from ambient repository/index/object routing.
 - [x] F02 Bound control delivery and close leases independently of pipe progress.
-- [ ] F03 Retain controller ownership immediately after successful creation.
+- [x] F03 Retain controller ownership immediately after successful creation.
 - [ ] F04 Apply recipient visibility to status, inbox and context references.
 - [ ] F05 Initialize runtime approvals atomically without replacing concurrent approval.
 - [ ] F06/F09 Share authoritative model-scoped quota supersession.
