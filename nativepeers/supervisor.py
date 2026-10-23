@@ -25,6 +25,9 @@ from .registry import Registry
 from .receipts import delivery_error
 
 
+CONTROL_WRITE_SECONDS=1
+
+
 class Group:
     def __init__(self,journal,group_id):
         self.journal,self.id=journal,group_id
@@ -57,7 +60,8 @@ class Group:
         child=self.children[worker_id];wire=canonical(value)+b'\n'
         require(len(wire)<=PEER_FRAME,'PAYLOAD_TOO_LARGE','Worker control frame exceeds 64 KiB')
         try:
-            child['process'].stdin.write(wire);await child['process'].stdin.drain()
+            child['process'].stdin.write(wire)
+            await asyncio.wait_for(child['process'].stdin.drain(),CONTROL_WRITE_SECONDS)
         except Exception as error:
             if value.get('operation')=='task':
                 raise PeerError('DELIVERY_UNKNOWN','Committed task handoff was not confirmed',may_have_received=True,
@@ -230,7 +234,7 @@ class Group:
     async def cancel_worker(self,worker_id,reason=None,*,expected=None):
         if worker_id not in self.children or (expected is not None and self.children[worker_id] is not expected):return
         try:await self.send_worker(worker_id,dict(operation='cancel',**({'reason':reason} if reason else {})))
-        except (BrokenPipeError,ConnectionError):pass
+        except (BrokenPipeError,ConnectionError,asyncio.TimeoutError):pass
 
     async def cleanup_native(self,worker_id,child):
         path=self.journal.root/'workers'/(worker_id+'.json')
@@ -257,24 +261,24 @@ class Group:
         if expected is not None and child is not expected:return
         self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND generation=? AND state!='RELEASED_RESUMABLE'",(worker_id,child['row']['generation']))
         try:await self.send_worker(worker_id,dict(operation='release',**({'reason':self.shutdown_reason} if self.shutdown_reason else {})))
-        except (BrokenPipeError,ConnectionError):pass
-        # Let the exact interrupt/terminal result drain before lease EOF cancels
-        # the controller. An unresponsive writer still loses its lease promptly.
+        except (BrokenPipeError,ConnectionError,asyncio.TimeoutError):pass
+        # Lease closure does not depend on a writable control pipe or successful
+        # process inspection. Post-write failures never establish nondelivery.
         try:
             try:await asyncio.wait_for(child['process'].wait(),2)
-            except asyncio.TimeoutError:
+            finally:
                 if child.get('lease_fd') is not None:
                     os.close(child['lease_fd']);child['lease_fd']=None
-                await asyncio.wait_for(child['process'].wait(),20)
         except asyncio.TimeoutError:
-            await self.cleanup_native(worker_id,child)
-            signal_captured(child['owner'],signal.SIGTERM)
-            try:await asyncio.wait_for(child['process'].wait(),5)
+            try:await asyncio.wait_for(child['process'].wait(),20)
             except asyncio.TimeoutError:
-                signal_captured(child['owner'],signal.SIGKILL)
-                await asyncio.wait_for(child['process'].wait(),5)
-        if child.get('lease_fd') is not None:
-            os.close(child['lease_fd']);child['lease_fd']=None
+                await self.cleanup_native(worker_id,child)
+                require(child.get('owner'),'OWNERSHIP_UNKNOWN','Created controller identity was not captured; lease is closed and ownership remains reserved')
+                signal_captured(child['owner'],signal.SIGTERM)
+                try:await asyncio.wait_for(child['process'].wait(),5)
+                except asyncio.TimeoutError:
+                    signal_captured(child['owner'],signal.SIGKILL)
+                    await asyncio.wait_for(child['process'].wait(),5)
         # A dead controller returns immediately from wait; its separately grouped
         # native process still needs exact, generation-fenced cleanup.
         await self.cleanup_native(worker_id,child)

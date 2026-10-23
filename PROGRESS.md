@@ -1,7 +1,7 @@
 # Review 2885497 corrections
 
 - [x] F01 Isolate every Git mutation from ambient repository/index/object routing.
-- [ ] F02 Bound control delivery and close leases independently of pipe progress.
+- [x] F02 Bound control delivery and close leases independently of pipe progress.
 - [ ] F03 Retain controller ownership immediately after successful creation.
 - [ ] F04 Apply recipient visibility to status, inbox and context references.
 - [ ] F05 Initialize runtime approvals atomically without replacing concurrent approval.
