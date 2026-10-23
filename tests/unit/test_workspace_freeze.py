@@ -157,7 +157,7 @@ class WorkspaceFreezeTests(unittest.TestCase):
         with patch('nativepeers.change_preview.subprocess.Popen',side_effect=slow):
             with self.assertRaises(PeerError):freeze(self.repo,[self.workspace()],timeout=.03)
         self.assertFalse((self.repo/'.worktrees').exists())
-        frozen=freeze(self.repo,[self.workspace()],timeout=1)
+        frozen=freeze(self.repo,[self.workspace()])
         from dataclasses import replace
         frozen=replace(frozen,deadline=time.monotonic()-.01)
         with self.assertRaises(PeerError):prepare(self.journal,self.repo,'expired',self.workspace(),frozen=frozen)

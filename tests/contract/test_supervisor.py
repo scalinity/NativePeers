@@ -27,10 +27,25 @@ class SupervisorTests(unittest.IsolatedAsyncioTestCase):
             j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group_id,parent['handle'],'{}','RESERVED','{}'))
             j.db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,parent['handle'],'wait','UNCLAIMED',None,None,new_id(),1))
             private_directory(j.root/'groups'/group_id)
+            # Fake completion waits for both actual task-start records. A short
+            # sleep alone does not establish overlap on a busy development Mac.
+            executable=Path(temporary)/('fake_'+provider+'.py')
+            fixture=(ROOT/'tests/fixtures'/executable.name).read_text()
+            barrier='''import sqlite3
+barrier_deadline=time.monotonic()+4
+while True:
+    with sqlite3.connect(DATABASE) as db:
+        started=db.execute("SELECT COUNT(*) FROM events WHERE kind='native-task-started'").fetchone()[0]
+    if started==2:break
+    if time.monotonic()>=barrier_deadline:raise RuntimeError('Task-start barrier timed out')
+    time.sleep(.01)
+'''.replace('DATABASE',repr(str(j.root/'journal.sqlite3')))
+            if provider=='codex':barrier='\n'.join('        '+line if line else '' for line in barrier.splitlines())
+            fixture=fixture.replace(('        ' if provider=='codex' else '')+'time.sleep(.15)',barrier,1)
+            executable.write_text(fixture);executable.chmod(0o755)
             for index in range(2):
                 worker_id,task_id=new_id(),new_id();policy['workers'].append(worker_id);policy['initial_tasks'].append(task_id)
                 spec=dict(provider=provider,title='fake '+str(index),task=task,permission_profile='analysis',model='fake-claude' if provider=='claude' else 'gpt-6.1-sol',reasoning_effort='xhigh',cwd=temporary,wall_time_seconds=5,max_task_turns=2)
-                executable=ROOT/'tests/fixtures'/('fake_'+provider+'.py');executable.chmod(0o755)
                 atomic_json(j.root/'compat/runtime.json',{'providers':{provider:fingerprint(executable)}})
                 lease=dict(spec=spec,grants={'worker_id':worker_id,'group_id':group_id},binding=str(j.root/'bindings'/new_id()),parent_key=parent['handle'],expires_at=time.time()+30,executable=str(executable))
                 j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker_id,group_id,None,provider,new_id() if provider=='claude' else None,spec['title'],spec['model'],None,'xhigh',temporary,None,'RESERVED',1,canonical(lease).decode()))
