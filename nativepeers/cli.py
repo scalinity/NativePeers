@@ -51,6 +51,10 @@ def parser():
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
     q=command('cleanup');q.add_argument('--plan',action='store_true',required=True);q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=20)
+    q=command('history-cleanup');action=q.add_mutually_exclusive_group(required=True)
+    action.add_argument('--plan',action='store_true');action.add_argument('--apply',action='store_true');action.add_argument('--unarchive',action='store_true')
+    q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=100);q.add_argument('--manifest',type=Path,required=True)
+    q.add_argument('--automation-manifest',type=Path,action='append',default=[])
     q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144)
     q=command('resume-command');q.add_argument('worker_id');q.add_argument('--explain',action='store_true')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
@@ -72,7 +76,7 @@ async def dispatch(args,journal):
     core=Core(journal)
     try:caller=bind_caller(journal,core.registry)
     except PeerError:
-        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','usage','usage-import'):raise
+        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','usage','usage-import','history-cleanup'):raise
         caller=Caller('external-local','external-local')
     name=args.command
     if name=='whoami':return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants)
@@ -116,6 +120,19 @@ async def dispatch(args,journal):
         workers=args.worker_id or [row['worker_id'] for row in journal.all("SELECT w.worker_id FROM workers w JOIN groups g USING(group_id) WHERE g.parent_key=? AND (w.state='RELEASED_RESUMABLE' OR w.state='FAILED' AND EXISTS (SELECT 1 FROM events e WHERE e.subject_id=w.worker_id AND e.kind='controller-not-created')) AND w.worktree_id IS NOT NULL ORDER BY w.rowid DESC LIMIT ?",(caller.key,args.limit))]
         if not workers:return dict(planner_only=True,removed=False,recheck_required=True,candidates=[],instruction='No released owned writing workspaces in this bounded selection.')
         return plan(journal,caller,workers)
+    if name=='history-cleanup':
+        from .history_cleanup import preview,save_manifest,apply
+        require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Workers cannot maintain native sidebar histories')
+        if args.plan:
+            manifest=preview(journal,worker_ids=args.worker_id or ([] if args.automation_manifest else None),automation_manifests=args.automation_manifest,limit=args.limit)
+            manifest['manifest_path']=str(args.manifest.resolve());save_manifest(args.manifest,manifest)
+            return manifest
+        require(not args.worker_id and not args.automation_manifest,'PROTOCOL_ERROR','Apply uses only the exact preview manifest selection')
+        manifest=json.loads(read_file(args.manifest,1048576))
+        result=await apply(journal,manifest,reverse=args.unarchive)
+        from .files import atomic_json
+        atomic_json(args.manifest.with_name(args.manifest.name+('.unarchive-result.json' if args.unarchive else '.result.json')),result)
+        return result
     if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))
     if name in ('resume-worker','resume-command'):
         from .recovery import resume_command,resume_worker
