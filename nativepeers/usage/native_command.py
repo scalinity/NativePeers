@@ -57,9 +57,11 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
             process=subprocess.Popen(argv,env=environment,cwd=directory,
                 stdin=slave if terminal else subprocess.DEVNULL,stdout=slave if terminal else subprocess.PIPE,stderr=slave if terminal else subprocess.PIPE,
                 start_new_session=True,close_fds=True)
-        except BaseException:
+        except BaseException as error:
             for descriptor in (master,slave):
                 if descriptor is not None:os.close(descriptor)
+            if isinstance(error,FileNotFoundError):
+                raise PeerError('EXECUTABLE_NOT_FOUND','The native usage launcher was not found') from error
             raise
         if slave is not None:os.close(slave)
         if not terminal:
@@ -112,13 +114,28 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                     except PeerError as error:
                         if error.code!='SOURCE_SCHEMA_MISMATCH':raise
 
+        def inspect(pid):
+            try:
+                try:return identity(pid).json()
+                except FileNotFoundError:
+                    # Linux can lose /proc/PID/exe after reading stat. A second
+                    # complete inspection can prove exit; denial stays unknown.
+                    return identity(pid).json()
+            except ProcessLookupError:return None
+            except OSError as error:
+                if isinstance(error,FileNotFoundError) and sys.platform.startswith('linux'):
+                    try:Path(f'/proc/{pid}').stat()
+                    except FileNotFoundError:return None
+                    except OSError:pass  # Denied directory inspection is unknown.
+                raise PeerError('OWNERSHIP_UNKNOWN','A later usage process inspection could not establish its identity',
+                    details={'pid':pid,'cause':type(error).__name__,'controller_created':True}) from error
+
         async def sample():
             nonlocal owner
             if process.poll() is None:
-                try:
-                    current=identity(process.pid).json()
+                current=inspect(process.pid)
+                if current:
                     if owner and all(current[k]==owner[k] for k in ('pid','start','uid')) or not owner and current['ppid']==os.getpid():owner=current
-                except ProcessLookupError:pass
             # Capture actual descendants while ancestry is still established.
             try:raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.4).stdout
             except subprocess.TimeoutExpired:return
@@ -130,8 +147,8 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                 if not selected:break
                 for pid in selected:
                     pending.remove(pid)
-                    try:record=identity(pid).json()
-                    except ProcessLookupError:continue
+                    record=inspect(pid)
+                    if record is None:continue
                     if record['uid']==os.getuid() and record['ppid'] in roots:owned[pid]=record;roots.add(pid)
 
         readers=[asyncio.create_task(drain_terminal())] if terminal else [asyncio.create_task(drain(process.stdout,0)),asyncio.create_task(drain(process.stderr,1))]

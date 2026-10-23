@@ -115,7 +115,7 @@ class Usage:
                     store.record(self.journal,provider,home,payload,kind=kind,settings=self.settings)
                 except asyncio.CancelledError:raise
                 except Exception as error:
-                    code=error.code if isinstance(error,PeerError) else 'SOURCE_TIMEOUT' if isinstance(error,TimeoutError) else 'EXECUTABLE_NOT_FOUND' if isinstance(error,FileNotFoundError) else 'REFRESH_FAILED'
+                    code=error.code if isinstance(error,PeerError) else 'SOURCE_TIMEOUT' if isinstance(error,TimeoutError) else 'SOURCE_UNAVAILABLE' if isinstance(error,FileNotFoundError) else 'REFRESH_FAILED'
                     from ..adapters.codex_app_server import ProviderError
                     if isinstance(error,ProviderError):
                         from ..provider_errors import classify

@@ -16,6 +16,12 @@ def executable(provider):
         'claude':'.local/bin/claude','antigravity':'.local/bin/agy'}[provider]
 
 
+def resolved_executable(provider):
+    try:return executable(provider).resolve(strict=True)
+    except FileNotFoundError as error:
+        raise PeerError('EXECUTABLE_NOT_FOUND','The configured native executable was not found') from error
+
+
 def verify_usage(journal,provider,path):
     """A reverified status-line contract does not approve worker/inbox execution."""
     try:return verify(journal,provider,path)
@@ -48,7 +54,7 @@ class CodexCollector:
     source='codex-rpc'
 
     async def collect(self,journal,home):
-        path=executable('codex').resolve(strict=True);runtime=verify(journal,'codex',path)
+        path=resolved_executable('codex');runtime=verify(journal,'codex',path)
         server=AppServer(path,environment=home_environment('codex',home))
         try:
             async with asyncio.timeout(6):
@@ -80,7 +86,7 @@ class NativeCollector:
     async def collect(self,journal,home,*,capture_directory=None):
         from .contracts import verified
         from .native_command import run_native
-        binary=executable(self.provider).resolve(strict=True);receipt=verified(journal,self.provider,binary)
+        binary=resolved_executable(self.provider);receipt=verified(journal,self.provider,binary)
         if self.provider=='antigravity':
             from ..launch import provider_home
             from .antigravity_native import parse
