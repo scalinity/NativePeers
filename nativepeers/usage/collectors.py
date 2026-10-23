@@ -77,7 +77,7 @@ class CodexCollector:
 class NativeCollector:
     def __init__(self,provider):self.provider=provider
 
-    async def collect(self,journal,home):
+    async def collect(self,journal,home,*,capture_directory=None):
         from .contracts import verified
         from .native_command import run_native
         binary=executable(self.provider).resolve(strict=True);receipt=verified(journal,self.provider,binary)
@@ -107,10 +107,19 @@ class NativeCollector:
         else:
             from .claude_native import parse
             import uuid
+            from ..profiles import ROOT
+            from ..files import private_directory
             collector_id=str(uuid.uuid4())
             args=['--safe-mode','--tools','','--strict-mcp-config','--settings','{"remoteControlAtStartup":false,"disableAllHooks":true}',
                 '--session-id',collector_id]
-            result=await run_native(self.provider,binary,args,home,timeout=15,terminal=True)
+            # Use a private child directory beneath the existing project. This
+            # inherits only existing native trust; no trust entry is created.
+            cwd_parent=private_directory(ROOT/'evidence/private/usage-collector-cwds')
+            try:result=await run_native(self.provider,binary,args,home,timeout=15,terminal=True,capture_directory=capture_directory,cwd_parent=cwd_parent)
+            except PeerError as error:
+                error.details=dict(error.details or {},collector_uuid=collector_id,
+                    conversation_created=any((Path(home)/'projects').glob('*/'+collector_id+'.jsonl')))
+                raise
             require(result['submitted_commands']==1,'SOURCE_NOT_QUALIFIED','Collector did not invoke exactly one native usage command')
             payload=parse(result['stdout'].decode(errors='replace'),fresh_transport=True)
             # Read only exact collector history names, never another conversation.

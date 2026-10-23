@@ -19,9 +19,11 @@ class Screen:
         while i<len(text):
             c=text[i]
             if c=='\x1b':
-                match=re.match(r'\x1b\[([0-9;?]*)([ -/]*)([@-~])',text[i:])
+                match=re.match(r'\x1b\[([0-?]*)([ -/]*)([@-~])',text[i:])
                 if match:
-                    raw,_,cmd=match.groups();values=[int(x) if x else 0 for x in raw.lstrip('?').split(';')]
+                    raw,_,cmd=match.groups()
+                    if cmd not in 'HfABCDGJK':i+=match.end();continue
+                    values=[int(x) if x else 0 for x in raw.lstrip('?').split(';')]
                     n=values[0] or 1
                     if cmd in ('H','f'):self.row=min(self.rows-1,max(0,n-1));self.col=min(self.columns-1,max(0,(values[1] if len(values)>1 else 1)-1))
                     elif cmd=='A':self.row=max(0,self.row-n)
@@ -42,7 +44,7 @@ class Screen:
                     end=re.search(r'\x07|\x1b\\',text[i:])
                     if not end:self.pending=text[i:];break
                     i+=end.end();continue
-                if len(text)-i<32:self.pending=text[i:];break
+                if text[i:].startswith('\x1b[') or len(text)-i==1:self.pending=text[i:];break
                 i+=2;continue
             if c=='\r':self.col=0
             elif c=='\n':
@@ -93,9 +95,12 @@ def parse(text,*,fresh_transport=False,now=None):
     require(pools,'SOURCE_SCHEMA_MISMATCH','Claude returned no measured plan quota rows; session insights are not account quota')
     cache_age=re.search(r'(\d+)\s*(second|minute|hour)s?\s+ago',folded) if cached else None
     age=int(cache_age[1])*{'second':1,'minute':60,'hour':3600}[cache_age[2]] if cache_age else None
+    metrics=re.search(r'Usage:\s*(\d+) input,\s*(\d+) output,\s*(\d+) cache read,\s*(\d+) cache write',text)
+    zero_metrics=all(int(n)==0 for n in metrics.groups()) if metrics else None
+    require(zero_metrics is not False,'SOURCE_EXECUTION_UNCONFIRMED','Collector panel reports nonzero invocation tokens')
     return dict(source='claude-native-usage',route='native-cli-auth',pools=pools,models=[],coverage='partial',
         collection=dict(outcome='CACHED' if cached else 'FRESH' if fresh_transport else 'UNVERIFIED',
             freshness_basis='native-last-known' if cached else 'native-panel-success' if fresh_transport else 'direct-transport-loses-native-cache-status',
-            provider_observed_at=None,native_cache_age_seconds=age),
+            provider_observed_at=None,native_cache_age_seconds=age,native_zero_invocation_tokens=zero_metrics),
         limitations=['Each visible row retains its own reset; omitted rows/credits remain unknown.',
             'Reset text without a full provider date is retained without inventing an epoch.'])

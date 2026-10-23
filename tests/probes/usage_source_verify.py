@@ -56,7 +56,8 @@ async def execute(args,journal):
                         error=envelope.get('error'),model_inputs=0)
                 same=not response.is_error and envelope.get('ok') and current['providers'][0]['observation_id']==envelope['data']['providers'][0]['observation_id']
         return dict(status='PASS' if same else 'FAIL',scope='Real native caller and stdio MCP transport; no model/client tool turn',model_inputs=0,collector_state=current['providers'][0]['collector_state'])
-    result=await COLLECTORS[args.provider].collect(journal,home)
+    options={'capture_directory':args.private_directory} if args.provider=='claude' else {}
+    result=await COLLECTORS[args.provider].collect(journal,home,**options)
     return dict(status='PASS',data=result,model_inputs=0,scope='Actual native metadata read; quota outcome and freshness remain explicit')
 
 

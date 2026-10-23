@@ -28,12 +28,18 @@ def guarded_argv(binary,arguments):
     return ['/usr/bin/sandbox-exec','-p',BROWSER_PROFILE,str(binary),*arguments]
 
 
-async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=1048576,terminal=False):
+async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=1048576,terminal=False,capture_directory=None,cwd_parent=None):
     """Only adapters supply arguments. This is not an exposed arbitrary command tool."""
-    try:environment={**launch_environment(provider),**home_environment(provider,home)}
+    try:
+        environment=launch_environment(provider)
+        # An absent Claude override uses ~/.claude.json; explicitly setting
+        # CLAUDE_CONFIG_DIR=~/.claude selects a different startup config file.
+        # Preserve the normal default layout, and preserve deliberate overrides.
+        if not (provider=='claude' and 'CLAUDE_CONFIG_DIR' not in environment and Path(home).resolve()==(Path.home()/'.claude').resolve()):
+            environment.update(home_environment(provider,home))
     except RuntimeError:raise PeerError('CAPABILITY_MISMATCH','The native nested-launch contract does not permit this usage collector') from None
     if provider=='claude':environment.update(DISABLE_AUTOUPDATER='1',CLAUDE_CODE_SKIP_PROMPT_HISTORY='1')
-    with tempfile.TemporaryDirectory(prefix='npeer-usage-') as name:
+    with tempfile.TemporaryDirectory(prefix='npeer-usage-',dir=cwd_parent) as name:
         directory=Path(name);directory.chmod(0o700)
         for command in ('open','xdg-open'):
             path=directory/command;path.write_text('#!/bin/sh\nexit 1\n');path.chmod(0o700)
@@ -86,9 +92,10 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                 total+=len(chunk);require(total<=max_bytes,'SOURCE_OUTPUT_LIMIT','Native usage terminal exceeds 1 MiB')
                 screen.feed(decoder.decode(chunk));last_output=asyncio.get_running_loop().time();text=screen.text()
                 # No trust/login/permission screen is acknowledged by this reader.
-                if any(word in text.lower() for word in ('do you trust','please sign in','select login','allow this','permission required')):
+                if any(word in text.lower() for word in ('do you trust','quick safety check','choose the text style','please sign in','select login','allow this','permission required')):
                     raise PeerError('SOURCE_ACCESS_DENIED','Native usage collector encountered a prompt requiring human action')
-                if commands==0 and re.search(r'(?m)^\s*[❯>]\s*$',text):
+                normal_prompt=re.search(r'(?m)^\s*[❯>]\s*$',text) or ('Claude Code v' in text and re.search(r'(?m)^\s*❯\s*Try [^\n]+$',text))
+                if commands==0 and normal_prompt:
                     os.write(master,b'/usage\r');commands=1
                     # Only the collector's in-memory screen is cleared. Native
                     # history/UI is untouched; old startup text cannot certify
@@ -160,9 +167,15 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                     if stream:stream.close()
             uncertain=process.poll() is None or bool(pending) or any(matches(r) for r in owned.values())
             if master is not None:os.close(master)
+            if capture_directory is not None:
+                from ..files import private_directory
+                capture=private_directory(capture_directory)
+                for filename,data in [('native-screen.txt',screen.text().encode() if screen else bytes(output[0])),('native-stderr.txt',bytes(output[1]))]:
+                    path=capture/filename;path.write_bytes(data);path.chmod(0o600)
         if isinstance(failure,asyncio.CancelledError):raise failure
         require(not uncertain,'CLEANUP_UNCERTAIN','Native usage command did not prove owned process/output cleanup')
-        if isinstance(failure,TimeoutError):raise PeerError('SOURCE_TIMEOUT','Native usage read exceeded its bounded deadline')
+        if isinstance(failure,TimeoutError):raise PeerError('SOURCE_TIMEOUT','Native usage read exceeded its bounded deadline',
+            details={'submitted_commands':commands,'cleanup':'CLOSED'})
         if failure:raise failure
         return dict(stdout=screen.text().encode() if screen else bytes(output[0]),stderr=bytes(output[1]),exit_code=process.returncode,submitted_commands=commands,
             cleanup={'state':'CLOSED','provider_exited':True,'captured_descendants':len(owned),'output_eof':True})

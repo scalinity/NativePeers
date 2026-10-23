@@ -72,3 +72,13 @@ def test_captured_descendant_pipes_are_bounded_after_leader_exit(tmp_path):
     from nativepeers.process import identity
     with pytest.raises(ProcessLookupError):identity(int(child_file.read_text()))
     assert time.monotonic()-started<3.5
+
+
+@pytest.mark.parametrize('explicit',[False,True])
+def test_claude_default_startup_layout_is_preserved_without_overriding_deliberate_selection(tmp_path,explicit):
+    path=tmp_path/'native';path.write_text('#!/bin/sh\nprintf "%s" "${CLAUDE_CONFIG_DIR-unset}"\n');path.chmod(0o700)
+    environment={'HOME':str(tmp_path),'PATH':os.environ['PATH']}
+    if explicit:environment['CLAUDE_CONFIG_DIR']=str(tmp_path/'.claude')
+    with patch.dict(os.environ,environment,clear=True),patch('nativepeers.usage.native_command.guarded_argv',side_effect=lambda b,a:[str(b),*a]):
+        result=asyncio.run(run_native('claude',path,[],tmp_path/'.claude',timeout=3))
+    assert result['stdout'].decode()==str(tmp_path/'.claude') if explicit else result['stdout']==b'unset'

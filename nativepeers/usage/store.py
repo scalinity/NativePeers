@@ -23,7 +23,7 @@ def scope(provider,home):
         s=path.resolve().stat();runtime=(str(path.resolve()),s.st_size,s.st_mtime_ns)
     except OSError:runtime=None
     flags={k:bool(os.environ.get(k)) for k in {
-        'claude':('ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','ANTHROPIC_BASE_URL','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY'),
+        'claude':('CLAUDE_CONFIG_DIR','ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','ANTHROPIC_BASE_URL','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY'),
         'codex':('OPENAI_API_KEY','OPENAI_BASE_URL'),'antigravity':()}[provider]}
     return sha256(dict(provider=provider,home=str(Path(home).resolve()),markers=markers,runtime=runtime,route_flags=flags))
 

@@ -73,3 +73,12 @@ def test_credits_have_a_distinct_schema_unit_and_never_override_weekly_limits():
     for invalid in (True,'2980',-1,None):
         raw['command']['data']['remaining_credits']=invalid
         with pytest.raises(PeerError):credits(json.dumps(raw))
+
+
+def test_private_csi_keyboard_sequences_are_consumed_and_native_zero_metrics_are_optional():
+    screen=Screen();screen.feed('\x1b[>4m\x1b[<u\x1b[4:3m❯ Try "fix errors"\x1b[0m')
+    assert screen.text()=='❯ Try "fix errors"'
+    base='Current session: 0% used\nCurrent week (all models): 100% used'
+    assert claude(base,fresh_transport=True)['collection']['native_zero_invocation_tokens'] is None
+    assert claude('Usage: 0 input, 0 output, 0 cache read, 0 cache write\n'+base,fresh_transport=True)['collection']['native_zero_invocation_tokens'] is True
+    with pytest.raises(PeerError):claude('Usage: 1 input, 0 output, 0 cache read, 0 cache write\n'+base,fresh_transport=True)
