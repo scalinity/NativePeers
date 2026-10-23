@@ -64,6 +64,9 @@ def test_only_exact_newer_scope_reconciles_refusal(tmp_path):
 def test_disabled_amount_and_gateway_overage_keep_native_semantics():
     values=antigravity({'quota':{'off':{'remaining_fraction':0,'disabled':True},'amount':{'remaining_amount':12}}})
     assert not values[0]['limiting'] and values[0]['disabled']
+    from nativepeers.usage.normalize import assess_pool
+    from nativepeers.usage.config import DEFAULTS
+    assert assess_pool(values[0],1,120,1,DEFAULTS)['warnings']==[]
     assert values[1]['unit']=='native-amount' and values[1]['remaining']==12 and values[1]['used'] is None
     p=claude({'rate_limits':{'spend_limit':{'used_percentage':125}}})[0]
     assert p['used']==125 and p['remaining']==0

@@ -24,7 +24,7 @@ def test_native_no_stdin_and_drained_output(tmp_path):
 
 def test_disposable_terminal_sends_only_one_local_usage_command(tmp_path):
     log=tmp_path/'input'
-    script="printf '❯ '\nIFS= read -r command\nprintf '%s' \"$command\" > "+str(log)+"\nprintf '\\r\\nCurrent session: 20%% used\\r\\nCurrent week (all models): 80%% used\\r\\n'\n"
+    script="printf 'Authentication failed during startup\\r\\n❯ '\nIFS= read -r command\nprintf '%s' \"$command\" > "+str(log)+"\nprintf '\\r\\nCurrent session: 20%% used\\r\\nCurrent week (all models): 80%% used\\r\\n'\n"
     result=run(tmp_path,script,terminal=True)
     assert log.read_text()=='/usage' and result['submitted_commands']==1
     assert b'Current session' in result['stdout']

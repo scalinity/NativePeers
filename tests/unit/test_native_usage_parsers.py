@@ -49,6 +49,14 @@ def test_screen_clears_old_errors_across_split_ansi_updates():
     with pytest.raises(PeerError):claude("What's contributing to your limits usage?\nTop skills 80%")
 
 
+def test_final_measured_claude_pane_supersedes_startup_auth_but_not_terminal_failure():
+    assert claude('Authentication failed during startup\nCurrent session: 20% used',fresh_transport=True)['collection']['outcome']=='FRESH'
+    with pytest.raises(PeerError) as error:claude('Current session: 20% used\nFailed to load usage',fresh_transport=True)
+    assert error.value.code=='SOURCE_UNAVAILABLE'
+    with pytest.raises(PeerError) as error:claude('Please run /login to read quota',fresh_transport=True)
+    assert error.value.code=='SOURCE_ACCESS_DENIED'
+
+
 def test_native_read_success_does_not_establish_backend_freshness_without_contract():
     raw=report([{'buckets':[{'id':'weekly','remaining_fraction':0}]}])
     unknown=agy(raw);fresh=agy(raw,fresh_verified=True)

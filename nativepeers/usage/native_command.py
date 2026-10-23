@@ -90,6 +90,11 @@ async def run_native(provider,binary,arguments,home,*,timeout=15,max_bytes=10485
                     raise PeerError('SOURCE_ACCESS_DENIED','Native usage collector encountered a prompt requiring human action')
                 if commands==0 and re.search(r'(?m)^\s*[❯>]\s*$',text):
                     os.write(master,b'/usage\r');commands=1
+                    # Only the collector's in-memory screen is cleared. Native
+                    # history/UI is untouched; old startup text cannot certify
+                    # or reject the response to the command just submitted.
+                    screen.cells=[[' ']*screen.columns for _ in range(screen.rows)]
+                    continue
                 if commands:
                     try:
                         parse(text,fresh_transport=True)

@@ -208,20 +208,21 @@ class Group:
             raise
         self.finished_at=None;self.changed.set()
 
-    def fail_worker(self,worker_id,error,generation=None):
+    def fail_worker(self,worker_id,error,generation=None,*,before_admission=False):
         row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker_id,))
         if generation is not None and row['generation']!=generation:return
         self.journal.db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if worker_id in self.children else 'FAILED',worker_id))
         for task in self.tasks():
-            if task['worker_id']!=worker_id or task['state'] in TERMINAL:continue
-            unstarted=task['state']=='QUEUED' and task['native_turn_id'] is None
+            cleanup_cancel=before_admission and task['state']=='CANCELED' and task['terminal_reason']=='WORKER_RELEASED' and task['result_artifact_id'] is None and task['native_turn_id'] is None
+            if task['worker_id']!=worker_id or task['state'] in TERMINAL and not cleanup_cancel:continue
+            unstarted=(task['state']=='QUEUED' or cleanup_cancel) and task['native_turn_id'] is None
             task_error=error if unstarted else {'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':error}
             state='FAILED' if unstarted else 'INTERRUPTED'
             record=dict(schema_version=1,group_id=self.id,task_id=task['task_id'],worker={'provider':row['provider'],
                 'native_session_id':row['native_id'],'title':row['role_title'],'peer_key':row['peer_key']},status=state.lower(),summary=task_error.get('message') or task_error['code'],error=task_error,
                 model_requested=row['model_requested'],model_observed=row['model_observed'],native_turn_ids=[],started_at=None,completed_at=time.time())
             artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or worker_id,[self.row['parent_key']],media_type='application/json')
-            changed=self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",(state,artifact,json.dumps(task_error),task['task_id'],row['generation'])).rowcount
+            changed=self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND (state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED') OR (? AND state='CANCELED' AND terminal_reason='WORKER_RELEASED' AND result_artifact_id IS NULL AND native_turn_id IS NULL))",(state,artifact,json.dumps(task_error),task['task_id'],row['generation'],cleanup_cancel)).rowcount
             if changed:self.journal.db.execute('INSERT OR IGNORE INTO task_attempts VALUES(?,?,?,?,?)',(task['task_id'],json.loads(task['task_json']).get('attempt_index',0),worker_id,state,artifact))
         self.changed.set()
 
@@ -278,7 +279,7 @@ class Group:
         rows=self.journal.all("SELECT * FROM workers WHERE group_id=? AND state='RESERVED'",(self.id,))
         results=await asyncio.gather(*[self.start_worker(row) for row in rows],return_exceptions=True)
         if any(isinstance(r,BaseException) for r in results):
-            for row in rows:self.fail_worker(row['worker_id'],{'code':'CAPABILITY_MISMATCH','message':'Batch readiness failed before task admission'},row['generation'])
+            for row in rows:self.fail_worker(row['worker_id'],{'code':'CAPABILITY_MISMATCH','message':'Batch readiness failed before task admission'},row['generation'],before_admission=True)
             # No task has crossed the readiness barrier. End every started lifetime
             # now; ordinary follow-up grace is only for admitted work.
             started=[(row['worker_id'],self.children[row['worker_id']]) for row in rows if row['worker_id'] in self.children]

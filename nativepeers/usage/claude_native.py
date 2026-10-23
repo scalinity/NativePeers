@@ -62,9 +62,7 @@ def parse(text,*,fresh_transport=False,now=None):
     text=re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]','',text).replace('\r','')
     folded=' '.join(text.lower().split())
     cached=any(s in folded for s in ('last-known','last known','could not refresh','usage endpoint is rate limited','showing cached','as of '))
-    if not cached and any(s in folded for s in ('failed to load usage','please run /login','not logged in','authentication failed','usage endpoint is rate limited')):
-        code='SOURCE_RATE_LIMITED' if 'rate limited' in folded else 'SOURCE_ACCESS_DENIED' if any(s in folded for s in ('/login','not logged in','authentication failed')) else 'SOURCE_UNAVAILABLE'
-        raise PeerError(code,'Claude native usage reader could not obtain current quota')
+    failure=re.search(r'failed to load usage|please run /login|not logged in|authentication failed|usage endpoint is rate limited',text,re.I)
     # Each reset stays with its own row. Unknown calendar dates are not invented.
     heading=re.compile(r'(?m)^\s*(Current session|Current week(?:\s*\([^\n)]+\))?|Spend limit)\s*:?')
     matches=list(heading.finditer(text));pools=[]
@@ -86,6 +84,12 @@ def parse(text,*,fresh_transport=False,now=None):
             label=title,reset_note=reset_note)
         if cached or not fresh_transport:item['observed_at']=0
         pools.append(item)
+    # A measured final pane can supersede an earlier startup banner. A failure
+    # inside/after that pane remains a source error; it is never quota exhaustion.
+    if not cached and failure and (not pools or failure.start()>=matches[0].start()):
+        message=failure[0].lower()
+        code='SOURCE_RATE_LIMITED' if 'rate limited' in message else 'SOURCE_ACCESS_DENIED' if any(s in message for s in ('/login','not logged in','authentication failed')) else 'SOURCE_UNAVAILABLE'
+        raise PeerError(code,'Claude native usage reader could not obtain current quota')
     require(pools,'SOURCE_SCHEMA_MISMATCH','Claude returned no measured plan quota rows; session insights are not account quota')
     cache_age=re.search(r'(\d+)\s*(second|minute|hour)s?\s+ago',folded) if cached else None
     age=int(cache_age[1])*{'second':1,'minute':60,'hour':3600}[cache_age[2]] if cache_age else None

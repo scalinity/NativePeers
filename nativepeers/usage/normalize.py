@@ -68,10 +68,10 @@ def assess_pool(value, now, freshness, observed_at, settings):
     result.update(state=state, age_seconds=max(0, age), freshness='STALE' if stale else 'FRESH',
                   reset_eastern=eastern(reset), seconds_until_reset=max(0,reset-now) if reset is not None else None)
     warnings=[]
-    if not stale and value.get('unit')=='percent' and remaining is not None:
+    if not stale and result.get('limiting',True) and value.get('unit')=='percent' and remaining is not None:
         if remaining<=settings['critical_remaining_percent']:warnings.append('CRITICAL_REMAINING')
         elif remaining<=settings['low_remaining_percent']:warnings.append('LOW_REMAINING')
-    if not stale and reset is not None and 0<reset-now<=settings['reset_warning_seconds']:warnings.append('RESET_SOON')
+    if not stale and result.get('limiting',True) and reset is not None and 0<reset-now<=settings['reset_warning_seconds']:warnings.append('RESET_SOON')
     result['warnings']=warnings
     return result
 

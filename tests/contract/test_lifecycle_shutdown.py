@@ -103,6 +103,15 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(finished.is_set());self.assertTrue(child['reader'].done())
         self.assertIsNotNone(self.j.one("SELECT sequence FROM events WHERE kind='fixture-final-reader-event'"))
 
+    async def test_pre_admission_failure_retains_error_after_controller_cleanup_wins(self):
+        for task,reason in ((self.first,'WORKER_RELEASED'),(self.successor,'USER_CANCELED')):
+            self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,self.worker,None,None,'CANCELED',None,reason,1,'{}'))
+        group=Group(self.j,self.id)
+        group.fail_worker(self.worker,{'code':'CAPABILITY_MISMATCH','message':'readiness failed'},1,before_admission=True)
+        first=self.j.one('SELECT * FROM tasks WHERE task_id=?',(self.first,))
+        self.assertEqual(first['state'],'FAILED');self.assertIsNotNone(first['result_artifact_id'])
+        self.assertEqual(self.j.one('SELECT state FROM tasks WHERE task_id=?',(self.successor,))['state'],'CANCELED')
+
     async def test_parent_loss_settles_buffered_successor_with_cause(self):
         await self.start()
         self.group.policy['parent_owner']=dict(self.policy['parent_owner'],pid=99999999,pgid=99999999)
