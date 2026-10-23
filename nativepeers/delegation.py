@@ -167,7 +167,13 @@ class Delegation:
                 from .usage import store
                 store.record(self.journal,'antigravity',homes['antigravity'],dict(source='antigravity-models',source_version=1,
                     models=[dict(model=k,display_name=v,support='NATIVE_CATALOG',capability_source='native-model-catalog',entitlement='UNVERIFIED') for k,v in list(agy_catalog.items())[:64]]),kind='catalog')
-            if 'codex' in homes:await intelligence.refresh('codex',homes['codex'])
+            remaining=policy['created_at']+wall-time.time()
+            require(remaining>0,'BUDGET_EXHAUSTED','Worker deadline elapsed during planning')
+            try:
+                async with asyncio.timeout(remaining):
+                    await asyncio.gather(*(intelligence.refresh(provider,home) for provider,home in homes.items()))
+            except TimeoutError:
+                raise PeerError('BUDGET_EXHAUSTED','Worker deadline elapsed during native quota collection') from None
         quota=intelligence.batch(prepared)
         for worker,assessment in zip(prepared,quota['workers']):
             worker['lease']['usage_at_spawn']=assessment

@@ -119,3 +119,20 @@ def test_scoped_statusline_receipt_does_not_approve_workers(fixture):
     with pytest.raises(PeerError):verify(j,'claude',binary)
     binary.write_text('changed after approval')
     with pytest.raises(PeerError):verify_usage(j,'claude',binary)
+
+
+def test_sparse_passive_capture_preserves_direct_additional_pools_without_freshening(fixture):
+    from nativepeers.usage.normalize import pool
+    from nativepeers.usage.service import Usage
+    import time
+    j,home,binary=fixture;old=time.time()-200
+    store.record(j,'claude',home,dict(source='claude-native-usage',pools=[pool('weekly/opus',used=100,models=['opus'])],models=[]),at=old)
+    contract={'runtime_stat':signature(binary),'runtime_sha256':'fixture'}
+    payload={'session_id':'12345678-abcd-4f01-a345-123456789abc','rate_limits':{'five_hour':{'used_percentage':10}}}
+    with patch('nativepeers.usage.statusline.provider_home',return_value=home):
+        first=capture(j,'claude',home,payload,contract,owners=[{'executable':str(binary)}])
+        assert capture(j,'claude',home,payload,contract,owners=[{'executable':str(binary)}])==first
+    view=Usage(j).snapshot('claude',home);retained=next(p for p in view['pools'] if p['pool_id']=='weekly/opus')
+    assert retained['observed_at']==old and retained['freshness']=='STALE'
+    assert retained['observation_source']=='claude-native-usage'
+    assert view['pools'][0]['freshness']=='FRESH'

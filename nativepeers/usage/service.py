@@ -87,18 +87,22 @@ class Usage:
                     store.record(self.journal,provider,home,payload,kind=kind,settings=self.settings)
                 except asyncio.CancelledError:raise
                 except Exception as error:
-                    code=error.code if isinstance(error,PeerError) else 'SOURCE_TIMEOUT' if isinstance(error,TimeoutError) else 'REFRESH_FAILED'
+                    code=error.code if isinstance(error,PeerError) else 'SOURCE_TIMEOUT' if isinstance(error,TimeoutError) else 'EXECUTABLE_NOT_FOUND' if isinstance(error,FileNotFoundError) else 'REFRESH_FAILED'
                     from ..adapters.codex_app_server import ProviderError
                     if isinstance(error,ProviderError):
                         from ..provider_errors import classify
                         classified=classify(error.error)
-                        code='SOURCE_ACCESS_DENIED' if classified=='AUTH_REQUIRED' else 'SOURCE_RATE_LIMITED' if classified=='RATE_LIMITED' else 'REFRESH_FAILED'
+                        denied=isinstance(error.error,dict) and any(error.error.get(k) in (401,403) for k in ('status','status_code','http_status'))
+                        code='SOURCE_ACCESS_DENIED' if classified=='AUTH_REQUIRED' or denied else 'SOURCE_RATE_LIMITED' if classified=='RATE_LIMITED' else 'REFRESH_FAILED'
                         if isinstance(error.error,dict) and error.error.get('code')==-32601:code='CAPABILITY_MISMATCH'
                     elif code=='AUTH_REQUIRED':code='SOURCE_ACCESS_DENIED'
+                    details=error.details if isinstance(error,PeerError) and isinstance(error.details,dict) else {}
                     store.record(self.journal,provider,home,dict(code=code,message='Current quota could not be obtained: '+code,
-                        request_started_at=started,request_completed_at=time.time()),kind='refresh',settings=self.settings)
+                        request_started_at=started,request_completed_at=time.time(),
+                        **{k:details[k] for k in ('retry_at','retry_after_seconds','retry_note') if k in details}),kind='refresh',settings=self.settings)
         except TimeoutError:
-            return
+            store.record(self.journal,provider,home,dict(code='SOURCE_BUSY',message='Another native quota collector still owns this scope; retained measurements keep their age.',
+                request_started_at=started,request_completed_at=time.time()),kind='refresh',settings=self.settings)
 
     def snapshot(self,provider,home,*,model=None,now=None):
         now=time.time() if now is None else now
@@ -248,13 +252,23 @@ def format_summary(value,details=False):
     for provider in value['providers']:
         age='no observation' if provider['age_seconds'] is None else f"{int(provider['age_seconds'])}s old"
         lines.append(f"{provider['provider']}: {provider['state']} — {safe(provider['source'])}, {age}")
+        failure=provider.get('collector_state')
+        if failure not in ('OK','FRESH','CACHED',None):
+            meaning={'SOURCE_ACCESS_DENIED':'Usage read denied; native sign-in status is unconfirmed.',
+                'SOURCE_RATE_LIMITED':'Usage refresh is temporarily limited; this does not establish model quota exhaustion.',
+                'SOURCE_NOT_QUALIFIED':'This native usage transport needs its scoped verification.',
+                'EXECUTABLE_NOT_FOUND':'The configured native executable is missing.',
+                'UNVERIFIED':'Numeric data is retained; current backend freshness is unverified.'}.get(failure,'A current quota report could not be obtained; retained measurements keep their age.')
+            lines.append('  '+safe(failure)+': '+meaning)
         for p in provider['pools']:
             capacity='capacity unknown' if p['remaining'] is None else f"{p['remaining']:g} {p['unit']} remaining"
             reset='; resets '+p['reset_eastern'] if p['reset_eastern'] else ''
+            if not reset and p.get('reset_note'):reset='; provider reset text: '+safe(p['reset_note'])+' (date unconfirmed)'
             if p['seconds_until_reset'] is not None:reset+=f" (in {int(p['seconds_until_reset']//60)}m)"
             used=f"; {p['used']:g} {p['unit']} used" if p['used'] is not None else ''
             warnings='; '+', '.join(p['warnings']) if p['warnings'] else ''
             lines.append(f"  {safe(p['pool_id'])}: {p['state']}; {capacity}{used}{reset}{warnings}")
+            if p.get('disabled'):lines.append('    Disabled native bucket; not a limiting pool.')
             if details and p.get('runway',{}).get('state')=='ESTIMATE':
                 lines.append(f"    Estimated runway at recent account pace: {int(p['runway']['seconds_at_recent_pace']//60)}m; includes activity outside NativePeers.")
         for m in provider['models']:

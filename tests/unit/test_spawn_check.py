@@ -72,6 +72,16 @@ class SpawnCheckTests(unittest.IsolatedAsyncioTestCase):
         await worker.task(task,'fixture');worker.claude_turn.assert_awaited_once()
         self.assertEqual(worker.spec['model'],'sonnet')
 
+    async def test_actual_admission_refreshes_primary_and_fallback_scopes_but_check_is_cached(self):
+        from nativepeers.usage.service import Usage
+        agy=self.home/'.local/bin/agy';agy.write_text('native fixture')
+        request=self.request();request['workers'][0]['fallbacks']=[{'provider':'antigravity','model':'gemini-3.8-flash-medium'}]
+        with patch('nativepeers.antigravity.catalog',new_callable=AsyncMock,return_value={'gemini-3.8-flash-medium':'Flash'}),patch.object(Usage,'refresh',new_callable=AsyncMock) as refresh:
+            await self.delegation.spawn(self.caller,request,check=True);refresh.assert_not_awaited()
+            await self.delegation.spawn(self.caller,request)
+        self.assertEqual({call.args[0] for call in refresh.await_args_list},{'claude','antigravity'})
+        self.assertEqual(next(c.args[1] for c in refresh.await_args_list if c.args[0]=='claude'),self.home/'.claude')
+
     async def test_shared_pool_advisory_and_atomic_explicit_local_ceiling(self):
         import asyncio
         from nativepeers.usage import store

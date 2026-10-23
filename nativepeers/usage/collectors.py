@@ -32,12 +32,14 @@ def verify_usage(journal,provider,path):
 
 def model_metadata(rows):
     result=[]
+    if not isinstance(rows,list):return result
     for row in rows[:64]:
         if not isinstance(row,dict) or not isinstance(row.get('model'),str):continue
+        efforts=row.get('supportedReasoningEfforts');modalities=row.get('inputModalities')
         result.append(dict(model=row['model'][:512],display_name=str(row.get('displayName',row['model']))[:512],
-            efforts=[x['reasoningEffort'] for x in row.get('supportedReasoningEfforts',[])[:16]
+            efforts=[x['reasoningEffort'][:64] for x in (efforts[:16] if isinstance(efforts,list) else [])
                      if isinstance(x,dict) and isinstance(x.get('reasoningEffort'),str)],
-            modalities=[x for x in row.get('inputModalities',[])[:8] if isinstance(x,str)],
+            modalities=[x[:64] for x in (modalities[:8] if isinstance(modalities,list) else []) if isinstance(x,str)],
             capability_source='native-model-catalog',support='NATIVE_CATALOG',entitlement='UNVERIFIED'))
     return result
 
@@ -54,10 +56,13 @@ class CodexCollector:
                 account=(await server.call('account/read',{'refreshToken':False},timeout=2)).get('account') or {}
                 api_key=account.get('type')=='apiKey'
                 value={} if api_key else await server.call('account/rateLimits/read',{'excludeResetCreditDetails':True},timeout=5)
+                require(api_key or isinstance(value,dict) and (isinstance(value.get('rateLimitsByLimitId'),dict) or
+                    isinstance(value.get('rateLimits'),dict) or type(value.get('ordinaryUsageAllowed')) is bool),
+                    'SOURCE_SCHEMA_MISMATCH','Native quota RPC returned no recognized account quota fields')
             # Optional enrichment has its own small budget and cannot discard quota.
             try:
                 async with asyncio.timeout(1):models=(await server.call('model/list',{'includeHidden':True,'limit':100},timeout=1))['data']
-            except (ProviderError,ConnectionError,TimeoutError,KeyError):models=[]
+            except (ProviderError,ConnectionError,TimeoutError,KeyError,TypeError,AttributeError):models=[]
             return dict(source=self.source,source_version=runtime,route='api-key' if api_key else 'subscription' if account.get('type')=='chatgpt' else 'native-auth-unknown',
                 pools=codex(value),models=model_metadata(models),coverage='unknown' if api_key else 'partial',
                 collection=dict(outcome='UNAVAILABLE' if api_key else 'FRESH',freshness_basis='native-quota-rpc',provider_observed_at=None),

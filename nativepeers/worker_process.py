@@ -162,7 +162,9 @@ class Worker:
                 from .usage.service import Usage
                 intelligence=Usage(self.journal)
                 # Collection is task-driven, outside transactions and native startup.
-                if self.row['provider']=='codex':await intelligence.refresh('codex',self.home)
+                require(time.time()<deadline,'BUDGET_EXHAUSTED','The original logical-task deadline has elapsed')
+                async with asyncio.timeout(deadline-time.time()):
+                    await intelligence.refresh(self.row['provider'],self.home)
                 usage_assessment=intelligence.guard(self.row['provider'],self.home,self.spec)
             except PeerError as usage_error:
                 if usage_error.code=='QUOTA_EXHAUSTED':raise

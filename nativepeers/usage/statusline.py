@@ -57,6 +57,19 @@ def capture(journal,provider,home,value,contract,*,owners=None):
         matched=[m['model'] for m in known if p['pool_id'] in (m['model'],m.get('display_name'))]
         if matched:p.update(models=matched,membership='exact-native-model-key')
     version=value.get('version')
+    previous=store.latest(journal,provider,home,'snapshot')
+    if previous:
+        # Passive status lines may omit model-weekly/credit pools exposed by
+        # an explicit native read. Preserve those rows with their own clocks.
+        incoming={p['pool_id'] for p in pools}
+        for old in previous['payload'].get('pools',[]):
+            if old['pool_id'] in incoming:continue
+            retained=dict(old)
+            retained.setdefault('observed_at',previous['observed_at'])
+            retained.setdefault('observation_source',previous['payload']['source'])
+            retained.setdefault('observation_source_version',previous['payload'].get('source_version'))
+            pools.append(retained)
+        pools=pools[:512]
     return store.record(journal,provider,home,dict(source=provider+'-statusline',
         source_version=dict(runtime_sha256=contract['runtime_sha256'],native_version=str(version)[:64]),
         route=route(provider),pools=pools,models=known[:64],coverage='partial',

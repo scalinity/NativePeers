@@ -75,7 +75,7 @@ def runway(journal,provider,home,scope,current_pool,now,ttl):
     points=[]
     for row in rows:
         payload=json.loads(row['payload_json'])
-        if payload.get('collection',{}).get('outcome')=='CACHED':continue
+        if payload.get('collection',{}).get('outcome') in ('CACHED','UNVERIFIED','UNAVAILABLE'):continue
         p=next((p for p in payload.get('pools',[]) if p['pool_id']==current_pool['pool_id']),None)
         if not p or p.get('resets_at')!=current_pool.get('resets_at') or p.get('used') is None:break
         measured=p.get('observed_at',row['observed_at'])
