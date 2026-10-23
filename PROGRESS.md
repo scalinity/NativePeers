@@ -1,3 +1,12 @@
+# Review 1211303 corrections
+
+- [x] Preserve legitimate Git configuration during inspection and normalization (55 focused tests / 38 subtests).
+- [ ] Preserve retained Claude layout during batch admission and recommendations.
+- [ ] Force captured and uncaptured inherited-pipe cleanup schedules.
+- [ ] Complete verification, scoped publication, review ZIP and session cleanup.
+
+---
+
 # Review 2885497 corrections
 
 - [x] F01 Isolate every Git mutation from ambient repository/index/object routing.

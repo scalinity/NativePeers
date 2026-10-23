@@ -72,7 +72,8 @@ def _workspace(journal,row,lease):
 
 def _git(cwd,args,deadline,*,raw=None,max_output_bytes=ARTIFACT_MAX):
     require(time.monotonic()<deadline,'PREVIEW_UNAVAILABLE','Inspection time limit reached')
-    environment={k:v for k,v in os.environ.items() if not k.startswith('GIT_')}
+    from .worktrees import git_environment
+    environment=git_environment()
     environment.update(GIT_OPTIONAL_LOCKS='0',GIT_TERMINAL_PROMPT='0')
     command=['git','-C',str(cwd),'-c','core.fsmonitor=false','-c','core.hooksPath=/dev/null',
              '-c','diff.autoRefreshIndex=false',*args]
