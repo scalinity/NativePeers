@@ -8,7 +8,7 @@
 - [ ] R06 Resolve current home labels consistently after policy changes.
 - [ ] R07 Retain Claude layout intent for registry discovery.
 - [x] R08 Require compatible forecast window duration/type.
-- [ ] R09 Preserve Antigravity approvals during integration maintenance.
+- [x] R09 Preserve Antigravity approvals during integration maintenance.
 - [x] R10 Assess exact models independently of display limits.
 - [x] R11 Reconcile refusals using the exact pool measurement clock.
 - [ ] H01/H02 Verify owned usage layout and usage-transport birth safety.

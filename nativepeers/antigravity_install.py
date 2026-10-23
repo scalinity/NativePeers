@@ -145,15 +145,21 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
     home=home or Path.home();manifest_path=journal.root/'antigravity-install.json'
     with advisory_lock(journal.root/'locks/install.lock'):
         actual=None
+        receipt_path=journal.root/'compat/runtime.json'
+        receipt=json.loads(receipt_path.read_text()) if receipt_path.exists() else {'schema_version':1,'providers':{}}
         if not remove:
             binary=home/'.local/bin/agy'
             require(binary.is_file(),'EXECUTABLE_NOT_FOUND','Install the official Antigravity CLI first')
-            source=verified_source or ROOT/'evidence/capabilities.json'
-            expected=json.loads(source.read_text())['providers'].get('antigravity')
-            actual=fingerprint(binary)
-            require(expected and expected.get('executable_sha256')==actual['sha256'],
-                    'CAPABILITY_MISMATCH','Review the current Antigravity executable and record its scoped verification before installation')
-            actual=dict(actual,version=expected['version'],scope='Scoped compatibility recorded in '+str(source))
+            # Integration maintenance cannot approve a rollback or retire a
+            # separately verified runtime. Only initial setup reads evidence.
+            if 'antigravity' not in receipt['providers']:
+                source=verified_source or ROOT/'evidence/capabilities.json'
+                expected=json.loads(source.read_text())['providers'].get('antigravity')
+                actual=fingerprint(binary)
+                require(expected and expected.get('executable_sha256')==actual['sha256'] and expected.get('version')
+                        and expected.get('scope') not in ('usage-only','quota-only'),
+                        'CAPABILITY_MISMATCH','Initial worker/inbox approval requires exact runtime integration evidence')
+                actual=dict(actual,version=expected['version'],scope='Worker/inbox compatibility recorded in '+str(source))
         manifest=json.loads(manifest_path.read_text()) if manifest_path.exists() else {'owned':{}}
         recovered=bool(manifest.get('pending')) or manifest.get('state') in ('INSTALLING','UNINSTALLING')
         for pending in manifest.pop('pending',[]):
@@ -215,7 +221,7 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
         if not remove:
             receipt_path=journal.root/'compat/runtime.json'
             receipt=json.loads(receipt_path.read_text()) if receipt_path.exists() else {'schema_version':1,'providers':{}}
-            if actual is not None and receipt['providers'].get('antigravity')!=actual:
+            if actual is not None and 'antigravity' not in receipt['providers']:
                 from .compatibility import update_verified
                 update_verified(journal,{'antigravity':actual});compatibility_updated=True
         return dict(plan,installed=not remove,changed=bool(operations) or recovered or compatibility_updated,

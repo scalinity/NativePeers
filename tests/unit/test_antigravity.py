@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -147,6 +148,7 @@ class AntigravityTests(unittest.TestCase):
                     self.assertIn('worker_spawn',facade.names())
 
     def test_changed_runtime_is_refused_before_any_configuration_write(self):
+        (self.j.root/'compat/runtime.json').unlink()
         self.evidence.write_text(json.dumps({'providers':{'antigravity':{'executable_sha256':'not-the-installed-binary','version':'fixture'}}}))
         with self.assertRaises(Exception) as error:install(self.j,home=self.home,verified_source=self.evidence)
         self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
@@ -280,4 +282,27 @@ class AntigravityTests(unittest.TestCase):
                     self.assertEqual(observe(self.j,dict(self.event,toolCall={'name':'call_mcp_tool','args':args}),'PreToolUse')['decision'],decision)
         self.assertFalse((self.home/'canary').exists())
         self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE subject_id=? AND kind='antigravity-tool-gate'",(worker,)))
-import asyncio
+
+    def test_integration_maintenance_preserves_newer_approval_and_retained_history(self):
+        from nativepeers.compatibility import update_verified
+        install(self.j,home=self.home,verified_source=self.evidence)
+        newer=self.home/'newer';newer.write_bytes(b'new immutable runtime')
+        update_verified(self.j,{'antigravity':fingerprint(newer)})
+        receipt=self.j.root/'compat/runtime.json';before=receipt.read_bytes()
+        self.evidence.unlink()
+        for changed in (False,True):
+            if changed:
+                skill=self.project/'integrations/claude/skills/nativepeers/SKILL.md'
+                skill.write_text('Updated owned skill\n')
+            result=install(self.j,home=self.home,verified_source=self.evidence)
+            self.assertEqual(receipt.read_bytes(),before)
+            self.assertFalse(result['compatibility_updated'])
+            self.assertEqual(result['changed'],changed)
+
+    def test_initial_usage_only_approval_cannot_approve_workers(self):
+        (self.j.root/'compat/runtime.json').unlink()
+        data=json.loads(self.evidence.read_text());data['providers']['antigravity']['scope']='usage-only'
+        self.evidence.write_text(json.dumps(data))
+        with self.assertRaises(Exception) as error:install(self.j,home=self.home,verified_source=self.evidence)
+        self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+        self.assertFalse((self.home/'.gemini/config/hooks.json').exists())
