@@ -130,11 +130,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
-    "evidence": "evidence/review-1211303.json",
-    "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
-    "status": "Both product defects and the cleanup fixture corrected; complete offline suite passed; native acceptance remains operation-specific"
+    "branch": "fix/review-ce4a4ac",
+    "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+    "evidence": "evidence/review-ce4a4ac.json",
+    "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
+    "status": "C01-C03 corrected; complete Mac suite and focused Linux usage/socket schedules passed; native acceptance remains operation-specific"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -147,10 +147,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
-    "branch": "main",
-    "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
-    "last_verified_publication": "17ff9d6098a09605600d5874e65399930ff80782",
+    "base_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
+    "branch": "fix/review-ce4a4ac",
+    "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+    "last_verified_publication": "70f0966d70749ec9fdb1ecfe01356f106784a825",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,62 +210,81 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/review-ce4a4ac",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "17ff9d6098a09605600d5874e65399930ff80782",
-    "verified_remote_code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+    "verified_remote_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+    "verified_remote_code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "REVIEW_1211303_CORRECTIONS_VERIFIED",
+  "stage": "REVIEW_CE4A4AC_CORRECTIONS_VERIFIED",
   "tests_current": {
-    "git_focused": {
+    "retirement_focused": {
       "status": "PASS",
-      "tests": 55,
-      "subtests": 38,
-      "seconds": 74.29
+      "tests": 31,
+      "seconds": 70.77
     },
-    "layout_focused": {
+    "reply_focused": {
       "status": "PASS",
-      "tests": 89,
-      "subtests": 39,
-      "seconds": 4.9
+      "tests": 61,
+      "subtests": 31,
+      "seconds": 22.22
     },
-    "cleanup_focused": {
+    "usage_focused": {
       "status": "PASS",
-      "tests": 5,
-      "subtests": 4,
-      "seconds": 1.5
+      "tests": 41,
+      "skipped": 4,
+      "seconds": 5.61,
+      "skip_reason": "Linux-specific /proc gates; all four executed separately on Linux"
+    },
+    "linux_usage": {
+      "status": "PASS",
+      "tests": 7,
+      "skipped": 0,
+      "seconds": 3.943
+    },
+    "linux_reply": {
+      "status": "PASS",
+      "tests": 4,
+      "skipped": 0,
+      "seconds": 0.852
     },
     "offline": {
       "status": "PASS",
-      "tests": 606,
+      "tests": 617,
       "subtests": 620,
       "failed": 0,
-      "skipped": 0,
-      "seconds": 300.36,
-      "command": ".venv/bin/python -m pytest -q",
+      "skipped": 4,
+      "seconds": 357.39,
       "python": "3.14.8",
       "platform": "macOS",
-      "outer_deadline_seconds": 900
+      "command": ".venv/bin/python -m pytest -q",
+      "outer_deadline_seconds": 900,
+      "skip_reason": "Four Linux-only /proc gates, all executed successfully in the separate Linux usage run",
+      "junit": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "0",
+        "skipped": "4",
+        "tests": "1241",
+        "time": "357.350",
+        "timestamp": "2026-10-23T07:28:27.865778-04:00",
+        "hostname": "M5.local"
+      },
+      "completion": {
+        "exit_code": 0,
+        "timeout": false,
+        "elapsed_seconds": 357.948446082999
+      }
     },
-    "full_run_completion": {
+    "classification_fixture": {
       "status": "PASS",
-      "exit_code": 0,
-      "elapsed_seconds": 300.746278708044,
-      "timeout": false
-    },
-    "installed_entrypoint": {
-      "status": "PASS",
-      "scope": "Existing installed launcher resolves to integrated main; all tested product source hashes match; no integration reinstall or receipt change"
-    },
-    "publication_consistency": {
-      "status": "PASS",
-      "tests": 3,
-      "seconds": 0.08,
-      "scope": "Generated pointers, actual file classes, historical document read claims and current source agree"
+      "tests": 6,
+      "skipped": 4,
+      "seconds": 0.29,
+      "skip_reason": "Linux gates already executed separately"
     }
   },
   "transports": {
@@ -274,7 +293,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T06:08:32.646541-04:00",
+  "updated_at": "2026-10-23T07:35:20.426237-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -604,6 +623,60 @@
         "evidence": "evidence/review-1211303.json",
         "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
         "status": "Both product defects and the cleanup fixture corrected; complete offline suite passed; native acceptance remains operation-specific"
+      }
+    },
+    {
+      "stage": "REVIEW_1211303_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-23T06:08:32.646541-04:00",
+      "git": {
+        "base_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
+        "branch": "main",
+        "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+        "last_verified_publication": "17ff9d6098a09605600d5874e65399930ff80782",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+        "verified_remote_code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+        "evidence": "evidence/review-1211303.json",
+        "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
+        "status": "Both product defects and the cleanup fixture corrected; complete offline suite passed; native acceptance remains operation-specific"
+      }
+    },
+    {
+      "stage": "REVIEW_CE4A4AC_CORRECTIONS_VERIFYING",
+      "updated_at": "2026-10-23T07:21:03.944997-04:00",
+      "git": {
+        "base_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
+        "branch": "fix/review-ce4a4ac",
+        "code_commit": "c5dd8a68aaac2098759f20fdadcd29f5773c8d55",
+        "last_verified_publication": "c5dd8a68aaac2098759f20fdadcd29f5773c8d55",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-ce4a4ac",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "c5dd8a68aaac2098759f20fdadcd29f5773c8d55",
+        "verified_remote_code_commit": "c5dd8a68aaac2098759f20fdadcd29f5773c8d55",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-ce4a4ac",
+        "code_commit": "c5dd8a68aaac2098759f20fdadcd29f5773c8d55",
+        "evidence": "evidence/review-ce4a4ac.json",
+        "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
+        "status": "C01-C03 corrected with focused Mac and Linux fixtures; complete suite pending"
       }
     }
   ],

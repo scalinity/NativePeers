@@ -3,7 +3,7 @@
 - [x] C01 Preserve split-index recovery and verify reconstruction before retirement (31 focused tests).
 - [x] C03 Bound control-socket replies and finite supervisor shutdown (61 Mac tests / 31 subtests; 4 Linux socket tests; committed-reply retry control).
 - [x] C02 Separate later process inspection from executable failure (41 Mac focused tests; 7 Linux tests including all 4 Mac-skipped Linux schedules).
-- [ ] Complete suite, integrated publication and session cleanup.
+- [x] Complete suite: 617 tests / 620 subtests, 4 Linux-only skips in 357.39 seconds; all skipped gates pass separately on Linux; integrated publication and session cleanup.
 
 ---
 

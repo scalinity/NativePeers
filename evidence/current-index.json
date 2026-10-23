@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
-  "reviewed_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
-  "publication_branch": "main",
-  "updated_at": "2026-10-23T06:08:32.646541-04:00",
-  "current_record": "evidence/review-1211303.json",
+  "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+  "reviewed_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
+  "publication_branch": "fix/review-ce4a4ac",
+  "updated_at": "2026-10-23T07:35:20.426237-04:00",
+  "current_record": "evidence/review-ce4a4ac.json",
   "file_classes": {
     "product": {
       "files": {
@@ -53,26 +53,26 @@
         "nativepeers/recovery.py": "4a549ea645be2947ca4743d82f09c2fcc2df41a4ea3e75974d8708d27ad7ccae",
         "nativepeers/registry.py": "944c0e2ce5ed6db66f5a2d9da4e75578d0f54c2e22dd63fa7fe896d3daa087c5",
         "nativepeers/routing.py": "3d1996758cc5fb6cc9d0ecd67c112d192587fdd6b1d19129ccf0ff0d9fe59328",
-        "nativepeers/supervisor.py": "3047790b549341a16e28f418bcf29b45f92d549a21b1836428fb7c836afe0e5d",
+        "nativepeers/supervisor.py": "2221c553859c5e130d2161444a76436650d42d70b992eb411ad01b5527a4951a",
         "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
         "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
         "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
-        "nativepeers/usage/collectors.py": "3253b577c8a04bb1e5ccfdd3638f0f0d83823db825f4cbd92a6fe8af6b36e7df",
+        "nativepeers/usage/collectors.py": "b79ac2571334a023cb38c2bd9f27b1ccb372b202c0a6c4940a1c9f4462a11600",
         "nativepeers/usage/config.py": "0bea94af652729c7749e4846d8de3acc6ca24bff3babae9b53b6368212a01d1d",
         "nativepeers/usage/contracts.py": "40d99b98a5496733097df005af303a4abefe0108e0da85160fb438e80ebea5e6",
         "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
         "nativepeers/usage/forecast.py": "ed637f520ddd798ce0201d430ce70ce14e1612ef72a5cdbd0c5de48e0b6c400f",
         "nativepeers/usage/import_snapshot.py": "d952602ae271dcc076b7b268e9e96c216b186f53ddbf481a2b4310e0a60a17d3",
         "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
-        "nativepeers/usage/native_command.py": "be4e1549ae2304c3eecd0607f7b882d6bc2f04f9dca48fb528dd821c8b037bfd",
+        "nativepeers/usage/native_command.py": "0102b9b9fae9f22d4d1dfc6cbee1f87ec9dd2a5d938d3c5bef5275cb2fe3c462",
         "nativepeers/usage/normalize.py": "08283b5e80011d832e7112beceba169eed94a25313ccf79013dc1883212e959b",
-        "nativepeers/usage/service.py": "5239ba426dcb7e6b795f6f79d5e8c8c23913b218e36c609f7ad0c9b94820b066",
+        "nativepeers/usage/service.py": "21472e05c8f45b1d498b8d57da3ba6a372ea67db10c15d2626e849a26e08339e",
         "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
         "nativepeers/usage/store.py": "41f86cc51ef1f9141719a8ad9c6f515ff264c63cac2a4c8e84bfd5c6d93a17a0",
         "nativepeers/worker_process.py": "9b8ce6169bc957a7f0ab46c3182520251eede27a1d1fce1c46970328b862cac0",
         "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
         "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
-        "nativepeers/workspace_retirement.py": "c63448f4930bdcef7e4f852102997b656438a960ebb354e42b2aa5c246130f72",
+        "nativepeers/workspace_retirement.py": "4b2493aeff87eccf6ba8e5443d8d880a72375843471f4bd8153311f6a0e28f62",
         "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
         "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
         "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
@@ -86,7 +86,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 76,
-      "sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899"
+      "sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e"
     },
     "launchers": {
       "files": {
@@ -114,11 +114,12 @@
         "tests/contract/test_bootstrap.py": "2568e17e1166c701d096f8073cd02fa282670248bc5324eac3e2424a096e6721",
         "tests/contract/test_controller_boundaries.py": "65f3e849f167316b1edac64fa7dde1df0bf0df05d9499df42c55b182cebf57d7",
         "tests/contract/test_copy_spawn.py": "95dabb69807dd807305c1114984b8238ed8919ec65dabdf117ab9dbbbaaafe80",
+        "tests/contract/test_group_reply_backpressure.py": "69871af02f1e0eb0be830b6170548be1605ab039ca71d636d4da2a6f719017ce",
         "tests/contract/test_lifecycle_shutdown.py": "28e967cd97564bb57bb7079afac6b315445c9c03af39fd0a6cd9e8dced01dc0f",
         "tests/contract/test_mcp_ack_groups.py": "ffeea8ae4e9eebfb0fba33915bb41cd83de0ff7ecd3408d3cd3298561150671c",
         "tests/contract/test_native_usage_command.py": "18ab1a9b62ff4bc5d558b1fe5097c088089c503ecbc6104aebd64b0f5a26df83",
         "tests/contract/test_notifications.py": "19d00b8e99933cbeae696f14914b987906720a8ee41632bdbc1bb532e5898772",
-        "tests/contract/test_phase_admission.py": "60a9148445c3261694f9bf27bcb304c29348f66727c254563913709c7fe28bfa",
+        "tests/contract/test_phase_admission.py": "9014d157494f9cb1875792ae4f4d1c9c93a18898d7e589c283e5defbcfa635ad",
         "tests/contract/test_pro_review_artifacts.py": "0ea2ceeccc66a2b47f3a92e1b9f72dd6d1ef7ca81f763b1ab3a8bb741916433b",
         "tests/contract/test_provider_fallback.py": "b9d584490ed5cad241a15ec9e08b05618898c34e52dbf93856e4484fa28e4888",
         "tests/contract/test_result_schema.py": "2aef1e2014171aa1e7ef7ba3296ba79e04ea87e0e5eea9b8780a818afadbdc1e",
@@ -202,9 +203,10 @@
         "tests/unit/test_spawn_check.py": "ba7332618fc6e2ed5a9f05d0f7cdd3a5fb68a49957ffbdfc9724a757244c455e",
         "tests/unit/test_usage.py": "a71c89de019e4c8fd603c3de78de2bde36660c8619523370e2378c10c0618b7d",
         "tests/unit/test_usage_batch_layout.py": "c27d5138d25ceb4bcf5f0083c08abfc2330dcc64a27d3813ceea074ed453cd61",
+        "tests/unit/test_usage_exit_race.py": "cd556ada4f161eb8815f088d43d2f1413fb3c7dfff019b23f0d937263f7d0107",
         "tests/unit/test_usage_forecasts.py": "2d1f68aa68cb70854ecc3d462594536cc5583381077cc38bf0823eebdcd5401a",
         "tests/unit/test_usage_import.py": "e3005b9f10a85f3c38f537ec26556b727e50c1f838b11c1862daa12dd6a2c4ef",
-        "tests/unit/test_usage_native_contracts.py": "e3a39d48bb18a117c178b28e66ac6789d7d97bde10744a0cebb172c4416b0de3",
+        "tests/unit/test_usage_native_contracts.py": "bcbbb831aa84d034a5c274bf6b313d275207dfb9b4e7c22de3bf381a28712738",
         "tests/unit/test_usage_refresh.py": "6b9371a2b93d28d2194bc91a33336e2be86f17b990179d154fd3dde4f221c635",
         "tests/unit/test_usage_selected_layout.py": "9ea1c4e003cd8fc73971791e7992c2baf045662a58c359a2074d27673504c768",
         "tests/unit/test_usage_statusline.py": "f53042aa4c0d73a494e0528d44b33cc4254db1333ca1cdf1170ea167b554699f",
@@ -213,33 +215,33 @@
         "tests/unit/test_worker_report.py": "000689f9786e448f2fbddfc2bd087dd2868272a23dec66892394eafa0f56690e",
         "tests/unit/test_worker_visibility.py": "0908c164408308396008dc18b9b1526f860de028ff4669f6df1d9ebb16f087db",
         "tests/unit/test_workspace_freeze.py": "9324dd95d7e4648cd6299861384f9186b7167ff29ecf12c01a11439c5291053a",
-        "tests/unit/test_workspace_retirement.py": "de667e8eb8469720ae2075a2814056f4d03c00658902766cf3b4588c67e22c0b",
+        "tests/unit/test_workspace_retirement.py": "d840b9088489ebb3a8ffc69aac9e1899925ceba2987d7f724e198bbcbe2f67a7",
         "tests/unit/test_worktrees_and_contracts.py": "33f40047f20a47c59ac9aa918e7ef1faabf2f36431721f49d23c3f9371918f22",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 107,
-      "sha256": "4eb87b7223c55166d3a67caf00afcffb406eedeee32435a54421dd56541a802c"
+      "file_count": 109,
+      "sha256": "121bac31c4717ac5a6c17ca845004833499d1e480d8abc62a22f86c38295ec21"
     }
   },
   "operation_checks": [
     {
-      "operation": "authenticated quota retrieval",
-      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "operation": "native quota and CLI/MCP parent contexts",
+      "parent_context": "No native provider or authenticated native caller executed for this correction session",
       "status": "NOT_RUN"
     },
     {
-      "operation": "native CLI/MCP and worker inference/cancel/resume matrix",
-      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "operation": "native worker inference, cancellation, follow-up and resume",
+      "parent_context": "No native provider or authenticated native caller executed for this correction session",
       "status": "NOT_RUN"
     },
     {
-      "operation": "Desktop worker visibility and native archive/resume",
-      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "operation": "Desktop visibility and native history archive/resume",
+      "parent_context": "No native provider or authenticated native caller executed for this correction session",
       "status": "NOT_RUN"
     },
     {
       "operation": "external CodexMCP manager/naming fixtures",
-      "parent_context": "No native caller or provider was launched for these offline corrections",
+      "parent_context": "No native provider or authenticated native caller executed for this correction session",
       "status": "NOT_RUN"
     }
   ],

@@ -1,4 +1,14 @@
-# Current review 1211303 verification
+# Current review ce4a4ac verification
+
+C01-C03 are corrected and the complete Mac suite passed **617 tests and 620 subtests**, with four Linux-only skips, zero failures/errors and no timeout, in **357.39 seconds** on Python 3.14.8. All 36 installed dependency versions matched the lock. The four skipped process-exit gates passed in a separate **seven-test Linux/Python 3.12.3 run**; **four Linux socket tests** also passed. [Corrections and scope](REVIEW_CE4A4AC.md) · [Current record](../evidence/review-ce4a4ac.json).
+
+The initial complete run finished with 616 passes, one old source-error fixture failure, four skips and 620 passing subtests. Its complete logs/JUnit remain distinct from the final complete pass. Recovery is verified from split/full index data before retirement; response backpressure cannot hold finite closure; later process exit is separate from launcher absence. Existing incomplete archives cannot recover already removed dependency bytes automatically.
+
+No native provider, authenticated quota request, model input, integration installation, runtime approval transition or host configuration change was performed. Current native CLI/MCP, inference/cancel/resume, Desktop/archive/resume and external manager operations are NOT_RUN here. Historical records retain their exact source/runtime/operation/parent scope. This correction round closes the three findings without scheduling another broad audit.
+
+---
+
+# Historical review 1211303 verification
 
 The complete corrected development source passed **606 tests and 620 subtests**, with zero failures or skips, in **300.36 seconds** using `.venv/bin/python -m pytest -q` on macOS/Python 3.14.8. All 36 installed dependency versions matched the lock. [Corrections and scope](REVIEW_1211303.md) · [Verification record](../evidence/review-1211303.json).
 
