@@ -25,6 +25,22 @@ class Caller:
         return dict(kind="external-local", source_label="unbound local process")
 
 
+
+def binding_readiness(journal,value):
+    """Bounded binding diagnosis without credentials or transcript discovery."""
+    worker=value.get('worker_id') or value.get('grants',{}).get('worker_id')
+    row=journal.one('SELECT provider,generation,lease_json FROM workers WHERE worker_id=?',(worker,)) if worker else None
+    lease=json.loads(row['lease_json']) if row else {}
+    state=value.get('state','UNKNOWN');reason='NATIVE_IDENTITY_RESERVED' if state=='RESERVED_UNBOUND' else 'BOUND'
+    if value.get('expires_at') is not None and value['expires_at']<=time.time():reason='LEASE_EXPIRED'
+    elif not value.get('owner'):reason='NO_NATIVE_CALLER'
+    elif not matches(value['owner']):reason='OWNER_GONE'
+    elif row and value.get('generation') is not None and row['generation']!=value['generation']:reason='WRONG_GENERATION'
+    return dict(state=state,reason=reason,worker_id=worker,provider=row['provider'] if row else value.get('provider'),
+                generation=row['generation'] if row else value.get('generation'),selected_home=lease.get('provider_home'),
+                expected_native_owner_pid=(value.get('owner') or {}).get('pid'),
+                next_binding_event='The owned provider binds at native initialization; an interactive CLI binds on its next normal launch/resume or first native turn. Do not replay a task to force binding.')
+
 def read_binding(journal, binding: Path, *, allow_reserved=False):
     require(binding.parent.resolve() == (journal.root/"bindings").resolve(), "CALLER_UNBOUND", "Binding is outside the private binding directory")
     fd = os.open(binding, os.O_RDONLY | os.O_NOFOLLOW)
@@ -37,10 +53,11 @@ def read_binding(journal, binding: Path, *, allow_reserved=False):
         value = json.loads(raw)
     finally:
         os.close(fd)
+    diagnosis=binding_readiness(journal,value)
     require(value.get("state") == "BOUND" or (allow_reserved and value.get("state") == "RESERVED_UNBOUND"),
-            "CALLER_NOT_READY", "Native identity is not bound yet")
+            "CALLER_NOT_READY", "Native identity is reserved; normal native initialization has not bound it",details=diagnosis)
     require(value.get("expires_at", 0) > time.time() and matches(value["owner"]),
-            "CALLER_UNBOUND", "Binding lease or owner expired")
+            "CALLER_UNBOUND", "Binding lease or owner expired",details=diagnosis)
     return value
 
 
@@ -65,7 +82,7 @@ def verify_owned_binding(journal, value, ancestors, *, provider=None, native_id=
         require(False,'CALLER_UNBOUND','Owned worker process manifest is unavailable')
     require(manifest.get('worker_id')==row['worker_id'] and manifest.get('group_id')==row['group_id']
             and manifest.get('generation')==row['generation'] and manifest.get('native_id')==row['native_id'],
-            'CALLER_UNBOUND','Owned worker process manifest differs from the current generation')
+            'CALLER_UNBOUND','Owned worker process manifest differs from the current generation',details=dict(binding_readiness(journal,value),reason='WRONG_GENERATION'))
     require(native_ancestor(value['owner'],[manifest['owner']]) and native_ancestor(value['owner'],ancestors),
             'CALLER_UNBOUND','Owned controller is outside caller ancestry or differs from its manifest')
     require((provider is None or provider==row['provider'])

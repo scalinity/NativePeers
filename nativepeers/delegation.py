@@ -101,6 +101,9 @@ class Delegation:
             client=AppServer(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',environment=home_environment('codex',homes['codex']))
             try:await client.start();catalog=(await client.call('model/list',{'includeHidden':True,'limit':100}))['data']
             finally:await client.close()
+        if any(w.get('workspace',{}).get('mode')=='isolated-copy' for w in workers):
+            from .isolated_copy import identity_preflight
+            identity_preflight(parent['cwd'])
         prepared=[];batch_baseline=snapshot(parent['cwd'])
         for source in workers:
             require(isinstance(source,dict) and source.get('provider') in ('claude','codex','antigravity'),'PROTOCOL_ERROR','Unknown worker provider')
@@ -205,7 +208,7 @@ class Delegation:
                         verify_worker_ready(self.journal,dict(spec,provider='antigravity',model=candidate['model']),candidate['executable'])
                     except PeerError as error:alternative['unavailable']=error.json()
                     alternatives.append(alternative)
-                planned.append(dict(spec,workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable'],fallbacks=alternatives))
+                planned.append(dict(spec,logical_task_slots={'limit':turns,'used':0,'remaining':turns},workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable'],fallbacks=alternatives))
             frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
             quota_blocked=[item for item,worker in zip(quota['workers'],prepared) if item['blockable'] and worker['lease']['spec'].get('quota_policy','respect-known-limits')!='warn']
             pool_blocked=[d for d in quota['demands'] if d['ceiling'] is not None and d['active_workers']+d['proposed_workers']>d['ceiling']]
@@ -306,6 +309,10 @@ class Delegation:
             result['notifications']=[]
         from .fallback import result_details
         for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
+        from .worker_process import task_slots
+        for worker in result['workers']:
+            row=self.journal.one('SELECT generation,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],))
+            worker['logical_task_slots']=task_slots(row)
         result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn')
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         return result
@@ -347,6 +354,10 @@ class Delegation:
         for row in rows[:limit]:
             workers=self.journal.all('SELECT worker_id,role_title,provider,native_id,state,generation FROM workers WHERE group_id=? ORDER BY worker_id',(row['group_id'],))
             counts=self.journal.one('SELECT COUNT(*) tasks,COUNT(result_artifact_id) results FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(row['group_id'],))
+            
+            from .worker_process import task_slots
+            for worker in workers:
+                worker['logical_task_slots']=task_slots(self.journal.one('SELECT generation,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],)))
             groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results']),progress=self.progress(row)))
         return {'groups':groups,'next_cursor':encode(scope,rows[limit-1]['page_id'],ceiling) if len(rows)>limit else None}
 

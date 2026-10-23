@@ -112,7 +112,19 @@ def validate_source(cwd,frozen,*,journal=None):
     require(observed==frozen.baseline,'WORKSPACE_SNAPSHOT_REQUIRED','Original directory differs from the frozen copy-batch inputs')
 
 
+
+def identity_preflight(cwd):
+    """Use the configured identity; never invent or change commit attribution."""
+    import subprocess
+    for variable in ('GIT_AUTHOR_IDENT','GIT_COMMITTER_IDENT'):
+        result=subprocess.run(['git','-C',str(cwd),'var',variable],capture_output=True,timeout=3)
+        require(result.returncode==0,'GIT_IDENTITY_REQUIRED',
+                'Isolated-copy baselines require an existing Git author and committer identity; configure Git before spawning this editing task',
+                details={'missing_identity':variable,'source_changed':False})
+    return {'state':'READY','basis':'existing Git identity','configuration_changed':False}
+
 def prepare_copy(cwd,worker_id,workspace,frozen,*,expected_baseline=None,journal=None):
+    identity_preflight(cwd)
     baseline=frozen.baseline;selected=selection(workspace)
     require(not baseline.get('git') and 'copy_inputs' in baseline and frozen.patch is None
             and all(p in frozen.untracked for p in selected),

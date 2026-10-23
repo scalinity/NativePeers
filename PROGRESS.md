@@ -15,12 +15,12 @@ Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All find
 - [x] F11 Share canonical home-label resolution.
 - [x] F12 Preserve independently approved runtime receipts.
 - [x] F13 Require exact evidence for native pool membership.
-- [ ] S01 Show operation-specific readiness in doctor.
-- [ ] S02 Explain incomplete caller binding precisely.
-- [ ] S03 Expose remaining logical task slots.
-- [ ] S04 Generate and validate current evidence pointers.
+- [x] S01 Show operation-specific readiness in doctor.
+- [x] S02 Explain incomplete caller binding precisely.
+- [x] S03 Expose remaining logical task slots.
+- [x] S04 Generate and validate current evidence pointers.
 - [x] S05 Coalesce quota-reader throttles with bounded retry hints.
-- [ ] S06 Preflight isolated-copy Git identity.
+- [x] S06 Preflight isolated-copy Git identity.
 - [ ] Close out focused/full tests, installed preservation, scoped native checks, conventions and publication.
 
 ---

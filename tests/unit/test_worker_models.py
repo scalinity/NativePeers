@@ -304,5 +304,9 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(row['state'],'FAILED');self.assertEqual(result['error']['code'],'BUDGET_EXHAUSTED')
         self.assertFalse(result['error']['may_have_received']);self.assertEqual(result['native_turn_ids'],[])
         worker.claude_turn.assert_awaited_once()
+        from nativepeers.worker_process import task_slots
+        current=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker.row['worker_id'],))
+        self.assertEqual(task_slots(current)['remaining'],0)
+        self.assertEqual(task_slots(dict(current,generation=2))['remaining'],1)
         await worker.task(tasks[1],'exact retry')
         self.assertEqual(self.journal.one('SELECT * FROM tasks WHERE task_id=?',(tasks[1],)),row)

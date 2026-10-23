@@ -2,6 +2,7 @@
 import argparse
 import asyncio
 import json
+import os
 from pathlib import Path
 import sys
 
@@ -45,7 +46,12 @@ async def execute(args,journal):
         from mcp.client.stdio import stdio_client
         caller=bind_caller(journal,Registry(journal),allow_external=False)
         current=await Usage(journal).status(caller,provider=args.provider,refresh=True)
-        parameters=StdioServerParameters(command=sys.executable,args=['-m','nativepeers.mcp_server','--native-caller'],cwd=str(ROOT))
+        # The MCP SDK defaults omit native thread/binding variables. Forward
+        # only the actual caller context; never synthesize a binding or UUID.
+        from nativepeers.launch import launch_environment
+        environment=launch_environment(args.provider)
+        environment.update({key:os.environ[key] for key in ('CODEX_THREAD_ID','NPEER_HOME','NPEER_BINDING','NPEER_BOOTSTRAP','CODEX_HOME','CLAUDE_CONFIG_DIR') if key in os.environ})
+        parameters=StdioServerParameters(command=sys.executable,args=['-m','nativepeers.mcp_server','--native-caller'],cwd=str(ROOT),env=environment)
         async with stdio_client(parameters) as (read,write):
             async with ClientSession(read,write) as session:
                 await session.initialize()

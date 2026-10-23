@@ -142,7 +142,8 @@ int main(int argc, char **argv) {
                             if followup_change=='wrong-hook-start':process['start']+='-old'
                             payload={'native_id':value.native,'model':spec['model'],'event':'PreInvocation','process':process}
                             if followup_change=='old-hook-boundary':
-                                j.db.execute('INSERT INTO events(sequence,subject_id,kind,payload_json,at) VALUES(?,?,?,?,?)',
+                                # Repeated manifest writes still represent one old hook event.
+                                j.db.execute('INSERT OR IGNORE INTO events(sequence,subject_id,kind,payload_json,at) VALUES(?,?,?,?,?)',
                                     (0,worker,'native-hook-observed',canonical(payload).decode(),time.time()))
                             else:j.event(worker,'native-hook-observed',payload)
                         value.manifest=mismatched_hook

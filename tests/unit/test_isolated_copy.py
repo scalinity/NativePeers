@@ -242,3 +242,15 @@ class IsolatedCopyTests(unittest.TestCase):
             with self.assertRaises(PeerError):pool.submit(validate_frozen,self.source,frozen).result()
             with self.assertRaises(PeerError):pool.submit(prepare,self.journal,self.source,'private',workspace,frozen=frozen).result()
         self.assertFalse((self.source/'.worktrees/private').exists())
+
+    def test_identity_preflight_refuses_missing_identity_before_materializing(self):
+        from nativepeers.isolated_copy import identity_preflight
+        before=self.source_files()
+        environment={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':str(self.root),
+            'GIT_CONFIG_GLOBAL':'/dev/null','GIT_CONFIG_SYSTEM':'/dev/null','GIT_CONFIG_COUNT':'1',
+            'GIT_CONFIG_KEY_0':'user.useConfigOnly','GIT_CONFIG_VALUE_0':'true'}
+        with patch.dict(os.environ,environment,clear=True):
+            with self.assertRaises(PeerError) as error:identity_preflight(self.source)
+            self.assertEqual(error.exception.code,'GIT_IDENTITY_REQUIRED')
+            self.assertFalse(error.exception.may_have_received)
+        self.assertEqual(before,self.source_files());self.assertFalse((self.source/'.worktrees').exists())

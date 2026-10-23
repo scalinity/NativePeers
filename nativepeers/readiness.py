@@ -95,3 +95,36 @@ def readiness(journal):
                 providers={provider:dict(checks=items,native_effective_precedence='unknown',
                     configuration_home=str(installer.home/'.gemini/config' if provider=='antigravity' else homes[provider]))
                     for provider,items in checks.items()})
+
+
+def operation_readiness(journal):
+    """One passive view; a quota receipt never approves worker or inbox execution."""
+    from .compatibility import diagnose
+    from .usage.collectors import executable
+    from .usage.contracts import verified
+    from .errors import PeerError
+    from .launch import home_environment
+    integrations=readiness(journal);runtime=diagnose(journal);results=[]
+    for item in runtime:
+        provider=item['provider'];home=provider_home(provider)
+        config_override=home_environment(provider,home)
+        quota={'state':'UNKNOWN','operation':'quota-read'}
+        try:
+            if provider=='codex':
+                from .compatibility import verify
+                verified_runtime=verify(journal,provider,executable(provider))
+                quota.update(state='APPROVED',runtime=verified_runtime,contract='native-account-quota-rpc')
+            else:
+                receipt=verified(journal,provider,executable(provider))
+                quota.update(state='APPROVED',runtime=receipt['runtime'],contract=receipt['route'])
+        except (PeerError,OSError,ValueError,KeyError) as error:
+            quota.update(state=error.code if isinstance(error,PeerError) else 'UNKNOWN',reason=str(error)[:256])
+        broad={'state':'APPROVED' if item['state']=='PASS' else item['state'],
+               'runtime':item['current'],'approved_runtime':item['expected'],'scope':item['verification_scope']}
+        checks=integrations['providers'][provider]['checks']
+        results.append(dict(provider=provider,selected_home=str(home),
+            configuration_layout='implicit ~/.claude.json' if provider=='claude' and not config_override else 'explicit native provider home',
+            operations={'quota':quota,'worker_turns':dict(broad),'inbox':dict(broad),
+                        'mcp':{'state':'UNKNOWN','reason':'A bound native caller and effective native tool inventory are required; static definitions alone are insufficient.'}},
+            integration_states=sorted({c['state'] for c in checks}),native_acceptance='Only the source/runtime and operation named by each acceptance record are covered.'))
+    return results

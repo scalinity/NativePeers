@@ -17,7 +17,7 @@ from .files import atomic_json,canonical
 from .journal import Journal
 from .launch import launch_environment,recorded_home,home_environment,apply_home
 from .models import new_id
-from .process import identity,matches,signal_owned,descendants
+from .process import identity,matches,signal_owned,descendants,refresh_captured
 from .profiles import ROOT,claude_arguments,codex_config,config_arguments
 from .registry import Registry
 from .compatibility import verify
@@ -85,8 +85,8 @@ class Worker:
                 # Owned turns run outside plan mode. Default is intentionally
                 # account-selected; unknown alias semantics are not verified.
                 if expected!='default':
-                    require(expected in families,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
-                    require(any(model.startswith('claude-'+family+'-') for family in families[expected]),
+                    require(expected in families or model==expected,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
+                    require(model==expected or any(model.startswith('claude-'+family+'-') for family in families.get(expected,())),
                             'MODEL_UNAVAILABLE','Provider selected a different Claude model family',details={'requested':requested,'observed':model})
             if self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
                 require(model==expected,'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
@@ -471,6 +471,9 @@ class Worker:
             signal_owned(self.provider_identity,signal.SIGINT,group=True)
 
     def refresh_provider_identity(self):
+        for pid,record in list(self.provider_descendants.items()):
+            current=refresh_captured(record)
+            if current:self.provider_descendants[pid]=current
         if self.provider and self.provider.returncode is None and self.provider_identity and self.provider_identity['pid']!=os.getpid():
             try:
                 current=identity(self.provider.pid).json()
@@ -494,7 +497,11 @@ class Worker:
 
     async def close_provider(self):
         if self.client:
-            await self.interrupt();await self.client.close()
+            await self.interrupt()
+            try:self.provider_cleanup=await self.client.close()
+            except PeerError:
+                self.provider_cleanup=getattr(self.client,'cleanup',None) or {'state':'UNCERTAIN','output_eof':False}
+                self.manifest();raise
         elif self.provider:
             process=self.provider
             # Capture before interruption; after reparenting ancestry alone cannot
@@ -560,7 +567,7 @@ async def run(worker_id,lease_fd):
             elif event['operation']=='cancel-task':await worker.cancel_task(event['task_id'])
             elif event['operation']=='release':
                 worker.shutdown_reason=worker.shutdown_reason or event.get('reason','WORKER_RELEASED')
-                worker.stopping=True;await worker.queue.put(None);return
+                worker.stopping=True;await worker.interrupt();await worker.queue.put(None);return
             elif event['operation']=='task':await worker.queue.put(event)
         worker.shutdown_reason=worker.shutdown_reason or 'CONTROL_STREAM_CLOSED'
         worker.stopping=True;await worker.interrupt();await worker.queue.put(None)

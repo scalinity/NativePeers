@@ -19,7 +19,7 @@ from .files import advisory_lock,async_advisory_lock,atomic_json,canonical
 from .journal import Journal
 from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
 from .notifications import claim_wait,wait_generations,wait_output,release_wait,settle_deferred
-from .process import identity,matches,signal_owned
+from .process import refresh_captured,identity,matches,signal_owned
 from .profiles import ROOT,PYTHON
 from .registry import Registry
 from .receipts import delivery_error
@@ -240,7 +240,7 @@ class Group:
         if not row or row['generation']!=child['row']['generation']:return
         require(manifest.get('worker_id')==worker_id and manifest.get('generation')==row['generation'] and manifest.get('native_id')==row['native_id'],'OWNERSHIP_UNKNOWN','Owned provider manifest differs from its generation; capacity remains reserved')
         owner=manifest.get('native_process')
-        records=[r for r in [owner,*manifest.get('native_descendants',[])] if r]
+        records=[current for r in [owner,*manifest.get('native_descendants',[])] if r and (current:=refresh_captured(r))]
         for sig,grace in ((signal.SIGTERM,1),(signal.SIGKILL,2)):
             for record in reversed(records):
                 try:signal_owned(record,sig)
@@ -258,9 +258,14 @@ class Group:
         self.journal.db.execute("UPDATE workers SET state='RELEASING' WHERE worker_id=? AND generation=? AND state!='RELEASED_RESUMABLE'",(worker_id,child['row']['generation']))
         try:await self.send_worker(worker_id,dict(operation='release',**({'reason':self.shutdown_reason} if self.shutdown_reason else {})))
         except (BrokenPipeError,ConnectionError):pass
-        if child.get('lease_fd') is not None:
-            os.close(child['lease_fd']);child['lease_fd']=None
-        try:await asyncio.wait_for(child['process'].wait(),22)
+        # Let the exact interrupt/terminal result drain before lease EOF cancels
+        # the controller. An unresponsive writer still loses its lease promptly.
+        try:
+            try:await asyncio.wait_for(child['process'].wait(),2)
+            except asyncio.TimeoutError:
+                if child.get('lease_fd') is not None:
+                    os.close(child['lease_fd']);child['lease_fd']=None
+                await asyncio.wait_for(child['process'].wait(),20)
         except asyncio.TimeoutError:
             await self.cleanup_native(worker_id,child)
             signal_owned(child['owner'],signal.SIGTERM,group=True)
@@ -268,6 +273,8 @@ class Group:
             except asyncio.TimeoutError:
                 signal_owned(child['owner'],signal.SIGKILL,group=True)
                 await asyncio.wait_for(child['process'].wait(),5)
+        if child.get('lease_fd') is not None:
+            os.close(child['lease_fd']);child['lease_fd']=None
         # A dead controller returns immediately from wait; its separately grouped
         # native process still needs exact, generation-fenced cleanup.
         await self.cleanup_native(worker_id,child)

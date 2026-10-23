@@ -126,3 +126,10 @@ def descendants(records):
             if record['uid']==os.getuid() and record['ppid'] in roots:
                 result.append(record);roots.add(pid)
     return result
+
+
+def refresh_captured(record):
+    """An observed process may exec or setsid without changing its birth identity."""
+    try:current=identity(record['pid']).json()
+    except (ProcessLookupError,FileNotFoundError,PermissionError):return None
+    return current if all(current[k]==record[k] for k in ('pid','uid','start')) else None

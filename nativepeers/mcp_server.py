@@ -64,7 +64,7 @@ class Facade:
                     # operation dispatches until a fresh bound caller is verified.
                     return dict(value,state='RESERVED_UNBOUND')
                 if bootstrap or os.getenv('NPEER_BINDING'):raise
-                return {'state':'RESERVED_UNBOUND','provider':'antigravity','grants':{'can_spawn':True}}
+                return {'state':'RESERVED_UNBOUND','provider':None,'grants':{'can_spawn':False}}
         return json.loads(self.binding.read_text())
 
     def names(self):
@@ -98,8 +98,10 @@ class Facade:
             require(valid(args,schema),'PROTOCOL_ERROR','Invalid tool arguments')
             state=self.binding_state()
             if state.get('state')!='BOUND':
-                require(params.name=='task_status','CALLER_NOT_READY','Native identity is reserved but not bound')
-                value={'state':'RESERVED_UNBOUND','worker_id':state.get('worker_id')}
+                from .caller import binding_readiness
+                diagnosis=binding_readiness(self.journal,state)
+                require(params.name=='task_status','CALLER_NOT_READY','Native identity is reserved but not bound',details=diagnosis)
+                value={'state':'RESERVED_UNBOUND','worker_id':state.get('worker_id'),'readiness':diagnosis}
             else:
                 require(params.name in self.names(),'APPROVAL_BLOCKED','Tool is outside the fixed lease')
                 from .core import Core
