@@ -26,6 +26,8 @@ from .receipts import delivery_error
 
 
 CONTROL_WRITE_SECONDS=1
+CONTROL_REPLY_SECONDS=1
+CONTROL_CLOSE_SECONDS=1
 
 
 class Group:
@@ -37,6 +39,7 @@ class Group:
         self.endpoint=runtime_root()/('g-'+group_id[:24]+'.sock')
         self.children={};self.changed=asyncio.Event();self.closing=False;self.finished_at=None;self.shutdown_reason=None
         self.handoffs=set()
+        self.connections={}
         self.controller=Caller('controller','controller:'+group_id+':'+str(self.generation),grants={'group_id':group_id,'generation':self.generation,'parent_key':self.row['parent_key']})
         self.parent=Caller('peer',self.row['parent_key'],self.policy['parent_incarnation'])
 
@@ -325,6 +328,27 @@ class Group:
             for task in self.tasks() if task['state']=='QUEUED' and task['worker_id'] in self.children])
 
     async def connection(self,reader,writer):
+        handler=asyncio.current_task()
+        self.connections[handler]=writer
+        try:
+            await self.respond(reader,writer)
+        except (ConnectionError,OSError,TimeoutError):
+            # A lost reply does not reverse committed admission or authorize
+            # replay. The caller retains its request/task identity as uncertain.
+            self.journal.event(self.id,'control-reply-unconfirmed',{})
+            writer.transport.abort()
+        except asyncio.CancelledError:
+            writer.transport.abort()
+            raise
+        finally:
+            writer.close()
+            try:await asyncio.wait_for(writer.wait_closed(),CONTROL_CLOSE_SECONDS)
+            except (ConnectionError,OSError,TimeoutError):writer.transport.abort()
+            except asyncio.CancelledError:
+                writer.transport.abort();raise
+            finally:self.connections.pop(handler,None)
+
+    async def respond(self,reader,writer):
         uncertain=False
         try:
             raw=await asyncio.wait_for(reader.readline(),3)
@@ -366,11 +390,8 @@ class Group:
             response={'ok':True,'data':value}
         except Exception as error:
             response={'ok':False,'error':error.json() if isinstance(error,PeerError) else {'code':'PROTOCOL_ERROR','message':type(error).__name__}}
-        try:
-            wire=canonical(response)+b'\n';require(len(wire)<=CONTROL_RESPONSE,'PAYLOAD_TOO_LARGE','Result response exceeds 2 MiB; use artifact pages')
-            writer.write(wire);await writer.drain()
-        finally:
-            writer.close();await writer.wait_closed()
+        wire=canonical(response)+b'\n';require(len(wire)<=CONTROL_RESPONSE,'PAYLOAD_TOO_LARGE','Result response exceeds 2 MiB; use artifact pages')
+        writer.write(wire);await asyncio.wait_for(writer.drain(),CONTROL_REPLY_SECONDS)
 
     async def cancel(self,payload):
         require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Cancellation requires the owning parent')
@@ -575,6 +596,7 @@ class Group:
 
     async def close(self):
         self.closing=True
+        self.server.close()
         self.stop_queued()
         if self.handoffs:await asyncio.gather(*list(self.handoffs),return_exceptions=True)
         self.journal.db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND state='UNCLAIMED' AND mode='push'",(self.id,))
@@ -591,7 +613,23 @@ class Group:
             for reader in pending:reader.cancel()
             await asyncio.gather(*readers,return_exceptions=True)
             if pending:self.journal.event(self.id,'controller-reader-cleanup-uncertain',{'readers':len(pending)})
-        self.server.close();await self.server.wait_closed();self.endpoint.unlink(missing_ok=True)
+        # Accepted transports can retain queued output after the listener stops.
+        # Abort them independently of a parent that may never read again.
+        await asyncio.sleep(0)
+        clients=list(self.connections.items())
+        for task,writer in clients:
+            writer.transport.abort()
+            if task is not asyncio.current_task():task.cancel()
+        handlers={task for task,_ in clients if task is not asyncio.current_task()}
+        if handlers:
+            done,pending=await asyncio.wait(handlers,timeout=CONTROL_CLOSE_SECONDS)
+            for task in done:
+                if not task.cancelled():task.exception()
+            if pending:unresolved.append({'control_handlers':len(pending),'reason':'Control handler cleanup remains unproved'})
+        try:await asyncio.wait_for(self.server.wait_closed(),CONTROL_CLOSE_SECONDS)
+        except TimeoutError:
+            unresolved.append({'reason':'Control socket transport closure remains unproved'})
+        self.endpoint.unlink(missing_ok=True)
         atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=not bool(unresolved),cleanup_unresolved=unresolved))
         final='COMPLETED' if all(t['state']=='COMPLETED' for t in self.tasks()) else 'PARTIAL'
         if unresolved:final='PARTIAL'

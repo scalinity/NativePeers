@@ -1,7 +1,7 @@
 # Review ce4a4ac corrections
 
 - [x] C01 Preserve split-index recovery and verify reconstruction before retirement (31 focused tests).
-- [ ] C03 Bound control-socket replies and finite supervisor shutdown.
+- [x] C03 Bound control-socket replies and finite supervisor shutdown (60 focused tests / 31 subtests).
 - [ ] C02 Separate later process-inspection failure from executable launch failure.
 - [ ] Complete suite, integrated publication and session cleanup.
 
