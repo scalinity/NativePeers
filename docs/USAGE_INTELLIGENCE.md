@@ -1,6 +1,6 @@
 # Usage intelligence and quota-aware delegation
 
-NativePeers reads supported native metadata and ordinary status-line telemetry. It never submits inference to collect quota, opens another writer for a conversation, redeems credits, changes billing or polls in the background.
+NativePeers reads native quota commands/RPCs and supplementary status-line telemetry. It never submits inference to collect quota, opens another writer for a conversation, redeems credits, changes billing or polls in the background.
 
 ```sh
 npeer usage
@@ -11,15 +11,15 @@ npeer usage --provider antigravity --model gemini-3.8-flash-medium --json
 npeer usage --provider codex --home-label WORK --json
 ```
 
-The ordinary command reads the cache. `--refresh` performs supported metadata work and coalesces concurrent requests. Codex can fetch account quota independently. Claude and Antigravity retain status-line quota from normal native operation; refreshing does not automate their interactive `/usage` panels. Antigravity can independently refresh its signed-in model catalog, which is separate from quota freshness.
+The ordinary command reads the cache. `--refresh` performs qualified native reads and coalesces concurrent acquisitions. Codex uses the native account quota RPC. Antigravity uses its supported read-only print command for `/usage` and a separately qualified `/credits` report. Claude has a gated disposable usage-only terminal adapter; its positional route is refused on the inspected build because it can omit cache-status information. The authorized, qualified 2.1.309 terminal route returns measured quota; without such a receipt, Claude retains dated passive observations or reports unknown. A missing reading never means full capacity or a missing login.
 
 ## Native sources and boundaries
 
 | Provider | Native source | Reported fields and important limits |
 |---|---|---|
 | Managed Codex | Private stdio `account/read` without token refresh, `account/rateLimits/read`, `model/list`; owned `account/rateLimits/updated` events | All returned buckets; primary/secondary used percentages, actual window durations/resets, credit balances, individual spend controls, reached flags, ordinary included-usage permission and reset-credit count. Bucket names do not establish complete model membership. API-key billing has no invented subscription allowance. |
-| Claude Code | Documented `statusLine` JSON `rate_limits` | Five-hour and seven-day usage/reset fields, gateway spend fields when present, and additional percentage-shaped pools actually emitted. Additional pool membership is unknown unless explicitly established. No independent account quota fetch is claimed. |
-| Antigravity CLI | Documented `statusLine` JSON `quota`; native `agy models` | Model/bucket remaining fractions and reset fields. Only exact catalog model/display-name matches establish model membership automatically; shared family names are not guessed. Credits and hidden overlapping windows absent from telemetry remain unknown. |
+| Claude Code | Qualified, explicitly authorized collector-owned native `/usage` terminal; supplementary `statusLine.rate_limits` | Session, all-model weekly and each model-scoped weekly row remain separate. Cached/last-known readings remain stale. Gateway usage can exceed 100%; USD remains a separate unit. The authorized 2.1.309 terminal route passes native collection, including a naturally exhausted weekly allowance. It is not enabled by the passive installer. |
+| Antigravity CLI | `agy -p /usage --output-format json --print-timeout 15s`; separately qualified `/credits`; supplementary status-line quota | All returned groups, including additional model-specific weekly buckets, own windows/resets, disabled flags and fraction/absolute units. Explicit model memberships are retained; family display names do not create mappings. Additional credits never clear an exhausted included allowance. |
 
 Primary contracts: [Codex app-server](https://learn.chatgpt.com/docs/app-server), [Claude status line](https://code.claude.com/docs/en/statusline), [Antigravity status line](https://www.antigravity.google/docs/cli/statusline/), [Antigravity model-quota panel](https://www.antigravity.google/docs/cli/commands/usage/).
 
@@ -29,7 +29,7 @@ Every model includes applicable pool IDs, state, coverage and reasons. Every poo
 
 All known applicable limiting pools matter. `EXHAUSTED` wins over a healthy overlapping window. Healthy but unmapped pools cannot certify a particular model. `AVAILABLE` means the observed applicable constraints permit it, with the stated coverage; it is not an entitlement guarantee.
 
-`UNKNOWN` means insufficient evidence. `STALE` means an old or reset-crossing observation. An elapsed reset timestamp does not refill anything locally. Authentication and runtime/schema failures remain separate from exhaustion. A failed refresh retains old data with its age and error; it does not disable peer messaging or immutable results.
+`UNKNOWN` means insufficient evidence. `STALE` means an old or reset-crossing observation. An elapsed reset timestamp does not refill anything locally. Authentication and runtime/schema failures remain separate from exhaustion. A failed refresh retains old data with its age and error; it does not disable peer messaging or immutable results. Source access denial means the quota read was denied, not that native sign-in is unavailable. Source throttling means usage cannot be refreshed, not that model inference quota is exhausted. Missing executables, capability/schema failures and task-level quota/auth errors have separate outcomes.
 
 ## Status-line capture and installation
 
@@ -56,7 +56,7 @@ npeer spawn --spec /absolute/batch.json --json
 
 Preflight reads cached quota without writing observations, reserving workers or materializing workspaces. Its `usage` section shows relevant pools, freshness, exact model/effort, proposed/active shared-pool demand and estimates. Quota and explicitly configured pool-ceiling blockers make `ready:false`. Configured fallbacks remain visible separately; a blocked primary is not reported as available because a fallback exists.
 
-Actual dispatch refreshes supported Codex quota when needed, reuses the existing Antigravity catalog, and checks applicable observations before task input. Unknown or stale data does not block a model. Fresh, proven applicable exhaustion yields a retained `QUOTA_EXHAUSTED` task disposition without submitting input. Other siblings can run. The default per-worker policy is `respect-known-limits`.
+Actual dispatch refreshes each distinct requested primary/fallback provider/home scope outside database transactions. Each worker rechecks its own scope before task input, reusing a fresh successful acquisition across siblings and collecting again after queue delay, reset crossing or scope changes. Collection and cleanup consume the original task deadline. Catalogs, passive updates and refresh errors cannot impersonate a successful acquisition. It then checks applicable observations before task input. Unknown or stale data does not block a model. Fresh, proven applicable exhaustion yields a retained `QUOTA_EXHAUSTED` task disposition without submitting input. Other siblings can run. The default per-worker policy is `respect-known-limits`.
 
 For an intentional attempt of the exact model despite a quota warning:
 
@@ -104,4 +104,25 @@ npeer usage-import --file /absolute/quota-snapshot.json --json
 
 The versioned [import schema](../schemas/usage-import.v1.json) accepts provider, original observation time, optional home label, model IDs and bounded pool values. Imports are clearly user-supplied, never override native snapshots and cannot alone block dispatch. Owned workers cannot import claims. The public normalized result is described in [usage.v1.json](../schemas/usage.v1.json).
 
-Current automated/native source checks and limitations are recorded in `evidence/usage-intelligence.json`. Runtime status-line emission, authenticated metadata reads, fake-provider tests and real inference acceptance are separate verification classes. This feature needs no inference for collection or calibration.
+Current source corrections and native checks are recorded in [LIVE_USAGE_SOURCES.md](LIVE_USAGE_SOURCES.md) and `evidence/live-usage-sources.json`. The preceding passive feature remains recorded in `evidence/usage-intelligence.json`. Runtime status-line emission, authenticated metadata reads, fake-provider tests and real inference acceptance are separate verification classes. This feature needs no inference for collection or calibration.
+
+
+## Qualifying a native quota transport
+
+Usage-only receipts live under the existing private state `compat/usage-sources.json`. They pin the executable and browser guard; they do not renew worker/inbox compatibility. No native package is activated. The fixed probe has no arbitrary prompt/RPC action:
+
+```sh
+.venv/bin/python tests/probes/usage_source_verify.py inspect --provider antigravity --deadline-ms 15000 --record --json
+.venv/bin/python tests/probes/usage_source_verify.py collect --provider antigravity --command credits --deadline-ms 20000 --record --json
+.venv/bin/python tests/probes/usage_source_verify.py collect --provider antigravity --deadline-ms 20000 --json
+.venv/bin/python tests/probes/usage_source_verify.py inspect --provider claude --deadline-ms 15000 --json
+```
+
+The inspected Antigravity 1.4.5 arm64 executable forces a fresh quota retrieval before rendering. That proof is pinned to its exact hash. Another build can return valid numeric data while backend freshness remains `UNVERIFIED`; its pools stay stale. A version string, new process, valid JSON or recent local timestamp alone never proves a backend fetch. The observed credits schema has numeric `remaining_credits`; its upgrade URL is discarded. Credits use their own unit and remain nonlimiting without an established applicability rule.
+
+Claude's inspected 2.1.309 positional handler can return seeded cached quota without the panel's last-known marker. NativePeers does not execute that route or substitute `claude -p /usage`. The optional terminal collector needs explicit approval of the narrow typing exception before inspection with `--authorize-claude-pty --record`. It starts an independent private terminal with no prompt/resume argument, preserves native home/auth/model selection, suppresses child-only customizations/browser launches, sends `/usage` once at a recognized normal prompt, and aborts on login/trust/permission or unknown screens. It never touches an existing terminal or clears the nested-launch guard. Managed startup changes invalidate qualification. An exact collector-UUID retained history is preserved and fails the no-persistence check. No history is deleted to obtain a pass.
+
+The runner continuously drains at most 1 MiB, closes inherited descriptors, and settles verified owned processes/pipes within a finite deadline. It captures descendants while ancestry is established, never signals a recycled dead leader's group, and reports cleanup uncertainty explicitly. Local request/completion clocks, provider time when supplied, cache age and per-pool clocks remain distinct. Cached/unverified/sparse readings do not manufacture forecast samples. Missing native counters remain unknown.
+
+
+The authorized Claude 2.1.309 native acceptance returned three measured windows, with zero displayed invocation tokens/API time/cost and no exact collector-UUID history. The collector preserves the implicit default startup layout: an absent CLAUDE_CONFIG_DIR remains absent, because setting it to ~/.claude changes the startup config location from ~/.claude.json to ~/.claude/.claude.json. Deliberate explicit overrides remain selected and have a distinct usage scope. Its private empty cwd is beneath the existing NativePeers project, inheriting only existing native trust; a trust/onboarding prompt is aborted, never acknowledged or configured away. Modern private CSI/keyboard/style sequences and the native empty-prompt hint are parsed before sending the one local command. Early onboarding/trust/prompt-parser diagnostics sent zero commands and are retained privately as failed checks, not quota successes.

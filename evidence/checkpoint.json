@@ -120,57 +120,36 @@
       "private_backups_retained": true,
       "private_capture_size": "284 KiB at close-out",
       "worktrees_created": 0
+    },
+    "live_usage_sources": {
+      "worktrees_created": 0,
+      "native_histories_deleted": 0,
+      "private_captures_ignored": true,
+      "regenerable_binary_indexes_removed": true
     }
   },
-  "current_protected_baseline": "evidence/private/review-0274647/protected-before-install.json",
+  "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "main",
-    "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
-    "evidence": "evidence/usage-intelligence.json",
-    "source_map_sha256": "52a755e716d015c06152bfa12221fa77fb7d00b9c04afdafbf009494cd71e60f",
-    "status": "IMPLEMENTED_AND_INSTALLED; offline and metadata checks PASS, runtime quota emission qualified"
+    "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
+    "evidence": "evidence/live-usage-sources.json",
+    "source_map_sha256": "ddbd84098355d99e82faddf9bc55f66222a5425eda606e6b8810bd2e85534b17",
+    "status": "IMPLEMENTED_AND_INSTALLED; native quota PASS; native MCP context BLOCKED; inference NOT_RUN"
   },
   "feature_work": {
-    "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
-    "branch": "feat/usage-intelligence",
-    "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
-    "concurrent_review": "Independent frozen Pro review; no fixes adopted",
-    "focused_tests": "46 tests / 23 subtests PASS; home-scoped model-support test PASS after fixture column correction",
-    "full_suite_final": {
-      "command": ".venv/bin/python -m pytest -q",
-      "python": "3.14.8",
-      "scope": "Combined locked unit/property/fake-provider contract suite; executable logic unchanged after run, package docstring trailing whitespace normalized",
-      "seconds": 178.66,
-      "status": "PASS",
-      "subtests": 556,
-      "tests": 405
-    },
-    "full_suite_initial": "398 tests / 553 subtests passed; three existing Antigravity cases found redundant catalog collection before readiness. Removed redundant per-task telemetry collector launch; regression rerun in progress.",
-    "full_suite_second": "21 regression failures from optional quota-ceiling path requiring full metadata in legacy/minimal leases; skip optional path when no ceiling is configured; focused regressions running.",
-    "installed": true,
-    "milestone": "IMPLEMENTED_AND_INSTALLED; offline and metadata checks PASS, runtime quota emission qualified",
-    "name": "usage-intelligence",
-    "native_inference_submitted": 0,
-    "next_action": "Await independent Pro review; no pending feature implementation or native model work.",
-    "publication": "Code and verification merged/pushed to main; temporary feature branch removed.",
-    "publication_checks": "36 tests / 19 subtests PASS",
-    "review_archive": {
-      "commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
-      "sha256": "a2fd639683845b8868d242c8bd8a6ac2e35f214f85c7fad3fed348c6bcbac9ef",
-      "tracked_files": 201,
-      "uncompressed_bytes": 2216835
-    },
-    "runtime_changes": {
-      "claude": "Independent native update to 2.1.309 detected; worker/inbox approval remains 2.1.308. Verify only usage status-line scope.",
-      "codex": "Current independently approved managed 0.163.0 reasoning-wrap build passes authenticated quota RPC; no package changes performed."
-    },
-    "status": "COMPLETE"
+    "name": "live-usage-sources",
+    "base_commit": "d9d89e222b0bbd08c11cc6ed101cc1c173d3a4d6",
+    "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
+    "status": "COMPLETE",
+    "pty_authorized": true,
+    "native_model_inputs_submitted": 0,
+    "remaining_verification": "Live MCP context CALLER_NOT_READY; full all-provider inference not attempted by quota reads"
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "729042bea8d46dda759ab6d14bf7f785d67aee89",
     "branch": "main",
-    "code_commit": "0f1c0fff41a414f20c31c53a9c732b6dbde49212",
+    "code_commit": "58b6a4b627cec652c785d787996c79d5ef776122",
     "last_verified_publication": "6d62637515d4e8951fea5e8571eb6acc18d75525",
     "manager_preexisting_changes": [
       " M codex-launcher",
@@ -211,7 +190,8 @@
     "pro_followup": "evidence/pro-followup-review.json",
     "provider_fallback": "evidence/provider-fallback.json",
     "review_9e0cefb": "evidence/review-9e0cefb.json",
-    "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints."
+    "scope": "Historical PASS fields apply only to their recorded source/runtime fingerprints.",
+    "before_live_usage_sources": "evidence/usage-intelligence.json"
   },
   "live_budget": {
     "active_seconds": 3875.5169775485992,
@@ -247,61 +227,66 @@
   "schema_version": 2,
   "stage": "USAGE_INTELLIGENCE_COMPLETE",
   "tests_current": {
-    "focused": {
-      "scope": "Expanded focused CLI/MCP, quota and collection set before final additional home/event cases; final cases included in full suite",
+    "offline": {
       "status": "PASS",
-      "subtests": 23,
-      "tests": 46
+      "tests": 460,
+      "subtests": 556,
+      "seconds": 155.98,
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8"
+    },
+    "manager_and_naming": {
+      "status": "PASS",
+      "tests": 23,
+      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
+      "scope": "Temporary external fixture tests; no package activation"
+    },
+    "native_quota_reads": {
+      "status": "PASS",
+      "providers": [
+        "claude",
+        "codex",
+        "antigravity"
+      ],
+      "scope": "Authenticated native metadata only; current code/runtime. No inference or credit redemption."
+    },
+    "native_cli": {
+      "status": "PASS",
+      "scope": "Combined usage --refresh plus each provider; outer envelopes and acquisition states checked separately"
+    },
+    "native_exhausted_account": {
+      "status": "PASS",
+      "scope": "Naturally exhausted Claude weekly window and Antigravity additional weekly pool; no quota manufactured"
+    },
+    "native_mcp": {
+      "status": "BLOCKED",
+      "code": "CALLER_NOT_READY",
+      "scope": "Real stdio MCP process rejected the inherited reserved identity; no fabricated binding or model prompt. Offline protocol/caller parity passes."
+    },
+    "native_spawn_check": {
+      "status": "PASS",
+      "scope": "Actual bound cached preflight returned CHECKED, two quota blockers, no reservation or model input"
+    },
+    "native_inference": {
+      "status": "NOT_RUN",
+      "submitted_inputs": 0,
+      "scope": "Quota-only acceptance does not reaccept the full native delegation/messaging failure matrix"
     },
     "installed": {
-      "entrypoint_uses_checkout": true,
-      "outside_owned_instruction_sections_unchanged": true,
-      "owned_skills_match": true,
-      "owned_statuslines_present": true,
+      "status": "PASS",
+      "outside_owned_instruction_bytes_unchanged": true,
       "second_install_operations": [
-        0,
         0,
         0
       ],
-      "status": "PASS"
-    },
-    "manager_and_naming": {
-      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p 'test_*.py'",
-      "scope": "Existing external fixture tests; no manager activation",
-      "status": "PASS",
-      "tests": 23
-    },
-    "native_inference": {
-      "scope": "Collection/forecasting uses no calibration turns; full all-provider messaging/delegation reacceptance not performed for new source",
-      "status": "NOT_RUN",
-      "submitted_inputs": 0
-    },
-    "native_metadata": {
-      "antigravity": "Signed-in native models catalog; catalog is not quota or entitlement",
-      "claude": "Actual 2.1.309 zero-input status-line envelope and exact owner verified; quota values absent at blank startup",
-      "codex": "Authenticated account/rateLimits/read and model/list; normal subscription route, no inference",
-      "status": "PASS"
-    },
-    "native_quota_emission_antigravity": {
-      "scope": "Installed helper, 20-second zero-input TUI startup, no quota snapshot emitted; owner exited",
-      "status": "NOT_RUN"
-    },
-    "native_quota_emission_claude": {
-      "scope": "No rate_limits values emitted at blank startup; needs ordinary native telemetry, no calibration inference submitted",
-      "status": "NOT_RUN"
-    },
-    "offline": {
-      "command": ".venv/bin/python -m pytest -q",
-      "python": "3.14.8",
-      "scope": "Combined locked unit/property/fake-provider contract suite; executable logic unchanged after run, package docstring trailing whitespace normalized",
-      "seconds": 178.66,
-      "status": "PASS",
-      "subtests": 556,
-      "tests": 405
+      "skills_match": true,
+      "entrypoint_uses_checkout": true
     },
     "preservation": {
-      "scope": "Only owned statusLine values and skills/instruction sections changed; auth and Codex TOML unchanged. Concurrent shell hash drift retained, no shell writes performed. No manager activation.",
-      "status": "PASS"
+      "status": "PASS",
+      "protected_file_hashes_match": true,
+      "daemon_auto_start": false,
+      "scope": "Native settings/auth files, Codex TOML and shell hashes match; three owned skills/global owned paragraph updated with outside bytes preserved. Native startup caches may update normally."
     }
   },
   "transports": {

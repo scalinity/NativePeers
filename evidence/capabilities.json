@@ -8,7 +8,7 @@
     "Required LIVE-01 through LIVE-18 are not accepted by M1 evidence."
   ],
   "native_queue_decision": "use-native-queue; no Rust patch selected",
-  "overall_acceptance": "Usage intelligence implemented/installed with offline and supported native metadata PASS; Claude/Antigravity live quota values and current-source all-provider inference NOT_RUN. Historical messaging/delegation evidence retains its original scope.",
+  "overall_acceptance": "Native quota reads pass for Claude, Codex and Antigravity at scoped source/runtime fingerprints. Offline suite passes. Live MCP context is CALLER_NOT_READY; complete current-source all-provider inference remains NOT_RUN.",
   "providers": {
     "antigravity": {
       "auth_route": "Native Google sign-in, Google AI Pro; no credential extraction or API key substitution",
@@ -184,6 +184,18 @@
       "offline_subtests": 556,
       "offline_tests": 405,
       "status": "PASS"
+    },
+    "live_usage_sources": {
+      "status": "PASS",
+      "offline_tests": 460,
+      "offline_subtests": 556,
+      "native_quota_providers": [
+        "claude",
+        "codex",
+        "antigravity"
+      ],
+      "native_mcp": "BLOCKED: CALLER_NOT_READY",
+      "native_inference": "NOT_RUN"
     }
   }
 }

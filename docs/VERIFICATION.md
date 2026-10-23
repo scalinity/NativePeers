@@ -1,3 +1,15 @@
+# Live native quota source verification
+
+Native quota collection is implemented and installed at product commit `58b6a4b627cec652c785d787996c79d5ef776122`. The settled full suite passes **460 tests / 556 subtests** (155.98 seconds); external manager/naming fixtures pass **23 tests**. Actual authenticated `npeer usage --refresh` returns fresh quota for **Claude 2.1.309, managed Codex 0.163.0 and Antigravity 1.4.5** without model inference. [Current source/runtime record](../evidence/live-usage-sources.json), [resolutions and limits](LIVE_USAGE_SOURCES.md).
+
+Claude's explicitly authorized collector-owned PTY sends native `/usage` once and reports three separate windows, including a naturally exhausted weekly allowance. Its native panel reports zero invocation tokens/API time/cost; the exact collector UUID has no retained history, and owned processes/pipes close. The positional route stays refused because it can hide cached data. The normal implicit default config layout and explicit selected-home overrides remain distinct. Initial onboarding/trust/prompt-parser diagnostics failed with zero commands and remain recorded privately.
+
+Antigravity's supported print route returns all five measured quota pools plus separately qualified credits, including an exhausted additional weekly pool. Empty conversation IDs, zero turns and zero token counters are checked. Its inspected fresh-fetch contract is tied to the exact executable hash. Codex uses its existing native account quota RPC; optional model catalog failure does not discard quota, and reset credits are never consumed.
+
+The actual cached spawn preflight detects two relevant quota blockers with no reservation/model input. Real stdio MCP acceptance is **BLOCKED by CALLER_NOT_READY** in this probe context; no binding is manufactured. Offline MCP protocol/caller tests pass. Full current-source native inference/messaging/delegation acceptance is **NOT_RUN** by these metadata checks. The original screenshot's exact cause remains unconfirmed without its raw error/group handle.
+
+Three owned skills and the global NativePeers usage paragraph are installed; outside instruction bytes and protected settings/auth/TOML/shell hashes match. Second installs have zero operations, the existing command uses this checkout, and daemon_auto_start=false is preserved. No package activation, account change, credential extraction, history deletion or permanent service was introduced. Broad Claude worker/inbox approval remains unchanged. Historical records below retain their own scopes.
+
 # Usage intelligence current verification
 
 The usage subsystem is implemented and installed at product commit `0f1c0fff41a414f20c31c53a9c732b6dbde49212`. The full locked offline suite passes **405 tests / 556 subtests**; existing external manager/naming fixtures pass **23 tests**. The separate focused run passed 46 tests / 23 subtests before final home/event regressions, which are included in the full suite. No provider inference was submitted for this feature. [Source/runtime fingerprints and results](../evidence/usage-intelligence.json), [daily commands and source boundaries](USAGE_INTELLIGENCE.md).
