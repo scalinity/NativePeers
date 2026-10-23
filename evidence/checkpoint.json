@@ -131,9 +131,9 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "main",
-    "code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+    "code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
     "evidence": "evidence/worker-visibility.json",
-    "source_map_sha256": "e6b1a7ef2d1ca998bd87d55493da44bd5b17639ba19806984c24230e63888394",
+    "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
     "status": "Worker-only managed runtime active; native and separate bundled Desktop reader visibility verified; exact released-history archival complete; direct Desktop UI observation blocked"
   },
   "feature_work": {
@@ -149,8 +149,8 @@
   "git": {
     "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
     "branch": "main",
-    "code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
-    "last_verified_publication": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+    "code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+    "last_verified_publication": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -213,8 +213,8 @@
     "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
-    "verified_remote_code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+    "verified_remote_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+    "verified_remote_code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -500,6 +500,34 @@
       "genuine_parent_source": "cli",
       "genuine_parent_archived": false,
       "scope": "Read-only exact-ID native metadata and selected file existence/stat only"
+    },
+    "publication_checkpoint_before_concurrent_update": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
+      "tests": 3,
+      "seconds": 0.08,
+      "scope": "Generated current source/checkpoint/fingerprints and operation index after final integrated result publication"
+    },
+    "concurrent_source_publication_guard": {
+      "status": "CORRECTED",
+      "scope": "Remote/source guard rejected stalec1bcb09 publication after independent workspace-retirement commits8431361/c1f1b1f; three stale metadata checks failed before regeneration. Runtime results retain their executed commit; no unrelated source changes reverted."
+    },
+    "final_concurrent_boundaries": {
+      "status": "PASS",
+      "tests": 97,
+      "subtests": 20,
+      "seconds": 81.23,
+      "source_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_workspace_retirement.py tests/unit/test_lifecycle_recovery.py tests/unit/test_worker_visibility.py tests/unit/test_history_cleanup.py tests/unit/test_cancellation.py tests/unit/test_cleanup.py tests/contract/test_worker_lease_cleanup.py tests/unit/test_change_preview.py",
+      "scope": "Affected source boundaries after independently authored workspace-retirement changes landed during final publication; no duplicated feature implementation"
+    },
+    "publication_checkpoint": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
+      "tests": 3,
+      "seconds": 0.07,
+      "source_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+      "scope": "Regenerated current source/checkpoint/fingerprints and operation index after concurrent workspace changes"
     }
   },
   "transports": {
@@ -508,7 +536,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T05:49:52.886143-04:00",
+  "updated_at": "2026-10-23T05:56:17.666615-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -730,6 +758,33 @@
         "evidence": "evidence/worker-visibility.json",
         "source_map_sha256": "bc0ab920577574b7b9bd2fabf3398b90be486984ffcb0dadae906f4749b48d46",
         "status": "NativePeers implementation and eligible native archival complete; managed runtime candidate validation pending; Desktop UI blocked"
+      }
+    },
+    {
+      "stage": "WORKER_VISIBILITY_NATIVE_VERIFIED_DESKTOP_BLOCKED",
+      "updated_at": "2026-10-23T05:49:52.886143-04:00",
+      "git": {
+        "base_commit": "2885497affb129e90252c4435b719a4a9170bb5e",
+        "branch": "main",
+        "code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+        "last_verified_publication": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+        "verified_remote_code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+        "evidence": "evidence/worker-visibility.json",
+        "source_map_sha256": "e6b1a7ef2d1ca998bd87d55493da44bd5b17639ba19806984c24230e63888394",
+        "status": "Worker-only managed runtime active; native and separate bundled Desktop reader visibility verified; exact released-history archival complete; direct Desktop UI observation blocked"
       }
     }
   ],

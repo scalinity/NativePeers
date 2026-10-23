@@ -285,12 +285,33 @@
       "genuine_parent_archived": false,
       "scope": "Read-only exact-ID native metadata and selected file existence/stat only"
     },
-    "publication_checkpoint": {
+    "publication_checkpoint_before_concurrent_update": {
       "status": "PASS",
       "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
       "tests": 3,
       "seconds": 0.08,
       "scope": "Generated current source/checkpoint/fingerprints and operation index after final integrated result publication"
+    },
+    "concurrent_source_publication_guard": {
+      "status": "CORRECTED",
+      "scope": "Remote/source guard rejected stalec1bcb09 publication after independent workspace-retirement commits8431361/c1f1b1f; three stale metadata checks failed before regeneration. Runtime results retain their executed commit; no unrelated source changes reverted."
+    },
+    "final_concurrent_boundaries": {
+      "status": "PASS",
+      "tests": 97,
+      "subtests": 20,
+      "seconds": 81.23,
+      "source_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_workspace_retirement.py tests/unit/test_lifecycle_recovery.py tests/unit/test_worker_visibility.py tests/unit/test_history_cleanup.py tests/unit/test_cancellation.py tests/unit/test_cleanup.py tests/contract/test_worker_lease_cleanup.py tests/unit/test_change_preview.py",
+      "scope": "Affected source boundaries after independently authored workspace-retirement changes landed during final publication; no duplicated feature implementation"
+    },
+    "publication_checkpoint": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
+      "tests": 3,
+      "seconds": 0.07,
+      "source_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+      "scope": "Regenerated current source/checkpoint/fingerprints and operation index after concurrent workspace changes"
     }
   },
   "operation_checks": [
@@ -353,7 +374,7 @@
     "status": "PASS",
     "scope": "Bounded same-vendor code and deterministic review; cross-vendor native review blocked by existing executable mismatches"
   },
-  "code_commit": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
+  "code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -366,10 +387,10 @@
     "nativepeers/artifacts.py": "e44d0a323f082d5b108b1269906f7d59f2e726042fb616f64b3693e78fc51cb5",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
     "nativepeers/caller.py": "0a0d5af0c28627db2cc06fe6c972fd2f40d229db03b1ec0e3021c52d896b2da0",
-    "nativepeers/change_preview.py": "3ded04e7a5d14fc1baea4cca5de844d429772f559448c6a60a28848412257422",
+    "nativepeers/change_preview.py": "83d045df1186c85392828d8db121abcb4610187decb98c9283a1fb7ad27dae5e",
     "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
-    "nativepeers/cleanup.py": "c9ffc1938e11749b68cba6ee8bdeb2bdfec5f5af19c288c6e997d1e7baad63d7",
-    "nativepeers/cli.py": "d98fd8a20bf7c102902737d306936f315b3716b1e5962a7eb4c596a9864724d2",
+    "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
+    "nativepeers/cli.py": "4834827b83a6df5d68ec02c9de60645a649883c8c7b1c591bf89397a24d37b39",
     "nativepeers/compatibility.py": "eb2e10226b183b952b3a60b2491841cbf75f1b674034fe567fc114d0b3fc6b1c",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "c85b9b98d6f2de51f9195d5e3d297771b4d7df5fffe6a8cc62343a419004bf2d",
@@ -397,7 +418,7 @@
     "nativepeers/readiness.py": "f80dfac5f3df7f4579080981aa4e992576a5008f3006f8ab974375f64422829d",
     "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
     "nativepeers/reconcile.py": "71ef7f185cb6ba9a7aafa4c93ac8d51e988feb06a649ed47ae744e0e0b8776a9",
-    "nativepeers/recovery.py": "191780c4d30af44991b27ff2d22b2223d0cad1625d2505a277fb036fef7ddd13",
+    "nativepeers/recovery.py": "4a549ea645be2947ca4743d82f09c2fcc2df41a4ea3e75974d8708d27ad7ccae",
     "nativepeers/registry.py": "944c0e2ce5ed6db66f5a2d9da4e75578d0f54c2e22dd63fa7fe896d3daa087c5",
     "nativepeers/routing.py": "3d1996758cc5fb6cc9d0ecd67c112d192587fdd6b1d19129ccf0ff0d9fe59328",
     "nativepeers/supervisor.py": "3047790b549341a16e28f418bcf29b45f92d549a21b1836428fb7c836afe0e5d",
@@ -416,9 +437,10 @@
     "nativepeers/usage/service.py": "1cb1a73204c919f0b2b48561d97b329601cf2770bd726d8b3d0f5d0f39d776f7",
     "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
     "nativepeers/usage/store.py": "41f86cc51ef1f9141719a8ad9c6f515ff264c63cac2a4c8e84bfd5c6d93a17a0",
-    "nativepeers/worker_process.py": "1999a0fce26111e1ed68b218fb48aaa872e58d58e0b2059f02268b71eeb389b1",
+    "nativepeers/worker_process.py": "9b8ce6169bc957a7f0ab46c3182520251eede27a1d1fce1c46970328b862cac0",
     "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
     "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
+    "nativepeers/workspace_retirement.py": "c63448f4930bdcef7e4f852102997b656438a960ebb354e42b2aa5c246130f72",
     "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
     "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
     "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
@@ -431,8 +453,8 @@
     "schemas/usage.v1.json": "64d3ea88da52474f4296152b8612b9c00861c4cb4c111336f60dfb17c20e0839",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "e6b1a7ef2d1ca998bd87d55493da44bd5b17639ba19806984c24230e63888394",
-  "updated_at": "2026-10-23T05:49:52.886143-04:00",
+  "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
+  "updated_at": "2026-10-23T05:56:17.666615-04:00",
   "concurrent_work": {
     "nativepeers_review_integrated": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
     "nativepeers_usage_scope": "Preexisting merged usage intelligence plus independently authored neighboring review corrections preserved; worker-visibility lane does not redesign usage intelligence",
@@ -444,7 +466,11 @@
       "patches/session-naming-native.patch",
       "patches/session-naming-reconnect.patch"
     ],
-    "codexmcp_final_commit": "74959c33cd0c218874d6e690135a2b156fa8a3e8"
+    "codexmcp_final_commit": "74959c33cd0c218874d6e690135a2b156fa8a3e8",
+    "nativepeers_later_workspace_retirement_commits": [
+      "8431361e051160146070e0b478fbb100da98ce14",
+      "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a"
+    ]
   },
   "preservation": {
     "protected_activation_hashes": "UNCHANGED",
@@ -467,7 +493,7 @@
     },
     "native_history_and_resume": "VERIFIED for exact native/local fixtures; legacy unclassified histories may reappear after unarchive/resume",
     "normal_conversation_preservation": "VERIFIED in native metadata and bundled-reader fixtures; direct Desktop UI blocked",
-    "offline_and_manager_regressions": "PASS:568tests619subtests;29manager/namingtests;153MCP;15disconnect;7startup;1retainedclient;318protocol1ignored;package/native-reader checks",
+    "offline_and_manager_regressions": "PASS:568tests619subtests atc1bcb09;97affectedtests20subtests atc1f1b1f;29manager/namingtests;153MCP;15disconnect;7startup;1retainedclient;318protocol1ignored;package/native-reader checks",
     "desktop_end_to_end": "BLOCKED: computer-use tool refuses com.openai.codex"
   }
 }
