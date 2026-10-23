@@ -43,8 +43,22 @@ def record(journal,provider,home,payload,*,kind='snapshot',at=None,dedupe=False,
     settings=settings or load(journal)
     at=time.time() if at is None else at
     home=str(Path(home).resolve());identity=scope(provider,home)
-    raw=canonical(payload).decode()
     previous=latest(journal,provider,home,kind)
+    if dedupe and kind=='snapshot':
+        payload=json.loads(canonical(payload))
+        old={p['pool_id']:p for p in previous['payload'].get('pools',[])} if previous else {}
+        measurement_keys=('used','remaining','total','unit','resets_at','window_seconds','disabled','state','resolution','basis')
+        for p in payload.get('pools',[]):
+            prior=old.get(p['pool_id'])
+            if prior and all(p.get(k)==prior.get(k) for k in measurement_keys) and not p.get('measurement_id'):
+                p['observed_at']=prior.get('observed_at',previous['observed_at'])
+                p['observation_source']=prior.get('observation_source',previous['payload'].get('source'))
+                p['observation_source_version']=prior.get('observation_source_version',previous['payload'].get('source_version'))
+            else:
+                p.setdefault('observed_at',at)
+                p.setdefault('observation_source',payload.get('source'))
+                p.setdefault('observation_source_version',payload.get('source_version'))
+    raw=canonical(payload).decode()
     if dedupe and previous and canonical(previous['payload']).decode()==raw:
         return previous['observation_id']
     with journal.transaction() as db:

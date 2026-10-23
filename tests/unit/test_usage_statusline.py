@@ -136,3 +136,36 @@ def test_sparse_passive_capture_preserves_direct_additional_pools_without_freshe
     assert retained['observed_at']==old and retained['freshness']=='STALE'
     assert retained['observation_source']=='claude-native-usage'
     assert view['pools'][0]['freshness']=='FRESH'
+
+
+def test_included_unchanged_passive_pool_keeps_its_measurement_clock(fixture):
+    import time
+    from nativepeers.usage.service import Usage
+    j,home,binary=fixture;old=time.time()-200;contract={'runtime_stat':signature(binary),'runtime_sha256':'fixture'}
+    payload={'session_id':'12345678-abcd-4f01-a345-123456789abc','model':{'id':'sonnet'},'rate_limits':{'five_hour':{'used_percentage':100}}}
+    with patch('nativepeers.usage.statusline.provider_home',return_value=home),patch('nativepeers.usage.store.time.time',return_value=old):
+        capture(j,'claude',home,payload,contract,owners=[{'executable':str(binary)}])
+    payload['model']={'id':'opus'}
+    with patch('nativepeers.usage.statusline.provider_home',return_value=home):
+        capture(j,'claude',home,payload,contract,owners=[{'executable':str(binary)}])
+        p=Usage(j).snapshot('claude',home)['pools'][0]
+        assert p['observed_at']==old and p['freshness']=='STALE'
+        payload['rate_limits']['five_hour']['used_percentage']=99
+        capture(j,'claude',home,payload,contract,owners=[{'executable':str(binary)}])
+    assert Usage(j).snapshot('claude',home)['pools'][0]['freshness']=='FRESH'
+    # A qualified direct acquisition can measure the same value again.
+    value=store.latest(j,'claude',home,'snapshot')['payload'];value['pools'][0].pop('observed_at')
+    value.update(acquisition_id='new measurement',collection={'outcome':'FRESH'})
+    store.record(j,'claude',home,value)
+    assert Usage(j).snapshot('claude',home)['pools'][0]['freshness']=='FRESH'
+
+
+def test_display_names_cannot_establish_native_pool_membership(fixture):
+    j,home,binary=fixture;contract={'runtime_stat':signature(binary),'runtime_sha256':'fixture'}
+    store.record(j,'antigravity',home,{'models':[{'model':'native-a','display_name':'Shared label'},{'model':'native-b','display_name':'Shared label'}]},kind='catalog')
+    payload={'conversation_id':'12345678-abcd-4f01-a345-123456789abc','quota':{'Shared label':{'remaining_fraction':0},'native-a':{'remaining_fraction':1}}}
+    with patch('nativepeers.usage.statusline.provider_home',return_value=home):
+        capture(j,'antigravity',home,payload,contract,owners=[{'executable':str(binary)}])
+    pools=store.latest(j,'antigravity',home,'snapshot')['payload']['pools']
+    assert pools[0]['models']==[] and pools[0]['membership']=='unknown'
+    assert pools[1]['models']==['native-a'] and pools[1]['membership']=='exact-native-model-key'

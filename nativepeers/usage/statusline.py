@@ -54,7 +54,7 @@ def capture(journal,provider,home,value,contract,*,owners=None):
     catalog=store.latest(journal,provider,home,'catalog')
     known=(catalog['payload'].get('models',[]) if catalog else [])+models
     for p in pools:
-        matched=[m['model'] for m in known if p['pool_id'] in (m['model'],m.get('display_name'))]
+        matched=[m['model'] for m in known if p['pool_id']==m['model']]
         if matched:p.update(models=matched,membership='exact-native-model-key')
     version=value.get('version')
     previous=store.latest(journal,provider,home,'snapshot')

@@ -71,18 +71,24 @@ def estimate(journal,provider,home,model,effort,requirements,profile):
 def runway(journal,provider,home,scope,current_pool,now,ttl):
     if current_pool['state'] not in ('AVAILABLE','LIMITED') or current_pool.get('unit')!='percent' or current_pool.get('resolution') is None:
         return dict(state='UNKNOWN',reason='Fresh compatible percentage observations with known precision are required.')
+    if current_pool.get('resets_at') is None:return dict(state='UNKNOWN',reason='The reset-window identity is unknown.')
     rows=journal.all("SELECT observed_at,payload_json FROM usage_observations WHERE provider=? AND home=? AND scope=? AND kind='snapshot' AND observed_at>=? ORDER BY observed_at DESC LIMIT 32",(provider,str(home),scope,now-86400))
-    points=[]
+    points=[];provenance=None
     for row in rows:
         payload=json.loads(row['payload_json'])
         if payload.get('collection',{}).get('outcome') in ('CACHED','UNVERIFIED','UNAVAILABLE'):continue
         p=next((p for p in payload.get('pools',[]) if p['pool_id']==current_pool['pool_id']),None)
         if not p or p.get('resets_at')!=current_pool.get('resets_at') or p.get('used') is None:break
         measured=p.get('observed_at',row['observed_at'])
+        if row['observed_at']>now or measured>now:
+            return dict(state='UNKNOWN',reason='A quota measurement is in the future.')
+        identity=(p.get('unit'),p.get('resolution'),p.get('basis'),p.get('observation_source',payload.get('source')),p.get('observation_source_version',payload.get('source_version')))
+        if identity[:3]!=(current_pool.get('unit'),current_pool.get('resolution'),current_pool.get('basis')) or provenance is not None and identity!=provenance:break
+        provenance=identity
         if any(t==measured for t,_ in points):continue
         points.append((measured,p['used']))
     points.reverse()
-    if len(points)<3 or points[-1][0]-points[0][0]<60 or any(b[1]<a[1] for a,b in zip(points,points[1:])):
+    if len(points)<3 or points[-1][0]-points[0][0]<60 or any(b[0]<=a[0] or b[1]<a[1] for a,b in zip(points,points[1:])):
         return dict(state='UNKNOWN',reason='Need three monotonic observations spanning one minute within the same reset window.')
     span=points[-1][0]-points[0][0];used=points[-1][1]-points[0][1]
     if used<=2*current_pool['resolution']:return dict(state='UNKNOWN',reason='Observed change is too small relative to reported precision.')

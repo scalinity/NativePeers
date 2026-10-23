@@ -9,12 +9,12 @@ Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All find
 - [x] F05 Reconcile pool demand atomically before task input.
 - [x] F06 Preserve authoritative terminal error precedence.
 - [x] F07 Classify Antigravity discovery/install failures accurately.
-- [ ] F08 Preserve passive measurement clocks per pool.
+- [x] F08 Preserve passive measurement clocks per pool.
 - [x] F09 Retain definite logical-task budget failures.
-- [ ] F10 Reject invalid account-pace forecast samples.
+- [x] F10 Reject invalid account-pace forecast samples.
 - [x] F11 Share canonical home-label resolution.
 - [ ] F12 Preserve independently approved runtime receipts.
-- [ ] F13 Require exact evidence for native pool membership.
+- [x] F13 Require exact evidence for native pool membership.
 - [ ] S01 Show operation-specific readiness in doctor.
 - [ ] S02 Explain incomplete caller binding precisely.
 - [ ] S03 Expose remaining logical task slots.

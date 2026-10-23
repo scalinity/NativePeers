@@ -55,3 +55,17 @@ def test_recommendations_preserve_quality_exact_choice_and_explain_unknowns():
     assert recommend(status,{'task_type':'architecture','quality':'demanding','independent_from_vendor':'openai'},'balanced',settings)['recommended'] is None
     assert recommend(status,{'task_type':'architecture','quality':'routine','model':'efficient'},'exact-model-only',settings)['recommended']['model']=='efficient'
     assert status['providers'][0]['models'][0]['model']=='strong'
+
+
+@pytest.mark.parametrize('case',['future','unknown-reset','source-change','precision-change','backwards'])
+def test_account_pace_rejects_unproven_history(tmp_path,case):
+    j=Journal(tmp_path/'state');home=tmp_path/'home';now=time.time();reset=None if case=='unknown-reset' else now+1000
+    try:
+        for index,(offset,used) in enumerate([(-120,10),(-60,12),(0,14)]):
+            if case=='future' and index==1:offset=30
+            if case=='backwards' and index==1:used=18
+            source='other' if case=='source-change' and index==0 else 'native'
+            resolution=2 if case=='precision-change' and index==0 else 1
+            store.record(j,'codex',home,dict(source=source,pools=[pool('shared',used=used,reset=reset,resolution=resolution,models=['*'])],models=[]),at=now+offset)
+        assert Usage(j).snapshot('codex',home,now=now)['pools'][0]['runway']['state']=='UNKNOWN'
+    finally:j.close()
