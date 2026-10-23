@@ -87,6 +87,53 @@ class RetirementTests(unittest.TestCase):
         with self.assertRaises(PeerError) as error: assert_released(self.j, self.j.one('SELECT * FROM workers'))
         self.assertEqual(error.exception.code, 'WORKSPACE_RETIRED')
 
+    def check_split_index_recovery(self, conflict):
+        (self.work/'input').write_bytes(b'staged unique\n'); git(self.work,'add','input')
+        if conflict:
+            blobs=[git(self.work,'hash-object','-w','--stdin',input=value).stdout.strip()
+                   for value in (b'base',b'ours',b'theirs')]
+            git(self.work,'update-index','--force-remove','input')
+            git(self.work,'update-index','--index-info',input=b''.join(b'100644 '+oid+b' '+str(stage).encode()+b'\tinput\n' for stage,oid in enumerate(blobs,1)))
+        (self.work/'input').write_bytes(b'working unique\n')
+        git(self.work,'update-index','--split-index')
+        expected=git(self.work,'ls-files','--stage','-z').stdout
+        admin=Path(git(self.work,'rev-parse','--absolute-git-dir').stdout.decode().strip())
+        shared=Path(git(self.work,'rev-parse','--shared-index-path').stdout.decode().strip())
+        if not shared.is_absolute():shared=self.work/shared
+        self.assertTrue(shared.is_file())
+        source_index=(self.source/'.git/index').read_bytes()
+        result=self.retire();self.assertFalse(admin.exists());self.assertFalse(shared.exists())
+        recovered=self.root/'split-recovered';recovered.mkdir()
+        with tarfile.open(result['archive']) as archive:archive.extractall(recovered,filter='data')
+        restored=recovered/'workspace';(restored/'.git').unlink();git(restored,'init','-q')
+        git(restored,'unpack-objects',input=(recovered/'git/objects.pack').read_bytes())
+        git(restored,'update-ref','HEAD',json.loads(Path(result['receipt_path']).read_text())['head'])
+        for path in (recovered/'git').glob('*index*'):(restored/'.git'/path.name).write_bytes(path.read_bytes())
+        self.assertEqual(git(restored,'ls-files','--stage','-z').stdout,expected)
+        if conflict:
+            for stage,value in enumerate((b'base',b'ours',b'theirs'),1):self.assertEqual(git(restored,'show',f':{stage}:input').stdout,value)
+        else:self.assertEqual(git(restored,'show',':input').stdout,b'staged unique\n')
+        self.assertEqual((restored/'input').read_bytes(),b'working unique\n')
+        self.assertEqual((self.source/'.git/index').read_bytes(),source_index)
+
+    def test_split_index_recovers_staged_bytes_after_original_administration_is_removed(self):
+        self.check_split_index_recovery(False)
+
+    def test_split_index_recovers_conflict_stages_after_original_administration_is_removed(self):
+        self.check_split_index_recovery(True)
+
+    def test_checksum_valid_archive_with_missing_shared_index_refuses_before_retirement_fence(self):
+        from nativepeers import workspace_retirement as module
+        git(self.work,'update-index','--split-index')
+        original=module._snapshot
+        def missing_dependency(*args):
+            snapshot=original(*args)
+            snapshot['git_state']={k:v for k,v in snapshot['git_state'].items() if not k.startswith('sharedindex.')}
+            return snapshot
+        with patch.object(module,'_snapshot',side_effect=missing_dependency):self.refuse('BACKUP_CHANGED')
+        self.assertIsNone(retirement(self.j,self.worker))
+        self.assertEqual(git(self.work,'show',':input').stdout,b'base\n')
+
     def test_complete_captured_births_do_not_replace_unproved_output_closure(self):
         value = json.loads(self.manifest.read_bytes()); value['cleanup'] = {'state': 'UNCERTAIN', 'output_eof': False}; atomic_json(self.manifest, value)
         with patch('nativepeers.workspace_retirement._previous_boot', return_value=None):

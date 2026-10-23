@@ -1,3 +1,12 @@
+# Review ce4a4ac corrections
+
+- [x] C01 Preserve split-index recovery and verify reconstruction before retirement (31 focused tests).
+- [ ] C03 Bound control-socket replies and finite supervisor shutdown.
+- [ ] C02 Separate later process-inspection failure from executable launch failure.
+- [ ] Complete suite, integrated publication and session cleanup.
+
+---
+
 # Review 1211303 corrections
 
 - [x] Preserve legitimate Git configuration during inspection and normalization (55 focused tests / 38 subtests).

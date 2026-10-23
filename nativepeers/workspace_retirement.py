@@ -194,6 +194,13 @@ def _snapshot(work, deadline):
     git_state = {}
     names = ('index', 'HEAD', 'logs/HEAD', 'logs/refs/heads/npeer/'+work.name,
              *('logs/'+name for name in worktree_refs))
+    shared = _git(work, ['rev-parse', '--shared-index-path'], deadline)
+    require(shared.returncode == 0, 'BACKUP_UNAVAILABLE', 'Split-index storage cannot be inspected')
+    if shared.stdout.strip():
+        name = Path(os.fsdecode(shared.stdout).strip()).name
+        require(re.fullmatch(r'sharedindex\.[0-9a-f]{40}|sharedindex\.[0-9a-f]{64}', name),
+                'BACKUP_UNAVAILABLE', 'Shared index has an unsupported name')
+        names += (name,)
     for name in names:
         result = _git(work, ['rev-parse', '--git-path', name], deadline)
         require(result.returncode == 0, 'OWNERSHIP_UNKNOWN', 'Git metadata path cannot be read')
@@ -212,16 +219,40 @@ def _hash(path):
     return digest.hexdigest()
 
 
-def _verify(archive, receipt):
+def _verify(archive, receipt, deadline=None):
+    deadline = deadline or time.monotonic()+120
     require(archive.is_file() and not archive.is_symlink() and archive.stat().st_size <= MAX_BYTES*2
             and _hash(archive) == receipt['archive_sha256'], 'BACKUP_CHANGED', 'Retirement archive checksum differs')
     expected = receipt['entries']; seen = set()
+    recovery = {}
     with tarfile.open(archive, 'r:gz') as bundle:
         for entry in bundle:
             require(entry.name in expected and entry.name not in seen and entry.isfile(), 'BACKUP_CHANGED', 'Archive has an unexpected or unsafe entry')
             seen.add(entry.name); raw = bundle.extractfile(entry).read()
             require(hashlib.sha256(raw).hexdigest() == expected[entry.name]['sha256'] and entry.mode == expected[entry.name]['mode'], 'BACKUP_CHANGED', 'Archived content or mode differs')
+            if entry.name in ('git/index', 'git/objects.pack') or re.fullmatch(r'git/sharedindex\.[0-9a-f]{40}|git/sharedindex\.[0-9a-f]{64}', entry.name):
+                recovery[entry.name] = raw
     require(seen == set(expected), 'BACKUP_CHANGED', 'Retirement archive is incomplete')
+    # Checksums cannot establish that an index is self-contained or its staged
+    # objects exist. Reconstruct only Git recovery data in an isolated repository.
+    with tempfile.TemporaryDirectory(prefix='.recovery-check-', dir=archive.parent) as temporary:
+        work = Path(temporary)
+        initialized = _git(work, ['init', '-q', '--object-format='+('sha256' if len(receipt['head']) == 64 else 'sha1')], deadline)
+        require(initialized.returncode == 0, 'BACKUP_UNAVAILABLE', 'Isolated recovery repository could not be initialized')
+        unpacked = _git(work, ['unpack-objects'], deadline, raw=recovery.get('git/objects.pack', b''))
+        require(unpacked.returncode == 0, 'BACKUP_CHANGED', 'Archived recovery objects cannot be unpacked')
+        head = _git(work, ['update-ref', 'HEAD', receipt['head']], deadline)
+        require(head.returncode == 0, 'BACKUP_CHANGED', 'Archived HEAD cannot be recovered independently')
+        for name, raw in recovery.items():
+            if name != 'git/objects.pack': (work/'.git'/Path(name).name).write_bytes(raw)
+        stages = _git(work, ['ls-files', '--stage', '-z'], deadline)
+        require(stages.returncode == 0 and 'git/index' in recovery, 'BACKUP_CHANGED', 'Archived index cannot be recovered independently')
+        require(not receipt.get('index_entries_sha256') or hashlib.sha256(stages.stdout).hexdigest() == receipt['index_entries_sha256'],
+                'BACKUP_CHANGED', 'Recovered index entries differ from the archived workspace')
+        objects = {v.split(b'\t', 1)[0].split()[1] for v in stages.stdout.split(b'\0') if v}
+        checked = _git(work, ['cat-file', '--batch-check'], deadline, raw=b'\n'.join(sorted(objects))+b'\n' if objects else b'')
+        require(checked.returncode == 0 and all(len(v.split()) == 3 and v.split()[1] in (b'blob', b'commit') for v in checked.stdout.splitlines()),
+                'BACKUP_CHANGED', 'Recovered index references unavailable objects')
 
 
 def _archive(source, work, baseline, destination, row, stopped, deadline):
@@ -238,13 +269,14 @@ def _archive(source, work, baseline, destination, row, stopped, deadline):
     roots.update(value['oid'] for value in snapshot['worktree_refs'].values())
     metadata = {}
     for name, digest in snapshot['git_state'].items():
-        if not name.startswith('logs/') or digest is None: continue
+        if not name.startswith(('logs/', 'sharedindex.')) or digest is None: continue
         location = _git(work, ['rev-parse', '--git-path', name], deadline)
         require(location.returncode == 0, 'BACKUP_UNAVAILABLE', 'Git reflog path cannot be read')
         path = Path(os.fsdecode(location.stdout).strip()); path = work/path if not path.is_absolute() else path
         raw = path.read_bytes()
         require(hashlib.sha256(raw).hexdigest() == digest, 'WORKSPACE_CHANGED', 'Git reflog changed before backup')
-        metadata['git/metadata/'+name] = raw
+        metadata[('git/' if name.startswith('sharedindex.') else 'git/metadata/')+name] = raw
+        if name.startswith('sharedindex.'): continue
         for line in raw.splitlines():
             for reflog_oid in line.split(b' ', 2)[:2]:
                 require(re.fullmatch(rb'[0-9a-f]{40}|[0-9a-f]{64}', reflog_oid), 'BACKUP_UNAVAILABLE', 'Git reflog object identity is malformed')
@@ -279,8 +311,9 @@ def _archive(source, work, baseline, destination, row, stopped, deadline):
         receipt = {'version': 1, 'worker_id': row['worker_id'], 'generation': row['generation'], 'source': str(source), 'workspace': str(work),
                    'archive': str(destination/'workspace.tar.gz'), 'archive_sha256': _hash(archive), 'head': oid, 'baseline': baseline,
                    'entries': entries, 'snapshot': snapshot, 'stopped': stopped,
-                   'recovery': 'Extract workspace files to a new folder, replace its .git pointer with git init, unpack git/objects.pack using git unpack-objects, set HEAD to the recorded head, then restore git/index. Recreate refs from git/worktree-refs.json using git update-ref or git symbolic-ref; raw owned-branch/HEAD/per-worktree reflogs are under git/metadata/logs. Create empty directories/modes from snapshot.directories. Internal symlinks are archived as inert regular files containing their targets: restore only snapshot.files entries with link_target as symlinks. The original source refs and native histories are not needed to recover the archived files.'}
-        _verify(archive, receipt)
+                   'index_entries_sha256': hashlib.sha256(stages.stdout).hexdigest(),
+                   'recovery': 'Extract workspace files to a new folder, replace its .git pointer with git init, unpack git/objects.pack using git unpack-objects, set HEAD to the recorded head, then copy git/index and every git/sharedindex.* file into the new .git directory. Recreate refs from git/worktree-refs.json using git update-ref or git symbolic-ref; raw owned-branch/HEAD/per-worktree reflogs are under git/metadata/logs. Create empty directories/modes from snapshot.directories. Internal symlinks are archived as inert regular files containing their targets: restore only snapshot.files entries with link_target as symlinks. The original source refs and native histories are not needed to recover the archived files.'}
+        _verify(archive, receipt, deadline)
         os.link(archive, destination/'workspace.tar.gz')  # exclusive publication; never overwrite a prior backup
         atomic_json(destination/'receipt.json', receipt)
         return receipt
@@ -302,7 +335,7 @@ def archive_retire(journal, caller, worker_id, *, timeout=120, archive_only=Fals
                     and row['cwd'] == str(work) and lease.get('baseline') == baseline and lease.get('spec', {}).get('cwd') == str(work)
                     and not work.is_symlink() and not work.parent.is_symlink(), 'OWNERSHIP_UNKNOWN', 'Retired workspace path changed')
             require(Path(receipt['archive']) == source/'.worktrees'/'.archives'/worker_id/'workspace.tar.gz', 'OWNERSHIP_UNKNOWN', 'Retirement archive path differs')
-            _verify(Path(receipt['archive']), receipt)
+            _verify(Path(receipt['archive']), receipt, deadline)
             require(json.loads((Path(receipt['archive']).parent/'receipt.json').read_bytes()) == receipt, 'BACKUP_CHANGED', 'Retirement receipt changed')
             if prior['state'] == 'retired' or archive_only: return summary(prior)
         else:
@@ -316,7 +349,7 @@ def archive_retire(journal, caller, worker_id, *, timeout=120, archive_only=Fals
                         and receipt['source'] == str(source) and receipt['workspace'] == str(work) and receipt['baseline'] == baseline
                         and receipt['archive'] == str(destination/'workspace.tar.gz')
                         and receipt['snapshot'] == _snapshot(work, deadline), 'BACKUP_CHANGED', 'Unclaimed archive differs from the current worker')
-                _verify(destination/'workspace.tar.gz', receipt)
+                _verify(destination/'workspace.tar.gz', receipt, deadline)
             else:
                 require(not (destination/'workspace.tar.gz').exists(), 'BACKUP_CHANGED', 'An incomplete archive publication must be preserved for inspection')
                 receipt = _archive(source, work, baseline, destination, row, stopped, deadline)
