@@ -310,3 +310,14 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(task_slots(dict(current,generation=2))['remaining'],1)
         await worker.task(tasks[1],'exact retry')
         self.assertEqual(self.journal.one('SELECT * FROM tasks WHERE task_id=?',(tasks[1],)),row)
+
+    async def test_custom_claude_identity_stays_pinned_after_recreation(self):
+        worker=await self.worker('tenant-model-a[1m]')
+        with self.assertRaises(PeerError):worker.bind(worker.native,model='tenant-model-b')
+        worker.bind(worker.native,model='tenant-model-a')
+        for active in (worker,Worker(self.journal,worker.row['worker_id'])):
+            before=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker.row['worker_id'],))
+            with self.assertRaises(PeerError) as error:active.bind(worker.native,model='tenant-model-b')
+            self.assertEqual(error.exception.code,'MODEL_UNAVAILABLE')
+            self.assertEqual(self.journal.one('SELECT * FROM workers WHERE worker_id=?',(worker.row['worker_id'],)),before)
+            self.assertEqual(active.spec['model'],'tenant-model-a[1m]')

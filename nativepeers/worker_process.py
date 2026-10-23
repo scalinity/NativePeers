@@ -88,7 +88,7 @@ class Worker:
                     require(expected in families or model==expected,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
                     require(model==expected or any(model.startswith('claude-'+family+'-') for family in families.get(expected,())),
                             'MODEL_UNAVAILABLE','Provider selected a different Claude model family',details={'requested':requested,'observed':model})
-            if self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
+            if self.model_observed or self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
                 require(model==expected,'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
                         details={'requested':requested,'observed':model})
             self.model_observed=model
