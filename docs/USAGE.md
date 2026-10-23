@@ -30,6 +30,9 @@ A definite send failure returns `ok:false` and the documented nonzero exit code.
 | Cancel owned active task/group | `npeer cancel HANDLE --reason "No longer needed" --json` |
 | Resume an owned released worker | `npeer resume-worker WORKER_ID --task-file /absolute/path/followup.txt --completion-mode wait --client-request-id followup-1 --json` |
 | Print native manual resume command | `npeer resume-command WORKER_ID --json` |
+| Preview exact released native histories for archival | `npeer history-cleanup --plan --manifest /absolute/private700-directory/preview.json --json` |
+| Archive only the rechecked preview selection | `npeer history-cleanup --apply --manifest /absolute/private700-directory/preview.json --json` |
+| Reverse archival from that exact manifest | `npeer history-cleanup --unarchive --manifest /absolute/private700-directory/preview.json --json` |
 | Reconcile exact native completion evidence | `npeer recover --group GROUP_ID --json` |
 | Inspect recovery without reading native events | `npeer recover --group GROUP_ID --dry-run --json` |
 | Passive health check | `npeer doctor --json` |

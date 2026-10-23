@@ -784,12 +784,14 @@ Do not launch the zsh function, inherit its YOLO flag by accident, enable the sh
 Protocol sequence, using the **installed generated schema**:
 
 ```text
-spawn private stdio app-server
+spawn private stdio app-server --nativepeers-worker
   -> initialize (client identity; experimental capabilities only if needed)
+  -> require nativepeersWorkerSource: true before any new history or model input
   -> initialized
   -> inspect auth status/model catalog/capabilities
   -> thread/start (non-ephemeral, explicit cwd/model/permissions)
   -> obtain native thread ID
+  -> require source: {"custom":"nativepeers-worker"}; retain the ID on mismatch
   -> thread/name/set through the supported native API, if available
   -> activate the already bootstrapped, scoped NativePeers tool binding
   -> turn/start for task A
@@ -807,6 +809,12 @@ A single reader owns stdout and dispatches responses by RPC ID and events by nat
 Completion requires a matching terminal turn event and extracted final assistant result, not process exit alone or the first text delta. A worker can emit several assistant items and tool calls before its final outcome. Interrupted/failed/limited turns yield structured partial results, never false success.
 
 Only this controller may `thread/resume` an owned worker after release. An external ownership conflict returns `OWNERSHIP_CONFLICT`; never remove writer locks.
+
+Owned Codex histories use the durable custom source `nativepeers-worker`. This is an independent native conversation source, with no vendor-private subagent relationship. Ordinary recent-history filtering excludes this source; NativePeers retains its existing worker/group/native-ID links. The managed runtime must acknowledge the opt-in before creation. A returned source mismatch stops before task input, preserves the bound native ID, and never authorizes input replay. New-spawn preflight uses its existing catalog process to verify the same capability before workspace or worker reservation.
+
+The existing lease records requested classification, runtime acknowledgment, returned native source and Desktop verification separately. A native source acknowledgment is not a Desktop observation. Legacy workers retain their exact executable/home/UUID and report unsupported visibility when that runtime cannot provide the guarantee. Renaming changes neither ownership nor source.
+
+History cleanup uses supported native archive/unarchive operations only after exact ownership and release checks under the existing resume/supervisor coordination. Native archive can affect a spawned subtree and shut down loaded threads; every affected identity must independently qualify. Positive matching-generation process/output closure, terminal tasks, dead ownership, settled completion/delivery, and pin/promotion checks are required. Uncertain native archive responses are reconciled against selected metadata without replay. Archived workers require exact unarchive before resume; a legacy unclassified worker may reappear in ordinary recents after unarchive. See [worker history visibility](WORKER_VISIBILITY.md).
 
 ### 11.2 Claude worker — native structured CLI turns
 

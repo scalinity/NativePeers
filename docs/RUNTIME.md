@@ -35,6 +35,10 @@ Antigravity CLI uses its native UUID and exact CLI-owner hooks, structured headl
 
 Claude SessionStart does not expose permission mode; its short Bash PreToolUse hook refreshes that exact interactive peer without changing identity/incarnation. Plan mode retains analysis-only grants. Unowned Codex historyless background hooks do not register as interactive peers or replace a TUI parent; registration verifies the hook UUID against its native history header. New Codex workers disable native background memory work only in their own runtime overlay. Supervisor lease loss now has one uncancelled worker cleanup path. These changes preserve native user settings and vendor tools.
 
+## Worker history visibility
+
+New Codex workers require the managed runtime's worker-only history capability before creation. The private app-server selects durable `{"custom":"nativepeers-worker"}` source metadata before indexing; ordinary launches retain their source. The initialize acknowledgment and returned native source are checked separately, and Desktop verification remains a separate result. Legacy retained leases keep their executable and UUID, with unsupported visibility reported explicitly. History-preserving cleanup and exact archived resume are described in [worker history visibility](WORKER_VISIBILITY.md).
+
 ## Explicit provider failure handoff
 
 Claude synthetic API errors are classified before inference-model binding. A terminal quota/auth error with zero reported usage and no observed model/tool work can hand off only to explicitly selected Gemini candidates, with unchanged editing input and stopped original writers. One logical task retains separately attributed immutable attempts, a shared original deadline/turn allowance and its original completion phase. A group-local provider/home quota record prevents later pointless submissions; it is neither global health monitoring nor permission to replay accepted input. See [PROVIDER_FALLBACK.md](PROVIDER_FALLBACK.md). Native input presentation is separate from the immutable routing envelope; receipt observers support both the exact readable frame and legacy envelopes.
