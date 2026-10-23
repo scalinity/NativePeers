@@ -58,7 +58,7 @@ def attempts(journal,task_id):
 
 def scope_limit(journal,row,home,task_id=None):
     import time
-    from .usage.service import Usage,same_model
+    from .usage.service import Usage,same_model,supersedes_refusal
     from .usage import store
     spec=json.loads(row['lease_json']).get('spec',{})
     if spec.get('quota_policy')=='warn':return None
@@ -75,8 +75,7 @@ def scope_limit(journal,row,home,task_id=None):
         if proof['scope']!=store.scope(row['provider'],home) or not 0<=now-proof['at']<=ttl:continue
         if proof.get('reset') is not None and now>=proof['reset']:continue
         if not any(m=='*' or same_model(row['provider'],model,m) for m in proof['models']):continue
-        if proof.get('pool_id') and any(p['pool_id']==proof['pool_id'] and p['freshness']=='FRESH' and
-                p['state'] in ('AVAILABLE','LIMITED') and p.get('observed_at',view['observed_at'] or 0)>proof['at'] for p in view['pools']):continue
+        if any(supersedes_refusal(row['provider'],p,proof.get('pool_id'),proof['models'],proof['at'],states=('AVAILABLE','LIMITED')) for p in view['pools']):continue
         error=proof['error']
         return dict(error,may_have_received=False,suppressed=True,
                     message=error.get('message','Native quota is exhausted.')+' A matching limit was already established in this batch.',

@@ -21,6 +21,15 @@ def same_model(provider,wanted,actual):
     return wanted==actual or provider=='claude' and any(claude_model_matches(alias,full) for alias,full in ((wanted,actual),(actual,wanted)))
 
 
+def supersedes_refusal(provider,measurement,limiting_pool,models,measured_at,*,states=('AVAILABLE','LIMITED','EXHAUSTED')):
+    """Only a newer authoritative measurement of the refused scope can replace it."""
+    members=measurement.get('reported_models',measurement.get('models',[]))
+    return bool(limiting_pool and measurement['pool_id']==limiting_pool
+        and measurement.get('basis')=='provider-reported' and measurement.get('freshness')=='FRESH'
+        and measurement.get('state') in states and measurement.get('observed_at',0)>measured_at
+        and models and all('*' in members or any(same_model(provider,m,n) for n in members) for m in models))
+
+
 @asynccontextmanager
 async def refresh_lock(path):
     # Reuse the owned advisory lock without leaving a blocked acquisition thread
@@ -125,6 +134,7 @@ class Usage:
             # An exact model key is usable; a family/bucket name is not guessed.
             if provider=='antigravity' and p['pool_id'] in {m['model'] for m in payload.get('models',[])}:
                 p.update(models=[p['pool_id']],membership='exact-native-model-key')
+            p['reported_models']=list(p.get('models',[]))
             pools.append(assess_pool(p,now,ttl,p.get('observed_at',selected['observed_at']),self.settings))
         errors=self.journal.all("SELECT observation_id,observed_at,payload_json FROM usage_observations WHERE provider=? AND home=? AND scope=? AND kind='native-error' ORDER BY observation_id DESC LIMIT 64",(provider,str(Path(home).resolve()),store.scope(provider,home)))
         seen=set()
@@ -133,8 +143,7 @@ class Usage:
                 if p['pool_id'] in seen:continue
                 seen.add(p['pool_id'])
                 scope=p.get('limiting_scope')
-                if scope and selected and any(
-                    q['pool_id']==scope and q.get('observed_at',selected['observed_at'])>p.get('observed_at',row['observed_at']) and q['freshness']=='FRESH' and q['state'] in ('AVAILABLE','LIMITED','EXHAUSTED') and all('*' in q['models'] or any(same_model(provider,m,n) for n in q['models']) for m in p['models']) for q in pools):continue
+                if selected and any(supersedes_refusal(provider,q,scope,p['models'],p.get('observed_at',row['observed_at'])) for q in pools):continue
                 pools.append(assess_pool(p,now,ttl,p.get('observed_at',row['observed_at']),self.settings))
         for mapping in self.settings['pool_memberships']:
             if mapping['provider']!=provider:continue

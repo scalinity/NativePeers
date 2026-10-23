@@ -5,7 +5,7 @@
 - [x] F03 Retain controller ownership immediately after successful creation.
 - [x] F04 Apply recipient visibility to status, inbox and context references.
 - [x] F05 Initialize runtime approvals atomically without replacing concurrent approval.
-- [ ] F06/F09 Share authoritative model-scoped quota supersession.
+- [x] F06/F09 Share authoritative model-scoped quota supersession.
 - [ ] F07 Preserve selected Claude layout through general usage lookup.
 - [ ] F08 Bound catalog descendants and output cleanup.
 - [ ] F10 Enforce one combined frozen-input byte budget.
