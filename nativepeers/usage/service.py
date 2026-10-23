@@ -248,15 +248,28 @@ class Usage:
 
     def batch(self,workers):
         assessments=[];demand={}
-        homes={p:provider_home(p) for p in PROVIDERS}
-        for worker in workers:homes[worker['lease']['spec']['provider']]=worker['lease']['provider_home']
-        views={'providers':[self.snapshot(p,h) for p,h in homes.items()]}
+        selections={}
+        for worker in workers:
+            lease=worker['lease'];provider=lease['spec']['provider']
+            selections[(provider,str(Path(lease['provider_home']).resolve()),lease.get('provider_home_explicit') if provider=='claude' else None)]=None
+        for provider in PROVIDERS:
+            if not any(p==provider for p,_,_ in selections):selections[(provider,str(provider_home(provider)),None)]=None
+        for provider,home,explicit in selections:
+            with store.home_layout(explicit):view=self.snapshot(provider,home)
+            if provider=='claude':view['provider_home_explicit']=explicit
+            selections[(provider,home,explicit)]=view
         from .forecast import estimate,recommend
         for worker in workers:
             lease=worker['lease'];spec=lease['spec']
-            item=self.assessment(spec['provider'],lease['provider_home'],spec['model'],spec.get('reasoning_effort'))
+            explicit=lease.get('provider_home_explicit') if spec['provider']=='claude' else None
+            with store.home_layout(explicit):
+                item=self.assessment(spec['provider'],lease['provider_home'],spec['model'],spec.get('reasoning_effort'))
+            if spec['provider']=='claude':item['provider_home_explicit']=explicit
             item['title']=spec['title'];assessments.append(item)
             item['task_estimate']=estimate(self.journal,item['provider'],item['home'],item['model'],item['reasoning_effort'],spec.get('requirements',{}),spec.get('permission_profile','analysis'))
+            # Same-provider recommendations use this worker's selected home and
+            # layout, never a sibling's account or the planning process's layout.
+            views={'providers':[v for v in selections.values() if v['provider']!=item['provider'] or v['scope']==item['scope']]}
             item['recommendations']=recommend(views,spec['requirements'],'balanced',self.settings) if spec.get('requirements') else None
             item['remaining_after_batch']='UNKNOWN: no validated subscription quota-per-task conversion.'
             for p in item['pools']:
