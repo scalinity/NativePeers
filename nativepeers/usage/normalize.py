@@ -32,13 +32,13 @@ def eastern(value):
 
 def pool(identifier, *, used=None, remaining=None, total=None, unit='percent',
          reset=None, duration=None, models=(), kind='other', resolution=None,
-         state=None, membership='unknown', **extra):
+         state=None, membership='unknown', percent_overage=False, **extra):
     supplied_used,supplied_remaining=used,remaining
     used, remaining, total = number(used), number(remaining), number(total)
     if unit == 'percent':
-        used, remaining = number(used, maximum=100), number(remaining, maximum=100)
+        used, remaining = number(used, maximum=None if percent_overage else 100), number(remaining, maximum=100)
         if remaining is None and used is not None:
-            remaining = 100 - used
+            remaining = max(0,100 - used)
         if used is None and remaining is not None:
             used = 100 - remaining
     return dict(pool_id=str(identifier)[:256], kind=kind, used=used, remaining=remaining,
@@ -57,7 +57,9 @@ def assess_pool(value, now, freshness, observed_at, settings):
     stale=age < -5 or age > freshness or (reset is not None and now >= reset)
     remaining=value.get('remaining')
     state=value.get('state')
-    if stale:
+    if value.get('disabled') is True:
+        state='UNKNOWN';result['limiting']=False
+    elif stale:
         state='STALE'
     elif state not in ('AVAILABLE','EXHAUSTED','AUTH_REQUIRED','MODEL_UNAVAILABLE','CAPABILITY_MISMATCH','LIMITED'):
         state='EXHAUSTED' if remaining == 0 else 'UNKNOWN' if remaining is None else 'AVAILABLE'
@@ -141,7 +143,7 @@ def claude(value):
         item=rates.get(name)
         if not isinstance(item,dict):continue
         if 'used_percentage' not in item:continue
-        pools.append(pool(name,used=item.get('used_percentage'),reset=item.get('resets_at'),duration=seconds,
+        pools.append(pool(name,used=item.get('used_percentage'),reset=item.get('resets_at'),duration=seconds,percent_overage=name=='spend_limit',
             kind='provider-wide' if name in windows else 'other',models=['*'] if name in windows else [],
             membership='documented-native-window' if name in windows else 'unknown'))
         # Dollar-denominated gateway spend is a separate actual unit.
@@ -160,11 +162,12 @@ def antigravity(value):
     pools=[]
     for identifier,item in list(quotas.items())[:64]:
         if not isinstance(item,dict):continue
-        remaining=number(item.get('remaining_fraction'),maximum=1)
-        pools.append(pool(identifier,remaining=remaining*100 if remaining is not None else None,
-            reset=item.get('reset_time'),kind='other',
+        remaining=number(item.get('remaining_fraction'),maximum=1);amount=number(item.get('remaining_amount'))
+        pools.append(pool(identifier,remaining=remaining*100 if remaining is not None else amount,
+            unit='percent' if remaining is not None or amount is None else 'native-amount',
+            reset=item.get('reset_time'),kind='other',disabled=item.get('disabled') is True,limiting=item.get('disabled') is not True,
             fraction_reported=remaining,reset_in_seconds_reported=number(item.get('reset_in_seconds'))))
-        pools[-1]['field_basis']['remaining']='derived-from-reported-fraction'
+        pools[-1]['field_basis']['remaining']='derived-from-reported-fraction' if remaining is not None else 'provider-reported' if amount is not None else 'unknown'
     return pools
 
 

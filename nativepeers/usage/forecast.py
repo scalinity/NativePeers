@@ -74,9 +74,13 @@ def runway(journal,provider,home,scope,current_pool,now,ttl):
     rows=journal.all("SELECT observed_at,payload_json FROM usage_observations WHERE provider=? AND home=? AND scope=? AND kind='snapshot' AND observed_at>=? ORDER BY observed_at DESC LIMIT 32",(provider,str(home),scope,now-86400))
     points=[]
     for row in rows:
-        p=next((p for p in json.loads(row['payload_json']).get('pools',[]) if p['pool_id']==current_pool['pool_id']),None)
+        payload=json.loads(row['payload_json'])
+        if payload.get('collection',{}).get('outcome')=='CACHED':continue
+        p=next((p for p in payload.get('pools',[]) if p['pool_id']==current_pool['pool_id']),None)
         if not p or p.get('resets_at')!=current_pool.get('resets_at') or p.get('used') is None:break
-        points.append((row['observed_at'],p['used']))
+        measured=p.get('observed_at',row['observed_at'])
+        if any(t==measured for t,_ in points):continue
+        points.append((measured,p['used']))
     points.reverse()
     if len(points)<3 or points[-1][0]-points[0][0]<60 or any(b[1]<a[1] for a,b in zip(points,points[1:])):
         return dict(state='UNKNOWN',reason='Need three monotonic observations spanning one minute within the same reset window.')

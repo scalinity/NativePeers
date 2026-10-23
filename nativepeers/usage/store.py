@@ -28,10 +28,11 @@ def scope(provider,home):
     return sha256(dict(provider=provider,home=str(Path(home).resolve()),markers=markers,runtime=runtime,route_flags=flags))
 
 
-def latest(journal,provider,home,kind=None):
+def latest(journal,provider,home,kind=None,*,active=False):
     suffix=' AND kind=?' if kind else ''
     params=[provider,str(Path(home).resolve()),scope(provider,home)]
     if kind:params.append(kind)
+    if active:suffix+=" AND json_type(payload_json,'$.acquisition_id')='text'"
     row=journal.one('SELECT * FROM usage_observations WHERE provider=? AND home=? AND scope=?'+suffix+' ORDER BY observation_id DESC LIMIT 1',params)
     if row:row['payload']=json.loads(row.pop('payload_json'))
     return row
@@ -80,6 +81,7 @@ def native_error(journal,row,home,error):
     record(journal,row['provider'],home,dict(source='native-task-error',source_version=1,
         route='native-auth-unknown',coverage='exact-refusal',models=[],
         pools=[pool('task-refusal/'+row['model_requested'],state=state,reset=reset,models=[row['model_requested']],
+            limiting_scope=error.get('limiting_scope') or error.get('pool_id'),
             kind='temporary-rate-limit' if code=='RATE_LIMITED' else 'model-specific',membership='exact-native-refusal',
             error_code=code,may_have_received=bool(error.get('may_have_received')),
             reset_note=str(error.get('reset_time',''))[:256])],

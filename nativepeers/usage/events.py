@@ -11,6 +11,8 @@ def codex_update(journal,home,params,runtime):
     previous=store.latest(journal,'codex',home,'snapshot')
     payload=dict(previous['payload']) if previous else dict(source='codex-notification',source_version=runtime,
         route='subscription',coverage='partial',models=[],pools=[],limitations=['Sparse native update; absent fields are unavailable.'])
+    payload.pop('acquisition_id',None);payload.pop('collection',None)
+    payload['source']='codex-notification'
     old={p['pool_id']:dict(p,observed_at=p.get('observed_at',previous['observed_at'])) for p in payload['pools']} if previous else {}
     for p in codex({'rateLimits':incoming}):
         if p['used'] is None and p['remaining'] is None and p.get('state') is None:continue

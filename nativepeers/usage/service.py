@@ -55,35 +55,48 @@ class Usage:
         require(len(matches)==1,'AMBIGUOUS_TARGET' if matches else 'TARGET_OFFLINE','Usage home label must identify one known provider home')
         return matches[0]
 
+    def acquisition_fresh(self,observation,now=None):
+        if not observation:return False
+        now=time.time() if now is None else now
+        ttl=self.settings['provider_freshness'].get(observation['provider'],self.settings['freshness_seconds'])
+        if not -5<=now-observation['observed_at']<=ttl:return False
+        payload=observation['payload']
+        if payload.get('collection',{}).get('outcome') not in ('FRESH','UNAVAILABLE'):return False
+        return all(assess_pool(p,now,ttl,p.get('observed_at',observation['observed_at']),self.settings)['freshness']=='FRESH'
+            for p in payload.get('pools',[]) if p.get('limiting',True) and not p.get('disabled'))
+
     async def refresh(self,provider,home,*,force=False):
-        initial=store.latest(self.journal,provider,home)
+        initial=store.latest(self.journal,provider,home,'snapshot',active=True)
         initial_id=initial['observation_id'] if initial else 0
-        ttl=self.settings['provider_freshness'].get(provider,self.settings['freshness_seconds'])
-        if not force and initial and time.time()-initial['observed_at']<ttl:return
-        key=sha256([provider,str(home),store.scope(provider,home)])
+        if not force and self.acquisition_fresh(initial):return
+        scope=store.scope(provider,home);key=sha256([provider,str(home),scope]);started=time.time()
         try:
             async with refresh_lock(self.journal.root/'locks'/('usage-'+key+'.lock')):
-                current=store.latest(self.journal,provider,home)
-                # A concurrent caller already refreshed this exact scope.
-                if current and current['observation_id']!=initial_id:return
+                current=store.latest(self.journal,provider,home,'snapshot',active=True)
+                if current and current['observation_id']!=initial_id and self.acquisition_fresh(current):return
                 try:
                     payload=await COLLECTORS[provider].collect(self.journal,home)
-                    if payload is not None:
-                        kind=payload.pop('kind','snapshot')
-                        store.record(self.journal,provider,home,payload,kind=kind,settings=self.settings)
-                    else:
-                        store.record(self.journal,provider,home,dict(code='TELEMETRY_ONLY',
-                            message='No independent quota-read RPC; waiting for ordinary native status-line telemetry.'),kind='refresh',settings=self.settings)
+                    require(store.scope(provider,home)==scope,'SOURCE_SCOPE_CHANGED','Native home/runtime/authentication metadata changed during the read; repeat the read in the current scope')
+                    require(payload is not None,'SOURCE_UNAVAILABLE','This native usage route is not yet qualified')
+                    kind=payload.pop('kind','snapshot');completed=time.time()
+                    collection=payload.setdefault('collection',dict(outcome='FRESH',freshness_basis='native-fetch-completed'))
+                    collection.update(request_started_at=started,request_completed_at=completed)
+                    if kind=='snapshot' and collection['outcome'] in ('FRESH','UNAVAILABLE'):
+                        import uuid
+                        payload['acquisition_id']=str(uuid.uuid4())
+                    store.record(self.journal,provider,home,payload,kind=kind,settings=self.settings)
                 except asyncio.CancelledError:raise
                 except Exception as error:
-                    code=error.code if isinstance(error,PeerError) else 'REFRESH_FAILED'
+                    code=error.code if isinstance(error,PeerError) else 'SOURCE_TIMEOUT' if isinstance(error,TimeoutError) else 'REFRESH_FAILED'
                     from ..adapters.codex_app_server import ProviderError
                     if isinstance(error,ProviderError):
                         from ..provider_errors import classify
                         classified=classify(error.error)
-                        if classified=='AUTH_REQUIRED':code=classified
-                        elif isinstance(error.error,dict) and error.error.get('code')==-32601:code='CAPABILITY_MISMATCH'
-                    store.record(self.journal,provider,home,dict(code=code,message='Native usage refresh failed: '+type(error).__name__),kind='refresh',settings=self.settings)
+                        code='SOURCE_ACCESS_DENIED' if classified=='AUTH_REQUIRED' else 'SOURCE_RATE_LIMITED' if classified=='RATE_LIMITED' else 'REFRESH_FAILED'
+                        if isinstance(error.error,dict) and error.error.get('code')==-32601:code='CAPABILITY_MISMATCH'
+                    elif code=='AUTH_REQUIRED':code='SOURCE_ACCESS_DENIED'
+                    store.record(self.journal,provider,home,dict(code=code,message='Current quota could not be obtained: '+code,
+                        request_started_at=started,request_completed_at=time.time()),kind='refresh',settings=self.settings)
         except TimeoutError:
             return
 
@@ -108,7 +121,11 @@ class Usage:
         for row in errors:
             for p in json.loads(row['payload_json']).get('pools',[]):
                 if p['pool_id'] in seen:continue
-                seen.add(p['pool_id']);pools.append(assess_pool(p,now,ttl,row['observed_at'],self.settings))
+                seen.add(p['pool_id'])
+                scope=p.get('limiting_scope')
+                if scope and selected and selected['observed_at']>row['observed_at'] and any(
+                    q['pool_id']==scope and q['freshness']=='FRESH' and q['state'] in ('AVAILABLE','LIMITED','EXHAUSTED') for q in pools):continue
+                pools.append(assess_pool(p,now,ttl,row['observed_at'],self.settings))
         for mapping in self.settings['pool_memberships']:
             if mapping['provider']!=provider:continue
             for p in pools:
@@ -138,14 +155,12 @@ class Usage:
                 reasons=['Only known applicable constraints are evaluated; catalog presence is not entitlement.']+
                     (['Model-to-pool membership is unavailable.'] if not applicable else [])))
         refresh=store.latest(self.journal,provider,home,'refresh')
-        failure=refresh['payload']['code'] if refresh and now-refresh['observed_at']<=ttl and refresh['payload']['code'] in ('AUTH_REQUIRED','CAPABILITY_MISMATCH') else None
-        if failure and selected and refresh['observed_at']<selected['observed_at']:failure=None
-        if failure:
-            for item in model_rows:item.update(state=failure,reasons=item['reasons']+['Current native metadata collection failed: '+failure])
+        source_failure=refresh['payload']['code'] if refresh and now-refresh['observed_at']<=ttl else None
+        if source_failure and selected and refresh['observed_at']<selected['observed_at']:source_failure=None
         return dict(provider=provider,home=str(Path(home).resolve()),scope=store.scope(provider,home),
-            state=failure or aggregate([p for p in pools if p.get('limiting',True)]),collector_state=failure or 'OK' if selected else failure or 'UNKNOWN',
+            state=aggregate([p for p in pools if p.get('limiting',True)]),collector_state=source_failure or (payload.get('collection',{}).get('outcome','OK') if selected else 'UNKNOWN'),
             route=payload.get('route','native-auth-unknown'),source=payload.get('source','NONE'),
-            source_version=payload.get('source_version'),observation_id=selected['observation_id'] if selected else None,
+            source_version=payload.get('source_version'),collection=payload.get('collection'),observation_id=selected['observation_id'] if selected else None,
             observed_at=selected['observed_at'] if selected else None,
             age_seconds=max(0,now-selected['observed_at']) if selected else None,
             freshness_seconds=ttl,confidence='IMPORTED' if selected and not native else 'NATIVE_OBSERVATION' if selected else 'UNKNOWN',

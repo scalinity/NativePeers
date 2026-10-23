@@ -97,7 +97,7 @@ def test_refresh_single_flight_failure_and_no_transaction_during_io(usage):
         with patch('nativepeers.usage.service.COLLECTORS',{'codex':type('Collector',(),{'collect':AsyncMock(side_effect=TimeoutError())})()}):
             await service.refresh('codex',home,force=True)
         view=service.snapshot('codex',home)
-        assert view['pools'][0]['used']==30 and view['last_refresh']['code']=='REFRESH_FAILED'
+        assert view['pools'][0]['used']==30 and view['last_refresh']['code']=='SOURCE_TIMEOUT'
     asyncio.run(test())
 
 
