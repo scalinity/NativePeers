@@ -68,6 +68,9 @@ class Worker:
         self.manifest()
 
     def manifest(self):
+        from .workspace_retirement import retain_processes
+        retain_processes(self.journal,self.row['worker_id'],self.row['generation'],self.native,
+                         [self.owner,self.provider_identity,*self.provider_descendants.values()])
         atomic_json(self.journal.root/'workers'/(self.row['worker_id']+'.json'),dict(owner=self.owner,
             native_process=self.provider_identity,native_descendants=list(self.provider_descendants.values()),cleanup=self.provider_cleanup,native_id=self.native,worker_id=self.row['worker_id'],
             group_id=self.row['group_id'],generation=self.row['generation'],history_visibility=self.lease.get('history_visibility')))

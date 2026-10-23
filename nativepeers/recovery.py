@@ -34,6 +34,8 @@ def settle_stopped_tasks(db,worker_id,generation,reason):
 
 
 def assert_released(journal,row):
+    from .workspace_retirement import retirement
+    require(not retirement(journal,row['worker_id']), 'WORKSPACE_RETIRED', 'Workspace retirement was prepared; recover its verified archive instead of resuming this writer')
     require(row['state']=='RELEASED_RESUMABLE','OWNERSHIP_CONFLICT','Worker has not released its native writer')
     closure=release_status(journal,row)
     require(closure['released'],'CLEANUP_UNCERTAIN','Previous process/output closure is unproved; inspect the retained release details',details=closure)
@@ -52,10 +54,13 @@ def resume_command(journal,caller,worker_id,*,explain=False):
     from .worker_visibility import status as visibility_status
     visibility=visibility_status(row)
     if explain:
+        from .workspace_retirement import retirement,summary
+        retired=retirement(journal,worker_id)
         closure=release_status(journal,row)
         return dict(worker_id=worker_id,native_id=row['native_id'],state=row['state'],closure=closure,history_visibility=visibility,
-                    resume_eligible=row['state']=='RELEASED_RESUMABLE' and closure['released'],launched=False,
-                    next_step='Use normal exact-history resume only after closure and native ownership checks pass' if closure['released'] else 'Retain ownership; inspect the listed live/unknown process births and pipe closure')
+                    workspace_retirement=summary(retired) if retired else None,
+                    resume_eligible=not retired and row['state']=='RELEASED_RESUMABLE' and closure['released'],launched=False,
+                    next_step='Recover the verified workspace archive; normal resume is refused after retirement' if retired else 'Use normal exact-history resume only after closure and native ownership checks pass' if closure['released'] else 'Retain ownership; inspect the listed live/unknown process births and pipe closure')
     assert_released(journal,row)
     archive_state={'archived':None,'checked':False}
     if row['provider']=='codex':

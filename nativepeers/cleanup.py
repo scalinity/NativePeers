@@ -85,7 +85,7 @@ def _storage(source,work,baseline,mode,deadline):
     return common_path
 
 
-def _inventory(work,deadline,max_entries,max_bytes):
+def _inventory(work,deadline,max_entries,max_bytes,*,allow_internal_links=False):
     size=0;count=0;files={};directories=set();pending=[work]
     while pending:
         directory=pending.pop()
@@ -96,6 +96,13 @@ def _inventory(work,deadline,max_entries,max_bytes):
                 size+=info.st_size if not stat.S_ISDIR(info.st_mode) else 0
                 require(count<=max_entries and size<=max_bytes,'CLEANUP_UNAVAILABLE','Workspace size or entry limit reached')
                 path=Path(entry.path);relative=path.relative_to(work)
+                if stat.S_ISLNK(info.st_mode) and allow_internal_links:
+                    target=os.readlink(path)
+                    require(not Path(target).is_absolute() and (path.parent/target).resolve().is_relative_to(work),
+                            'OWNERSHIP_UNKNOWN','Workspace symlink escapes its owned directory')
+                    files[str(relative)]={'sha256':hashlib.sha256(os.fsencode(target)).hexdigest(),
+                                          'mode':stat.S_IMODE(info.st_mode),'link_target':target}
+                    continue
                 require(not stat.S_ISLNK(info.st_mode),'UNIQUE_CHANGES','Workspace contains a symlink; retain for inspection')
                 if stat.S_ISDIR(info.st_mode):
                     pending.append(path)

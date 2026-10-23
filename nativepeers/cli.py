@@ -50,7 +50,9 @@ def parser():
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
-    q=command('cleanup');q.add_argument('--plan',action='store_true',required=True);q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=20)
+    q=command('cleanup');action=q.add_mutually_exclusive_group(required=True)
+    action.add_argument('--plan',action='store_true');action.add_argument('--archive-only',action='store_true');action.add_argument('--archive-retire',action='store_true')
+    q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=20)
     q=command('history-cleanup');action=q.add_mutually_exclusive_group(required=True)
     action.add_argument('--plan',action='store_true');action.add_argument('--apply',action='store_true');action.add_argument('--unarchive',action='store_true')
     q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=100);q.add_argument('--manifest',type=Path,required=True)
@@ -116,6 +118,10 @@ async def dispatch(args,journal):
         from .cleanup import plan
         require(caller.kind=='peer' and caller.incarnation,'CALLER_UNBOUND','Cleanup planning requires a verified parent')
         core.registry.verify(caller.key,caller.incarnation)
+        if args.archive_retire or args.archive_only:
+            from .workspace_retirement import archive_retire
+            require(len(args.worker_id)==1, 'PROTOCOL_ERROR', 'Archive retirement requires one exact --worker-id; automatic selection is not permitted')
+            return archive_retire(journal,caller,args.worker_id[0],archive_only=args.archive_only)
         require(1<=args.limit<=100,'PROTOCOL_ERROR','Cleanup selection limit must be 1 to 100')
         workers=args.worker_id or [row['worker_id'] for row in journal.all("SELECT w.worker_id FROM workers w JOIN groups g USING(group_id) WHERE g.parent_key=? AND (w.state='RELEASED_RESUMABLE' OR w.state='FAILED' AND EXISTS (SELECT 1 FROM events e WHERE e.subject_id=w.worker_id AND e.kind='controller-not-created')) AND w.worktree_id IS NOT NULL ORDER BY w.rowid DESC LIMIT ?",(caller.key,args.limit))]
         if not workers:return dict(planner_only=True,removed=False,recheck_required=True,candidates=[],instruction='No released owned writing workspaces in this bounded selection.')

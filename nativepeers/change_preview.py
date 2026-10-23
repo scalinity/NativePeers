@@ -70,7 +70,7 @@ def _workspace(journal,row,lease):
     return source,work,baseline,'isolated-copy' if copying else 'isolated-worktree'
 
 
-def _git(cwd,args,deadline,*,raw=None):
+def _git(cwd,args,deadline,*,raw=None,max_output_bytes=ARTIFACT_MAX):
     require(time.monotonic()<deadline,'PREVIEW_UNAVAILABLE','Inspection time limit reached')
     environment={k:v for k,v in os.environ.items() if not k.startswith('GIT_')}
     environment.update(GIT_OPTIONAL_LOCKS='0',GIT_TERMINAL_PROMPT='0')
@@ -98,7 +98,7 @@ def _git(cwd,args,deadline,*,raw=None):
                         chunk=os.read(stream.fileno(),65536)
                         if not chunk:selector.unregister(stream);continue
                         output[stream].extend(chunk)
-                        require(sum(map(len,output.values()))<=ARTIFACT_MAX,'PREVIEW_UNAVAILABLE','Git inspection output exceeds its byte limit')
+                        require(sum(map(len,output.values()))<=max_output_bytes,'PREVIEW_UNAVAILABLE','Git inspection output exceeds its byte limit')
         code=process.wait(timeout=max(.001,deadline-time.monotonic()))
         return subprocess.CompletedProcess(command,code,bytes(output[process.stdout]),bytes(output[process.stderr]))
     finally:
