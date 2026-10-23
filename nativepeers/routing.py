@@ -98,7 +98,10 @@ class Router:
                 db.execute("INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)",(message_id,envelope["exchange_id"],caller.key,peer["handle"],in_reply_to,None,canonical(envelope).decode(),sha256(envelope),now+expiry,now))
                 db.execute("INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)",(attempt_id,message_id,peer["incarnation_id"],transport,"OUTBOX_COMMITTED",now))
                 if reference:
-                    original_attempt=db.execute('SELECT attempt_id FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1',(in_reply_to,)).fetchone()
+                    original_attempt=db.execute('SELECT attempt_id,state FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1',(in_reply_to,)).fetchone()
+                    if original_attempt:
+                        db.execute('UPDATE attempts SET state=?,ended_at=? WHERE attempt_id=?',
+                            (reduce_receipt(original_attempt['state'],'REPLY_RECORDED'),time.time(),original_attempt['attempt_id']))
                     db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),in_reply_to,original_attempt['attempt_id'] if original_attempt else None,
                         'REPLY_RECORDED','explicit-bound-peer-reply',caller.key,None,canonical({'reply_message_id':message_id}).decode(),time.time()))
         return await self.admit(message_id, request_id,admission_deadline=admission_deadline)

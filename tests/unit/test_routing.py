@@ -100,6 +100,41 @@ class RoutingTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result['state'],'INGESTED');self.assertEqual(len(messages),1)
         self.assertEqual(json.loads(result['attempt']['error_json'])['message'],'CancelledError')
 
+    async def test_correlated_reply_reduces_only_its_original_even_if_return_delivery_fails(self):
+        async def unknown(peer,message):raise ConnectionError('lost response')
+        self.router.adapters['fake']=unknown
+        first=await self.router.send(self.ca,'b','original',client_request_id='reply-original')
+        other=await self.router.send(self.ca,'b','separate',client_request_id='reply-other')
+        reply=await self.router.send(self.cb,'ignored','answer',in_reply_to=first['message_id'],client_request_id='correlated')
+        self.assertEqual(reply['state'],'DELIVERY_UNKNOWN')
+        self.assertEqual(self.router.outcome(first['message_id'])['state'],'REPLY_RECORDED')
+        self.assertEqual(self.router.outcome(other['message_id'])['state'],'DELIVERY_UNKNOWN')
+        again=await self.router.send(self.cb,'ignored','answer',in_reply_to=first['message_id'],client_request_id='correlated')
+        self.assertEqual(reply,again)
+        self.router.record(first['message_id'],first['attempt']['attempt_id'],
+            dict(stage='REPLY_SUBMITTED',evidence_kind='submitted-reply'),self.b)
+        await self.router.send(self.cb,'ignored','another answer',in_reply_to=first['message_id'],client_request_id='another-correlated')
+        self.assertEqual(self.router.outcome(first['message_id'])['state'],'REPLY_SUBMITTED')
+
+    async def test_reply_during_pending_admission_survives_late_transport_failure(self):
+        started=asyncio.Event();release=asyncio.Event();messages=[]
+        async def pending(peer,message):
+            messages.append(message)
+            if message['in_reply_to']:
+                return dict(stage='ACCEPTED_QUEUED',evidence_kind='fake-reply-queue')
+            started.set();await release.wait();raise TimeoutError('late response loss')
+        self.router.adapters['fake']=pending
+        sending=asyncio.create_task(self.router.send(self.ca,'b','pending',client_request_id='pending-reply'))
+        await started.wait();message_id=messages[0]['message_id']
+        self.assertEqual(self.router.outcome(message_id)['state'],'SUBMITTING')
+        try:
+            await self.router.send(self.cb,'ignored','answer',in_reply_to=message_id,client_request_id='reply-before-response')
+        finally:release.set()
+        result=await sending
+        self.assertEqual(result['state'],'REPLY_RECORDED')
+        self.assertEqual((await self.router.send(self.ca,'b','pending',client_request_id='pending-reply'))['state'],'REPLY_RECORDED')
+        self.assertEqual(len(messages),2)
+
     async def test_same_request_concurrency(self):
         rows=await asyncio.gather(*[self.router.send(self.ca,'b','same',client_request_id='concurrent') for _ in range(8)])
         self.assertEqual(len({r['message_id'] for r in rows}),1);self.assertEqual(len(self.admissions),1)
