@@ -48,20 +48,38 @@ async def refresh_lock(path):
 class Usage:
     def __init__(self,journal):self.journal=journal;self.settings=load(journal)
 
-    def home(self,provider,caller=None,label=None):
-        default=provider_home(provider)
-        choices={str(default)}
+    def selection(self,provider,caller=None,label=None):
+        """A canonical directory and Claude's startup layout form one selection."""
+        from ..launch import home_environment
+        default=provider_home(provider);bound=None
         if caller and caller.kind=='peer':
             from ..registry import Registry
             peer=Registry(self.journal).verify(caller.key,caller.incarnation)
-            if peer['peer_key']['provider']==provider:default=Path(peer['home']);choices.add(str(default))
-        if not label:return default
-        from ..policy import home_label
-        for row in self.journal.all('SELECT descriptor_json FROM peer_instances WHERE provider=?',(provider,)):
-            choices.add(json.loads(row['descriptor_json'])['home'])
-        matches=[h for h in {Path(h).resolve() for h in choices} if home_label(self.journal,h)==label]
-        require(len(matches)==1,'AMBIGUOUS_TARGET' if matches else 'TARGET_OFFLINE','Usage home label must identify one known provider home')
-        return matches[0]
+            if peer['peer_key']['provider']==provider:default=Path(peer['home']);bound=peer
+        records=[json.loads(row['descriptor_json']) for row in self.journal.all(
+            'SELECT descriptor_json FROM peer_instances WHERE provider=?',(provider,))]
+        home=default
+        if label:
+            from ..policy import home_label
+            choices={default.resolve(),*(Path(p['home']).resolve() for p in records)}
+            matches=[h for h in choices if home_label(self.journal,h)==label]
+            require(len(matches)==1,'AMBIGUOUS_TARGET' if matches else 'TARGET_OFFLINE','Usage home label must identify one known provider home')
+            home=matches[0]
+        explicit=None
+        if provider=='claude':
+            if bound and home==Path(bound['home']).resolve():
+                explicit=bound.get('provider_home_explicit')
+                require(type(explicit) is bool,'OWNERSHIP_UNKNOWN','The selected Claude session has unknown configuration-layout intent; register through its next normal native launch')
+            elif label and (selected:=[p for p in records if Path(p['home']).resolve()==home]):
+                layouts={p.get('provider_home_explicit') for p in selected}
+                require(len(layouts)==1 and type(next(iter(layouts))) is bool,'AMBIGUOUS_TARGET',
+                    'Claude home label has conflicting or unknown configuration layouts; select a bound native caller')
+                explicit=next(iter(layouts))
+            else:explicit=bool(home_environment(provider,home))
+        return home,explicit
+
+    def home(self,provider,caller=None,label=None):
+        return self.selection(provider,caller,label)[0]
 
     def acquisition_fresh(self,observation,now=None):
         if not observation:return False
@@ -194,9 +212,14 @@ class Usage:
         require(model is None or isinstance(model,str) and 0<len(model)<=512 and all(ord(c)>=32 for c in model),'PROTOCOL_ERROR','Invalid exact usage model')
         require(not home_label or provider,'PROTOCOL_ERROR','A home label requires a provider')
         providers=[provider] if provider else list(PROVIDERS)
-        homes={p:self.home(p,caller,home_label) for p in providers}
-        if refresh:await asyncio.gather(*(self.refresh(p,h,force=True) for p,h in homes.items()))
-        result=dict(schema_version=1,providers=[self.snapshot(p,h,model=model) for p,h in homes.items()],
+        selections={p:self.selection(p,caller,home_label) for p in providers}
+        async def read(provider,home,explicit):
+            with store.home_layout(explicit):
+                if refresh:await self.refresh(provider,home,force=True)
+                view=self.snapshot(provider,home,model=model)
+                if provider=='claude':view['provider_home_explicit']=explicit
+                return view
+        result=dict(schema_version=1,providers=await asyncio.gather(*(read(p,*s) for p,s in selections.items())),
             inference_submitted=False,quota_reserved=False)
         from .forecast import local_summary,recommend
         result['local_usage']=local_summary(self.journal)

@@ -6,7 +6,7 @@
 - [x] F04 Apply recipient visibility to status, inbox and context references.
 - [x] F05 Initialize runtime approvals atomically without replacing concurrent approval.
 - [x] F06/F09 Share authoritative model-scoped quota supersession.
-- [ ] F07 Preserve selected Claude layout through general usage lookup.
+- [x] F07 Preserve selected Claude layout through general usage lookup.
 - [ ] F08 Bound catalog descendants and output cleanup.
 - [ ] F10 Enforce one combined frozen-input byte budget.
 - [ ] Fix isolated-copy identity and sibling-order test prerequisites.
