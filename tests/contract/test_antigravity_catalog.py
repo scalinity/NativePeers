@@ -22,10 +22,38 @@ class CatalogTests(unittest.IsolatedAsyncioTestCase):
                 else:self.assertEqual(await catalog(binary),expected)
 
     async def test_cancellation_is_preserved_after_catalog_cleanup(self):
-        process=Mock(returncode=None);process.communicate=AsyncMock(side_effect=[asyncio.CancelledError(),(b'',b'')])
-        with patch('nativepeers.antigravity.asyncio.create_subprocess_exec',new=AsyncMock(return_value=process)):
-            with self.assertRaises(asyncio.CancelledError):await catalog(Path('fixture'))
-        process.terminate.assert_called_once();self.assertEqual(process.communicate.await_count,2)
+        from nativepeers.process import identity,owned_status
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);pid=root/'pid';binary=root/'fake-agy'
+            binary.write_text('#!'+sys.executable+'\nimport os,time\nfrom pathlib import Path\nPath('+repr(str(pid))+').write_text(str(os.getpid()))\ntime.sleep(30)\n');binary.chmod(0o700)
+            task=asyncio.create_task(catalog(binary,terminate_grace=.1))
+            async with asyncio.timeout(2):
+                while not pid.exists():await asyncio.sleep(.01)
+            record=identity(int(pid.read_text())).json();task.cancel()
+            with self.assertRaises(asyncio.CancelledError):await task
+            self.assertEqual(owned_status(record),'DEAD')
+
+    async def test_exited_leader_cannot_abandon_captured_pipe_descendant(self):
+        from nativepeers.process import owned_status
+        for pipe in ('stdout','stderr'):
+            with self.subTest(pipe=pipe),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);birth=root/'birth.json';binary=root/'fake-agy'
+                binary.write_text('#!'+sys.executable+'\n'+"""
+import os,time,json,subprocess,sys
+from pathlib import Path
+from nativepeers.process import identity
+child=subprocess.Popen([sys.executable,'-c','import time; time.sleep(30)'],
+    stdout=None if PIPE=='stdout' else subprocess.DEVNULL,stderr=None if PIPE=='stderr' else subprocess.DEVNULL,start_new_session=True)
+Path(BIRTH).write_text(json.dumps(identity(child.pid).json()))
+print('model-a\tModel A',flush=True)
+time.sleep(.2)
+""".replace('PIPE',repr(pipe)).replace('BIRTH',repr(str(birth))))
+                binary.chmod(0o700)
+                # The fixture imports this checkout without widening the native environment.
+                binary.write_text(binary.read_text().replace('from nativepeers.process import identity','sys.path.insert(0,'+repr(str(Path(__file__).resolve().parents[2]))+'); from nativepeers.process import identity'))
+                with self.assertRaises(TimeoutError):await asyncio.wait_for(catalog(binary,timeout=.5,terminate_grace=.1),3)
+                import json
+                self.assertEqual(owned_status(json.loads(birth.read_text())),'DEAD')
 
     async def test_timeout_reaps_a_native_process_that_ignores_termination(self):
         with tempfile.TemporaryDirectory() as directory:

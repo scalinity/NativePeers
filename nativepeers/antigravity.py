@@ -39,20 +39,58 @@ def resolve_name(name):
 
 async def catalog(executable,*,timeout=30,terminate_grace=1):
     from .launch import launch_environment
-    process=await asyncio.create_subprocess_exec(str(executable),'models',env=launch_environment('antigravity'),
-        stdin=asyncio.subprocess.DEVNULL,stdout=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.PIPE)
+    import signal,subprocess
+    from .process import identity,descendants,owned_status,signal_captured
+    # Register the synchronous creation handle before any fallible inspection.
+    process=subprocess.Popen([str(executable),'models'],env=launch_environment('antigravity'),
+        stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,close_fds=True)
+    owner=None;captured={};eof=[False,False];buffers=[bytearray(),bytearray()];overflow=False
+    for stream in (process.stdout,process.stderr):os.set_blocking(stream.fileno(),False)
+    async def drain(stream,index):
+        nonlocal overflow
+        while True:
+            try:chunk=os.read(stream.fileno(),16384)
+            except BlockingIOError:await asyncio.sleep(.01);continue
+            if not chunk:eof[index]=True;return
+            available=1048576-sum(map(len,buffers))
+            buffers[index].extend(chunk[:max(0,available)])
+            if len(chunk)>available:overflow=True
+    readers=[asyncio.create_task(drain(stream,i)) for i,stream in enumerate((process.stdout,process.stderr))]
+    failure=None
     try:
-        output,error=await asyncio.wait_for(process.communicate(),timeout)
-    except BaseException:
-        try:
-            if process.returncode is None:
-                with contextlib.suppress(ProcessLookupError):process.terminate()
-                try:await asyncio.wait_for(process.communicate(),terminate_grace)
-                except asyncio.TimeoutError:
-                    with contextlib.suppress(ProcessLookupError):process.kill()
-                    await asyncio.wait_for(process.communicate(),5)
-        except (ProcessLookupError,asyncio.TimeoutError):pass
-        raise
+        async with asyncio.timeout(timeout):
+            while process.poll() is None or not all(eof):
+                if owner is None and process.poll() is None:
+                    try:
+                        current=identity(process.pid).json()
+                        if current['ppid']==os.getpid():owner=current
+                    except (ProcessLookupError,FileNotFoundError,PermissionError):pass
+                for record in descendants([owner,*captured.values()]):captured[record['pid']]=record
+                for reader in readers:
+                    if reader.done():reader.result()
+                require(not overflow,'SOURCE_OUTPUT_LIMIT','Antigravity model catalog exceeds 1 MiB')
+                await asyncio.sleep(.02)
+    except BaseException as error:failure=error
+    finally:
+        # EOF and leader exit are independent; escaped captured children remain
+        # owned by birth, never by an exited leader's process group.
+        for sig,grace in ((signal.SIGTERM,terminate_grace),(signal.SIGKILL,terminate_grace)):
+            records=[r for r in [owner,*captured.values()] if r]
+            for record in reversed(records):signal_captured(record,sig)
+            deadline=asyncio.get_running_loop().time()+grace
+            while (process.poll() is None or any(owned_status(r)!='DEAD' for r in records)) and asyncio.get_running_loop().time()<deadline:await asyncio.sleep(.01)
+        _,pending=await asyncio.wait(readers,timeout=terminate_grace)
+        for reader in pending:reader.cancel()
+        await asyncio.gather(*readers,return_exceptions=True)
+        cleanup=dict(state='CLOSED',controller_pid=process.pid,owner=owner,captured_descendants=list(captured.values()),
+            provider_exited=process.poll() is not None,stdout_eof=eof[0],stderr_eof=eof[1])
+        uncertain=owner is None or not cleanup['provider_exited'] or not all(eof) or any(owned_status(r)!='DEAD' for r in captured.values())
+        if uncertain:cleanup['state']='UNCERTAIN'
+        for stream in (process.stdout,process.stderr):stream.close()
+    if isinstance(failure,asyncio.CancelledError):raise failure
+    require(not uncertain,'CLEANUP_UNCERTAIN','Antigravity catalog process/output closure was not proved',details=cleanup)
+    if failure:raise failure
+    output,error=map(bytes,buffers)
     if process.returncode!=0:
         from .provider_errors import classify
         text=(error or output).decode(errors='replace')[-4000:]
