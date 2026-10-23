@@ -3,7 +3,7 @@
 - [x] F01 Isolate every Git mutation from ambient repository/index/object routing.
 - [x] F02 Bound control delivery and close leases independently of pipe progress.
 - [x] F03 Retain controller ownership immediately after successful creation.
-- [ ] F04 Apply recipient visibility to status, inbox and context references.
+- [x] F04 Apply recipient visibility to status, inbox and context references.
 - [ ] F05 Initialize runtime approvals atomically without replacing concurrent approval.
 - [ ] F06/F09 Share authoritative model-scoped quota supersession.
 - [ ] F07 Preserve selected Claude layout through general usage lookup.

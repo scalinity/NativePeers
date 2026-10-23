@@ -185,18 +185,22 @@ class Router:
         predicate+=' AND rowid<=?';params.extend([ceiling,limit+1])
         rows=self.journal.all("SELECT created_at,message_id,payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC,message_id DESC LIMIT ?",params)
         messages=[json.loads(r["payload_json"]) for r in rows[:limit]]
-        peer=self.registry.get(caller.key)
-        if peer['owner_kind']=='interactive-standalone':
-            visible=[]
-            for message in messages:
-                receipt=self.outcome(message['message_id'])
-                known=receipt['state'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED','REPLY_SUBMITTED') or any(r['stage'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED') for r in receipt['receipts'])
-                visible.append(message if known else {'message_id':message['message_id'],'delivery_state':receipt['state'],'body_available':False,'reason':'Native admission or inbound policy has not established ingestion.'})
-            messages=visible
+        messages=[self.visible_message(caller,message) for message in messages]
         if paged or cursor is not None:
             last=rows[limit-1] if len(rows)>limit else None
             return {'messages':messages,'next_cursor':encode(scope,[last['created_at'],last['message_id']],ceiling) if last else None}
         return messages
+
+    def visible_message(self,caller,message):
+        """Share native recipient admission across inbox and exact status reads."""
+        if message.get('from',{}).get('peer_key')==caller.key:return message
+        peer=self.registry.get(caller.key)
+        if peer['owner_kind']!='interactive-standalone':return message
+        receipt=self.outcome(message['message_id'])
+        known=receipt['state'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED','REPLY_SUBMITTED') or any(
+            r['stage'] in ('INGESTED','MODEL_REPORTED_PROCESSED','REPLY_RECORDED') for r in receipt['receipts'])
+        return message if known else {'message_id':message['message_id'],'delivery_state':receipt['state'],
+            'body_available':False,'reason':'Native admission or inbound policy has not established ingestion.'}
 
     def ack(self,caller,message_id):
         row=self.journal.one("SELECT to_key FROM messages WHERE message_id=?",(message_id,))
