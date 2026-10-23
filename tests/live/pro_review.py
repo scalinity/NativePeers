@@ -220,7 +220,7 @@ def launch(provider):
     prompt=f'''Authorized bounded NativePeers reliability test. Run this exact command ONCE through your native shell tool:
 {command}
 Allow this same tool process up to 480 seconds and collect its output if it runs in the background. It launches two native fixture workers and, for Codex, resumes one released Gemini history. Do not start vendor-native agents, retry commands, answer child tasks yourself or change configuration. After completion, report NP-PRO-{provider}-PARENT with the actual parent UUID, two child UUIDs, observed models, result 42 and actual assertion verdict. End your turn.'''
-    args=[str(binary),'--name','NP Pro Sol Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(json.loads((RUN/'overrides.json').read_text())),prompt] if provider=='codex' else [str(binary),'--model',MODELS[provider],'--dangerously-skip-permissions','--prompt-interactive',prompt]
+    args=[str(binary),'--nativepeers-worker','--no-daemon','--name','NP Pro Sol Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(json.loads((RUN/'overrides.json').read_text())),prompt] if provider=='codex' else [str(binary),'--model',MODELS[provider],'--dangerously-skip-permissions','--prompt-interactive',prompt]
     budget=LiveBudget(LEDGER);reservation=budget.reserve('Pro review '+provider+' parent input',tranche='pro_review');budget.admit(reservation)
     atomic_json(RUN/(provider+'-launch.json'),{'at':stamp(),'reservation':reservation,'owner_expected_after_exec':dict(identity(os.getpid()).json(),executable=str(binary))})
     env=launch_environment(provider);env.update(NPEER_HOME=str(STATE),NPEER_PRO_REVIEW_RUN=str(RUN),PYTHONPATH=str(ROOT),TERM='xterm-256color')

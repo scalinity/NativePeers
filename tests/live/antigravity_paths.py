@@ -208,7 +208,7 @@ It binds to your actual native identity, launches two independent native workers
             finally:await client.close()
         overrides=json.loads((RUN/'codex-overrides.json').read_text());overrides['hooks.state']=asyncio.run(refresh_hooks())
         overrides.update({'memories.generate_memories':False,'memories.use_memories':False})
-        args=[str(binary),'--name','NP Argon Codex Parent','--dangerously-bypass-approvals-and-sandbox',
+        args=[str(binary),'--nativepeers-worker','--no-daemon','--name','NP Argon Codex Parent','--dangerously-bypass-approvals-and-sandbox',
               *config_arguments(overrides),prompt]
     else:
         binary=(Path.home()/'.local/bin/agy').resolve()

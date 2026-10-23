@@ -104,7 +104,7 @@ The helper binds to your actual native identity, spawns exactly two independent 
               '--settings',str(RUN/'claude-settings.json'),'--strict-mcp-config','--mcp-config','{"mcpServers":{}}','--tools','Bash,Read','--',prompt]
     else:
         overrides=json.loads((RUN/'codex-overrides.json').read_text())
-        args=[str(binary),'--name','RV Codex Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(overrides),prompt]
+        args=[str(binary),'--nativepeers-worker','--no-daemon','--name','RV Codex Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(overrides),prompt]
     budget=LiveBudget(LEDGER);reservation=budget.reserve('RV '+provider+' parent initial input',tranche='review_fixes')
     expected_owner=dict(identity(os.getpid()).json(),executable=str(binary))
     workspace=workspace or FIXTURE

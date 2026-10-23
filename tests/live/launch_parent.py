@@ -37,6 +37,6 @@ else:
     states={h['key']:({'trusted_hash':h['currentHash']} if 'NativePeers' in h['sourcePath'] else {'enabled':False}) for h in listing['data'][0]['hooks']}
     config['hooks.state']=states
     config['projects']={str(fixture):{'trust_level':'trusted'}}
-    args=[str(binary),'--name',case,'--dangerously-bypass-approvals-and-sandbox',*config_arguments(config),prompt]
+    args=[str(binary),'--nativepeers-worker','--no-daemon','--name',case,'--dangerously-bypass-approvals-and-sandbox',*config_arguments(config),prompt]
 atomic_json(run/'parent-launch.json',{'provider':provider,'executable':str(binary),'argv':args,'initial_reservation':reservation})
 os.chdir(fixture);budget.admit(reservation);os.execve(binary,args,environment)

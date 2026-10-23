@@ -66,7 +66,7 @@ def launch(provider):
     prompt=f'''Authorized bounded NativePeers verification. Run this exact command ONCE through your native shell tool:
 {command}
 Wait for that same tool process and collect its output. It runs {'two' if provider=='codex' else 'one'} small native fixture workers. Do not retry, spawn native subagents, edit configuration, send peer messages or solve worker tasks yourself. After the command returns, report NP-PRO2-PARENT, its actual parent UUID, child UUIDs, observed models and assertion verdict, then end your turn.'''
-    args=[str(binary),'--name','NP Pro2 Sol Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(json.loads((RUN/'overrides.json').read_text())),prompt] if provider=='codex' else [str(binary),'--model',base.MODELS[provider],'--dangerously-skip-permissions','--prompt-interactive',prompt]
+    args=[str(binary),'--nativepeers-worker','--no-daemon','--name','NP Pro2 Sol Parent','--dangerously-bypass-approvals-and-sandbox',*config_arguments(json.loads((RUN/'overrides.json').read_text())),prompt] if provider=='codex' else [str(binary),'--model',base.MODELS[provider],'--dangerously-skip-permissions','--prompt-interactive',prompt]
     budget=LiveBudget(base.LEDGER);reservation=budget.reserve('Pro2 '+provider+' original parent',tranche='pro_followup');budget.admit(reservation)
     atomic_json(RUN/(provider+'-launch.json'),{'reservation':reservation,'owner_expected_after_exec':dict(identity(os.getpid()).json(),executable=str(binary))})
     environment=launch_environment(provider);environment.update(NPEER_HOME=str(base.STATE),PYTHONPATH=str(ROOT),TERM='xterm-256color')
