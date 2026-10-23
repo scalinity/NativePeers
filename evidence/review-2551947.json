@@ -199,7 +199,7 @@
     "Historical records retain their original source/runtime scope; class digests exclude documentation/evidence/private state",
     "Cumulative native test ceilings are disabled; historical ledger retained"
   ],
-  "code_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
+  "code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -276,5 +276,5 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "e904393d079de2cc4ed51665a4e55e5a33f26f0df13f808e038cbe476fe5a0f0",
-  "updated_at": "2026-10-23T00:58:09.216330-04:00"
+  "updated_at": "2026-10-23T00:59:08.917605-04:00"
 }

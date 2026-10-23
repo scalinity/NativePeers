@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
+  "code_commit": "eccd6cf8a5bd6db9e7f382276a945b4db2fef03a",
   "reviewed_commit": "25519473e39f3d4891ab81c9413e5698c9b228ee",
-  "publication_branch": "fix/review-2551947",
-  "updated_at": "2026-10-23T00:58:09.216330-04:00",
+  "publication_branch": "main",
+  "updated_at": "2026-10-23T00:59:08.917605-04:00",
   "current_record": "evidence/review-2551947.json",
   "file_classes": {
     "product": {

@@ -21,7 +21,7 @@
 - [x] S05 Complete missing-binding diagnostics.
 - [x] S06 Benchmark repeated reads and apply only supported optimizations.
 - [x] Correct stale budget and historical summary wording.
-- [ ] Full tests, scoped native checks, conventions, publication and cleanup.
+- [x] Full tests, scoped native checks, conventions, publication and cleanup.
 
 ---
 
