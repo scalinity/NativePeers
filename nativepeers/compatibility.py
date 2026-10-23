@@ -36,11 +36,20 @@ def verify(journal,provider,executable,*,worker_id=None):
     return actual
 
 
-def update_verified(journal,replacements,*,initialize=False):
+def update_verified(journal,replacements,*,initialize=False,expected=None):
     """Retire only explicit approvals, scoped to leases already verified with them."""
     receipt=journal.root/'compat/runtime.json'
     with advisory_lock(journal.root/'locks/runtime.lock'):
         document=json.loads(receipt.read_text()) if receipt.exists() else {'schema_version':1,'providers':{}}
+        require(not initialize or expected is None,'PROTOCOL_ERROR','Initialization is separate from a guarded runtime transition')
+        if expected is not None:
+            require(set(expected)==set(replacements),'PROTOCOL_ERROR','Guard every selected runtime transition')
+            for provider,actual in replacements.items():
+                current=document['providers'].get(provider,{})
+                require(current and all(current.get(k)==expected[provider].get(k) for k in ('path','sha256','size')),
+                        'CAPABILITY_MISMATCH','The runtime approval changed before the guarded transition')
+                retained=document.get('retained',{}).get(provider,{}).get(actual['sha256'],{})
+                require(not retained.get('revoked'),'CAPABILITY_MISMATCH','The target runtime approval was explicitly revoked')
         changed=[]
         for provider,actual in replacements.items():
             old=document['providers'].get(provider)

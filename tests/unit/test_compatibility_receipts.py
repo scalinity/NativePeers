@@ -9,6 +9,31 @@ from nativepeers.journal import Journal
 
 
 class CompatibilityReceiptTests(unittest.TestCase):
+    def test_guarded_restore_preserves_later_revocation_and_approval_changes(self):
+        from nativepeers.compatibility import update_verified,revoke
+        from nativepeers.errors import PeerError
+        for change in ('revocation','approval','none'):
+            with self.subTest(change=change),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory);journal=Journal(root/'state');self.addCleanup(journal.close)
+                old=root/'old';old.write_text('previous qualified runtime')
+                new=root/'new';new.write_text('current qualified runtime')
+                prior=fingerprint(old);current=fingerprint(new)
+                update_verified(journal,{'codex':prior})
+                update_verified(journal,{'codex':current})
+                if change=='revocation':revoke(journal,'codex',prior['sha256'])
+                elif change=='approval':
+                    other=root/'other';other.write_text('later qualified runtime')
+                    update_verified(journal,{'codex':fingerprint(other)})
+                receipt=journal.root/'compat/runtime.json';before=receipt.read_bytes()
+                if change=='none':
+                    update_verified(journal,{'codex':prior},expected={'codex':current})
+                    self.assertEqual(verify(journal,'codex',old),prior)
+                else:
+                    with self.assertRaises(PeerError) as error:
+                        update_verified(journal,{'codex':prior},expected={'codex':current})
+                    self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+                    self.assertEqual(receipt.read_bytes(),before)
+
     def test_refreshing_existing_providers_preserves_the_installed_third_provider(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);journal=Journal(root/'state');providers={}
