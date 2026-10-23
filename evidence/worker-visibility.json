@@ -374,7 +374,7 @@
     "status": "PASS",
     "scope": "Bounded same-vendor code and deterministic review; cross-vendor native review blocked by existing executable mismatches"
   },
-  "code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+  "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -454,7 +454,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
-  "updated_at": "2026-10-23T05:56:17.666615-04:00",
+  "updated_at": "2026-10-23T05:59:38.220696-04:00",
   "concurrent_work": {
     "nativepeers_review_integrated": "c1bcb09c0422e2b5e028fe106e5974d938a73e40",
     "nativepeers_usage_scope": "Preexisting merged usage intelligence plus independently authored neighboring review corrections preserved; worker-visibility lane does not redesign usage intelligence",
@@ -466,11 +466,12 @@
       "patches/session-naming-native.patch",
       "patches/session-naming-reconnect.patch"
     ],
-    "codexmcp_final_commit": "74959c33cd0c218874d6e690135a2b156fa8a3e8",
+    "codexmcp_final_commit": "5276cba0c329b775f4ed17ffe7b9865146ec6b55",
     "nativepeers_later_workspace_retirement_commits": [
       "8431361e051160146070e0b478fbb100da98ce14",
       "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a"
-    ]
+    ],
+    "codexmcp_feature_source_commit": "708d36dcd41247dee951dddc15735495d8467d41"
   },
   "preservation": {
     "protected_activation_hashes": "UNCHANGED",
@@ -495,5 +496,13 @@
     "normal_conversation_preservation": "VERIFIED in native metadata and bundled-reader fixtures; direct Desktop UI blocked",
     "offline_and_manager_regressions": "PASS:568tests619subtests atc1bcb09;97affectedtests20subtests atc1f1b1f;29manager/namingtests;153MCP;15disconnect;7startup;1retainedclient;318protocol1ignored;package/native-reader checks",
     "desktop_end_to_end": "BLOCKED: computer-use tool refuses com.openai.codex"
+  },
+  "repository_hygiene": {
+    "owned_nativepeers_implementation_worktrees_removed": true,
+    "owned_codexmcp_source_worktrees_removed": 6,
+    "owned_codexmcp_implementation_worktree_and_branch_removed": true,
+    "unrelated_worktrees_and_dirty_naming_inputs_preserved": true,
+    "private_source_indices_retained": "Two checksum-verified CodeGraph indices under CodexMCP artifacts/worker-visibility; archive volume unavailable",
+    "managed_installed_releases_and_shared_target_preserved": true
   }
 }

@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-23T05:56:17.666615-04:00",
+  "at": "2026-10-23T05:59:38.220696-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,7 +60,7 @@
     "schemas/usage.v1.json": "64d3ea88da52474f4296152b8612b9c00861c4cb4c111336f60dfb17c20e0839",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "c1f1b1f148d11afddbfcd819b084fa632d6cbf5a",
+  "code_commit": "e43551a0622b010fea0e1716ba6e15a1815ed09f",
   "current_verification": "evidence/worker-visibility.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
