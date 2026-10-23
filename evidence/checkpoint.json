@@ -130,11 +130,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
-    "evidence": "evidence/review-ff8c8c2.json",
-    "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
-    "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits"
+    "branch": "fix/review-2551947",
+    "code_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
+    "evidence": "evidence/review-2551947.json",
+    "source_map_sha256": "e904393d079de2cc4ed51665a4e55e5a33f26f0df13f808e038cbe476fe5a0f0",
+    "status": "All 11 findings, eight investigated boundaries and six suggestions addressed; offline verification passed; native acceptance remains operation-specific"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -147,10 +147,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "ff8c8c20770e79317d807336c2ad6258889984ef",
-    "branch": "main",
-    "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
-    "last_verified_publication": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+    "base_commit": "25519473e39f3d4891ab81c9413e5698c9b228ee",
+    "branch": "fix/review-2551947",
+    "code_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
+    "last_verified_publication": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,90 +210,45 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/review-2551947",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
-    "verified_remote_code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+    "verified_remote_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
+    "verified_remote_code_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "REVIEW_FF8C8C2_CORRECTIONS_VERIFIED",
+  "stage": "REVIEW_2551947_CORRECTIONS_VERIFIED",
   "tests_current": {
     "offline": {
       "status": "PASS",
-      "tests": 483,
-      "subtests": 574,
-      "seconds": 230.25,
+      "tests": 520,
+      "subtests": 588,
+      "seconds": 210.38,
+      "skips": 0,
       "command": ".venv/bin/python -m pytest -q",
       "python": "3.14.8",
-      "scope": "Final current product source, full locked unit and contract suite"
+      "locked_dependency_distributions": 36,
+      "lock_version_mismatches": []
     },
-    "native_quota_reads": {
-      "status": "PASS",
-      "providers": [
-        "claude",
-        "codex",
-        "antigravity"
-      ],
-      "model_inputs": 0,
-      "scope": "Fresh authenticated native reads; exact current runtime receipts."
-    },
-    "native_mcp": {
-      "status": "PASS",
-      "providers": [
-        "claude",
-        "codex",
-        "antigravity"
-      ],
-      "model_inputs": 0,
-      "scope": "Real stdio transport from legitimate Codex caller, actual inherited identity context, same retained observation IDs as CLI. Claude/Antigravity parent contexts NOT_RUN."
-    },
-    "native_inference": {
-      "status": "NOT_RUN",
-      "scope": "The complete current-source native messaging/editing/cancellation/fallback matrix is not reaccepted by quota reads or the scoped Flash review/resume."
-    },
-    "independent_flash_review": {
-      "status": "COMPLETE_NO_FINDINGS",
-      "group_id": "8661a2a4-c835-48d8-8fce-447a175387cb",
-      "model_requested": "gemini-3.8-flash-medium",
-      "submitted_inputs": 2,
-      "initial_outcome": "TIMED_OUT after 300 seconds; retained without replay",
-      "resume_task_id": "af158f47-3da7-42cc-9ab9-8b5160d98de1",
-      "scope": "Native reviewer reports no actionable defects from static inspection. Initial 300-second timeout is retained. Exact-history follow-up delivered the report. Worker-reported review is not an independent test pass.",
-      "model_observed": "gemini-3.8-flash-medium",
-      "native_session_id": "8a07c8de-0337-4128-9bb8-f3085a73d40d",
-      "cleanup": "RELEASED_RESUMABLE; exact recorded controller/provider/descendants stopped"
-    },
-    "manager_and_naming": {
+    "external_manager": {
       "status": "PASS",
       "tests": 23,
-      "command": ".venv/bin/python -m unittest discover -s ../CodexMCP -p test_*.py",
-      "scope": "External temporary fixtures; no package activation"
+      "subtests": 22,
+      "seconds": 0.99
     },
     "installed": {
       "status": "PASS",
-      "second_operations": [
-        0,
-        0
-      ],
-      "outside_owned_instruction_bytes_unchanged": true,
-      "entrypoint_uses_checkout": true,
-      "skills_match": true
+      "owned_skills_updated": 3,
+      "second_plan_operations": 0,
+      "outside_instruction_bytes_preserved": true,
+      "protected_settings_auth_toml_shell_receipts_unchanged": true,
+      "command_uses_development_checkout": true
     },
-    "preservation": {
+    "native_usage": {
       "status": "PASS",
-      "protected_file_hashes_match": true,
-      "daemon_auto_start": false,
-      "scope": "Native settings/auth, Codex TOML, shell files and runtime receipts unchanged; owned skills and instruction section updated"
-    },
-    "native_review_and_resume": {
-      "status": "PASS",
-      "provider": "antigravity",
-      "model": "gemini-3.8-flash-medium",
-      "submitted_inputs": 2,
-      "scope": "Independent analysis, same-history owned resume, exact original-parent wait return and verified owned cleanup only; no editing or unsafe fallback acceptance implied."
+      "scope": "Claude quota and Codex quota/stdio MCP through legitimate Codex caller only; Antigravity current runtime is BLOCKED; no inference"
     }
   },
   "transports": {
@@ -302,7 +257,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-22T23:12:46.086752-04:00",
+  "updated_at": "2026-10-23T00:58:09.216330-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -363,6 +318,35 @@
         "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
         "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits"
       }
+    },
+    {
+      "stage": "REVIEW_FF8C8C2_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-22T23:12:46.086752-04:00",
+      "git": {
+        "base_commit": "ff8c8c20770e79317d807336c2ad6258889984ef",
+        "branch": "main",
+        "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+        "last_verified_publication": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+        "verified_remote_code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "8f29f9faa60b3de6cdc2f9d0bfaabf6b51f50e60",
+        "evidence": "evidence/review-ff8c8c2.json",
+        "source_map_sha256": "337ade4089d6aabf0547fc544c5d47f0e92380ca17726a35c3902728945e0dbe",
+        "status": "All 13 findings and six suggestions addressed; offline and native usage/MCP verified with explicit remaining native limits"
+      }
     }
-  ]
+  ],
+  "current_evidence_index": "evidence/current-index.json",
+  "historical_flat_summary_scope": "Flat capabilities/transports/blockers and prior verification summaries retain their original run scope; current operation decisions use current_evidence_index and current_review."
 }

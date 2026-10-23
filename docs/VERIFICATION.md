@@ -1,6 +1,6 @@
 # Current verification
 
-Review 2551947 corrections cover all 11 confirmed findings, the eight investigated boundaries and six suggestions. See [the correction ledger](REVIEW_2551947.md), [machine-readable current record](../evidence/review-2551947.json) and [operation-scoped index](../evidence/current-index.json). Final offline counts and exact source/runtime fingerprints live in that generated record.
+Review 2551947 corrections cover all 11 confirmed findings, the eight investigated boundaries and six suggestions. See [the correction ledger](REVIEW_2551947.md), [machine-readable current record](../evidence/review-2551947.json) and [operation-scoped index](../evidence/current-index.json). The final offline suite passes **520 tests / 588 subtests** in **210.38 seconds**, with no skips; external manager/naming fixtures pass **23 tests / 22 subtests**. Exact source/runtime fingerprints live in that generated record.
 
 Fresh no-inference Claude quota collection and native Codex quota/stdio MCP agreement through a legitimate Codex parent passed. Antigravity is now 1.4.6 and does not match its retained 1.4.5 approval; current-runtime worker/quota checks and independent Flash review are BLOCKED on requalification. Claude worker/inbox approval remains stale. Native inference/delegation failure-window acceptance and Claude/Antigravity parent MCP contexts remain NOT_RUN. Quota approval is separate from worker/inbox approval. The native cumulative input/time ceilings are disabled; historical ledger bytes remain retained.
 

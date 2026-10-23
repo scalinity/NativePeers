@@ -1,0 +1,280 @@
+{
+  "schema_version": 1,
+  "feature": "review-2551947-corrections",
+  "reviewed_commit": "25519473e39f3d4891ab81c9413e5698c9b228ee",
+  "stage": "REVIEW_2551947_CORRECTIONS_VERIFIED",
+  "status": "All 11 findings, eight investigated boundaries and six suggestions addressed; offline verification passed; native acceptance remains operation-specific",
+  "findings": {
+    "R01": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R02": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R03": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R04": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R05": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R06": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R07": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R08": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R09": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R10": "CORRECTED_OFFLINE_REGRESSIONS",
+    "R11": "CORRECTED_OFFLINE_REGRESSIONS"
+  },
+  "hypotheses": {
+    "H01": "INVESTIGATED_AND_ADDRESSED",
+    "H02": "INVESTIGATED_AND_ADDRESSED",
+    "H03": "INVESTIGATED_AND_ADDRESSED",
+    "H04": "INVESTIGATED_AND_ADDRESSED",
+    "H05": "INVESTIGATED_AND_ADDRESSED",
+    "H06": "INVESTIGATED_AND_ADDRESSED",
+    "H07": "INVESTIGATED_AND_ADDRESSED",
+    "H08": "INVESTIGATED_AND_ADDRESSED"
+  },
+  "suggestions": {
+    "S01": "IMPLEMENTED",
+    "S02": "IMPLEMENTED",
+    "S03": "IMPLEMENTED",
+    "S04": "IMPLEMENTED",
+    "S05": "IMPLEMENTED",
+    "S06": "MEASURED_EXPORT_OPTIMIZED_USAGE_UNCHANGED"
+  },
+  "runtime_scopes": [
+    {
+      "provider": "claude",
+      "operation": "worker-and-inbox",
+      "sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "state": "CAPABILITY_MISMATCH",
+      "scope": "Passive executable comparison; native acceptance remains separately scoped"
+    },
+    {
+      "provider": "codex",
+      "operation": "worker-and-inbox",
+      "sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
+      "state": "PASS",
+      "scope": "Passive executable comparison; native acceptance remains separately scoped"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "worker-and-inbox",
+      "sha256": "cab004f3c5c6cb7dc8b8712d3bc30431bd4480b17ff38a07eb1865abeffd2f27",
+      "state": "CAPABILITY_MISMATCH",
+      "scope": "Passive executable comparison; native acceptance remains separately scoped"
+    }
+  ],
+  "tests": {
+    "offline": {
+      "status": "PASS",
+      "tests": 520,
+      "subtests": 588,
+      "seconds": 210.38,
+      "skips": 0,
+      "command": ".venv/bin/python -m pytest -q",
+      "python": "3.14.8",
+      "locked_dependency_distributions": 36,
+      "lock_version_mismatches": []
+    },
+    "external_manager": {
+      "status": "PASS",
+      "tests": 23,
+      "subtests": 22,
+      "seconds": 0.99
+    },
+    "installed": {
+      "status": "PASS",
+      "owned_skills_updated": 3,
+      "second_plan_operations": 0,
+      "outside_instruction_bytes_preserved": true,
+      "protected_settings_auth_toml_shell_receipts_unchanged": true,
+      "command_uses_development_checkout": true
+    },
+    "native_usage": {
+      "status": "PASS",
+      "scope": "Claude quota and Codex quota/stdio MCP through legitimate Codex caller only; Antigravity current runtime is BLOCKED; no inference"
+    }
+  },
+  "operation_checks": [
+    {
+      "operation": "locked-offline-suite",
+      "parent_context": "temporary fixture callers",
+      "status": "PASS",
+      "reason": "520 tests / 588 subtests, 210.38 seconds, no skips; locked installed dependency versions match"
+    },
+    {
+      "provider": "codex",
+      "operation": "quota-and-stdio-MCP-agreement",
+      "parent_context": "verified native Codex parent",
+      "status": "PASS",
+      "runtime_sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
+      "reason": "Actual native account quota read and bound stdio MCP return the same observation; no model input"
+    },
+    {
+      "provider": "claude",
+      "operation": "quota-read",
+      "parent_context": "collector-owned usage-only PTY from verified Codex shell",
+      "status": "PASS",
+      "runtime_sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "reason": "Three native quota windows; fresh panel; zero invocation token counters; no collector history; CLOSED processes/output"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "quota-read",
+      "parent_context": "collector-owned print command",
+      "status": "BLOCKED",
+      "runtime_sha256": "cab004f3c5c6cb7dc8b8712d3bc30431bd4480b17ff38a07eb1865abeffd2f27",
+      "reason": "Installed 1.4.6 differs from retained 1.4.5 runtime approval; no approval changed"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "independent-Flash-review",
+      "parent_context": "verified native Codex parent",
+      "status": "BLOCKED",
+      "runtime_sha256": "cab004f3c5c6cb7dc8b8712d3bc30431bd4480b17ff38a07eb1865abeffd2f27",
+      "reason": "Current 1.4.6 worker runtime is not yet qualified; no worker launched"
+    },
+    {
+      "provider": "claude",
+      "operation": "worker-and-inbox",
+      "parent_context": "native Claude context",
+      "status": "BLOCKED",
+      "runtime_sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "reason": "Current 2.1.309 differs from worker/inbox approval 2.1.308; quota approval does not renew it"
+    },
+    {
+      "provider": "codex",
+      "operation": "inference-cancel-resume-failure-matrix",
+      "parent_context": "all supported parent combinations",
+      "status": "NOT_RUN",
+      "runtime_sha256": "31019d3137ade5949eacd83af6525efe1a3601df7f9f6ea6c2bd1745b89a4f29",
+      "reason": "This correction used fake-provider/process/socket regressions and no inference"
+    },
+    {
+      "provider": "claude",
+      "operation": "MCP-parent",
+      "parent_context": "native Claude parent",
+      "status": "NOT_RUN",
+      "runtime_sha256": "5eadc0009cdcdbc0d06e58110d7b2baf88ced6088b1c33a60a21217fe410619c",
+      "reason": "Codex-parent checks do not accept this caller context"
+    },
+    {
+      "provider": "antigravity",
+      "operation": "MCP-parent",
+      "parent_context": "native Antigravity parent",
+      "status": "NOT_RUN",
+      "runtime_sha256": "cab004f3c5c6cb7dc8b8712d3bc30431bd4480b17ff38a07eb1865abeffd2f27",
+      "reason": "Codex-parent checks do not accept this caller context"
+    }
+  ],
+  "performance": {
+    "before": {
+      "export": {
+        "seconds": 0.20631612499710172,
+        "full_digest_passes": 40,
+        "bytes_hashed": 419430400,
+        "artifact_bytes": 10485760
+      },
+      "usage": {
+        "seconds": 0.040002666995860636,
+        "reads": 5,
+        "sql_statements": 70
+      }
+    },
+    "after": {
+      "export": {
+        "seconds": 0.008462209021672606,
+        "full_digest_passes": 0,
+        "bytes_hashed": 0,
+        "artifact_bytes": 10485760,
+        "streamed_source_bytes": 10485760
+      },
+      "usage": {
+        "seconds": 0.04226295801345259,
+        "reads": 5,
+        "sql_statements": 70
+      }
+    },
+    "scope": "Temporary local fixture; export before/after, usage unchanged; no inference"
+  },
+  "limitations": [
+    "Current Antigravity 1.4.6 is unqualified against the retained 1.4.5 approval; no approval rewritten",
+    "Claude quota approval is separate from stale worker/inbox approval",
+    "No current-source all-provider inference/failure-window acceptance",
+    "Screenshot incident remains unattributed",
+    "Historical records retain their original source/runtime scope; class digests exclude documentation/evidence/private state",
+    "Cumulative native test ceilings are disabled; historical ledger retained"
+  ],
+  "code_commit": "3ec1ef8a5fdc4e215bbaabff37fce590e8887db3",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "e8e49fc1e1e5a6d63107f571a3e1ec4e58910705a3c1a7cfe6765dfb76ad1dda",
+    "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
+    "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
+    "nativepeers/antigravity.py": "130b4ff440f1230d0cafc01d49b5626936090562913289aa8aad87044cb890b6",
+    "nativepeers/antigravity_install.py": "136805928075e1f298d138f609a94a5e4b7b189bb94fd28244613d6a3bcff870",
+    "nativepeers/artifacts.py": "e44d0a323f082d5b108b1269906f7d59f2e726042fb616f64b3693e78fc51cb5",
+    "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
+    "nativepeers/caller.py": "0a0d5af0c28627db2cc06fe6c972fd2f40d229db03b1ec0e3021c52d896b2da0",
+    "nativepeers/change_preview.py": "3ded04e7a5d14fc1baea4cca5de844d429772f559448c6a60a28848412257422",
+    "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
+    "nativepeers/cleanup.py": "c9ffc1938e11749b68cba6ee8bdeb2bdfec5f5af19c288c6e997d1e7baad63d7",
+    "nativepeers/cli.py": "3b1e4bd96679e2cdec34a44930459dde2174213e91f01efb330b74d8f54d678d",
+    "nativepeers/compatibility.py": "008ea78afaeb629ffb0eebce6f34a8ad07f2f4d9bff06732d1c9739c857974fd",
+    "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
+    "nativepeers/core.py": "93f252329d9f98ab1919b508342d0f4179ceb97006d4af5a4097b16a131663aa",
+    "nativepeers/delegation.py": "c26036477dca863519505721a09464e56e5666cbc44490846a6a432ff6f36707",
+    "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
+    "nativepeers/fallback.py": "c976e7ba6a3c38d68ca9a0a4a16ded17208c3d0c6e2ed61c97e70681b2727610",
+    "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
+    "nativepeers/hooks.py": "456ba4f1cc9da27e0601fea9319180f56f8ff24bcbfa608090016c6a4b6fe421",
+    "nativepeers/install.py": "e7e03d3b8866c06702a07ff2da4e124805c2d0c619f6f8b3439b08586b386579",
+    "nativepeers/isolated_copy.py": "950d4d055f299fc2c36a29a91bcfa3fa7a2d1554841b6569cb59856d355d97dd",
+    "nativepeers/journal.py": "8f375b654a6998a893ab5d77f2210863914f51f1c0bd3fad3576e665bdfcf783",
+    "nativepeers/launch.py": "01fb4d96602ca42aa8f47c6d4bcd4d064416acf1e594a3aa59fe4919dae99512",
+    "nativepeers/mcp_server.py": "4691f1bbcb53c397d8664e264d511e6ebd66574e709e2cefec9d7d03c0ec6f90",
+    "nativepeers/models.py": "e9ccccec7123468b60f9f1a7a0d299e304f6a203443f6f9270eed4ff60a358ad",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "bb890667ed5219febd70f306094424a1106f81bbafbd327b288ce66ee32d505b",
+    "nativepeers/presentation.py": "dea4b873f78d0002d3b0bf9ee6c5807cdd221739be8cb6b609458b2869ea0e80",
+    "nativepeers/process.py": "b28c6be2d0d221e7d61f030c10cd3a5403e2f6744afa776b5aca7960f1702d72",
+    "nativepeers/profiles.py": "5b9a8bdca866a240c7875dcc0bdd3148fc7101b88dc2c832760b68f7a6982111",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "49b49bcf600e2433a401011894d6d1cfd9854ebe38f06fd8fe9446e161a9f629",
+    "nativepeers/readiness.py": "f80dfac5f3df7f4579080981aa4e992576a5008f3006f8ab974375f64422829d",
+    "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
+    "nativepeers/reconcile.py": "71ef7f185cb6ba9a7aafa4c93ac8d51e988feb06a649ed47ae744e0e0b8776a9",
+    "nativepeers/recovery.py": "03d4c4936662f3f905563bbd60f7780776a1b04ce129614eca93944001875fe2",
+    "nativepeers/registry.py": "944c0e2ce5ed6db66f5a2d9da4e75578d0f54c2e22dd63fa7fe896d3daa087c5",
+    "nativepeers/routing.py": "bbb22c04ac82091ab867f5f76ce38b7fcb44e579cd69087f7bd9c657d4da415c",
+    "nativepeers/supervisor.py": "036d32946021ed5ee91a4e0082cbb831d3634524ed10d508fb2f3d0b8ef4b8e1",
+    "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
+    "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
+    "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
+    "nativepeers/usage/collectors.py": "3253b577c8a04bb1e5ccfdd3638f0f0d83823db825f4cbd92a6fe8af6b36e7df",
+    "nativepeers/usage/config.py": "0bea94af652729c7749e4846d8de3acc6ca24bff3babae9b53b6368212a01d1d",
+    "nativepeers/usage/contracts.py": "40d99b98a5496733097df005af303a4abefe0108e0da85160fb438e80ebea5e6",
+    "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
+    "nativepeers/usage/forecast.py": "ed637f520ddd798ce0201d430ce70ce14e1612ef72a5cdbd0c5de48e0b6c400f",
+    "nativepeers/usage/import_snapshot.py": "d952602ae271dcc076b7b268e9e96c216b186f53ddbf481a2b4310e0a60a17d3",
+    "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
+    "nativepeers/usage/native_command.py": "2dca305e2bd6613196efe668e117d4e3343fe8ca6483fce3954fab206675238f",
+    "nativepeers/usage/normalize.py": "08283b5e80011d832e7112beceba169eed94a25313ccf79013dc1883212e959b",
+    "nativepeers/usage/service.py": "62c98b82ad9f4f740b08529e515edd702dcdacebb1fa2414ba753ca22a3298f1",
+    "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
+    "nativepeers/usage/store.py": "41f86cc51ef1f9141719a8ad9c6f515ff264c63cac2a4c8e84bfd5c6d93a17a0",
+    "nativepeers/worker_process.py": "80fa51978c9dce4854c3feccac463786c673333dcff287d20043416b42aec14f",
+    "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
+    "nativepeers/worktrees.py": "d5e5a8de2eb5111d53a9a9febe40be58f8b97e31a7a1d243e42f61cc18242f20",
+    "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
+    "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
+    "schemas/peer.v1.json": "f92135c15ecc1372d7eda7e8d3afe09d27a6aa09da53c91b68e389f9b6008024",
+    "schemas/receipt.v1.json": "bd1568d47c1046ea5503a5adf38cd8bec7118a289206c6af44da276395e73511",
+    "schemas/requirements.v1.json": "326106aac17bbe21e5ec8a79f8896f31e72321beb8c113cfd886fb685ea9ced1",
+    "schemas/result.v1.json": "5e068908cec9b218ef912da8b4b22118a1015fb5f3be9001dff68b889a932990",
+    "schemas/spawn.v1.json": "f9974cf253f37b509d5a43bd1301cefe3405e430b6a403e0125b6f976bd23ba9",
+    "schemas/usage-import.v1.json": "f2e89c190867815e84bd679d016db29e85297042078b4d56b8879aad81db949b",
+    "schemas/usage.v1.json": "64d3ea88da52474f4296152b8612b9c00861c4cb4c111336f60dfb17c20e0839",
+    "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
+  },
+  "source_map_sha256": "e904393d079de2cc4ed51665a4e55e5a33f26f0df13f808e038cbe476fe5a0f0",
+  "updated_at": "2026-10-23T00:58:09.216330-04:00"
+}
