@@ -3,7 +3,7 @@
 - [x] Preserve legitimate Git configuration during inspection and normalization (55 focused tests / 38 subtests).
 - [x] Preserve retained Claude layout during batch admission and recommendations (89 focused tests / 39 subtests).
 - [x] Force captured and uncaptured inherited-pipe cleanup schedules (5 focused tests / 4 subtests).
-- [x] Complete offline suite: 606 tests / 620 subtests, zero failures/skips, 300.36 seconds; scoped publication and session close-out follow.
+- [x] Complete offline suite: 606 tests / 620 subtests, zero failures/skips, 300.36 seconds; integrated main, scoped publication, review ZIP/prompt and session cleanup.
 
 ---
 

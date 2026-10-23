@@ -100,9 +100,19 @@
       "exit_code": 0,
       "elapsed_seconds": 300.746278708044,
       "timeout": false
+    },
+    "installed_entrypoint": {
+      "status": "PASS",
+      "scope": "Existing installed launcher resolves to integrated main; all tested product source hashes match; no integration reinstall or receipt change"
+    },
+    "publication_consistency": {
+      "status": "PASS",
+      "tests": 3,
+      "seconds": 0.08,
+      "scope": "Generated pointers, actual file classes, historical document read claims and current source agree"
     }
   },
-  "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+  "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -182,7 +192,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
-  "updated_at": "2026-10-23T06:07:26.021257-04:00",
+  "updated_at": "2026-10-23T06:08:32.646541-04:00",
   "tested_source_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
   "fix_commits": {
     "git_configuration": "ac4dc7f",

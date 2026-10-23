@@ -130,8 +130,8 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/review-1211303",
-    "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+    "branch": "main",
+    "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
     "evidence": "evidence/review-1211303.json",
     "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
     "status": "Both product defects and the cleanup fixture corrected; complete offline suite passed; native acceptance remains operation-specific"
@@ -148,9 +148,9 @@
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
-    "branch": "fix/review-1211303",
-    "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
-    "last_verified_publication": "701d8209a86dc0b7faae09aa93661343aced8d03",
+    "branch": "main",
+    "code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+    "last_verified_publication": "17ff9d6098a09605600d5874e65399930ff80782",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -210,11 +210,11 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/review-1211303",
+    "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
-    "verified_remote_code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+    "verified_remote_commit": "17ff9d6098a09605600d5874e65399930ff80782",
+    "verified_remote_code_commit": "17ff9d6098a09605600d5874e65399930ff80782",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -256,6 +256,16 @@
       "exit_code": 0,
       "elapsed_seconds": 300.746278708044,
       "timeout": false
+    },
+    "installed_entrypoint": {
+      "status": "PASS",
+      "scope": "Existing installed launcher resolves to integrated main; all tested product source hashes match; no integration reinstall or receipt change"
+    },
+    "publication_consistency": {
+      "status": "PASS",
+      "tests": 3,
+      "seconds": 0.08,
+      "scope": "Generated pointers, actual file classes, historical document read claims and current source agree"
     }
   },
   "transports": {
@@ -264,7 +274,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T06:07:26.021257-04:00",
+  "updated_at": "2026-10-23T06:08:32.646541-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -567,6 +577,33 @@
         "evidence": "evidence/worker-visibility.json",
         "source_map_sha256": "0bbfc35f0605bd0714306a96cfccdc59a383ffe000c4d3c4406fb4627ac01ed0",
         "status": "Worker-only managed runtime active; native and separate bundled Desktop reader visibility verified; exact released-history archival complete; direct Desktop UI observation blocked"
+      }
+    },
+    {
+      "stage": "REVIEW_1211303_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-23T06:07:26.021257-04:00",
+      "git": {
+        "base_commit": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
+        "branch": "fix/review-1211303",
+        "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+        "last_verified_publication": "701d8209a86dc0b7faae09aa93661343aced8d03",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-1211303",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+        "verified_remote_code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-1211303",
+        "code_commit": "701d8209a86dc0b7faae09aa93661343aced8d03",
+        "evidence": "evidence/review-1211303.json",
+        "source_map_sha256": "b639e6cbae2b12dde1799d9bf66222a1b2564271d12a58a6ba9a73f16c128899",
+        "status": "Both product defects and the cleanup fixture corrected; complete offline suite passed; native acceptance remains operation-specific"
       }
     }
   ],
