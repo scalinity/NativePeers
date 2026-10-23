@@ -49,6 +49,8 @@ class Worker:
         self.lease=json.loads(self.row['lease_json']);self.spec=self.lease['spec'];self.binding=Path(self.lease['binding'])
         self.spec['model']=model_selection(self.row)
         self.home=recorded_home(journal,self.row);self.lease['provider_home']=str(self.home)
+        from .worker_visibility import requested
+        requested(self.row,self.lease)
         journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),worker_id))
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
         self.provider=None;self.provider_identity=None;self.provider_descendants={};self.provider_monitor=None;self.provider_cleanup=None;self.client=None;self.native=self.row['native_id'];self.turn=None
@@ -68,7 +70,7 @@ class Worker:
     def manifest(self):
         atomic_json(self.journal.root/'workers'/(self.row['worker_id']+'.json'),dict(owner=self.owner,
             native_process=self.provider_identity,native_descendants=list(self.provider_descendants.values()),cleanup=self.provider_cleanup,native_id=self.native,worker_id=self.row['worker_id'],
-            group_id=self.row['group_id'],generation=self.row['generation']))
+            group_id=self.row['group_id'],generation=self.row['generation'],history_visibility=self.lease.get('history_visibility')))
 
     def bind(self,native_id,*,model=None):
         if self.expected_native:
@@ -107,30 +109,44 @@ class Worker:
         self.manifest();self.emit('bound',native_id=native_id,peer_key=peer['handle'])
 
     async def prepare(self):
+        self.check_submission()
         self.bootstrap()
         actual=verify(self.journal,self.row['provider'],self.lease['executable'],worker_id=self.row['worker_id'])
         self.lease['verified_runtime']=actual
         self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),self.row['worker_id']))
         if self.row['provider']=='codex':
+            from .worker_visibility import server_arguments,initialized,persisted
             executable=Path(self.lease['executable']).resolve(strict=True)
+            history_arguments=server_arguments(self.row,self.lease)
             config=codex_config(self.journal,self.binding,self.spec['permission_profile'],home=self.home)
             self.client=AppServer(executable,config_arguments(config),cwd=Path(self.row['cwd']),
+                server_arguments=history_arguments,
                 ownership_changed=self.app_server_ownership,
                 environment={**home_environment('codex',self.home),'NPEER_HOME':str(self.journal.root),'NPEER_BOOTSTRAP':str(self.binding),'PYTHONPATH':str(ROOT)})
-            await self.client.start();self.provider=self.client.process;self.provider_identity=identity(self.provider.pid).json();self.manifest()
+            capability=await self.client.start();self.provider=self.client.process;self.provider_identity=identity(self.provider.pid).json();self.manifest()
+            initialized(self.journal,self.row,self.lease,capability,required=bool(history_arguments))
             catalog=(await self.client.call('model/list',{'includeHidden':True,'limit':100}))['data']
             model=next((m for m in catalog if m['model']==self.spec['model']),None)
             require(model,'MODEL_UNAVAILABLE','The immutable worker executable does not advertise the exact model')
             require(self.spec.get('reasoning_effort') in [e['reasoningEffort'] for e in model['supportedReasoningEfforts']],
                     'EFFORT_UNSUPPORTED','The immutable worker executable does not advertise the exact effort')
+            self.check_submission()
             if self.native:
                 require(self.lease.get('released_native',False),'OWNERSHIP_CONFLICT','Existing native worker was not released')
+                from .history_cleanup import resume_archive_state
+                archived=resume_archive_state(self.journal,dict(self.row,native_id=self.native))
+                if archived['archived'] is True:
+                    self.check_submission()
+                    await self.client.call('thread/unarchive',{'threadId':self.native})
+                    self.journal.event(self.row['worker_id'],'history-unarchived',dict(archived,generation=self.row['generation'],operation='owned-resume'))
+                self.check_submission()
                 response=await self.client.call('thread/resume',{'threadId':self.native,'cwd':self.row['cwd'],'model':self.spec['model'],'approvalPolicy':'never','sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
             else:
                 response=await self.client.call('thread/start',{'cwd':self.row['cwd'],'model':self.spec['model'],'approvalPolicy':'never',
                     'sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write',
                     'ephemeral':False,'allowProviderModelFallback':False})
             self.bind(response['thread']['id'],model=response.get('model'))
+            persisted(self.journal,self.row,self.lease,response['thread'],required=bool(history_arguments))
             await self.client.call('thread/name/set',{'threadId':self.native,'name':self.row['role_title']})
             # A real inventory, including inherited MCP/plugin tools, is checked before model input.
             deadline=time.monotonic()+5
@@ -150,6 +166,7 @@ class Worker:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'EXECUTABLE_NOT_FOUND','Installed Claude executable is unavailable')
             launch_environment('claude');claude_arguments(self.journal,self.binding,self.spec,self.expected_native,home=self.home)
+        self.check_submission()
         self.journal.db.execute("UPDATE workers SET state='READY' WHERE worker_id=?",(self.row['worker_id'],))
         self.emit('ready',native_id=self.native if self.row['provider']=='codex' else None)
 
@@ -233,6 +250,7 @@ class Worker:
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
         record['usage_intelligence']={'at_admission':usage_assessment,'account_usage_is_local_task_usage':False}
+        if self.row['provider']=='codex':record['history_visibility']=dict(self.lease['history_visibility'])
         if self.row['worktree_id']:
             from .worktrees import git,changes
             from .models import ARTIFACT_MAX

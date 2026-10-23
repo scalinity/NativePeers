@@ -277,6 +277,7 @@ class ReadinessTests(unittest.TestCase):
         expected=desired(self.home)[path][2]
         self.write_json(path,{'mcpServers':{'nativepeers':dict(expected,disabled=True)}})
         worker=Worker.__new__(Worker)
+        worker.stopping=False;worker.canceling_task=None
         worker.row={'provider':'antigravity','worker_id':'fixture'}
         worker.spec={'cwd':str(self.cwd),'permission_profile':'analysis'}
         worker.lease={'executable':str(self.project/'bin/npeer')}
