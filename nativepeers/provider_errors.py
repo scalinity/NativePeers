@@ -18,18 +18,25 @@ EXACT={
 def classify(error):
     """Classify the terminal error, not logging/context serialized beside it."""
     if isinstance(error,dict):
+        terminal=error.get('terminal')
+        if isinstance(terminal,dict):
+            terminal_code=classify(terminal)
+            if terminal_code!='PROVIDER_TASK_FAILED':return terminal_code
+        codes=[error.get(k) for k in ('error_code','code','type','subtype','error')]
+        exact=next((code for item in codes if isinstance(item,str)
+            for code,values in EXACT.items() if item.lower() in values),None)
         nested_rate=False
-        # A caller-supplied terminal wrapper has precedence over earlier events.
-        for key in ('terminal','error','details','cause'):
+        if exact and exact!='RATE_LIMITED':return exact
+        for key in ('error','details','cause'):
             child=error.get(key)
             if isinstance(child,dict):
                 code=classify(child)
-                if code not in ('PROVIDER_TASK_FAILED','RATE_LIMITED'):return code
+                # Structured spend limits refine generic throttling, but an
+                # incidental historical auth diagnostic cannot replace it.
+                if exact=='RATE_LIMITED':
+                    if code=='QUOTA_EXHAUSTED':return code
+                elif code!='PROVIDER_TASK_FAILED':return code
                 nested_rate=nested_rate or code=='RATE_LIMITED'
-        codes=[error.get(k) for k in ('error_code','code','type','error')]
-        exact=next((code for item in codes if isinstance(item,str)
-            for code,values in EXACT.items() if item.lower() in values),None)
-        if exact and exact!='RATE_LIMITED':return exact
         # Only diagnostic fields are text. Account IDs, stack traces, context
         # and successful-auth banners cannot become an error diagnosis.
         messages=[error[k] for k in ('message','result','description','error') if isinstance(error.get(k),str)]
@@ -50,6 +57,7 @@ def classify(error):
         ('BUDGET_EXHAUSTED',r'max_turns|max turns|max_budget'),
     ]
     matched={code for code,pattern in patterns if re.search(pattern,text)}
+    if exact=='RATE_LIMITED':return 'QUOTA_EXHAUSTED' if 'QUOTA_EXHAUSTED' in matched and not matched-{'QUOTA_EXHAUSTED','RATE_LIMITED'} else exact
     if len(matched-{'RATE_LIMITED'})>1:return 'PROVIDER_TASK_FAILED'
     if matched:return next(code for code,_ in patterns if code in matched)
     if exact:return exact

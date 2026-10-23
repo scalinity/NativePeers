@@ -7,8 +7,8 @@ Source: independent review of ff8c8c20770e79317d807336c2ad6258889984ef. All find
 - [ ] F03 Scope and reconcile group quota suppression.
 - [x] F04 Verify the first Claude alias family.
 - [ ] F05 Reconcile pool demand atomically before task input.
-- [ ] F06 Preserve authoritative terminal error precedence.
-- [ ] F07 Classify Antigravity discovery/install failures accurately.
+- [x] F06 Preserve authoritative terminal error precedence.
+- [x] F07 Classify Antigravity discovery/install failures accurately.
 - [ ] F08 Preserve passive measurement clocks per pool.
 - [x] F09 Retain definite logical-task budget failures.
 - [ ] F10 Reject invalid account-pace forecast samples.

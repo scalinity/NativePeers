@@ -147,7 +147,7 @@ def install(journal,*,home=None,dry_run=False,remove=False,verified_source=None)
         actual=None
         if not remove:
             binary=home/'.local/bin/agy'
-            require(binary.is_file(),'AUTH_REQUIRED','Install the official Antigravity CLI first')
+            require(binary.is_file(),'EXECUTABLE_NOT_FOUND','Install the official Antigravity CLI first')
             source=verified_source or ROOT/'evidence/capabilities.json'
             expected=json.loads(source.read_text())['providers'].get('antigravity')
             actual=fingerprint(binary)

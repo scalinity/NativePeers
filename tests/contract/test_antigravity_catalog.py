@@ -12,12 +12,13 @@ from nativepeers.antigravity import catalog
 class CatalogTests(unittest.IsolatedAsyncioTestCase):
     async def test_catalog_parsing_authentication_and_provider_failure(self):
         for output,code,expected in [('model-a\tModel A\nmodel-b\tModel B\n',0,{'model-a':'Model A','model-b':'Model B'}),
-                                     ('Please SIGN IN',1,'AUTH_REQUIRED'),('native failure',2,'CAPABILITY_MISMATCH')]:
+                                     ('Please SIGN IN',1,'AUTH_REQUIRED'),('native failure',2,'SOURCE_UNAVAILABLE'),('HTTP 429',1,'SOURCE_RATE_LIMITED'),('network unavailable',1,'SOURCE_UNAVAILABLE'),('invalid catalog',0,'CAPABILITY_MISMATCH')]:
             with self.subTest(code=code),tempfile.TemporaryDirectory() as directory:
                 binary=Path(directory)/'fake-agy';binary.write_text('#!'+sys.executable+'\nimport sys\nprint('+repr(output)+')\nsys.exit('+str(code)+')\n');binary.chmod(0o700)
-                if code:
+                if isinstance(expected,str):
                     with self.assertRaises(Exception) as error:await catalog(binary)
                     self.assertEqual(error.exception.code,expected)
+                    if expected!='AUTH_REQUIRED':self.assertNotIn('sign in',str(error.exception).lower())
                 else:self.assertEqual(await catalog(binary),expected)
 
     async def test_cancellation_is_preserved_after_catalog_cleanup(self):

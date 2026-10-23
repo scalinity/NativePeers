@@ -9,7 +9,7 @@ import sqlite3
 import sys
 import time
 
-from .errors import require
+from .errors import PeerError,require
 from .files import canonical
 from .journal import Journal
 from .process import ancestry
@@ -53,9 +53,18 @@ async def catalog(executable,*,timeout=30,terminate_grace=1):
                     await asyncio.wait_for(process.communicate(),5)
         except (ProcessLookupError,asyncio.TimeoutError):pass
         raise
-    require(process.returncode==0,'AUTH_REQUIRED' if b'sign in' in (output+error).lower() else 'CAPABILITY_MISMATCH',
-            'Antigravity could not list native models; sign in through agy before launching workers')
-    return {line.split('\t',1)[0]:line.split('\t',1)[1] for line in output.decode().splitlines() if '\t' in line}
+    if process.returncode!=0:
+        from .provider_errors import classify
+        text=(error or output).decode(errors='replace')[-4000:]
+        try:terminal=json.loads(text)
+        except ValueError:terminal=text
+        classification=classify(terminal)
+        code={'AUTH_REQUIRED':'AUTH_REQUIRED','RATE_LIMITED':'SOURCE_RATE_LIMITED'}.get(classification,'SOURCE_UNAVAILABLE')
+        message='Antigravity native login is unavailable for the selected home; check login in agy.' if code=='AUTH_REQUIRED' else 'Antigravity native model catalog could not be read: '+code
+        raise PeerError(code,message)
+    rows={line.split('\t',1)[0]:line.split('\t',1)[1] for line in output.decode().splitlines() if '\t' in line}
+    require(rows,'CAPABILITY_MISMATCH','Antigravity returned no valid native model catalog entries')
+    return rows
 
 
 def arguments(spec,native_id=None):

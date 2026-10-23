@@ -36,3 +36,14 @@ def test_terminal_stream_failure_supersedes_earlier_synthetic_auth():
 def test_provider_name_and_auth_instruction_are_not_borrowed():
     value=diagnostic({'error':{'code':'invalid_api_key'}},provider='antigravity')
     assert value['message'].startswith('Antigravity') and '/login' not in value['message']
+
+@pytest.mark.parametrize('value,expected',[
+    ({'terminal':{'error':{'type':'rate_limit_error'}},'error':{'type':'authentication_error'}},'RATE_LIMITED'),
+    ({'code':'quota_exhausted','details':{'message':'Authentication failed in an earlier attempt'}},'QUOTA_EXHAUSTED'),
+    ({'subtype':'error_max_turns','is_error':True},'BUDGET_EXHAUSTED'),
+])
+def test_authoritative_terminal_shapes(value,expected):
+    assert classify(value)==expected
+    if 'terminal' in value:
+        e=Evidence();e.observe({'type':'assistant','isApiErrorMessage':True,'error':'authentication_error'})
+        assert e.failure(value['terminal'],1)['code']==expected
