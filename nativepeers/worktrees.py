@@ -58,7 +58,7 @@ def worktree_parent(journal,root):
 
 
 def bounded_diff(cwd,args,limit,deadline,*,options=()):
-    process=subprocess.Popen(['git','-C',str(cwd),*options,'diff','--no-ext-diff','--no-textconv',*args],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    process=subprocess.Popen(['git','-C',str(cwd),*options,'diff','--no-ext-diff','--no-textconv',*args],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,env=git_environment())
     data=bytearray()
     try:
         with selectors.DefaultSelector() as selector:
@@ -146,12 +146,24 @@ def changes(cwd,baseline,*,max_bytes=ARTIFACT_MAX,timeout=10):
     return result
 
 
+# These select a repository/index/object store independently of git -C. Configuration
+# and author/committer settings remain native; private index overrides are explicit.
+GIT_ROUTING={'GIT_DIR','GIT_WORK_TREE','GIT_COMMON_DIR','GIT_INDEX_FILE','GIT_OBJECT_DIRECTORY',
+             'GIT_ALTERNATE_OBJECT_DIRECTORIES','GIT_NAMESPACE','GIT_PREFIX','GIT_SHALLOW_FILE'}
+
+
+def git_environment(overrides=None):
+    environment={key:value for key,value in os.environ.items() if key not in GIT_ROUTING}
+    if overrides:environment.update(overrides)
+    return environment
+
+
 def git(cwd,*args,input=None,stdin=None,env=None,check=True,timeout=None):
     deadline=_preparation_deadline.get()
     if deadline is not None:
         require(time.monotonic()<deadline,'WORKSPACE_SNAPSHOT_REQUIRED','Input preparation deadline elapsed')
         timeout=min(timeout,deadline-time.monotonic()) if timeout else deadline-time.monotonic()
-    result=subprocess.run(['git','-C',str(cwd),*args],input=input,stdin=stdin,env=env,capture_output=True,timeout=timeout)
+    result=subprocess.run(['git','-C',str(cwd),*args],input=input,stdin=stdin,env=git_environment(env),capture_output=True,timeout=timeout)
     if check and result.returncode:
         raise PeerError('WORKSPACE_SNAPSHOT_REQUIRED',result.stderr.decode(errors='replace')[:800])
     return result
@@ -180,7 +192,7 @@ def read_git(cwd,*args,**kwargs):
 def _temporary_index(cwd,deadline,*,options=()):
     directory=git(cwd,'rev-parse','--absolute-git-dir',timeout=max(.001,deadline-time.monotonic())).stdout.decode().strip()
     with tempfile.TemporaryDirectory(prefix='npeer-index-',dir=directory) as temporary:
-        environment=dict(os.environ,GIT_INDEX_FILE=str(Path(temporary)/'index'))
+        environment={'GIT_INDEX_FILE':str(Path(temporary)/'index')}
         def command(*args,**kwargs):
             return git(cwd,*options,*args,env=environment,timeout=max(.001,deadline-time.monotonic()),**kwargs)
         yield command

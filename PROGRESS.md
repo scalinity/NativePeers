@@ -1,3 +1,19 @@
+# Review 2885497 corrections
+
+- [x] F01 Isolate every Git mutation from ambient repository/index/object routing.
+- [ ] F02 Bound control delivery and close leases independently of pipe progress.
+- [ ] F03 Retain controller ownership immediately after successful creation.
+- [ ] F04 Apply recipient visibility to status, inbox and context references.
+- [ ] F05 Initialize runtime approvals atomically without replacing concurrent approval.
+- [ ] F06/F09 Share authoritative model-scoped quota supersession.
+- [ ] F07 Preserve selected Claude layout through general usage lookup.
+- [ ] F08 Bound catalog descendants and output cleanup.
+- [ ] F10 Enforce one combined frozen-input byte budget.
+- [ ] Fix isolated-copy identity and sibling-order test prerequisites.
+- [ ] Full verification, scoped publication, installed checks and workspace cleanup.
+
+---
+
 # Review 2551947 corrections
 
 - [x] R01 Pin every observed Claude model, including custom IDs.
