@@ -45,7 +45,9 @@ def parser():
         q=command(name);q.add_argument('handle')
         if name=='status':q.add_argument('--explain-selection',action='store_true');q.add_argument('--refresh',action='store_true');q.add_argument('--scan-cursor');q.add_argument('--scan-max-bytes',type=int)
         if name=='result':q.add_argument('--include-artifacts',action='store_true')
-        if name=='wait':q.add_argument('--timeout-ms',type=int,default=30000);q.add_argument('--on-timeout',choices=['push','retain'])
+        if name=='wait':
+            q.add_argument('--timeout-ms',type=int,default=30000,help='Bounded wait in milliseconds: 1 <= timeout-ms <= 30000 (default: 30000); larger values are rejected')
+            q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
@@ -81,7 +83,12 @@ async def dispatch(args,journal):
         if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','usage','usage-import','history-cleanup'):raise
         caller=Caller('external-local','external-local')
     name=args.command
-    if name=='whoami':return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants)
+    if name=='whoami':
+        from .completion_delivery import readiness
+        peer=core.registry.verify(caller.key,caller.incarnation)
+        return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants,
+                    native_session_id=peer['peer_key']['native_session_id'],owner=peer['owner'],
+                    inbox_readiness=readiness(journal,caller.key))
     if name=='usage':
         from .usage.service import Usage
         require(not args.requirements or args.recommend,'PROTOCOL_ERROR','Task requirements require --recommend')
@@ -195,7 +202,8 @@ def error_exit(error):
 def main():
     args=parser().parse_args();journal=None;request_id=new_id();exit_code=0
     try:
-        journal=Journal();value=asyncio.run(dispatch(args,journal))
+        journal=Journal(read_only=True) if args.command=='artifact-read' else Journal()
+        value=asyncio.run(dispatch(args,journal))
         response=dict(schema_version=1,ok=True,data=value,error=None,request_id=request_id)
         if isinstance(value,dict) and value.get('state') in ('DELIVERY_UNKNOWN','SUBMITTING','SUBMITTED_UNCONFIRMED','OUTBOX_COMMITTED'):
             exit_code=6

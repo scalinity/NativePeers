@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import stat
 import time
 
 from .files import advisory_lock, atomic_json, canonical, private_directory
@@ -82,7 +83,35 @@ class Journal:
         self.host_id=json.loads((root/'host.json').read_text())['host_id']
         return self
 
-    def __init__(self, root: Path | None = None):
+    def __init__(self, root: Path | None = None, *, read_only=False):
+        if read_only:
+            self.root = Path(root or os.getenv("NPEER_HOME", Path.home()/".local/state/nativepeers")).absolute()
+            info = self.root.lstat()
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+                raise PermissionError(f"Expected an owned private directory: {self.root}")
+            database = self.root/"journal.sqlite3"
+            if not database.is_file() or database.is_symlink():
+                raise PermissionError("NativePeers journal is not installed or is symlinked")
+            # Keep SQLite's live WAL locking: immutable=1 can miss current reader grants.
+            # Live readers need readable WAL/SHM sidecars. Never fall back to an
+            # immutable snapshot when a read-only filesystem prevents their creation.
+            self.db = None
+            try:
+                self.db = sqlite3.connect(database.as_uri()+"?mode=ro", uri=True, timeout=5, isolation_level=None)
+                self.db.row_factory = sqlite3.Row
+                if self.db.execute("PRAGMA user_version").fetchone()[0] != 1:
+                    from .errors import PeerError
+                    raise PeerError('CAPABILITY_MISMATCH','Unsupported read-only journal schema; no migration applied')
+                self.host_id = json.loads((self.root/"host.json").read_text())["host_id"]
+            except sqlite3.Error as error:
+                if self.db:self.db.close()
+                from .errors import PeerError
+                raise PeerError('CAPABILITY_MISMATCH','Read-only journal is unavailable; readable live WAL/SHM files may be required',
+                                details={'cause':str(error)[:256]}) from None
+            except BaseException:
+                if self.db:self.db.close()
+                raise
+            return
         self.root = private_directory(root or Path(os.getenv("NPEER_HOME", Path.home()/".local/state/nativepeers")))
         for name in ("peers", "bindings", "workers", "artifacts", "locks", "groups", "compat"):
             private_directory(self.root/name)

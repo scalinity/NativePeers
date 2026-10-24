@@ -24,6 +24,10 @@ def codex_config(journal,binding,profile,*,home=None):
     policies={name:{'enabled':False} for name in config.get('mcp_servers',{})}
     policies.update({'codex_apps':{'enabled':False},'openai-api-key-local-confirmation':{'enabled':False}})
     return {'mcp_servers':{'nativepeers':dict(facade_config(journal,binding),default_tools_approval_mode='approve')},
+            # The native shell's core environment omits custom variables. Supply
+            # only this worker's binding explicitly; its read-only sandbox stays intact.
+            'shell_environment_policy.set':dict(config.get('shell_environment_policy',{}).get('set',{}),
+                NPEER_HOME=str(journal.root),NPEER_BOOTSTRAP=str(binding),NPEER_BINDING=''),
             'mcp_server_policy':policies,
             'plugins':{name:{'enabled':False} for name in config.get('plugins',{})},
             'features.multi_agent':False,'features.multi_agent_v2':False,

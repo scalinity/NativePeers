@@ -116,7 +116,12 @@ class Installer:
     def lock(self):
         with advisory_lock(self.journal.root/'locks/install.lock'):
             if not self.native:yield;return
-            manager=Path.home()/'Documents/Tools/CodexMCP/manager.py'
+            # Follow the installed manager across project renames. Its supported
+            # lock must serialize qualification with the actual activation path.
+            launcher=Path.home()/'.local/bin/codex-mcp'
+            require(launcher.is_symlink(),'CAPABILITY_MISMATCH','Installed Codex manager must be a symlink: '+str(launcher))
+            manager=launcher.resolve()
+            require(manager.is_file() and manager.suffix=='.py','CAPABILITY_MISMATCH','Installed Codex manager target is unavailable or unsupported: '+str(manager))
             spec=importlib.util.spec_from_file_location('nativepeers_existing_manager',manager);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
             with module.update_lock():yield
 

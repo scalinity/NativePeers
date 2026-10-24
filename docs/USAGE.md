@@ -4,6 +4,10 @@ Use these commands from a registered native conversation's shell tool. All provi
 
 A definite send failure returns `ok:false` and the documented nonzero exit code. Its `data` retains the message and client-request IDs for inspection. Held, queued and ingested receipts remain distinct; a held receipt does not establish model processing. An outbox record without confirmed admission also returns exit 6.
 
+Completion pushes have their own readiness. `spawn --check` reports `ready_scope:"worker_execution"`; `ready` describes the workers, quota and capacity. Its separate `completion_delivery` and `push_ready` describe the original parent's return route. A blocked push adds a warning on push preflight, spawn and wait timeout, while useful workers and explicit result collection remain available. `whoami` includes the exact native UUID/owner and `inbox_readiness`. CLI and bound MCP use the same checks. Quota approval, worker execution, parent inbox and bound MCP readiness remain separate.
+
+If `push_ready` is false, use a bounded wait with `--on-timeout retain`, then collect `status`/`result` when needed. Do not end a turn expecting an unavailable push. Each completion route in status/result includes its actual `delivery.state`, message ID and failure reason when a delivery was attempted. `RETAINED`, `HELD`, native queue acceptance and native ingestion remain different outcomes. A follow-up or resumed generation keeps its own route and delivery evidence; reading a result never resends a notification. Passive `READY` detects known route blockers; it cannot predict a later policy refusal, process exit or runtime update.
+
 | Need | Command |
 |---|---|
 | Verify this native caller | `npeer whoami --json` |
@@ -26,8 +30,8 @@ A definite send failure returns `ok:false` and the documented nonzero exit code.
 | Message/task/group status | `npeer status HANDLE --json` |
 | Check a batch without reserving or launching workers | `npeer spawn --check --spec /absolute/path/batch.json --json` |
 | Launch independent workers | `npeer spawn --spec /absolute/path/batch.json --json` |
-| Current-tool wait, then push fallback | `npeer wait GROUP_ID --timeout-ms 30000 --on-timeout push --json` |
-| Retain after wait timeout | `npeer wait TASK_ID --timeout-ms 1000 --on-timeout retain --json` |
+| Current-tool wait, then push fallback | `npeer wait GROUP_ID --timeout-ms 30000 --on-timeout push --json`; `--timeout-ms`: integer 1–30000 ms (default 30000); larger values are rejected |
+| Retain after wait timeout | `npeer wait TASK_ID --timeout-ms 1000 --on-timeout retain --json`; `--timeout-ms` must be <=30000 ms |
 | Immutable results without inference | `npeer result GROUP_ID --json` |
 | Cancel owned active task/group | `npeer cancel HANDLE --reason "No longer needed" --json` |
 | Resume an owned released worker | `npeer resume-worker WORKER_ID --task-file /absolute/path/followup.txt --completion-mode wait --client-request-id followup-1 --json` |
@@ -46,6 +50,8 @@ The incoming native message contains `message_id`, `exchange_id`, `in_reply_to`,
 `ACCEPTED_QUEUED` means native admission, not model processing. `SUBMITTED_UNCONFIRMED` and `DELIVERY_UNKNOWN` remain uncertain; a timeout does not prove expiry or nonexecution. `HELD` respects the receiver's native policy. Interactive inbox bodies are withheld until native ingestion/ack/reply evidence exists, so local inbox reads cannot bypass a held native message. `ack` is explicitly a model report. Exact native-history observations can advance ingestion without replaying a send. No exactly-once model-execution guarantee is made across external crash windows.
 
 Peer frames are at most 64 KiB, inline text 12 KiB, local control responses 2 MiB, artifact pages 256 KiB and registered artifacts 10 MiB. Artifact pages carry a digest, byte count, base64 data and `next_offset`. Artifact handles grant access only to the registered immutable file; arbitrary file paths are not artifact handles. Spawn `context_refs` are explicit registered handles already readable by the parent, then granted to the new worker. Whole histories are not copied.
+
+`artifact-read` opens the installed journal read-only, preserving live WAL grants without schema initialization, chmod, directory creation or NativePeers write-lock files. SQLite needs readable live WAL/SHM sidecars; when a read-only filesystem prevents their creation, the CLI returns a structured `CAPABILITY_MISMATCH` instead of using a stale immutable snapshot. Analysis workers can use authorized artifacts without write access to NativePeers state. Codex workers receive their exact owned binding through a worker-local shell environment overlay, including when the native shell inherits only its core variables. This changes no sandbox, global environment policy or shell-wide Python import path. Missing/stale identities and ungranted artifacts still fail. Admission errors for `limits.wall_time_seconds` and `limits.max_task_turns_per_worker` report the field, requested value and current ceiling; admission limits are unchanged.
 
 Use [the Claude-to-Codex example](../examples/claude-to-two-codex.json) or [the Codex-to-Claude example](../examples/codex-to-two-claude.json) as a batch template. The Sol example requests `gpt-6.1-sol` and `xhigh` without a fallback. Installed catalog checks precede dispatch; entitlement remains a real-inference question. Requested and provider-reported models are stored separately. Effort observation stays unverified when the backend does not independently echo it.
 

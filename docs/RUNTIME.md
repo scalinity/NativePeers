@@ -28,6 +28,10 @@ Installed integration and native permission to run unattended are different. The
 
 A bounded wait leases completion delivery only for that call. Timeout/disconnect releases the claim and chooses push or retain. An uncertain tool-result write or native push is retained as uncertain instead of automatically duplicated. Immutable result reads remain available. Push completion uses a separate controller actor for that group/generation. Exactly one reasoning model is used per native worker; supervisors and aggregation are ordinary local code.
 
+Parent completion readiness is inspected separately from worker execution and quota. Preflight, spawn, wait, status/result and caller identity expose the passive parent route and its reason when unavailable. An unavailable push does not prevent explicit worker execution or retained-result collection. Each attempted completion retains exact message/error evidence under its own delivery ID, including follow-up and resumed generations. No status/read operation retries it. Native policy remains authoritative after a passive ready check.
+
+The artifact CLI uses an existing read-only SQLite connection with live WAL visibility. It neither installs schema nor opens state lock files for writing. Worker reader grants and exact native ownership are still checked. The Codex worker overlay explicitly supplies its own bootstrap to native shell commands that otherwise inherit only core variables; it preserves the configured shell environment and read-only sandbox. It supplies no enclosing caller binding or unrelated write root.
+
 Compatibility receipts bind the verified native executable hashes. A changed binary blocks affected worker launch/native delivery until its changed seam is revalidated; existing immutable owned workers retain their package path. NativePeers does not activate an unrelated Codex update, disable the hourly manager job, drop patches or roll back completed naming/MCP work. Revalidate installed schemas, native hook/queue/MCP behavior and the relevant live checks for a new runtime; use the manager's supported lock/activation mechanism for any separately authorized package change.
 
 

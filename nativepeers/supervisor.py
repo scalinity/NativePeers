@@ -535,6 +535,8 @@ class Group:
             receipt=await Core(self.journal).router.send(self.controller,self.row['parent_key'],text,kind='completion',client_request_id=row['delivery_id'],admission_deadline=self.lifetime_deadline())
             deferred=receipt['state'] in ('OUTBOX_COMMITTED','ADMISSION_DEFERRED')
             error=delivery_error(receipt)
+            self.journal.event(row['delivery_id'],'completion-delivery',dict(state=receipt['state'],
+                message_id=receipt.get('message_id'),error=error.json() if error else None))
             state=('UNCLAIMED' if deferred else 'PUSH_ACCEPTED' if receipt['state'] in ('INGESTED','ACCEPTED_QUEUED')
                    else 'HELD' if receipt['state']=='HELD' else 'RETAINED' if error else 'NOTIFICATION_UNKNOWN')
             self.journal.db.execute('UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?',(state,self.id,generation,self.generation))
@@ -543,6 +545,7 @@ class Group:
             if error and not deferred and budget and reservation:budget.settle(reservation,observed_turns=0)
             # Accepted/uncertain model work remains reserved until the live collector observes it.
         except PeerError as error:
+            self.journal.event(row['delivery_id'],'completion-delivery',dict(state=error.code,error=error.json()))
             self.journal.db.execute("UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?",('NOTIFICATION_UNKNOWN' if error.may_have_received else 'RETAINED',self.id,generation,self.generation))
             self.journal.event(self.id,'parent-completion-retained',error.json())
             if not error.may_have_received and budget and reservation:budget.settle(reservation,observed_turns=0)

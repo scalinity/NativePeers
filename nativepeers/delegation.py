@@ -77,7 +77,10 @@ class Delegation:
                 'CAPACITY_UNAVAILABLE','Batch exceeds the caller concurrency ceiling')
         require(not request.get('survive_parent') or caller.grants.get('survive_parent'),'APPROVAL_BLOCKED','Detached survival requires an explicit operator grant')
         wall=limits.get('wall_time_seconds',local['task_wall_seconds']);turns=limits.get('max_task_turns_per_worker',local['max_task_turns'])
-        require(1<=wall<=local['task_wall_seconds'] and 1<=turns<=local['max_task_turns'],'BUDGET_EXHAUSTED','Worker time/turn ceilings exceeded')
+        for field,requested,budget_ceiling in (('wall_time_seconds',wall,local['task_wall_seconds']),
+                                               ('max_task_turns_per_worker',turns,local['max_task_turns'])):
+            require(1<=requested<=budget_ceiling,'BUDGET_EXHAUSTED',f'limits.{field} requested {requested} exceeds ceiling {budget_ceiling}',
+                    details={'field':'limits.'+field,'requested':requested,'ceiling':budget_ceiling})
         group_id=new_id();policy=dict(original_request=original,workers=[],initial_tasks=[],completion_mode=request.get('completion_mode','push'),
             followup_grace_seconds=min(local['followup_grace_seconds'],max(0,limits.get('followup_grace_seconds',local['followup_grace_seconds']))),wall_time_seconds=wall,group_wall_seconds=local['group_wall_seconds'],
             depth=depth,allow_sibling_messages=bool(request.get('allow_sibling_messages',False)),survive_parent=bool(request.get('survive_parent',False)),
@@ -223,14 +226,16 @@ class Delegation:
             frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
             quota_blocked=[item for item,worker in zip(quota['workers'],prepared) if item['blockable'] and worker['lease']['spec'].get('quota_policy','respect-known-limits')!='warn']
             pool_blocked=[d for d in quota['demands'] if d['ceiling'] is not None and d['active_workers']+d['proposed_workers']>d['ceiling']]
-            return dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
+            from .completion_delivery import annotate,readiness
+            return annotate(dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],ready_scope='worker_execution',usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
                 workers=planned,baseline=frozen.baseline,failures=failures,
                 input_preparation=dict(selected_files=len(frozen.untracked)+frozen.baseline.get('dirty_input_files',0),selected_bytes=sum(len(data) for data,mode in frozen.untracked.values())+frozen.baseline.get('dirty_input_bytes',0),dirty_patch_bytes=len(frozen.patch or b''),time_limit_seconds=20,input_limit_bytes=10485760),
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
                 native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
                                 for provider in ('codex','antigravity') if provider in homes],
                 client_request_id=request_id,existing_group_id=prior['group_id'] if prior else None,
-                limitations=['A plan does not reserve capacity or guarantee later entitlement, runtime tools or unchanged files/configuration.'])
+                limitations=['A plan does not reserve capacity or guarantee later entitlement, runtime tools or unchanged files/configuration.']),
+                readiness(self.journal,caller.key),push=policy['completion_mode']=='push')
         if active+len(prepared)>local['workers_total']:
             candidates=self.journal.all("SELECT worker_id,group_id FROM workers w WHERE state='IDLE_GRACE' AND NOT EXISTS(SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED'))")
             for idle in candidates:
@@ -242,22 +247,23 @@ class Delegation:
             raced=db.execute('SELECT * FROM spawn_requests WHERE caller_key=? AND client_request_id=?',(caller.key,request_id)).fetchone()
             if raced:
                 require(raced['spec_sha256']==digest,'IDEMPOTENCY_CONFLICT','Concurrent spawn has different content')
-                return dict(self.status(caller,raced['group_id']),client_request_id=request_id)
-            active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
-            require(active+len(prepared)<=local['workers_total'],'CAPACITY_UNAVAILABLE','Eight worker slots are occupied; no model work was submitted')
-            # Optional local pool ceilings reserve only local demand, never vendor quota.
-            for demand in intelligence.batch(prepared)['demands']:
-                require(demand['ceiling'] is None or demand['active_workers']+demand['proposed_workers']<=demand['ceiling'],
-                    'CAPACITY_UNAVAILABLE','Configured local quota-pool concurrency ceiling reached',details=demand)
-            db.execute('INSERT INTO spawn_requests VALUES(?,?,?,?)',(caller.key,request_id,digest,group_id))
-            db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group_id,caller.key,canonical(policy).decode(),'RESERVED','{}'))
-            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'UNCLAIMED',None,None,new_id(),1))
-            for worker in prepared:
-                spec=worker['lease']['spec']
-                for ref in spec.get('context_refs',[]):Artifacts(self.journal).grant(ref,caller.key,[worker['worker_id']])
-                native_id=new_id() if spec['provider']=='claude' else None
-                db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker['worker_id'],group_id,None,spec['provider'],native_id,spec['title'],spec['model'],None,spec.get('reasoning_effort'),spec['cwd'],None,'RESERVED',1,canonical(worker['lease']).decode()))
-                db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(worker['task_id'],worker['worker_id'],None,None,'QUEUED',None,None,1,canonical({'text':spec['task'],'initial':True}).decode()))
+            else:
+                active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
+                require(active+len(prepared)<=local['workers_total'],'CAPACITY_UNAVAILABLE','Eight worker slots are occupied; no model work was submitted')
+                # Optional local pool ceilings reserve only local demand, never vendor quota.
+                for demand in intelligence.batch(prepared)['demands']:
+                    require(demand['ceiling'] is None or demand['active_workers']+demand['proposed_workers']<=demand['ceiling'],
+                        'CAPACITY_UNAVAILABLE','Configured local quota-pool concurrency ceiling reached',details=demand)
+                db.execute('INSERT INTO spawn_requests VALUES(?,?,?,?)',(caller.key,request_id,digest,group_id))
+                db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group_id,caller.key,canonical(policy).decode(),'RESERVED','{}'))
+                db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'UNCLAIMED',None,None,new_id(),1))
+                for worker in prepared:
+                    spec=worker['lease']['spec']
+                    for ref in spec.get('context_refs',[]):Artifacts(self.journal).grant(ref,caller.key,[worker['worker_id']])
+                    native_id=new_id() if spec['provider']=='claude' else None
+                    db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker['worker_id'],group_id,None,spec['provider'],native_id,spec['title'],spec['model'],None,spec.get('reasoning_effort'),spec['cwd'],None,'RESERVED',1,canonical(worker['lease']).decode()))
+                    db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(worker['task_id'],worker['worker_id'],None,None,'QUEUED',None,None,1,canonical({'text':spec['task'],'initial':True}).decode()))
+        if raced:return dict(self.status(caller,raced['group_id']),client_request_id=request_id)
         directory=private_directory(self.journal.root/'groups'/group_id)
         launch_attempted=False
         try:
@@ -306,7 +312,7 @@ class Delegation:
                 await asyncio.sleep(.03)
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 
-    def status(self,caller,handle,*,explain_selection=False):
+    def status(self,caller,handle,*,explain_selection=False,completion=True):
         group=self.group(caller,handle)
         result=dict(group_id=group['group_id'],state=group['state'],workers=self.journal.all(
             'SELECT worker_id,peer_key,provider,native_id,role_title,model_requested,model_observed,effort_requested,state,generation FROM workers WHERE group_id=?',(group['group_id'],)),
@@ -319,6 +325,11 @@ class Delegation:
             result['workers']=[w for w in result['workers'] if w['worker_id']==worker]
             result['tasks']=[t for t in result['tasks'] if t['worker_id']==worker]
             result['notifications']=[]
+        elif completion:
+            from .completion_delivery import annotate,describe,readiness
+            result['notifications']=[describe(self.journal,route) for route in result['notifications']]
+            annotate(result,readiness(self.journal,group['parent_key']),
+                     push=any(route['mode']=='push' for route in result['notifications']))
         from .fallback import result_details
         for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
         from .worker_process import task_slots
@@ -441,7 +452,7 @@ class Delegation:
         claimed=False;deliveries=[];waiter=waiter or new_id()
         with self.journal.transaction() as db:
             group=self.group(caller,handle)
-            status=self.status(caller,handle)
+            status=self.status(caller,handle,completion=False)
             tasks=[t for t in status['tasks'] if handle==group['group_id'] or t['task_id']==handle]
             if not tasks or any(t['state'] not in TERMINAL for t in tasks):return None
             policy=json.loads(group['policy_json']);generations=wait_generations(group['group_id'],policy,handle)
@@ -456,17 +467,28 @@ class Delegation:
                 status['notifications']=self.journal.all('SELECT * FROM completion_routes WHERE group_id=? ORDER BY completion_generation',(group['group_id'],))
         # Artifact/budget I/O happens after committing the exact claims/membership.
         for delivery in deliveries:settle_deferred(self.journal,group['group_id'],delivery)
+        if caller.key==group['parent_key']:
+            from .completion_delivery import annotate,describe,readiness
+            status['notifications']=[describe(self.journal,route) for route in status['notifications']]
+            annotate(status,readiness(self.journal,group['parent_key']))
         return {'ready':True,'result':self._render_result(status,policy,handle),'notification_output_uncertain':claimed,
                 'notification_disposition':('tool-result-output-pending-observation' if claimed else 'retained-result-read') if generations else 'batch-notification-unchanged'}
 
     async def wait(self,caller,handle,timeout_ms=30000,on_timeout=None):
-        require(type(timeout_ms) is int and 1<=timeout_ms<=30000,'PROTOCOL_ERROR','Wait is bounded to 30 seconds')
+        require(type(timeout_ms) is int and 1<=timeout_ms<=30000,'PROTOCOL_ERROR',
+                f'timeout_ms requested {timeout_ms!r}; must be an integer from 1 to 30000 ms (ceiling 30000)',
+                details={'field':'timeout_ms','requested':timeout_ms,'minimum':1,'ceiling':30000})
         require(on_timeout in (None,'push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         terminal=self.terminal_wait(caller,handle,timeout_ms)
-        if terminal is not None:return terminal
+        if terminal is not None:
+            from .completion_delivery import annotate
+            route=terminal['result'].get('completion_delivery')
+            return annotate(terminal,route) if route is not None else terminal
         group=self.group(caller,handle)
         try:
-            return await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
+            value=await group_call(self.journal,group['group_id'],'wait',{'caller_key':caller.key,'handle':handle,'timeout_ms':timeout_ms,'on_timeout':on_timeout},timeout_ms/1000+2)
+            from .completion_delivery import annotate,readiness
+            return annotate(value,readiness(self.journal,group['parent_key']),push=value.get('notification_disposition')=='push')
         except (PeerError,FileNotFoundError,ConnectionRefusedError) as error:
             if isinstance(error,PeerError) and error.code!='SUPERVISOR_LOST':raise
             latest=self.status(caller,handle)
