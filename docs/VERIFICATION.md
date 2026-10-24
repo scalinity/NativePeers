@@ -1,4 +1,18 @@
-# Current review ce4a4ac verification
+# Open issues 1 and 2 verification
+
+Completion readiness, exact retained delivery details, read-only context artifacts, bounded-wait help and field-specific budget errors have focused regression coverage. The broader product suite passed **641 tests / 656 subtests**, with four Linux-only skips and zero failures, in 312.83 seconds. The three generated-publication consistency checks pass separately after the verified source commit is published. Seven focused completion tests also pass after strengthening the final review assertion; production source is unchanged. Commands, exit codes, source/runtime fingerprints, independent review outcomes and native proof are recorded in [the issue verification record](../evidence/open-issues-20261023.json).
+
+Claude **2.1.310**, SHA-256 `ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd`, passed signed-code verification, structured native worker execution, effective analysis tool inventory and exact original-parent completion ingestion. The guarded approval transition changes only Claude worker/inbox approval. Claude quota remains separately mismatched; bound MCP readiness remains unknown until an actual bound inventory is inspected. Other providers' approval records are preserved. The [explicit maintenance procedure](INSTALLATION.md#claude-executable-maintenance) refuses runtime/source drift and concurrent approval changes.
+
+A real managed Codex analysis worker read a granted context artifact through the CLI under native `read-only`/`never` policy and received exit 0. The same native history, generation 2, retained its exact UUID after release/resume. A separate attempted sentinel write returned exit 1 with `Operation not permitted`, and the sentinel checksum/content remained intact. Native tool calls/output are retained privately, independently of the worker's final report. Offline enforced filesystem tests also cover live WAL grants/revocation and refusal of stale identities and ungranted artifacts.
+
+The first live artifact diagnostic exposed a dropped bootstrap in the native core-only shell environment; its failed outcome is retained. Two initial review attempts exhausted an incorrectly small two-round bound before producing findings; they are not reviews or passes. Two independent Opus 5.5 reviews and exact-history remediation reviews completed. All actionable findings and the final test notes are addressed and attributed separately in the issue record. The first receipt transition stopped before writing when it encountered the renamed manager path; the corrected path follows the installed manager link. Historical uncertain messages were never resent or inspected through another caller's identity.
+
+Native acceptance covers the recorded disposable `dontAsk` parent and owned worker profiles, with ordinary authentication/home selection. It does not certify every everyday inbound policy, quota transport, unrelated provider update, Desktop mode or historical acceptance variant. A native policy may still hold/refuse a later message; readiness and actual delivery remain distinct. The four Linux-only skipped gates were not rerun on Linux for these issue fixes. Private proof remains under `evidence/scratch/open-issues-20261023/`; public records contain sanitized references and IDs.
+
+---
+
+# Historical review ce4a4ac verification
 
 C01-C03 are corrected and the complete Mac suite passed **617 tests and 620 subtests**, with four Linux-only skips, zero failures/errors and no timeout, in **357.39 seconds** on Python 3.14.8. All 36 installed dependency versions matched the lock. The four skipped process-exit gates passed in a separate **seven-test Linux/Python 3.12.3 run**; **four Linux socket tests** also passed. [Corrections and scope](REVIEW_CE4A4AC.md) · [Current record](../evidence/review-ce4a4ac.json).
 

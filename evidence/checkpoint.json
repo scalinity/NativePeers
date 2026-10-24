@@ -131,10 +131,10 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "main",
-    "code_commit": "94db52910df37264d16213091ef7e570ec62f974",
-    "evidence": "evidence/review-ce4a4ac.json",
-    "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
-    "status": "C01-C03 corrected; complete Mac suite and focused Linux usage/socket schedules passed; native acceptance remains operation-specific"
+    "code_commit": "e5c1aa3463dae6cea296f34c6d2924afed3916ba",
+    "evidence": "evidence/open-issues-20261023.json",
+    "source_map_sha256": "fc09190912789962357a03c6583dbfcb0cf22f9bb5a5f5c25b47bbb5333c3b45",
+    "status": "PASS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -147,10 +147,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
+    "base_commit": "1010ae2efb4525ba1f62860462b594b24a1a21b7",
     "branch": "main",
-    "code_commit": "94db52910df37264d16213091ef7e570ec62f974",
-    "last_verified_publication": "94db52910df37264d16213091ef7e570ec62f974",
+    "code_commit": "e5c1aa3463dae6cea296f34c6d2924afed3916ba",
+    "last_verified_publication": "e5c1aa3463dae6cea296f34c6d2924afed3916ba",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -213,88 +213,118 @@
     "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "94db52910df37264d16213091ef7e570ec62f974",
-    "verified_remote_code_commit": "94db52910df37264d16213091ef7e570ec62f974",
+    "verified_remote_commit": "e5c1aa3463dae6cea296f34c6d2924afed3916ba",
+    "verified_remote_code_commit": "e5c1aa3463dae6cea296f34c6d2924afed3916ba",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "REVIEW_CE4A4AC_CORRECTIONS_VERIFIED",
+  "stage": "Open issues 1 and 2 fixes",
   "tests_current": {
-    "retirement_focused": {
+    "focused": {
+      "test_id": "final-focused",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/unit/test_completion_delivery.py",
+        "tests/unit/test_readonly_artifacts.py",
+        "tests/unit/test_claude_runtime_verify.py",
+        "tests/unit/test_delegation_diagnostics.py",
+        "tests/unit/test_worker_shell_binding.py",
+        "tests/unit/test_spawn_check.py",
+        "tests/contract/test_notifications.py",
+        "tests/unit/test_install.py",
+        "tests/unit/test_nested_caller.py"
+      ],
+      "expected_exit_code": 0,
+      "actual_exit_code": 0,
       "status": "PASS",
-      "tests": 31,
-      "seconds": 70.77
+      "at": "2026-10-23T20:11:21.182163-04:00",
+      "elapsed_seconds": 17.589035374985542,
+      "evidence_path": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/open-issues-20261023/final-focused.log",
+      "product_python_sha256": "069e1fe23803d0ddfbd340aeefa7c2c6fa428640fb218e99c9d8362a434e18bf",
+      "passed": 89,
+      "subtests_passed": 88
     },
-    "reply_focused": {
+    "broader": {
+      "inputs_changed": [],
+      "test_id": "publication-suite",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "--ignore=tests/unit/test_evidence_checkpoint.py"
+      ],
+      "expected_exit_code": 0,
+      "actual_exit_code": 0,
       "status": "PASS",
-      "tests": 61,
-      "subtests": 31,
-      "seconds": 22.22
-    },
-    "usage_focused": {
-      "status": "PASS",
-      "tests": 41,
+      "at": "2026-10-23T20:12:38.860659-04:00",
+      "elapsed_seconds": 313.3153600830119,
+      "evidence_path": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/open-issues-20261023/publication-suite.log",
+      "product_python_sha256": "069e1fe23803d0ddfbd340aeefa7c2c6fa428640fb218e99c9d8362a434e18bf",
+      "test_input_sha256": "32e0143851238138cfc8f62c0cae05da6f263a58b181178f406d3b8719b64440",
+      "passed": 641,
+      "subtests_passed": 656,
       "skipped": 4,
-      "seconds": 5.61,
-      "skip_reason": "Linux-specific /proc gates; all four executed separately on Linux"
+      "skip_reason": "Linux-only process gates on macOS"
     },
-    "linux_usage": {
+    "post_suite_assertion": {
+      "inputs_changed": [],
+      "test_id": "post-suite-review-assertion",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/unit/test_completion_delivery.py"
+      ],
+      "expected_exit_code": 0,
+      "actual_exit_code": 0,
       "status": "PASS",
-      "tests": 7,
-      "skipped": 0,
-      "seconds": 3.943
+      "at": "2026-10-23T20:18:11.148724-04:00",
+      "elapsed_seconds": 0.933650791994296,
+      "evidence_path": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/open-issues-20261023/post-suite-review-assertion.log",
+      "product_python_sha256": "069e1fe23803d0ddfbd340aeefa7c2c6fa428640fb218e99c9d8362a434e18bf",
+      "test_input_sha256": "406f6abd0e36ab6da672448e2f0c0265b747b1ef114b428fef528398156b60a4",
+      "passed": 7,
+      "scope": "Strengthen one non-vacuity assertion requested by the reviewer after the stable broad run; production source unchanged"
     },
-    "linux_reply": {
+    "signed_claude": {
+      "test_id": "claude-codesign",
+      "command": [
+        "/usr/bin/codesign",
+        "--verify",
+        "--strict",
+        "/Users/danny/.local/share/claude/versions/2.1.310"
+      ],
+      "expected_exit_code": 0,
+      "actual_exit_code": 0,
       "status": "PASS",
-      "tests": 4,
-      "skipped": 0,
-      "seconds": 0.852
+      "at": "2026-10-23T20:03:02.120252-04:00",
+      "elapsed_seconds": 0.3520552910049446,
+      "evidence_path": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/open-issues-20261023/claude-codesign.log",
+      "product_python_sha256": "ba19a084299dbbbbd16f0b4a2bb679cc0be42b5722cfbf32589624a025b892f6"
     },
-    "offline": {
+    "publication_pointers": {
+      "inputs_changed": [],
+      "test_id": "publication-pointers-initial",
+      "command": [
+        ".venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/unit/test_evidence_checkpoint.py"
+      ],
+      "expected_exit_code": 0,
+      "actual_exit_code": 0,
       "status": "PASS",
-      "tests": 617,
-      "subtests": 620,
-      "failed": 0,
-      "skipped": 4,
-      "seconds": 357.39,
-      "python": "3.14.8",
-      "platform": "macOS",
-      "command": ".venv/bin/python -m pytest -q",
-      "outer_deadline_seconds": 900,
-      "skip_reason": "Four Linux-only /proc gates, all executed successfully in the separate Linux usage run",
-      "junit": {
-        "name": "pytest",
-        "errors": "0",
-        "failures": "0",
-        "skipped": "4",
-        "tests": "1241",
-        "time": "357.350",
-        "timestamp": "2026-10-23T07:28:27.865778-04:00",
-        "hostname": "M5.local"
-      },
-      "completion": {
-        "exit_code": 0,
-        "timeout": false,
-        "elapsed_seconds": 357.948446082999
-      }
-    },
-    "classification_fixture": {
-      "status": "PASS",
-      "tests": 6,
-      "skipped": 4,
-      "seconds": 0.29,
-      "skip_reason": "Linux gates already executed separately"
-    },
-    "installed_entrypoint": {
-      "status": "PASS",
-      "scope": "Installed launcher resolves to integrated main; all tested product fingerprints agree; no reinstall or receipt transition"
-    },
-    "publication_consistency": {
-      "status": "PASS",
-      "tests": 3,
-      "seconds": 0.19,
-      "scope": "Current pointers, source/file classes and historical canonical read claims"
+      "at": "2026-10-23T20:19:08.860194-04:00",
+      "elapsed_seconds": 0.35141145798843354,
+      "evidence_path": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/open-issues-20261023/publication-pointers-initial.log",
+      "passed": 3
     }
   },
   "transports": {
@@ -303,7 +333,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-23T07:36:32.494266-04:00",
+  "updated_at": "2026-10-23T20:21:03.411655-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -711,6 +741,33 @@
       "current_review": {
         "branch": "fix/review-ce4a4ac",
         "code_commit": "70f0966d70749ec9fdb1ecfe01356f106784a825",
+        "evidence": "evidence/review-ce4a4ac.json",
+        "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
+        "status": "C01-C03 corrected; complete Mac suite and focused Linux usage/socket schedules passed; native acceptance remains operation-specific"
+      }
+    },
+    {
+      "stage": "REVIEW_CE4A4AC_CORRECTIONS_VERIFIED",
+      "updated_at": "2026-10-23T07:36:32.494266-04:00",
+      "git": {
+        "base_commit": "ce4a4acd2660b3f67497535d44e5b058480d873b",
+        "branch": "main",
+        "code_commit": "94db52910df37264d16213091ef7e570ec62f974",
+        "last_verified_publication": "94db52910df37264d16213091ef7e570ec62f974",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "94db52910df37264d16213091ef7e570ec62f974",
+        "verified_remote_code_commit": "94db52910df37264d16213091ef7e570ec62f974",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "94db52910df37264d16213091ef7e570ec62f974",
         "evidence": "evidence/review-ce4a4ac.json",
         "source_map_sha256": "578e533cdb52f108d482cae2bd36739975cfb61710e09537d522371cb17cc72e",
         "status": "C01-C03 corrected; complete Mac suite and focused Linux usage/socket schedules passed; native acceptance remains operation-specific"

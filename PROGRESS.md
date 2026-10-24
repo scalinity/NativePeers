@@ -1,3 +1,18 @@
+# Open issues 1 and 2 — complete
+
+- [x] Expose parent push readiness separately from worker/quota/MCP readiness across CLI/MCP preflight, spawn, wait, status/result and caller identity.
+- [x] Retain exact per-generation delivery failure and later native receipt details without replay.
+- [x] Restore read-only CLI context access, live WAL reader grants and exact worker shell binding; preserve native sandbox denial.
+- [x] Document/reject waits above 30000 ms and name offending worker budget fields, requests and ceilings.
+- [x] Qualify Claude 2.1.310 worker/inbox paths, verify signature and original-parent ingestion, and perform a guarded Claude-only approval transition.
+- [x] Complete two independent Opus 5.5 reviews, remediate findings and recheck final notes.
+- [x] Stable broader suite: 641 tests / 656 subtests, four Linux-only skips, zero failures. Three publication-pointer tests and seven final focused completion tests pass separately.
+- [x] Integrate/publish product commit e5c1aa3463dae6cea296f34c6d2924afed3916ba; retain native histories and verified recovery archives for the two finished implementation lanes.
+
+Current record: [evidence/open-issues-20261023.json](evidence/open-issues-20261023.json). Claude quota and universal bound MCP readiness remain separate; unrelated runtime approvals and sessions are preserved.
+
+---
+
 # Review ce4a4ac corrections
 
 - [x] C01 Preserve split-index recovery and verify reconstruction before retirement (31 focused tests).
