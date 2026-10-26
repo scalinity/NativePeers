@@ -51,7 +51,7 @@ class InstallHomeTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result['installed'])
         manifest=json.loads(self.installer.manifest.read_text())
         self.assertEqual(manifest['state'],'INSTALLED')
-        self.assertEqual(set(manifest['trusted_hooks']),{'SessionStart','SessionEnd'})
+        self.assertEqual(set(manifest['trusted_hooks']),set(self.installer.desired_hooks('codex')))
         config=tomllib.loads(self.installer.config.read_text())
         self.assertEqual(config['hooks']['state']['SessionStart']['trusted_hash'],'hash-SessionStart')
         self.assertEqual(config['model'],'retained');self.assertFalse(config['features']['daemon_auto_start'])

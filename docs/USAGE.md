@@ -20,6 +20,10 @@ If `push_ready` is false, use a bounded wait with `--on-timeout retain`, then co
 | Ask for another reply | `npeer reply MESSAGE_ID --message "Please check the sum too." --request-reply --client-request-id fixture-followup-1 --json` |
 | Bounded inbox | `npeer inbox --unread --limit 20 --json` |
 | Page older inbox entries | `npeer inbox --unread --page --limit 20 --json`; continue with `--cursor CURSOR` |
+| Open notifications at a new human task | `npeer notifications open --json` |
+| Close out notifications before the final report | `npeer notifications close --json`; confirm `data.state:"QUIET"` |
+| Notification policy state | `npeer notifications status --json` |
+| Read quietly retained notices | `npeer inbox --retained --json`; add `--page --limit 20` and `--cursor CURSOR` |
 | Retained delegations for this parent | `npeer groups --mine --limit 20 --json`; continue with `--cursor CURSOR` |
 | Export a granted artifact to a new file | `npeer artifact-export ARTIFACT_ID --output /absolute/new.patch --json` |
 | Preview a worker-only delta | `npeer delta-preview WORKER_ID --task-id TASK_ID --json` |
@@ -62,6 +66,12 @@ Waiting for one task in a multi-task batch leaves the batch notification unchang
 For writing tasks use `permission_profile:"workspace"` and `workspace:{"mode":"isolated-worktree"}`. Each worker gets a separate branch/worktree and an exact baseline. Dirty tracked changes are captured into that worktree, selected untracked files require `untracked_allowlist`, and secrets are excluded. NativePeers does not stash, reset, clean or automatically merge the source checkout. Results retain the owned worktree path for inspection.
 
 The optional private state `policy.json` follows [the example](../examples/policy.json). It sets concurrency, depth, task/group duration, pending-message and hop limits and maps absolute native-home paths to short labels. A task request may narrow these limits. Changes are local operator configuration, not authority granted by an inbound message. Historical verification counts remain in `evidence/live-budget.json`; cumulative input and active-time ceilings are disabled. Each operation still has explicit deadlines and concurrency limits. Historical counts do not block new authorized tests.
+
+## Quiet close-out notifications
+
+Run `notifications close` immediately before a final task report, and `notifications open` at the next human task. MCP callers use `peer_notifications` with `action` set to `open`, `close` or `status`; each action applies only to the verified calling peer. Closing records journal cutoffs on the stable peer key, so they survive a resumed session and reopening. Exchanges and completion phases that existed at close stay quiet. While quiet, only an unexpired new root request (`send --request-reply`, not a reply) is admitted.
+
+Other input that was never submitted gets `RETAINED` with a `notification-policy` receipt and a reason. It is never submitted later, whether by same-ID retries, reopening or reads. `inbox --retained` (MCP `peer_inbox` with `retained:true`) returns only these bodies and frames the consumption guard suppressed, never native-held, rejected or ordinary uncertain bodies. Policy-retained and guard-suppressed requests do not count toward the pending-request cap; held, rejected and ordinary uncertain requests still do. Guard coverage and verification limits are in [NOTIFICATIONS.md](NOTIFICATIONS.md).
 
 ## Per-worker models and Gemini
 

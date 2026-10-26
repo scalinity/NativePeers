@@ -1,3 +1,20 @@
+# Quiet close-out notifications — source complete, final checks pending
+
+- [x] Stable-peer close-out policy: `notifications open|close|status`, MCP `peer_notifications`, durable cutoffs, pre-submission `RETAINED`, and `inbox --retained`.
+- [x] Consumption guard in the owned Claude/Codex `UserPromptSubmit` hook, Grok/Antigravity pending-frame filters, installer/readiness support, owned instructions and docs.
+- [x] R1 budget, fixed: quiet-retained completions consumed a turn; they now release the unsubmitted reservation.
+- [x] R2 metadata ID lookup, fixed: the footer ID now comes from the final references section.
+- [x] R3 post-lock owner revalidation, fixed: a superseded owner can no longer change the resumed policy.
+- [x] R4 suppressed pending cap, fixed: guard-suppressed requests no longer hold pending capacity.
+- [x] R5 owned-worker lifecycle, fixed: only interactive peers can open or close, and owned-worker follow-ups ignore stale policy rows.
+- [x] R6 completion diagnostics, fixed: group status and results include `delivery.suppression`.
+- [x] R7 Grok prompt reopen, fixed: a Grok hook superseded during the lock wait no longer reopens the resumed policy.
+- [x] Receipt schema now lists `RETAINED`.
+- [x] Native Codex 0.164.0 blocking seam and actual guard integration passed on an operator-seeded private loaded app-server. This is not standalone-TUI qualification.
+- [ ] Final full suite, final independent review, and a live Claude special-inbox guard check.
+
+No finding was waived. Details are in docs/NOTIFICATIONS.md; raw reports and probe output stay in ignored evidence/scratch/quiet-notifications-20261026/.
+
 # Grok Build provider — integrated and published
 
 - [x] Implement fourth-provider identity, trusted hook inbox, fixed worker profiles, exact executable/model attribution, resume/cancel and owned-turn usage.

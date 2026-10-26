@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS task_usage (task_id TEXT NOT NULL,attempt_index INTEG
  worker_id TEXT NOT NULL,provider TEXT NOT NULL,home TEXT NOT NULL,model TEXT NOT NULL,
  effort TEXT,started_at REAL NOT NULL,completed_at REAL NOT NULL,payload_json TEXT NOT NULL,
  PRIMARY KEY(task_id,attempt_index));
+CREATE TABLE IF NOT EXISTS notification_policies (peer_key TEXT PRIMARY KEY,state TEXT NOT NULL,message_cutoff INTEGER NOT NULL,
+ route_cutoff INTEGER NOT NULL,closed_at REAL,opened_at REAL,incarnation_id TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS messages_exchange ON messages(exchange_id);
 PRAGMA user_version=1;
 """
 

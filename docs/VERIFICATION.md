@@ -288,3 +288,12 @@ IMPLEMENTATION.md  615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb81
 KICKOFF_PROMPT.md  18de5e0d3230bba5bab4a380108c3a8cd420d4ddc281936e4104d89138841141
 REVIEW.md          625e8ec453a673e1c616bc359cdba269741e721f685031389ddc65586d2778e1
 ```
+
+## Quiet close-out notifications (2026-10-26)
+
+Source support and native qualification are recorded separately in [NOTIFICATIONS.md](NOTIFICATIONS.md#verification).
+
+- **Parent, outside the worker sandbox:** the policy, guard-hook, install, readiness, hook-identity, Grok and Antigravity focused suites passed 98 tests and 125 subtests before the final R2–R6 and receipt-schema corrections. The final source has not been rerun there. An independent reviewer confirmed R1–R4 fixed (58 targeted tests, 89 subtests), then R1–R6 fixed (183 tests, 195 subtests in the integration tree). R7 awaits review.
+- **Native Codex 0.164.0:** the generic blocking seam and the actual NativePeers guard integration both passed on an operator-seeded receiver in a loaded private app-server, using localhost model fixtures only. This is not normal standalone-TUI identity qualification or UI acceptance. Raw output stays in ignored `evidence/scratch/`.
+- **Not yet run:** the final full suite, and a live Claude special-inbox guard check.
+- **Baseline at `d7f69b6`:** the full suite had 720 passing, 1 failing (a `test_native_no_stdin_and_drained_output` timeout), 4 Linux-only skips and 740 subtests in 303.60s. That test passed in isolation in 0.26s. The baseline is not recorded as a passing full run.

@@ -50,7 +50,8 @@ class Installer:
 
     def desired_hooks(self,provider):
         groups={}
-        for event in ['SessionStart','SessionEnd']+(['PreToolUse'] if provider=='claude' else []):
+        # UserPromptSubmit is the consumption-time close-out guard; it never registers peers.
+        for event in ['SessionStart','SessionEnd','UserPromptSubmit']+(['PreToolUse'] if provider=='claude' else []):
             group={'hooks':[{'type':'command','command':self.command_for(provider),'timeout':3}]}
             if event=='PreToolUse':group['matcher']='Bash'
             groups[event]=group
@@ -108,7 +109,7 @@ class Installer:
             manifest=json.loads(self.manifest.read_text()) if self.manifest.exists() else {}
             states=tomllib.loads(self.config.read_text()).get('hooks',{}).get('state',{}) if self.config.exists() else {}
             trust=manifest.get('trusted_hooks',{})
-            if (remove and trust) or (not remove and (len(trust)!=2 or any(states.get(k,{}).get('trusted_hash')!=v for k,v in trust.items()))):
+            if (remove and trust) or (not remove and (len(trust)!=len(self.desired_hooks('codex')) or any(states.get(k,{}).get('trusted_hash')!=v for k,v in trust.items()))):
                 operations.append({'path':str(self.config),'operation':'remove-owned-hook-trust' if remove else 'trust-owned-hooks-with-native-version-check','before_sha256':file_hash(self.config)})
         return {'operations':operations,'command_collision':collision and not ours,'entrypoint':'python -m nativepeers' if collision and not ours else 'npeer','managed_binary_change':False}
 
@@ -147,7 +148,7 @@ class Installer:
                 for hook in listing['data'][0]['hooks']:
                     if hook['sourcePath']==str(self.targets['codex']) and hook.get('command')==self.command_for('codex'):
                         owned[hook['key']]=hook['currentHash'];updated.setdefault(hook['key'],{})['trusted_hash']=hook['currentHash']
-                require(len(owned)==2,'CAPABILITY_MISMATCH','Installed native hook inventory did not identify both namespaced lifecycle hooks')
+                require(len(owned)==len(self.desired_hooks('codex')),'CAPABILITY_MISMATCH','Installed native hook inventory did not identify every namespaced lifecycle hook')
             if updated!=state:
                 await client.call('config/batchWrite',{'edits':[{'keyPath':'hooks.state','value':updated,'mergeStrategy':'replace'}],
                     'filePath':str(self.config),'expectedVersion':layer['version'],'reloadUserConfig':False})
@@ -180,9 +181,9 @@ class Installer:
                 before,after=self.merged(path,provider)
                 if before!=after:
                     atomic_json(backup/(provider+'-owned-blocks.json'),{'path':str(path),'before_sha256':expected,
-                        'before_hooks':before.get('hooks',{}),'changed_events':['SessionStart','SessionEnd']+(['PreToolUse'] if provider=='claude' else [])})
+                        'before_hooks':before.get('hooks',{}),'changed_events':list(self.desired_hooks(provider))})
                     compare_write(path,(json.dumps(after,indent=2,ensure_ascii=False)+'\n').encode(),expected)
-                    manifest['changed_keys'].append(str(path)+':hooks.SessionStart/SessionEnd'+('/PreToolUse' if provider=='claude' else ''))
+                    manifest['changed_keys'].append(str(path)+':hooks.'+'/'.join(self.desired_hooks(provider)))
                     atomic_json(self.manifest,manifest)
             for provider,path in self.skills.items():
                 expected,raw,desired=skill_inputs[provider]

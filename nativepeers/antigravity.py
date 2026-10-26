@@ -168,9 +168,14 @@ def observe(journal,event,kind):
     from .presentation import render
     messages=[]
     with journal.transaction():
-        pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind='antigravity-hook-output-unconfirmed') ORDER BY m.created_at LIMIT 10",
+        pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind IN ('antigravity-hook-output-unconfirmed','notification-suppressed')) ORDER BY m.created_at LIMIT 10",
                             (peer['handle'],peer['incarnation_id'],time.time()))
+        from .notification_policy import suppress
         for row in pending:
+            # Quiet, closed-exchange and closed-phase frames stay retained and are never marked as output.
+            try:retained=suppress(journal,row['message_id'],json.loads(row['payload_json']),dict(evidence='pending-hook-frame',transport='antigravity-native-hook',attempt_id=row['attempt_id'],native_id=native))
+            except (ValueError,TypeError,AttributeError,KeyError):retained=None  # Malformed legacy frames keep their existing refusal path.
+            if retained:continue
             value=render(json.loads(row['payload_json']))
             content='\n\n'.join([*messages,value])
             if len(canonical({'injectSteps':[{'ephemeralMessage':content}]}))>65536:break

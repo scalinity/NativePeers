@@ -67,6 +67,31 @@ class AntigravityTests(unittest.TestCase):
             self.assertEqual(self.j.one('SELECT incarnation_id FROM peer_instances')['incarnation_id'],peer['incarnation_id'])
             self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'SUBMITTED_UNCONFIRMED')
 
+    def test_quiet_frames_stay_retained_and_hook_activity_never_reopens(self):
+        import asyncio
+        from nativepeers.caller import Caller
+        from nativepeers.notification_policy import apply
+        from nativepeers.registry import Registry
+        with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
+             patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':''}):
+            observe(self.j,self.event,'SessionStart')
+            peer=self.j.one('SELECT peer_key,incarnation_id FROM peer_instances');caller=Caller('peer',peer['peer_key'],peer['incarnation_id'])
+            def pending(text):
+                message=new_id();payload={'message_id':message,'exchange_id':new_id(),'from':{'kind':'peer','peer_key':'sender'},'body':{'text':text}}
+                self.j.db.execute('INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)',(message,payload['exchange_id'],'sender',peer['peer_key'],None,None,canonical(payload).decode(),'hash',time.time()+60,time.time()))
+                self.j.db.execute('INSERT INTO attempts(attempt_id,message_id,target_incarnation,transport,state,started_at) VALUES(?,?,?,?,?,?)',
+                                  (new_id(),message,peer['incarnation_id'],'antigravity-native-hook','SUBMITTED_UNCONFIRMED',time.time()))
+                return message
+            quiet=pending('quiet notice');asyncio.run(apply(self.j,Registry(self.j),caller,'close'))
+            self.assertEqual([observe(self.j,self.event,'PreInvocation') for _ in range(2)],[{},{}])
+            self.assertEqual(self.j.one('SELECT state FROM notification_policies')['state'],'QUIET')
+            self.assertEqual([r['kind'] for r in self.j.all('SELECT kind FROM events WHERE subject_id=?',(quiet,))],['notification-suppressed'])
+            asyncio.run(apply(self.j,Registry(self.j),caller,'open'));pending('after open')
+            step=observe(self.j,self.event,'PreInvocation')['injectSteps'][0]['ephemeralMessage']
+            self.assertIn('after open',step);self.assertNotIn('quiet notice',step)
+        self.assertEqual(self.j.one('SELECT state FROM attempts WHERE message_id=?',(quiet,))['state'],'SUBMITTED_UNCONFIRMED')
+
     def test_hook_advances_past_ten_previously_emitted_messages(self):
         with patch('nativepeers.antigravity.Path.home',return_value=self.home), \
              patch('nativepeers.antigravity.ancestry',return_value=[self.owner,self.owner]), \

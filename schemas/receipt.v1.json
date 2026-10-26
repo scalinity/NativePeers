@@ -16,6 +16,7 @@
         "SUBMITTED_UNCONFIRMED",
         "HELD",
         "REJECTED",
+        "RETAINED",
         "ACCEPTED_QUEUED",
         "INGESTED",
         "MODEL_REPORTED_PROCESSED",

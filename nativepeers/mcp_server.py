@@ -30,7 +30,8 @@ TOOLS={
  'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
  'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
- 'peer_inbox':('Read a bounded inbox without starting a model turn.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'unread':{'type':'boolean'},'paged':{'type':'boolean'},'cursor':STRING})),
+ 'peer_inbox':('Read a bounded inbox without starting a model turn; retained:true reads only notices this session\'s close-out policy kept unsubmitted.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'unread':{'type':'boolean'},'paged':{'type':'boolean'},'cursor':STRING,'retained':{'type':'boolean'}})),
+ 'peer_notifications':('Open, close or read this verified session\'s close-out notification policy. close retains late informational notices without native submission; open keeps closed exchanges quiet.',object_schema({'action':{'enum':['open','close','status']}},['action'])),
  'peer_ack':('Record this recipient\'s model-reported processing acknowledgment; this is not native ingestion evidence.',object_schema({'message_id':STRING},['message_id'])),
  'worker_spawn':('Check or launch independent native workers with exact selections and optional explicit Claude-to-Gemini fallbacks. check:true plans without reserving or launching workers; catalog helpers are reported. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA,'check':{'type':'boolean'}},['spec'])),
  'worker_resume':('Resume an exact released owned native worker. Reuse the same request ID and identical arguments after a lost response; input is never replayed.',object_schema({'worker_id':STRING,'task':STRING,'completion_mode':{'enum':['push','wait']},'client_request_id':STRING},['worker_id','task','client_request_id'])),
@@ -76,6 +77,8 @@ class Facade:
         if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity','grok'):return ['task_status']
         granted=state.get('grants',{})
         names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read','usage_status']
+        # Owned workers cannot change close-out policy, so it is not advertised to them.
+        if not granted.get('worker_id'):names.insert(5,'peer_notifications')
         if granted.get('can_spawn'):names += ['worker_spawn','worker_resume','task_cancel']
         return names
 

@@ -127,11 +127,23 @@ def observe(journal,event,kind):
             capabilities=dict(idle_wakeup=False,bounded_wait=True))
         peer['native_transcript']=str(Path(names[0]['path']).parent/'chat_history.jsonl')
         journal.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE incarnation_id=?',(canonical(peer).decode(),peer['incarnation_id']))
+    if kind=='UserPromptSubmit' and not event.get('subagentType'):
+        # Pending peer frames reach Grok only as hook context, so a top-level prompt is never a NativePeers frame.
+        from .notification_policy import current_owner,recipient_lock,reopen
+        with recipient_lock(journal,peer['handle'],1),journal.transaction() as db:
+            # Same rule as the shared guard: a hook superseded during the lock wait must not mutate the resumed policy.
+            if current_owner(db,peer['handle'],peer['incarnation_id'],native,owner['pid'],owner['start']):
+                reopen(db,peer['handle'],peer['incarnation_id'],time.time(),'human-prompt')
     if kind!='PreToolUse':return {}
     messages=[]
     with journal.transaction():
-        pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind='grok-hook-output-unconfirmed') ORDER BY m.created_at LIMIT 10",(peer['handle'],peer['incarnation_id'],time.time()))
+        pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind IN ('grok-hook-output-unconfirmed','notification-suppressed')) ORDER BY m.created_at LIMIT 10",(peer['handle'],peer['incarnation_id'],time.time()))
+        from .notification_policy import suppress
         for row in pending:
+            # Quiet, closed-exchange and closed-phase frames stay retained and are never marked as output.
+            try:retained=suppress(journal,row['message_id'],json.loads(row['payload_json']),dict(evidence='pending-hook-frame',transport='grok-native-hook',attempt_id=row['attempt_id'],native_id=native))
+            except (ValueError,TypeError,AttributeError,KeyError):retained=None  # Malformed legacy frames keep their existing refusal path.
+            if retained:continue
             try:value=hook_frame(json.loads(row['payload_json']))
             except PeerError as error:
                 if error.code!='PAYLOAD_TOO_LARGE':raise

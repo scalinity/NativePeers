@@ -39,6 +39,16 @@ Antigravity CLI uses its native UUID and exact CLI-owner hooks, structured headl
 
 Claude SessionStart does not expose permission mode; its short Bash PreToolUse hook refreshes that exact interactive peer without changing identity/incarnation. Plan mode retains analysis-only grants. Unowned Codex historyless background hooks do not register as interactive peers or replace a TUI parent; registration verifies the hook UUID against its native history header. New Codex workers disable native background memory work only in their own runtime overlay. Supervisor lease loss now has one uncancelled worker cleanup path. These changes preserve native user settings and vendor tools.
 
+## Close-out notification policy
+
+Notification policy is NativePeers journal state keyed by the stable peer key; only the verified current incarnation may change it. `Router.admit` decides retention under the recipient admission lock before any adapter side effect, so definitely unsubmitted input becomes `RETAINED` and never reaches a native transport. Accepted or uncertain transport state is never rewritten.
+
+Frames already accepted into a native queue are handled at consumption. The owned Claude/Codex `UserPromptSubmit` hook blocks only an exact rendered frame for this exact registered peer (provider, home, native UUID and owner PID/start) and records a separate `notification-suppressed` event, which `status` shows as `suppression`. It never registers or rebinds a peer. Any other prompt passes unchanged and reopens a quiet peer without clearing cutoffs; that is not proof of human origin. Input from a superseded owner never changes the resumed policy, and hook errors never block input.
+
+Grok `PreToolUse` and Antigravity `PreInvocation` apply the same filter before emitting pending frames. A top-level Grok prompt reopens the peer; Antigravity hook activity never does. Neither can wake an idle session.
+
+A configured hook definition does not prove that a running process loaded it, and no NativePeers Claude inbox guard test has run, although Claude's hooks documentation says `UserPromptSubmit` fires for cross-session messages. Details: [NOTIFICATIONS.md](NOTIFICATIONS.md).
+
 ## Worker history visibility
 
 New Codex workers require the managed runtime's worker-only history capability before creation. The private app-server selects durable `{"custom":"nativepeers-worker"}` source metadata before indexing; ordinary launches retain their source. The initialize acknowledgment and returned native source are checked separately, and Desktop verification remains a separate result. Legacy retained leases keep their executable and UUID, with unsupported visibility reported explicitly. History-preserving cleanup and exact archived resume are described in [worker history visibility](WORKER_VISIBILITY.md).

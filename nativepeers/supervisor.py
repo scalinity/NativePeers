@@ -535,14 +535,18 @@ class Group:
             receipt=await Core(self.journal).router.send(self.controller,self.row['parent_key'],text,kind='completion',client_request_id=row['delivery_id'],admission_deadline=self.lifetime_deadline())
             deferred=receipt['state'] in ('OUTBOX_COMMITTED','ADMISSION_DEFERRED')
             error=delivery_error(receipt)
+            # Close-out retention is a definite unsubmitted disposition: retained, never delivered or retried.
+            retained=error is not None or receipt['state']=='RETAINED'
             self.journal.event(row['delivery_id'],'completion-delivery',dict(state=receipt['state'],
                 message_id=receipt.get('message_id'),error=error.json() if error else None))
             state=('UNCLAIMED' if deferred else 'PUSH_ACCEPTED' if receipt['state'] in ('INGESTED','ACCEPTED_QUEUED')
-                   else 'HELD' if receipt['state']=='HELD' else 'RETAINED' if error else 'NOTIFICATION_UNKNOWN')
+                   else 'HELD' if receipt['state']=='HELD' else 'RETAINED' if retained else 'NOTIFICATION_UNKNOWN')
             self.journal.db.execute('UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=? AND claimed_generation=?',(state,self.id,generation,self.generation))
-            event='parent-completion-deferred' if deferred else 'parent-completion-retained' if error else 'parent-completion-submitted'
+            event='parent-completion-deferred' if deferred else 'parent-completion-retained' if retained else 'parent-completion-submitted'
             self.journal.event(self.id,event,{'receipt':receipt,'live_reservation':reservation})
-            if error and not deferred and budget and reservation:budget.settle(reservation,observed_turns=0)
+            # Definite pre-submission retention returns its reservation; a settle would still count the turn.
+            if receipt['state']=='RETAINED' and budget and reservation:budget.release_unsubmitted(reservation)
+            elif error and not deferred and budget and reservation:budget.settle(reservation,observed_turns=0)
             # Accepted/uncertain model work remains reserved until the live collector observes it.
         except PeerError as error:
             self.journal.event(row['delivery_id'],'completion-delivery',dict(state=error.code,error=error.json()))

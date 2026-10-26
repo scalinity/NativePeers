@@ -1,6 +1,6 @@
 """Evidence reduction: late uncertainty never erases stronger native evidence."""
 RANK={'CREATED':0,'OUTBOX_COMMITTED':1,'SUBMITTING':2,'DELIVERY_UNKNOWN':2,
-      'SUBMITTED_UNCONFIRMED':3,'HELD':4,'REJECTED':4,'ACCEPTED_QUEUED':5,
+      'SUBMITTED_UNCONFIRMED':3,'HELD':4,'REJECTED':4,'RETAINED':4,'ACCEPTED_QUEUED':5,
       'INGESTED':6,'MODEL_REPORTED_PROCESSED':7,'REPLY_RECORDED':8,'REPLY_SUBMITTED':9}
 
 
@@ -14,6 +14,7 @@ def delivery_error(outcome):
     import json
     from .errors import PeerError
     state = outcome.get('state')
+    # Close-out RETAINED is a successful definitely-unsubmitted disposition, never a retry.
     if state != 'REJECTED' and state in RANK:
         return None
     info = json.loads((outcome.get('attempt') or {}).get('error_json') or '{}')

@@ -38,7 +38,8 @@ def parser():
         else:q.add_argument('message_id')
         source=q.add_mutually_exclusive_group(required=True);source.add_argument('--message');source.add_argument('--message-file',type=Path)
         q.add_argument('--request-reply',action='store_true');q.add_argument('--client-request-id')
-    q=command('inbox');q.add_argument('--unread',action='store_true');q.add_argument('--limit',type=int,default=20);q.add_argument('--page',action='store_true');q.add_argument('--cursor')
+    q=command('inbox');q.add_argument('--unread',action='store_true');q.add_argument('--limit',type=int,default=20);q.add_argument('--page',action='store_true');q.add_argument('--cursor');q.add_argument('--retained',action='store_true')
+    q=command('notifications');q.add_argument('action',choices=['open','close','status'])
     q=command('ack');q.add_argument('message_id')
     q=command('spawn');q.add_argument('--spec',type=Path,required=True);q.add_argument('--check',action='store_true')
     for name in ['status','result','wait','cancel']:
@@ -85,10 +86,11 @@ async def dispatch(args,journal):
     name=args.command
     if name=='whoami':
         from .completion_delivery import readiness
+        from .notification_policy import status
         peer=core.registry.verify(caller.key,caller.incarnation)
         return dict(kind=caller.kind,key=caller.key,incarnation_id=caller.incarnation,grants=caller.grants,
                     native_session_id=peer['peer_key']['native_session_id'],owner=peer['owner'],
-                    inbox_readiness=readiness(journal,caller.key))
+                    inbox_readiness=readiness(journal,caller.key),notification_policy=status(journal,caller.key))
     if name=='usage':
         from .usage.service import Usage
         require(not args.requirements or args.recommend,'PROTOCOL_ERROR','Task requirements require --recommend')
@@ -104,7 +106,8 @@ async def dispatch(args,journal):
         return await core.router.send(caller,args.to if name=='send' else 'reply-author',
             args.message if args.message is not None else read_file(args.message_file),expect_reply=args.request_reply,
             client_request_id=args.client_request_id,in_reply_to=args.message_id if name=='reply' else None)
-    if name=='inbox':return core.router.inbox(caller,args.limit,args.unread,cursor=args.cursor,paged=args.page)
+    if name=='inbox':return core.router.inbox(caller,args.limit,args.unread,cursor=args.cursor,paged=args.page,retained=args.retained)
+    if name=='notifications':return await core.tool(caller,'peer_notifications',dict(action=args.action))
     if name=='ack':return core.router.ack(caller,args.message_id)
     if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
     if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)),check=args.check)

@@ -66,8 +66,10 @@ def _describe(journal, route):
         from .receipts import delivery_error
         outcome = Router(journal, Registry(journal)).outcome(message['message_id'])
         error = delivery_error(outcome)
+        # Consumption-time suppression is additive disposition evidence; route and transport states stay unchanged.
         value['delivery'] = dict(message_id=message['message_id'], state=outcome['state'],
-                                 error=error.json() if error else None)
+                                 error=error.json() if error else None,
+                                 **({'suppression': outcome['suppression']} if outcome.get('suppression') else {}))
     else:
         event = journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='completion-delivery' ORDER BY sequence DESC LIMIT 1",
                             (route['delivery_id'],))

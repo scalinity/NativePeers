@@ -62,7 +62,10 @@ class Core:
         if name=='peer_list':return self.registry.list(args.get('provider'))
         if name=='peer_send':return await self.router.send(caller,args['target'],args['text'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
         if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
-        if name=='peer_inbox':return self.router.inbox(caller,args.get('limit',20),args.get('unread',False),cursor=args.get('cursor'),paged=args.get('paged',False))
+        if name=='peer_inbox':return self.router.inbox(caller,args.get('limit',20),args.get('unread',False),cursor=args.get('cursor'),paged=args.get('paged',False),retained=args.get('retained',False))
+        if name=='peer_notifications':
+            from .notification_policy import apply
+            return await apply(self.journal,self.registry,caller,args['action'])
         if name=='peer_ack':return self.router.ack(caller,args['message_id'])
         if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'],check=args.get('check',False))
         if name=='worker_resume':

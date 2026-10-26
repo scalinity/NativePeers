@@ -32,7 +32,7 @@ def _hooks(installer,provider,path):
                    and candidates[0][1]==expected['hooks'][0])
             state='PRESENT' if exact else 'MODIFIED' if candidates else 'MISSING'
             if data.get('disableAllHooks') is True and provider=='claude':state='DISABLED'
-            checks.append(_check('hook',path,state,event=event))
+            checks.append(_check('hook',path,state,event=event,**({'guard':'passive-configuration-only','live_verified':False} if event=='UserPromptSubmit' else {})))
         return checks
     except (OSError,ValueError,TypeError,AttributeError):
         return [_check('hooks',path,'UNKNOWN',reason='Hook configuration could not be read')]

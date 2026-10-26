@@ -23,9 +23,12 @@ class Router:
     def outcome(self, message_id):
         message = self.journal.one("SELECT * FROM messages WHERE message_id=?", (message_id,))
         attempt = self.journal.one("SELECT * FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1", (message_id,))
+        # Consumption-time suppression is separate disposition evidence; attempt state is never downgraded.
+        suppressed = self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='notification-suppressed' ORDER BY sequence LIMIT 1", (message_id,))
         return dict(message_id=message_id, exchange_id=message["exchange_id"], target=message["to_key"],
                     state=attempt["state"] if attempt else "OUTBOX_COMMITTED", attempt=attempt,
-                    receipts=self.journal.all("SELECT * FROM receipts WHERE message_id=? ORDER BY at", (message_id,)))
+                    receipts=self.journal.all("SELECT * FROM receipts WHERE message_id=? ORDER BY at", (message_id,)),
+                    **({'suppression':json.loads(suppressed['payload_json'])} if suppressed else {}))
 
     def authorize(self, caller, target, kind, reference=None):
         require(caller.kind in ("peer", "controller"), "CALLER_UNBOUND", "Peer sends require a verified native caller or leased controller")
@@ -92,7 +95,7 @@ class Router:
                 message_id = raced["message_id"]
             else:
                 if expect_reply:
-                    pending=db.execute("SELECT COUNT(*) FROM messages WHERE to_key=? AND expires_at>? AND json_extract(payload_json,'$.expect_reply')=1 AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.in_reply_to=messages.message_id)",(peer["handle"],now)).fetchone()[0]
+                    pending=db.execute("SELECT COUNT(*) FROM messages WHERE to_key=? AND expires_at>? AND json_extract(payload_json,'$.expect_reply')=1 AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.in_reply_to=messages.message_id) AND NOT EXISTS(SELECT 1 FROM receipts q WHERE q.message_id=messages.message_id AND q.stage='RETAINED' AND q.evidence_kind='notification-policy') AND NOT (EXISTS(SELECT 1 FROM events e WHERE e.subject_id=messages.message_id AND e.kind='notification-suppressed') AND NOT EXISTS(SELECT 1 FROM attempts h WHERE h.message_id=messages.message_id AND h.state IN ('HELD','REJECTED')))",(peer["handle"],now)).fetchone()[0]
                     require(pending<local["pending_messages"],"CAPACITY_UNAVAILABLE","Recipient has 32 pending requests")
                 for ref in artifact_refs:Artifacts(self.journal).grant(ref,caller.key,[peer["handle"]])
                 db.execute("INSERT INTO send_requests VALUES(?,?,?,?)",(caller.key,request_id,digest,message_id))
@@ -127,6 +130,14 @@ class Router:
                     require(admission_deadline is None or time.time()<admission_deadline, 'EXPIRED_BEFORE_SUBMISSION', 'Controller lifetime ended before native admission')
                     peer = self.registry.verify(target, attempt['target_incarnation'])
                     require(time.time() < envelope['expires_at'], 'EXPIRED_BEFORE_SUBMISSION', 'Message expired before native admission')
+                    from .notification_policy import EVIDENCE,retention
+                    # Owned workers have no close-out policy, so a stale quiet row never blocks controller-routed follow-ups.
+                    now=time.time();reason=None if attempt['transport']=='owned-worker' else retention(db,message_id,envelope,now)
+                    if reason:
+                        # Definitely unsubmitted and decided under the recipient lock: a durable disposition, not ingestion.
+                        db.execute("UPDATE attempts SET state='RETAINED',error_json=NULL,ended_at=? WHERE attempt_id=?",(now,attempt_id))
+                        db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),message_id,attempt_id,'RETAINED',EVIDENCE,None,None,canonical({'reason':reason,'submitted':False}).decode(),now))
+                        return dict(self.outcome(message_id), client_request_id=request_id)
                     adapter = self.adapters.get(attempt['transport'])
                     require(adapter is not None, 'UNSUPPORTED_TRANSPORT', 'Transport is not validated')
                     db.execute("UPDATE attempts SET state='SUBMITTING',error_json=NULL,ended_at=NULL WHERE attempt_id=?", (attempt_id,))
@@ -169,12 +180,20 @@ class Router:
             db.execute("UPDATE attempts SET state=?,external_submission_id=COALESCE(?,external_submission_id),ended_at=? WHERE attempt_id=?",(state,receipt.get("external_submission_id"),time.time(),attempt_id))
             db.execute("INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)",(new_id(),message_id,attempt_id,receipt["stage"],receipt["evidence_kind"],peer["peer_key"]["native_session_id"],receipt.get("native_turn_id"),canonical(receipt).decode(),time.time()))
 
-    def inbox(self,caller,limit=20,unread=False,*,cursor=None,paged=False):
+    def inbox(self,caller,limit=20,unread=False,*,cursor=None,paged=False,retained=False):
         require(caller.kind=="peer","CALLER_UNBOUND","Inbox requires a bound native session")
-        require(type(limit) is int and 0<limit<=100 and type(unread) is bool,"PROTOCOL_ERROR","Invalid inbox limit or unread selection")
+        require(type(limit) is int and 0<limit<=100 and type(unread) is bool and type(retained) is bool,"PROTOCOL_ERROR","Invalid inbox limit or unread selection")
         predicate = " AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=messages.message_id AND r.stage='MODEL_REPORTED_PROCESSED')" if unread else ''
+        if retained:
+            # Opt-in bodies are only input this recipient's close-out policy kept definitely unsubmitted.
+            require(caller.incarnation,"CALLER_UNBOUND","Retained reads require a verified native caller")
+            self.registry.verify(caller.key,caller.incarnation)
+            # Suppression counts only from the owned policy filter; native-held/rejected bodies never qualify.
+            predicate+=(" AND (EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=messages.message_id AND r.stage='RETAINED' AND r.evidence_kind='notification-policy')"
+                        " OR EXISTS (SELECT 1 FROM events e WHERE e.subject_id=messages.message_id AND e.kind='notification-suppressed'))"
+                        " AND NOT EXISTS (SELECT 1 FROM attempts a WHERE a.message_id=messages.message_id AND a.state IN ('HELD','REJECTED'))")
         from .pagination import encode,decode,SQLITE_MAX
-        scope=['inbox',caller.key,unread]
+        scope=['inbox',caller.key,unread]+(['retained'] if retained else [])
         ceiling=self.journal.one('SELECT COALESCE(MAX(rowid),0) n FROM messages')['n']
         params=[caller.key];position=None
         if cursor is not None:
@@ -186,7 +205,7 @@ class Router:
         predicate+=' AND rowid<=?';params.extend([ceiling,limit+1])
         rows=self.journal.all("SELECT created_at,message_id,payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC,message_id DESC LIMIT ?",params)
         messages=[json.loads(r["payload_json"]) for r in rows[:limit]]
-        messages=[self.visible_message(caller,message) for message in messages]
+        messages=[message if retained else self.visible_message(caller,message) for message in messages]
         if paged or cursor is not None:
             last=rows[limit-1] if len(rows)>limit else None
             return {'messages':messages,'next_cursor':encode(scope,[last['created_at'],last['message_id']],ceiling) if last else None}

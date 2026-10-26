@@ -112,6 +112,45 @@ class GrokTests(unittest.TestCase):
         self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'SUBMITTED_UNCONFIRMED')
         self.assertEqual(asyncio.run(queue_native_hook(peer,payload))['stage'],'SUBMITTED_UNCONFIRMED')
 
+    def test_superseded_prompt_hook_cannot_reopen_resumed_policy(self):
+        import contextlib
+        from pathlib import Path
+        from nativepeers import notification_policy
+        from nativepeers.caller import Caller
+        self.hook('SessionStart');peer=self.peer();original=notification_policy.recipient_lock;resumed=[]
+        asyncio.run(notification_policy.apply(self.j,Registry(self.j),Caller('peer',peer['handle'],peer['incarnation_id']),'close'))
+        @contextlib.contextmanager
+        def superseding(journal,peer_key,timeout):
+            # Deterministically resume the same native UUID as a fresh incarnation at lock entry.
+            resumed.append(Registry(self.j).register('grok',Path(peer['home']),peer['peer_key']['native_session_id'],peer['title'],peer['owner'],peer['cwd'],
+                                                     peer['transport'],policy=peer['policy'],capabilities=peer.get('capabilities')))
+            with original(journal,peer_key,timeout) as locked:yield locked
+        with patch('nativepeers.notification_policy.recipient_lock',superseding):self.assertEqual(self.hook('UserPromptSubmit'),{})
+        state=notification_policy.status(self.j,peer['handle'])
+        self.assertEqual((state['state'],state['written_by_incarnation']),('QUIET',peer['incarnation_id']))
+        self.assertNotEqual(resumed[0]['incarnation_id'],peer['incarnation_id'])
+        self.assertEqual(self.j.all("SELECT 1 FROM events WHERE kind='notification-policy-opened'"),[])
+        # The resumed, current owner's own prompt still reopens without clearing cutoffs.
+        self.assertEqual(self.hook('UserPromptSubmit'),{})
+        state=notification_policy.status(self.j,peer['handle'])
+        self.assertEqual((state['state'],state['written_by_incarnation'],state['message_cutoff']),('OPEN',resumed[0]['incarnation_id'],0))
+
+    def test_quiet_frames_are_retained_not_emitted_and_prompt_reopens(self):
+        from nativepeers.caller import Caller
+        from nativepeers.notification_policy import apply
+        self.hook('SessionStart');peer=self.peer();quiet=self.message(peer,'quiet notice')
+        asyncio.run(apply(self.j,Registry(self.j),Caller('peer',peer['handle'],peer['incarnation_id']),'close'))
+        self.assertEqual(self.hook('PreToolUse',toolName='read_file'),{})
+        self.assertEqual(self.j.one('SELECT state FROM attempts')['state'],'SUBMITTED_UNCONFIRMED')
+        self.assertEqual(self.j.all("SELECT kind FROM events WHERE subject_id=? AND kind LIKE 'grok-hook-output%'",(quiet['message_id'],)),[])
+        reason=json.loads(self.j.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='notification-suppressed'",(quiet['message_id'],))['payload_json'])['reason']
+        self.assertIn(reason,('exchange-closed','quiet-informational'))
+        self.assertEqual(self.hook('UserPromptSubmit'),{})
+        self.assertEqual(self.j.one('SELECT state FROM notification_policies')['state'],'OPEN')
+        self.message(peer,'after reopen')
+        context=self.hook('PreToolUse',toolName='read_file')['hookSpecificOutput']['additionalContext']
+        self.assertIn('after reopen',context);self.assertNotIn('quiet notice',context)
+
     def test_changed_runtime_cannot_register_or_emit(self):
         receipt=self.j.root/'compat/runtime.json';atomic_json(receipt,{'providers':{'grok':dict(fingerprint(self.binary),sha256='changed')}})
         with self.assertRaises(PeerError) as error:self.hook('SessionStart')
