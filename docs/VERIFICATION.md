@@ -14,6 +14,10 @@ python -m pytest -q tests/unit/test_delegation_diagnostics.py tests/unit/test_sp
 
 Behavior changes were exercised red before green: long explicit requests, configured-ceiling diagnostics, group/task mismatch, check/doctor discovery, separate native-round arguments and exhaustion, resume limits and old-lease native defaults. Compatibility checks cover existing policy keys and every spawn example; the policy example lists all built-in keys. The final-head complete-suite command is `python -m pytest -q`; the pull request records its actual outcome and read-only reviewer dispositions.
 
+The independent Sol review found a parent-loss shutdown path that serialized an internal infinite deadline. A new lifecycle regression reproduces that exception and verifies a JSON `null` event deadline for an unset group ceiling. The corrected lifecycle, Grok profile, fallback, selected-home and supervisor files pass **45 tests / 34 subtests**. Contract helper launches require the worktree's ignored `.venv` link to the existing environment; imports still resolve to worktree source.
+
+The two installed-verification fingerprint assertions in `tests/unit/test_evidence_checkpoint.py` compare source bytes against the installed snapshot and therefore detect this branch's source drift. Those checks and all files under `evidence/` remain unchanged. A separate read-only hash comparison confirms that the snapshot still matches main. Source behavior checks do not establish installed/native acceptance or refresh that snapshot.
+
 No installed-runtime qualification, real provider acceptance batch, test under `tests/live`, installation or runtime-approval update is part of these source checks. Review workers are separate authorized read-only reviews, not live acceptance tests. Historical verification records below retain their original source/runtime scope.
 
 ---

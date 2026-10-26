@@ -589,7 +589,7 @@ class Group:
                 await asyncio.gather(*[self.cancel_worker(w,self.shutdown_reason) for w in self.children])
                 if not active:break
                 if time.time()>deadline+20 or parent_gone:
-                    self.journal.event(self.id,'lifetime-ended',{'parent_gone':parent_gone,'deadline':deadline});break
+                    self.journal.event(self.id,'lifetime-ended',{'parent_gone':parent_gone,'deadline':deadline if self.policy.get('group_wall_seconds',self.policy['wall_time_seconds']) is not None else None});break
             pending_push=self.journal.one("SELECT 1 FROM completion_routes WHERE group_id=? AND mode='push' AND state='UNCLAIMED' LIMIT 1",(self.id,))
             if not active and self.finished_at is not None and not pending_push and time.time()-self.finished_at>=self.policy['followup_grace_seconds']:
                 async with async_advisory_lock(self.journal.root/'locks'/(self.id+'.resume.lock')):
