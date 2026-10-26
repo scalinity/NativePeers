@@ -2,76 +2,37 @@
   "schema_version": 1,
   "stage": "quiet-notifications-20261026",
   "reviewed_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-  "status": "PASS",
+  "status": "PARTIAL",
   "scope": "Explicit interactive close-out windows, sender retention and exact native receiving guard; operation-specific acceptance below.",
   "tests": {
-    "baseline_full": {
-      "status": "FAIL",
-      "passed": 720,
-      "failed": 1,
-      "skipped": 4,
-      "subtests": 740,
-      "seconds": 303.6,
-      "reason": "preexisting native usage timeout fixture; isolated rerun PASS"
-    },
-    "prepublication_full": {
-      "status": "FAIL",
-      "passed": 754,
-      "failed": 2,
-      "skipped": 4,
-      "subtests": 742,
-      "seconds": 253.76,
-      "reason": "generated evidence source/class fingerprints stale after authorized source change; all product checks passed"
-    },
-    "focused_final": {
+    "upgrade_focused": {
       "status": "PASS",
-      "passed": 100,
-      "subtests": 57,
-      "seconds": 4.39
+      "passed": 40,
+      "seconds": 3.57
     },
-    "reviewer_final": {
+    "upgrade_exact_measured_ddl": {
       "status": "PASS",
-      "passed": 75,
-      "subtests": 15,
-      "seconds": 4.63
+      "private_fixture": true
     },
     "worktree_full": {
       "status": "PASS",
-      "passed": 757,
+      "passed": 764,
       "skipped": 4,
       "subtests": 742,
-      "seconds": 271.6,
+      "seconds": 250.98,
       "command": ".venv/bin/python -m pytest -q",
-      "log_sha256": "3b70be522675da58f67480c9b49564bcb01a7c17d8119ded8483448cdcb0555a"
+      "log_sha256": "4eaf8982c24549627c1bb3309054ee3b90e2804f4f846ab68794ad79e280f096"
     },
     "main_full": {
-      "status": "PASS",
-      "passed": 757,
-      "skipped": 4,
-      "subtests": 742,
-      "seconds": 255.65,
-      "command": ".venv/bin/python -m pytest -q",
-      "log_sha256": "8ab31b0ad4ec783afe783cf315e33e926151a7e239e4a33a48173059b0a849d5"
+      "status": "NOT_RUN"
     },
-    "installation": {
-      "status": "PASS",
-      "default_repeat_operations": 0,
-      "antigravity_repeat_operations": 0,
-      "grok_plan_operations": 0,
-      "uninstall_owned_only": true
+    "installed_close": {
+      "status": "FAIL",
+      "reason": "Existing empty legacy composite-key table; original failure retained, repair source awaits integration"
     },
     "preservation": {
       "status": "PASS",
-      "runtime_receipt_byte_identical": true,
-      "nonowned_configuration_unchanged": true,
-      "shared_outside_bytes_identical": true,
-      "protected_branch_unchanged": true
-    },
-    "publication_consistency": {
-      "status": "PASS",
-      "passed": 3,
-      "seconds": 0.06,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+      "scope": "Protected files match recorded post-install hashes; no approval changes"
     }
   },
   "operation_checks": [
@@ -95,7 +56,9 @@
       "operation": "actual notification policy at native queue consumption",
       "parent_context": "operator-seeded exact native UUID/owner in private loaded app-server",
       "status": "PASS",
-      "scope": "final-tree run; accepted-before-close, quiet, expired, old reply, fresh root and human control;5localhost requests; no external model input; not normal standalone-TUI registration/UI"
+      "scope": "Repaired final source; accepted-before-close, quiet, expiry, old reply, fresh root and human control PASS;5localhost requests; no external model input; private loaded appserver receiver, not standaloneTUI registration/UI.",
+      "tested_source_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+      "evidence": "evidence/scratch/quiet-notifications-20261026/native-policy-upgrade/result-20261026T162341.json"
     },
     {
       "provider": "claude",
@@ -103,7 +66,9 @@
       "operation": "native interactive inbox quiet and expired guard",
       "parent_context": "SessionStart-registered disposable interactive Claude; normal implicit auth/settings; per-launch dontAsk/crossSessionInbound accept overlay; fixture controller sender",
       "status": "PASS",
-      "scope": "Native UserPromptSubmit guard blocks both cases; transport/receipts unchanged; no assistant/Stop during blocks; single allowed control after explicit reopen has one Stop and persisted matching assistant text. Original harness FAIL early flush preserved; independent read-only post-exit SUPPLEMENTAL_PASS. No API-request instrumentation, no native peer-sender or fresh-root/human-typing qualification."
+      "scope": "Native UserPromptSubmit guard blocks both cases; transport/receipts unchanged; no assistant/Stop during blocks; single allowed control after explicit reopen has one Stop and persisted matching assistant text. Original harness FAIL early flush preserved; independent read-only post-exit SUPPLEMENTAL_PASS. No API-request instrumentation, no native peer-sender or fresh-root/human-typing qualification.",
+      "tested_source_commit": "d999a58754f1746278648f51b35ea579d522c524",
+      "later_change": "Journal-only empty legacy upgrade and named close insert are separately source/private-fixture/installed qualified; no additional Claude inference."
     },
     {
       "provider": "grok",
@@ -127,6 +92,12 @@
       "parent_context": "live main checkout after verified worktree suite",
       "status": "PASS",
       "scope": "Full main suite757tests742subtests4Linuxskips255.65s; owned hook installation and trust; repeat installs0ops; owned-only uninstall dry-run; source published to main. Hook presence does not establish loaded state in existing native processes."
+    },
+    {
+      "operation": "Known empty legacy journal upgrade and installed close",
+      "parent_context": "Captured installed schema replayed in a private fixture; installed main verification pending",
+      "status": "NOT_RUN",
+      "scope": "Focused and exact-DDL source tests PASS; complete worktree/main suites and real close pending."
     }
   ],
   "review": {
@@ -172,6 +143,11 @@
         "id": "R7",
         "disposition": "FIXED",
         "summary": "Revalidate Grok owner after recipient lock wait"
+      },
+      {
+        "id": "R8",
+        "disposition": "FIXED_SOURCE; installed verification pending",
+        "summary": "Recognize and atomically repair the known empty legacy notification policy table; named-column writes and seven upgrade regressions."
       }
     ],
     "additional_schema_disposition": "RETAINED added to receipt schema; actual retained receipt and full reducer enum regression pass."
@@ -192,8 +168,17 @@
     "external_codex_model_inputs": 0,
     "claude_observed_allowed_replies": 1,
     "claude_request_count": "NOT_INSTRUMENTED",
-    "successful_codex_probe_requests": 12,
-    "count_scope": "Successful seam and policy probes only; earlier failed diagnostics remain separately retained, no whole-session cumulative inference claim."
+    "successful_codex_probe_requests": 17,
+    "count_scope": "Successful seam and policy probes only; earlier failed diagnostics remain separately retained, no whole-session cumulative inference claim.",
+    "after_journal_upgrade": {
+      "status": "PASS",
+      "source_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+      "path": "evidence/scratch/quiet-notifications-20261026/native-policy-upgrade/result-20261026T162341.json",
+      "sha256": "d597dae6605ade2bfc212d4c3cb4f56c18bef67ce7d6a1983366f51a37d20053",
+      "localhost_requests": 5,
+      "external_model_inputs": 0,
+      "owned_cleanup_proved": true
+    }
   },
   "preservation_baseline": {
     "at": "2026-10-26T14:51:55.270303-04:00",
@@ -300,7 +285,7 @@
     "Historical Grok ledger and original acceptance limits remain unchanged.",
     "Hook presence is passive configuration; already-running sessions may require normal resume to load new hook."
   ],
-  "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+  "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -333,11 +318,11 @@
     "nativepeers/hooks.py": "a9f9d56c42377ff125b475cc69fa3f43f2e09316e99a2a7f32b004888b71cf6c",
     "nativepeers/install.py": "6a932caa2890a89b35bd83c4e68f161c894690106e90d15dab9c8a4d55e79f75",
     "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
-    "nativepeers/journal.py": "61df935b6e2ea6d35080d3cbd2946765e55dc11b395b9a7aa131588b6fa18028",
+    "nativepeers/journal.py": "ddce8bd6177309615b4844f367ce399294d549646f230737ad84f8e117bff4d8",
     "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
     "nativepeers/mcp_server.py": "99f028f1f82b43dd4d2410936e8e3dcfc01650620efff9ef1644d941bba27a13",
     "nativepeers/models.py": "46f5f8125f85726326c1cd977e5d71bb57e845af4d683e9dc9c9b8f325e83162",
-    "nativepeers/notification_policy.py": "6a83b582dea3aea70546ffdffb5d50e94c5274e9e7704d4bc427920c4e97e72a",
+    "nativepeers/notification_policy.py": "f61af4495fea105d2ae2db74546e34945058a9823c565274f01c9c5992cefca5",
     "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
     "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
     "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
@@ -386,8 +371,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3",
-  "updated_at": "2026-10-26T16:13:16.798111-04:00",
+  "source_map_sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b",
+  "updated_at": "2026-10-26T16:29:14.913396-04:00",
   "preservation": {
     "files": {
       "/Users/danny/.local/state/nativepeers/compat/runtime.json": {
@@ -632,5 +617,341 @@
     "source_commit": "d999a58754f1746278648f51b35ea579d522c524",
     "push_command": "git -C /Users/danny/Documents/Tools/NativePeers push origin main",
     "scope": "Published source; this final documentation/evidence commit is a descendant with identical product/launcher/integration/test class digests."
+  },
+  "before_journal_upgrade": {
+    "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+    "source_map_sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3",
+    "tests": {
+      "baseline_full": {
+        "status": "FAIL",
+        "passed": 720,
+        "failed": 1,
+        "skipped": 4,
+        "subtests": 740,
+        "seconds": 303.6,
+        "reason": "preexisting native usage timeout fixture; isolated rerun PASS"
+      },
+      "prepublication_full": {
+        "status": "FAIL",
+        "passed": 754,
+        "failed": 2,
+        "skipped": 4,
+        "subtests": 742,
+        "seconds": 253.76,
+        "reason": "generated evidence source/class fingerprints stale after authorized source change; all product checks passed"
+      },
+      "focused_final": {
+        "status": "PASS",
+        "passed": 100,
+        "subtests": 57,
+        "seconds": 4.39
+      },
+      "reviewer_final": {
+        "status": "PASS",
+        "passed": 75,
+        "subtests": 15,
+        "seconds": 4.63
+      },
+      "worktree_full": {
+        "status": "PASS",
+        "passed": 757,
+        "skipped": 4,
+        "subtests": 742,
+        "seconds": 271.6,
+        "command": ".venv/bin/python -m pytest -q",
+        "log_sha256": "3b70be522675da58f67480c9b49564bcb01a7c17d8119ded8483448cdcb0555a"
+      },
+      "main_full": {
+        "status": "PASS",
+        "passed": 757,
+        "skipped": 4,
+        "subtests": 742,
+        "seconds": 255.65,
+        "command": ".venv/bin/python -m pytest -q",
+        "log_sha256": "8ab31b0ad4ec783afe783cf315e33e926151a7e239e4a33a48173059b0a849d5"
+      },
+      "installation": {
+        "status": "PASS",
+        "default_repeat_operations": 0,
+        "antigravity_repeat_operations": 0,
+        "grok_plan_operations": 0,
+        "uninstall_owned_only": true
+      },
+      "preservation": {
+        "status": "PASS",
+        "runtime_receipt_byte_identical": true,
+        "nonowned_configuration_unchanged": true,
+        "shared_outside_bytes_identical": true,
+        "protected_branch_unchanged": true
+      },
+      "publication_consistency": {
+        "status": "PASS",
+        "passed": 3,
+        "seconds": 0.06,
+        "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+      }
+    },
+    "publication": {
+      "verified_main_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+      "source_commit": "d999a58754f1746278648f51b35ea579d522c524",
+      "push_command": "git -C /Users/danny/Documents/Tools/NativePeers push origin main",
+      "scope": "Published source; this final documentation/evidence commit is a descendant with identical product/launcher/integration/test class digests."
+    },
+    "cleanup": {
+      "status": "PASS",
+      "integration_worktree_removed": true,
+      "worktrees_pruned": true,
+      "feature_local_remote_branch_removed": true,
+      "source_parent_branch_preserved": "fix/review-2885497",
+      "probe_workspace": {
+        "archive": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/3bfc481e-71dd-4792-89da-75a70e5e3aa1/workspace.tar.gz",
+        "archive_sha256": "4e1aae22ec42d4d57887c9980ad8faefd2b519ae7a946ff3cb3cebf5eed247e2",
+        "file_count": 325,
+        "generation": 2,
+        "native_history_preserved": true,
+        "native_output_closure_changed": false,
+        "receipt_path": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/3bfc481e-71dd-4792-89da-75a70e5e3aa1/receipt.json",
+        "removed": true,
+        "resume": "Refused after explicit workspace retirement; recover files from the verified archive.",
+        "size_bytes": 24764591,
+        "state": "retired",
+        "worker_id": "3bfc481e-71dd-4792-89da-75a70e5e3aa1"
+      },
+      "author_workspace": {
+        "archive": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/9b422fce-e278-48be-9c54-7b7d32902650/workspace.tar.gz",
+        "archive_sha256": "4b53d1a317079f5428c434d55e1aa9db26e5493c07ec98984ab0fe5671fc5ed3",
+        "file_count": 552,
+        "generation": 2,
+        "native_history_preserved": true,
+        "native_output_closure_changed": false,
+        "receipt_path": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/9b422fce-e278-48be-9c54-7b7d32902650/receipt.json",
+        "removed": true,
+        "resume": "Refused after explicit workspace retirement; recover files from the verified archive.",
+        "size_bytes": 27444705,
+        "state": "retired",
+        "worker_id": "9b422fce-e278-48be-9c54-7b7d32902650"
+      },
+      "idle_supervisor": {
+        "group_id": "7df7d8ef-4c1f-4a48-828d-0b96471e8bb7",
+        "worker_id": "9b422fce-e278-48be-9c54-7b7d32902650",
+        "all_tasks_terminal": true,
+        "worker_native_output_closed": true,
+        "fresh_identity": {
+          "pid": 49096,
+          "ppid": 1,
+          "pgid": 49096,
+          "uid": 501,
+          "start": "1793040718:818887",
+          "executable": "/opt/homebrew/Cellar/python@3.14/3.14.9/Frameworks/Python.framework/Versions/3.14/Resources/Python.app/Contents/MacOS/Python"
+        },
+        "signal": "SIGTERM",
+        "scope": "Exact owned idle non-model supervisor only; no process-group signal or runtime product fix.",
+        "signalled": true,
+        "after": "DEAD"
+      },
+      "retained": [
+        {
+          "path": "evidence/scratch/quiet-notifications-20261026",
+          "reason": "Raw test/probe results, original failures, supplemental collection and verbatim review"
+        },
+        {
+          "path": ".worktrees/.archives/9b422fce-e278-48be-9c54-7b7d32902650",
+          "reason": "Verified recovery copy of implementation/docs worker dirty tree and ignored unique files"
+        },
+        {
+          "path": ".worktrees/.archives/3bfc481e-71dd-4792-89da-75a70e5e3aa1",
+          "reason": "Verified recovery copy of probe worker tree and ignored unique files"
+        },
+        {
+          "path": "backups/quiet-notifications-20261026 and installer-owned backups",
+          "reason": "Recoverable shared instruction and owned hook/trust snapshots"
+        },
+        {
+          "native_uuids": [
+            "0565255b-a836-4ca8-905e-0a9b713fbd5e",
+            "061c4fb5-3e22-4009-844a-b34bc7d73cae",
+            "8e6ca95c-6be8-47f7-906b-037328f3d6b2"
+          ],
+          "reason": "Native Claude proof and worker histories retained; no verified exact-UUID native deletion API was used"
+        },
+        {
+          "branch": "fix/review-2885497",
+          "reason": "Explicitly protected unrelated branch"
+        }
+      ]
+    }
+  },
+  "journal_upgrade": {
+    "original_installed_failure": {
+      "status": "FAIL",
+      "command": "npeer notifications close --json",
+      "observed_at": "2026-10-26T16:17:00.572971-04:00",
+      "error_type": "sqlite3.OperationalError",
+      "message": "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint",
+      "stdout": "empty; CLI exception occurred before JSON response",
+      "schema": "CREATE TABLE notification_policies (peer_key TEXT NOT NULL,incarnation_id TEXT NOT NULL,state TEXT NOT NULL,\n message_cutoff INTEGER NOT NULL,route_cutoff INTEGER NOT NULL,closed_at REAL,opened_at REAL,PRIMARY KEY(peer_key,incarnation_id))",
+      "columns": [
+        {
+          "cid": 0,
+          "name": "peer_key",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "incarnation_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 2
+        },
+        {
+          "cid": 2,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "message_cutoff",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "route_cutoff",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "closed_at",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "opened_at",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "indexes": [
+        {
+          "seq": 0,
+          "name": "sqlite_autoindex_notification_policies_1",
+          "unique": 1,
+          "origin": "pk",
+          "partial": 0
+        }
+      ],
+      "rows": 0,
+      "scope": "Existing live version1 journal contains an empty obsolete incarnation-keyed table; fresh canonical databases passed. No manual DB mutation or replay."
+    },
+    "initial_candidate": {
+      "status": "FAIL",
+      "failed": 3,
+      "passed": 35,
+      "reason": "Canonical PRAGMA notnull signature mismatch and WAL-file assertion; not integrated"
+    },
+    "initial_author_attempt": "BUDGET_EXHAUSTED; retained edits reviewed and corrected in exact owned history",
+    "final_focused_status": "PASS",
+    "measured_layout_fixture": {
+      "scope": "Private fixture replay of exact measured installed DDL; no live journal mutation or native provider call.",
+      "original_failure_reproduced": true,
+      "closed": {
+        "state": "QUIET",
+        "configured": true,
+        "message_cutoff": 0,
+        "route_cutoff": 0,
+        "closed_at": 1793046104.945631,
+        "opened_at": null,
+        "written_by_incarnation": "9bd1d750-9739-4ae6-b5cd-49f9692cac6a"
+      },
+      "sentinel_preserved": true,
+      "canonical_reopen_with_existing_policy": true,
+      "shape": [
+        {
+          "cid": 0,
+          "name": "peer_key",
+          "type": "TEXT",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 1
+        },
+        {
+          "cid": 1,
+          "name": "state",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 2,
+          "name": "message_cutoff",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 3,
+          "name": "route_cutoff",
+          "type": "INTEGER",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 4,
+          "name": "closed_at",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 5,
+          "name": "opened_at",
+          "type": "REAL",
+          "notnull": 0,
+          "dflt_value": null,
+          "pk": 0
+        },
+        {
+          "cid": 6,
+          "name": "incarnation_id",
+          "type": "TEXT",
+          "notnull": 1,
+          "dflt_value": null,
+          "pk": 0
+        }
+      ],
+      "status": "PASS",
+      "fixture_removed": true
+    },
+    "independent_review": {
+      "status": "PASS",
+      "model": "gpt-6.1-sol",
+      "effort": "xhigh",
+      "passed": 40,
+      "report_sha256": "9426d65e7cf69d0f9d6f645923415c23485239c40922873c8a41731795aa289c",
+      "report": "evidence/scratch/quiet-notifications-20261026/review-upgrade-final.txt"
+    },
+    "scope": "Writable startup repairs only the exact known empty obsolete table under the schema lock and an immediate transaction. Unknown or populated layouts are refused intact; read-only initialization never migrates. Other journal data and runtime approvals are preserved.",
+    "worktree_full_status": "PASS"
   }
 }

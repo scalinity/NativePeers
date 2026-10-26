@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-26T16:13:16.798111-04:00",
+  "at": "2026-10-26T16:29:14.913396-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,7 +60,7 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+  "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
   "current_verification": "evidence/quiet-notifications-20261026.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
@@ -161,11 +161,11 @@
     "nativepeers/hooks.py": "a9f9d56c42377ff125b475cc69fa3f43f2e09316e99a2a7f32b004888b71cf6c",
     "nativepeers/install.py": "6a932caa2890a89b35bd83c4e68f161c894690106e90d15dab9c8a4d55e79f75",
     "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
-    "nativepeers/journal.py": "61df935b6e2ea6d35080d3cbd2946765e55dc11b395b9a7aa131588b6fa18028",
+    "nativepeers/journal.py": "ddce8bd6177309615b4844f367ce399294d549646f230737ad84f8e117bff4d8",
     "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
     "nativepeers/mcp_server.py": "99f028f1f82b43dd4d2410936e8e3dcfc01650620efff9ef1644d941bba27a13",
     "nativepeers/models.py": "46f5f8125f85726326c1cd977e5d71bb57e845af4d683e9dc9c9b8f325e83162",
-    "nativepeers/notification_policy.py": "6a83b582dea3aea70546ffdffb5d50e94c5274e9e7704d4bc427920c4e97e72a",
+    "nativepeers/notification_policy.py": "f61af4495fea105d2ae2db74546e34945058a9823c565274f01c9c5992cefca5",
     "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
     "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
     "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",

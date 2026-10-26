@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+  "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
   "reviewed_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-  "publication_branch": "main",
-  "updated_at": "2026-10-26T16:13:16.798111-04:00",
+  "publication_branch": "fix/notification-journal-upgrade",
+  "updated_at": "2026-10-26T16:29:14.913396-04:00",
   "current_record": "evidence/quiet-notifications-20261026.json",
   "file_classes": {
     "product": {
@@ -39,11 +39,11 @@
         "nativepeers/hooks.py": "a9f9d56c42377ff125b475cc69fa3f43f2e09316e99a2a7f32b004888b71cf6c",
         "nativepeers/install.py": "6a932caa2890a89b35bd83c4e68f161c894690106e90d15dab9c8a4d55e79f75",
         "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
-        "nativepeers/journal.py": "61df935b6e2ea6d35080d3cbd2946765e55dc11b395b9a7aa131588b6fa18028",
+        "nativepeers/journal.py": "ddce8bd6177309615b4844f367ce399294d549646f230737ad84f8e117bff4d8",
         "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
         "nativepeers/mcp_server.py": "99f028f1f82b43dd4d2410936e8e3dcfc01650620efff9ef1644d941bba27a13",
         "nativepeers/models.py": "46f5f8125f85726326c1cd977e5d71bb57e845af4d683e9dc9c9b8f325e83162",
-        "nativepeers/notification_policy.py": "6a83b582dea3aea70546ffdffb5d50e94c5274e9e7704d4bc427920c4e97e72a",
+        "nativepeers/notification_policy.py": "f61af4495fea105d2ae2db74546e34945058a9823c565274f01c9c5992cefca5",
         "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
         "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
         "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
@@ -93,7 +93,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 83,
-      "sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3"
+      "sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b"
     },
     "launchers": {
       "files": {
@@ -213,6 +213,7 @@
         "tests/unit/test_nested_caller.py": "23be6293a36883654eb848b34424588db73fb6f4cf2fbec551ec71c55d5eb9c2",
         "tests/unit/test_notification_guard_hooks.py": "e26778a7f44d424b04ab10d6bf2999d5edf1b7dfcfe24bf68a1546829acfca69",
         "tests/unit/test_notification_policy.py": "fb70d38e1ffe45617e6725d665cac8d2af5c994e599404c1f274b328eb005b6c",
+        "tests/unit/test_notification_upgrade.py": "29c383f4eb3e476dd6c7bd9eca1c194c21a50138a8f34790fd90503317786ec4",
         "tests/unit/test_operation_readiness.py": "7a074b50ee077f0dd093c5be4788d9707541f0b8b4adb363e0eb790a2308790b",
         "tests/unit/test_owned_caller_identity.py": "aa8a619371bd04c92b8161c0e0167fe45df8a2f449092f7da6543241b247216c",
         "tests/unit/test_process.py": "0ff58a74a48d49f263a2d02d599f66104d90c8d70e5c55a7e49bba086d1d30f2",
@@ -247,8 +248,8 @@
         "tests/unit/test_worktrees_and_contracts.py": "33f40047f20a47c59ac9aa918e7ef1faabf2f36431721f49d23c3f9371918f22",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 129,
-      "sha256": "f40c8cf01beba2072f1bf54f489bff63dfdafd97c37e05ee18fe46aeab2ad911"
+      "file_count": 130,
+      "sha256": "270506017be743c642040bdb4123726f886cf57651ac79ca844f8ed889e289be"
     }
   },
   "operation_checks": [
@@ -272,7 +273,9 @@
       "operation": "actual notification policy at native queue consumption",
       "parent_context": "operator-seeded exact native UUID/owner in private loaded app-server",
       "status": "PASS",
-      "scope": "final-tree run; accepted-before-close, quiet, expired, old reply, fresh root and human control;5localhost requests; no external model input; not normal standalone-TUI registration/UI"
+      "scope": "Repaired final source; accepted-before-close, quiet, expiry, old reply, fresh root and human control PASS;5localhost requests; no external model input; private loaded appserver receiver, not standaloneTUI registration/UI.",
+      "tested_source_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+      "evidence": "evidence/scratch/quiet-notifications-20261026/native-policy-upgrade/result-20261026T162341.json"
     },
     {
       "provider": "claude",
@@ -280,7 +283,9 @@
       "operation": "native interactive inbox quiet and expired guard",
       "parent_context": "SessionStart-registered disposable interactive Claude; normal implicit auth/settings; per-launch dontAsk/crossSessionInbound accept overlay; fixture controller sender",
       "status": "PASS",
-      "scope": "Native UserPromptSubmit guard blocks both cases; transport/receipts unchanged; no assistant/Stop during blocks; single allowed control after explicit reopen has one Stop and persisted matching assistant text. Original harness FAIL early flush preserved; independent read-only post-exit SUPPLEMENTAL_PASS. No API-request instrumentation, no native peer-sender or fresh-root/human-typing qualification."
+      "scope": "Native UserPromptSubmit guard blocks both cases; transport/receipts unchanged; no assistant/Stop during blocks; single allowed control after explicit reopen has one Stop and persisted matching assistant text. Original harness FAIL early flush preserved; independent read-only post-exit SUPPLEMENTAL_PASS. No API-request instrumentation, no native peer-sender or fresh-root/human-typing qualification.",
+      "tested_source_commit": "d999a58754f1746278648f51b35ea579d522c524",
+      "later_change": "Journal-only empty legacy upgrade and named close insert are separately source/private-fixture/installed qualified; no additional Claude inference."
     },
     {
       "provider": "grok",
@@ -304,6 +309,12 @@
       "parent_context": "live main checkout after verified worktree suite",
       "status": "PASS",
       "scope": "Full main suite757tests742subtests4Linuxskips255.65s; owned hook installation and trust; repeat installs0ops; owned-only uninstall dry-run; source published to main. Hook presence does not establish loaded state in existing native processes."
+    },
+    {
+      "operation": "Known empty legacy journal upgrade and installed close",
+      "parent_context": "Captured installed schema replayed in a private fixture; installed main verification pending",
+      "status": "NOT_RUN",
+      "scope": "Focused and exact-DDL source tests PASS; complete worktree/main suites and real close pending."
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
