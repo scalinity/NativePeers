@@ -209,3 +209,87 @@ def test_unreadable_executable_is_not_reported_as_missing_or_incompatible(runtim
         row=diagnose(j,{'claude':binary})[0]
         assert row['compatibility_state']=='CHECK_UNAVAILABLE'
         assert row['error']=='PermissionError'
+
+
+def test_completed_series_refusal_remains_visible_in_passive_doctor(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,_=runtime;binary.write_text(binary.read_text().replace('2.1.311','3.0.0'))
+    original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        with pytest.raises(PeerError):check_runtime(j,'claude',apply=True)
+    row=diagnose(j,{'claude':binary})[0]
+    assert row['compatibility_state']=='QUALIFICATION_REQUIRED'
+    assert 'outside' in row['reason']
+
+
+def test_same_version_rebuild_needs_qualification_instead_of_forward_patch_approval(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,prior=runtime;binary.write_text(binary.read_text().replace('2.1.311','2.1.310'))
+    original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        with pytest.raises(PeerError) as error:check_runtime(j,'claude',apply=True)
+    assert error.value.details['compatibility_state']=='QUALIFICATION_REQUIRED'
+    assert json.loads((j.root/'compat/runtime.json').read_text())['providers']['claude']==prior
+
+
+def test_ambiguous_version_banner_is_not_a_supported_patch(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,_=runtime;binary.write_text(binary.read_text().replace('2.1.311 (Claude Code)','loader 2.1.311 ; actual release 3.0.0'))
+    original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        with pytest.raises(PeerError) as error:check_runtime(j,'claude',apply=True)
+    assert error.value.details['compatibility_state']=='QUALIFICATION_REQUIRED'
+
+
+def test_renewed_doctor_rows_keep_native_behavior_unrun(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    from nativepeers.readiness import operation_readiness
+    j,binary,_=runtime;original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        result=check_runtime(j,'claude',apply=True)
+    row=diagnose(j,{'claude':binary})[0]
+    assert row['native_acceptance']=='NOT_RUN' and 'NOT_RUN' in result['reason']
+    with patch('nativepeers.compatibility.diagnose',return_value=[row]),patch('nativepeers.readiness.readiness',return_value={'providers':{}}):
+        assert operation_readiness(j)[0]['operations']['worker_turns']['native_acceptance']=='NOT_RUN'
+
+
+def test_swap_and_restore_cannot_approve_bytes_whose_options_failed(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,prior=runtime;good=binary.read_text();bad=good.replace('--restricted','--removed-restriction')
+    binary.write_text(bad);original=subprocess.run
+    def boundary(argv,**kwargs):
+        if argv[0]=='/usr/bin/codesign':
+            binary.write_text(good)
+            return subprocess.CompletedProcess(argv,0,b'',b'')
+        result=signed_run(original)(argv,**kwargs)
+        if '--help' in argv:binary.write_text(bad)
+        return result
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=boundary):
+        with pytest.raises(PeerError):check_runtime(j,'claude',apply=True)
+    assert json.loads((j.root/'compat/runtime.json').read_text())['providers']['claude']==prior
+
+
+def test_bounded_admission_stays_distinct_from_native_qualification(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    from nativepeers.readiness import operation_readiness
+    j,binary,_=runtime;original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        result=check_runtime(j,'claude',apply=True)
+        again=check_runtime(j,'claude')
+    assert result['approved'] and result['compatibility_state']=='SUPPORTED_UPDATE'
+    assert again['approved'] and again['compatibility_state']=='SUPPORTED_UPDATE'
+    row=diagnose(j,{'claude':binary})[0]
+    assert row['state']==row['compatibility_state']=='SUPPORTED_UPDATE'
+    with patch('nativepeers.compatibility.diagnose',return_value=[row]),patch('nativepeers.readiness.readiness',return_value={'providers':{}}):
+        assert operation_readiness(j)[0]['operations']['worker_turns']['state']=='SUPPORTED_UPDATE'
+    assert verify(j,'claude',binary)==fingerprint(binary)
+
+
+def test_quota_readiness_does_not_inherit_worker_operation_details(runtime):
+    from nativepeers.readiness import operation_readiness
+    j,binary,prior=runtime;update_verified(j,{'codex':prior})
+    row=diagnose(j,{'codex':binary})[0]
+    with patch('nativepeers.compatibility.diagnose',return_value=[row]),patch('nativepeers.readiness.readiness',return_value={'providers':{}}),patch('nativepeers.usage.collectors.executable',return_value=binary):
+        quota=operation_readiness(j)[0]['operations']['quota']
+    assert quota['operation']=='quota-read' and 'operations' not in quota
+    assert quota['compatibility_state']=='UPDATE_UNTESTED'

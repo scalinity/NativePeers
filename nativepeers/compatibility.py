@@ -157,10 +157,12 @@ def diagnose(journal, executables=None):
             detail.update(compatibility_state='CHECK_UNAVAILABLE',reason='The selected executable could not be inspected.',
                           next_action='Inspect access to the selected executable, then rerun doctor.')
         matches=bool(expected and actual and expected['sha256']==actual['sha256'] and detail['compatibility_state']!='REVOKED')
-        results.append(dict(provider=provider,state='PASS' if matches else 'CAPABILITY_MISMATCH',
+        bounded=bool(matches and expected.get('update_basis'))
+        results.append(dict(provider=provider,state='SUPPORTED_UPDATE' if bounded else 'PASS' if matches else 'CAPABILITY_MISMATCH',
             expected=expected,current=actual,error=error,affected_operations=operations.get(provider,[]),
             verification_scope=(expected or {}).get('scope','Installed executable receipt; live acceptance remains scoped to its recorded source/runtime fingerprints'),
-            **dict(detail,compatibility_state='APPROVED' if matches else detail['compatibility_state'],
-                   reason='The exact selected runtime is approved.' if matches else detail['reason'],
+            native_acceptance=(expected or {}).get('native_acceptance','UNKNOWN') if matches else 'NOT_RUN',
+            **dict(detail,compatibility_state='SUPPORTED_UPDATE' if bounded else 'APPROVED' if matches else detail['compatibility_state'],
+                   reason='Selected runtime admitted by bounded checks; native behavior NOT_RUN.' if bounded else 'The exact selected runtime is approved.' if matches else detail['reason'],
                    next_action='No executable change detected' if matches else detail['next_action'])))
     return results

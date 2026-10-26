@@ -123,10 +123,11 @@ def operation_readiness(journal):
                 quota.update(state='APPROVED',runtime=receipt['runtime'],contract=receipt['route'])
         except (PeerError,OSError,ValueError,KeyError) as error:
             quota.update(state=error.code if isinstance(error,PeerError) else 'UNKNOWN',reason=str(error)[:256])
-            if isinstance(error,PeerError) and isinstance(error.details,dict):quota.update(error.details)
+            if isinstance(error,PeerError) and isinstance(error.details,dict):
+                quota.update({key:error.details[key] for key in ('compatibility_state','reason','next_action','operation') if key in error.details})
         broad={'state':'APPROVED' if item['state']=='PASS' else item['state'],
                'runtime':item['current'],'approved_runtime':item['expected'],'scope':item['verification_scope']}
-        broad.update({key:item[key] for key in ('compatibility_state','reason','next_action') if key in item})
+        broad.update({key:item[key] for key in ('compatibility_state','reason','next_action','native_acceptance') if key in item})
         checks=integrations['providers'].get(provider,{}).get('checks',[{'state':'UNKNOWN'}])
         results.append(dict(provider=provider,selected_home=str(home),
             configuration_layout='implicit ~/.claude.json' if provider=='claude' and not config_override else 'explicit native provider home',
