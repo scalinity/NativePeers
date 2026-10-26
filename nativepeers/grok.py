@@ -6,6 +6,20 @@ import uuid
 
 from .errors import require
 
+HOOK_CONTEXT_LIMIT=10000
+HOOK_OUTPUT_LIMIT=65536
+
+
+def hook_frame(message):
+    """Keep a complete frame within Grok's native character and output limits."""
+    from .files import canonical
+    from .presentation import render
+    text=render(message)
+    require(len(text)<=HOOK_CONTEXT_LIMIT and len(canonical({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':text}}))<=HOOK_OUTPUT_LIMIT,
+            'PAYLOAD_TOO_LARGE','Rendered Grok message exceeds the native hook context limit',
+            details=dict(rendered_characters=len(text),context_character_limit=HOOK_CONTEXT_LIMIT,output_byte_limit=HOOK_OUTPUT_LIMIT))
+    return text
+
 
 def native_home():
     return Path(os.getenv('GROK_HOME',Path.home()/'.grok')).expanduser().resolve()
@@ -51,6 +65,7 @@ def resolve_name(name):
 
 
 async def queue_native_hook(peer,message):
+    hook_frame(message)
     return dict(stage='SUBMITTED_UNCONFIRMED',evidence_kind='local-journal-pending-grok-hook',
                 native_wakeup=False,message_id=message['message_id'],
                 limitation='Pending the exact owner next native tool invocation; no idle wakeup or ingestion is claimed.')

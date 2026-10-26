@@ -281,3 +281,55 @@ class GrokTests(unittest.TestCase):
         with patch('nativepeers.caller.ancestry',return_value=[self.owner]),patch.dict(os.environ,{'CODEX_THREAD_ID':new_id()}):
             caller=bind_caller(self.j,Registry(self.j),allow_external=False)
         self.assertEqual(caller.key,peer['handle']);self.assertEqual(caller.incarnation,peer['incarnation_id'])
+
+    def test_individually_oversized_frame_is_refused_before_hook_queue_acceptance(self):
+        from nativepeers.caller import Caller
+        from nativepeers.routing import Router
+        self.hook('SessionStart');peer=self.peer()
+        result=asyncio.run(Router(self.j,Registry(self.j)).send(Caller('peer','sender'),peer['handle'],'x'*12000))
+        self.assertEqual(result['state'],'PAYLOAD_TOO_LARGE')
+        self.assertFalse(json.loads(result['attempt']['error_json'])['may_have_received'])
+        self.assertEqual(self.hook('PreToolUse',toolName='read_file'),{})
+        self.assertIsNone(self.j.one("SELECT * FROM events WHERE kind='grok-hook-output-unconfirmed'"))
+
+    def test_hook_aggregate_limit_keeps_complete_frames_for_later_invocations(self):
+        from nativepeers.presentation import render
+        self.hook('SessionStart');peer=self.peer()
+        first=self.message(peer,'a'*6000);second=self.message(peer,'b'*6000)
+        first_context=self.hook('PreToolUse',toolName='read_file')['hookSpecificOutput']['additionalContext']
+        self.assertEqual(first_context,render(first));self.assertLessEqual(len(first_context),10000)
+        self.assertIsNone(self.j.one("SELECT * FROM events WHERE subject_id=? AND kind='grok-hook-output-unconfirmed'",(second['message_id'],)))
+        second_context=self.hook('PreToolUse',toolName='read_file')['hookSpecificOutput']['additionalContext']
+        self.assertEqual(second_context,render(second));self.assertLessEqual(len(second_context),10000)
+        self.assertEqual(self.hook('PreToolUse',toolName='read_file'),{})
+        self.assertEqual({row['state'] for row in self.j.all('SELECT state FROM attempts')},{'SUBMITTED_UNCONFIRMED'})
+
+    def test_oversized_unemitted_legacy_frame_cannot_block_later_or_replay_uncertain_output(self):
+        self.hook('SessionStart');peer=self.peer()
+        uncertain=self.message(peer,'u'*12000)
+        self.j.event(uncertain['message_id'],'grok-hook-output-unconfirmed',{'native_id':self.native})
+        legacy=self.message(peer,'x'*12000);later=self.message(peer,'deliver this complete frame')
+        context=self.hook('PreToolUse',toolName='read_file')['hookSpecificOutput']['additionalContext']
+        self.assertIn(later['message_id'],context)
+        for payload in (uncertain,legacy):self.assertNotIn(payload['message_id'],context)
+        refused=self.j.one('SELECT state,error_json FROM attempts WHERE message_id=?',(legacy['message_id'],))
+        self.assertEqual(refused['state'],'REJECTED');self.assertFalse(json.loads(refused['error_json'])['may_have_received'])
+        self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE subject_id=? AND kind='grok-hook-output-refused'",(legacy['message_id'],)))
+        self.assertEqual(self.j.one('SELECT state FROM attempts WHERE message_id=?',(uncertain['message_id'],))['state'],'SUBMITTED_UNCONFIRMED')
+        self.assertEqual(self.hook('PreToolUse',toolName='read_file'),{})
+
+    def test_hook_context_character_boundary_counts_unicode_and_preserves_byte_bound(self):
+        from nativepeers.presentation import render
+        self.hook('SessionStart');peer=self.peer();payload=self.message(peer,'')
+        prefix=len(render(payload));payload['body']['text']='🙂'*(10000-prefix)
+        self.assertEqual(len(render(payload)),10000)
+        self.assertGreater(len(render(payload).encode()),10000)
+        self.assertEqual(asyncio.run(queue_native_hook(peer,payload))['stage'],'SUBMITTED_UNCONFIRMED')
+        self.j.db.execute('UPDATE messages SET payload_json=? WHERE message_id=?',(canonical(payload).decode(),payload['message_id']))
+        output=self.hook('PreToolUse',toolName='read_file')
+        self.assertEqual(output['hookSpecificOutput']['additionalContext'],render(payload))
+        self.assertLessEqual(len(canonical(output)),65536)
+        payload['body']['text']+='🙂'
+        with self.assertRaises(PeerError) as error:asyncio.run(queue_native_hook(peer,payload))
+        self.assertEqual(error.exception.code,'PAYLOAD_TOO_LARGE')
+        self.assertEqual(error.exception.details['rendered_characters'],10001)

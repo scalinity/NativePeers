@@ -7,9 +7,9 @@ import sys
 import time
 import uuid
 
-from .errors import require
+from .errors import PeerError,require
 from .files import canonical
-from .grok import executable,native_home,summaries
+from .grok import executable,native_home,summaries,hook_frame,HOOK_CONTEXT_LIMIT,HOOK_OUTPUT_LIMIT
 from .journal import Journal
 from .process import ancestry
 from .registry import Registry
@@ -105,14 +105,21 @@ def observe(journal,event,kind):
         peer['native_transcript']=str(Path(names[0]['path']).parent/'chat_history.jsonl')
         journal.db.execute('UPDATE peer_instances SET descriptor_json=? WHERE incarnation_id=?',(canonical(peer).decode(),peer['incarnation_id']))
     if kind!='PreToolUse':return {}
-    from .presentation import render
     messages=[]
     with journal.transaction():
         pending=journal.all("SELECT m.message_id,m.payload_json,a.attempt_id FROM messages m JOIN attempts a USING(message_id) WHERE m.to_key=? AND a.target_incarnation=? AND m.expires_at>? AND a.state='SUBMITTED_UNCONFIRMED' AND NOT EXISTS (SELECT 1 FROM events e WHERE e.subject_id=m.message_id AND e.kind='grok-hook-output-unconfirmed') ORDER BY m.created_at LIMIT 10",(peer['handle'],peer['incarnation_id'],time.time()))
         for row in pending:
-            content='\n\n'.join([*messages,render(json.loads(row['payload_json']))])
-            if len(canonical({'hookSpecificOutput':{'hookEventName':kind,'additionalContext':content}}))>65536:break
-            messages.append(render(json.loads(row['payload_json'])))
+            try:value=hook_frame(json.loads(row['payload_json']))
+            except PeerError as error:
+                if error.code!='PAYLOAD_TOO_LARGE':raise
+                # This query excludes every message already emitted by a hook.
+                # Only a definitely un-emitted legacy frame can be refused here.
+                journal.db.execute("UPDATE attempts SET state='REJECTED',ended_at=?,error_json=? WHERE attempt_id=?",(time.time(),canonical(error.json()).decode(),row['attempt_id']))
+                journal.event(row['message_id'],'grok-hook-output-refused',dict(attempt_id=row['attempt_id'],native_id=native,error=error.json()))
+                continue
+            content='\n\n'.join([*messages,value])
+            if len(content)>HOOK_CONTEXT_LIMIT or len(canonical({'hookSpecificOutput':{'hookEventName':kind,'additionalContext':content}}))>HOOK_OUTPUT_LIMIT:break
+            messages.append(value)
             journal.event(row['message_id'],'grok-hook-output-unconfirmed',dict(attempt_id=row['attempt_id'],native_id=native,prompt_id=event.get('promptId')))
     # Grok 1.0.70 discards allowing UserPromptSubmit output. PreToolUse is its
     # documented model-facing context route; emitting it is not an ingestion receipt.
