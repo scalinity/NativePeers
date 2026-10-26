@@ -72,7 +72,7 @@ time.sleep(.2)
             try:
                 # Establish SIGTERM ignore before the catalog's response deadline.
                 async with asyncio.timeout(3):
-                    while not pid.exists():
+                    while not pid.exists() or pid.read_text()!=str(process.pid):
                         self.assertIsNone(process.poll(),'Fixture exited before readiness')
                         await asyncio.sleep(.01)
                 self.assertEqual(int(pid.read_text()),process.pid)
