@@ -3,7 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from .errors import require
+from .errors import PeerError,require
 from .files import advisory_lock,atomic_json
 
 _cache={}
@@ -19,8 +19,13 @@ def fingerprint(path):
 def verify(journal,provider,executable,*,worker_id=None):
     receipt=journal.root/'compat/runtime.json'
     require(receipt.exists(),'CAPABILITY_MISMATCH','Native compatibility has not been installed or verified for this state root')
-    document=json.loads(receipt.read_text());expected=document['providers'].get(provider)
-    require(expected,'CAPABILITY_MISMATCH','Provider has no installed compatibility receipt')
+    try:
+        document=json.loads(receipt.read_text());expected=document['providers'].get(provider)
+        if not isinstance(document.get('retained',{}),dict):raise ValueError('Invalid retained approvals')
+    except (OSError,ValueError,TypeError,KeyError,AttributeError):
+        raise PeerError('CAPABILITY_MISMATCH','Runtime approval receipt is unreadable') from None
+    require(isinstance(expected,dict) and isinstance(expected.get('sha256'),str),
+            'CAPABILITY_MISMATCH','Provider has no installed compatibility receipt')
     actual=fingerprint(executable)
     pinned=None
     if worker_id:
@@ -99,7 +104,13 @@ def record_verified(journal,source,*,preserve_existing=False,selected=None):
 def diagnose(journal, executables=None):
     """Passive comparison only: never certify an update or launch a provider."""
     receipt=journal.root/'compat/runtime.json'
-    providers=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
+    receipt_error=None
+    try:
+        providers=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
+        if not isinstance(providers,dict) or any(not isinstance(value,dict) for value in providers.values()):
+            raise ValueError('Invalid runtime provider entries')
+    except (OSError,ValueError,TypeError,AttributeError) as error:
+        providers={};receipt_error='Runtime receipt unreadable: '+type(error).__name__
     from .grok import executable as grok_executable
     executables=executables or {'claude':Path.home()/'.local/bin/claude',
         'codex':Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',
@@ -110,7 +121,7 @@ def diagnose(journal, executables=None):
         'grok':['native hook inbox','streaming worker turns']}
     results=[]
     for provider,path in executables.items():
-        expected=providers.get(provider);error=None
+        expected=providers.get(provider);error=receipt_error
         try:actual=fingerprint(path)
         except OSError as exception:actual=None;error=type(exception).__name__
         matches=bool(expected and actual and expected['sha256']==actual['sha256'])

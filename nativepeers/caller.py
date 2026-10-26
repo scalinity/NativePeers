@@ -76,11 +76,16 @@ def native_binaries(journal=None):
     binaries[grok_executable()]='grok'
     if journal is not None and isinstance(journal.root,(str,os.PathLike)):
         path=Path(journal.root)/'compat/runtime.json'
-        document=json.loads(path.read_text()) if path.exists() else {}
-        records=[document.get('providers',{}).get('grok',{})]
-        records.extend(value.get('fingerprint',{}) for value in document.get('retained',{}).get('grok',{}).values())
-        for record in records:
-            if record.get('path'):binaries[Path(record['path'])]='grok'
+        try:
+            document=json.loads(path.read_text()) if path.exists() else {}
+            records=[document.get('providers',{}).get('grok',{})]
+            records.extend(value.get('fingerprint',{}) for value in document.get('retained',{}).get('grok',{}).values())
+            for record in records:
+                if record.get('path'):binaries[Path(record['path'])]='grok'
+        except (OSError,ValueError,TypeError,AttributeError):
+            # Dropping retained paths could let a nested old Grok process borrow
+            # an outer provider. Refuse binding while passive diagnostics remain usable.
+            raise PeerError('CAPABILITY_MISMATCH','Runtime approval receipt is unreadable; native caller boundaries cannot be verified') from None
     return binaries
 
 
