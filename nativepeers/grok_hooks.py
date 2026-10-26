@@ -25,8 +25,15 @@ def kernel_sandbox(spec):
     if not spec.get('state_root'):return dict(result,reason='The exact NativePeers state root is required')
     try:
         state_root=Path(spec['state_root']).resolve();journal=state_root/'journal.sqlite3'
-        if not (cwd.is_dir() and state_root.is_dir() and journal.is_file()):
-            return dict(result,reason='Kernel checks require existing workspace/state directories and the native journal file')
+        protected_dirs=[state_root/'compat',state_root/'bindings'];protected_files=[state_root/'compat/runtime.json']
+        binding=spec.get('binding_path') or os.getenv('NPEER_BOOTSTRAP')
+        if binding:
+            path=Path(binding).resolve()
+            if not path.is_relative_to(state_root/'bindings'):return dict(result,reason='The kernel binding check must use the owned binding directory')
+            protected_files.append(path)
+        if not (cwd.is_dir() and state_root.is_dir() and journal.is_file()
+                and all(path.is_dir() for path in protected_dirs) and all(path.is_file() for path in protected_files)):
+            return dict(result,reason='Kernel checks require existing workspace/state directories, journal, approval and current binding files')
         import ctypes
         library=ctypes.CDLL('/usr/lib/libsandbox.dylib',use_errno=True)
         check=library.sandbox_check;check.restype=ctypes.c_int
@@ -36,6 +43,10 @@ def kernel_sandbox(spec):
         targets=[(cwd,'file-write-create',profile=='analysis'),
                  (state_root,'file-write-create',False),(state_root,'file-read-metadata',False),
                  (journal,'file-write-data',False),(journal,'file-read-metadata',False)]
+        targets.extend((path,operation,denied) for path in protected_dirs
+                       for operation,denied in (('file-write-create',True),('file-read-metadata',False)))
+        targets.extend((path,operation,denied) for path in protected_files
+                       for operation,denied in (('file-write-data',True),('file-read-data',False),('file-read-metadata',False)))
         if profile=='workspace':targets.append((cwd.parent,'file-write-create',True))
         for path,operation,denied in targets:
             state=check(ctypes.c_int(os.getpid()),ctypes.c_char_p(operation.encode()),ctypes.c_int(1),ctypes.c_char_p(os.fsencode(path)))
@@ -70,7 +81,7 @@ def observe(journal,event,kind):
     nearest=nearest_native(ancestors,binary,journal=journal)
     require(nearest is not None and native_ancestor(owner,[nearest]),'CALLER_UNBOUND','Grok hook belongs to an enclosing native session')
     if bootstrap:
-        spec=dict(json.loads(row['lease_json'])['spec'],state_root=str(journal.root))
+        spec=dict(json.loads(row['lease_json'])['spec'],state_root=str(journal.root),binding_path=bootstrap)
         from .compatibility import verify
         verify(journal,'grok',owner['executable'],worker_id=row['worker_id'])
         names=summaries(native_id=native,home=Path(spec.get('provider_home') or native_home()))

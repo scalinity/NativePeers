@@ -193,15 +193,37 @@ class GrokTests(unittest.TestCase):
         source=Path(__file__).resolve().parents[2]
         cwd=self.root.resolve()/'allowed';cwd.mkdir()
         state=self.j.root.resolve();root=self.root.resolve();journal=state/'journal.sqlite3'
+        binding=state/'bindings/current';atomic_json(binding,{'fixture':True})
+        protected=[state/'compat/runtime.json',binding];before={path:path.read_bytes() for path in protected}
+        read_only='(deny file-write* (subpath '+json.dumps(str(state/'compat'))+') (subpath '+json.dumps(str(state/'bindings'))+'))'
         outside='(require-all (subpath '+json.dumps(str(root))+') (require-not (subpath '+json.dumps(str(cwd))+')) (require-not (subpath '+json.dumps(str(state))+')))'
-        profiles=[('workspace','(version 1)(allow default)(deny file-write* '+outside+')',True),
-                  ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(cwd))+'))',True),
+        profiles=[('workspace','(version 1)(allow default)(deny file-write* '+outside+')'+read_only,True),
+                  ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(cwd))+'))'+read_only,True),
                   ('workspace','(version 1)(allow default)',False),
                   ('analysis','(version 1)(allow default)(deny file-write*)',False)]
-        program='import json,sys; from nativepeers.grok_hooks import kernel_sandbox; print(json.dumps(kernel_sandbox(json.loads(sys.argv[1]))))'
+        program='''import json,sys
+from pathlib import Path
+from nativepeers.grok_hooks import kernel_sandbox
+from nativepeers.journal import Journal
+spec=json.loads(sys.argv[1]);observation=kernel_sandbox(spec)
+if observation['verified']:
+    for path in (Path(spec['state_root'])/'compat/runtime.json',Path(spec['binding_path'])):
+        assert path.read_bytes()
+        try:
+            with path.open('a') as stream:stream.write('forbidden')
+        except PermissionError:pass
+        else:raise AssertionError('Protected write was allowed')
+        try:(path.parent/'new-file').write_text('forbidden')
+        except PermissionError:pass
+        else:raise AssertionError('Protected directory creation was allowed')
+    journal=Journal(Path(spec['state_root']))
+    journal.event('seatbelt-fixture','protected-state-journal-write',{'verified':True});journal.close()
+    observation['protected_reads_and_journal_write']=True
+print(json.dumps(observation))
+'''
         for permission,profile,verified in profiles:
             with self.subTest(permission=permission,verified=verified):
-                spec=dict(cwd=str(cwd),state_root=str(state),permission_profile=permission)
+                spec=dict(cwd=str(cwd),state_root=str(state),permission_profile=permission,binding_path=str(binding))
                 result=subprocess.run(['/usr/bin/sandbox-exec','-p',profile,sys.executable,'-c',program,json.dumps(spec)],
                     cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
                     capture_output=True,text=True,timeout=10)
@@ -213,8 +235,15 @@ class GrokTests(unittest.TestCase):
                         [(str(cwd),'file-write-create',1 if permission=='analysis' else 0),
                          (str(state),'file-write-create',0),(str(state),'file-read-metadata',0),
                          (str(journal),'file-write-data',0),(str(journal),'file-read-metadata',0)]+
+                        [(str(path),operation,value) for path in (state/'compat',state/'bindings')
+                         for operation,value in (('file-write-create',1),('file-read-metadata',0))]+
+                        [(str(path),operation,value) for path in protected
+                         for operation,value in (('file-write-data',1),('file-read-data',0),('file-read-metadata',0))]+
                         ([(str(root),'file-write-create',1)] if permission=='workspace' else []))
+                    self.assertTrue(observation['protected_reads_and_journal_write'])
         self.assertEqual(list(root.rglob('.npeer-kernel-probe')),[])
+        self.assertEqual({path:path.read_bytes() for path in protected},before)
+        self.assertEqual(self.j.one("SELECT COUNT(*) AS count FROM events WHERE kind='protected-state-journal-write'")['count'],2)
 
     def test_kernel_check_refuses_missing_workspace_state_or_journal_without_creating_probes(self):
         absent=self.root/'absent';empty=self.root/'empty-state';empty.mkdir()
@@ -224,6 +253,22 @@ class GrokTests(unittest.TestCase):
                 self.assertFalse(observation['verified']);self.assertEqual(observation['checks'],[])
                 self.assertIn('existing',observation['reason'])
         self.assertFalse(absent.exists());self.assertEqual(list(empty.iterdir()),[])
+
+    def test_kernel_check_requires_existing_approval_and_current_owned_binding(self):
+        binding=self.j.root/'bindings/current';atomic_json(binding,{'fixture':True})
+        spec=dict(cwd=str(self.root),state_root=str(self.j.root),permission_profile='analysis',binding_path=str(binding))
+        for path in (self.j.root/'compat/runtime.json',binding):
+            with self.subTest(path=path),patch('nativepeers.grok_hooks.sys.platform','darwin'):
+                held=path.with_name(path.name+'.held');path.rename(held)
+                try:
+                    observation=kernel_sandbox(spec)
+                    self.assertFalse(observation['verified']);self.assertEqual(observation['checks'],[])
+                    self.assertFalse(path.exists())
+                finally:held.rename(path)
+        outside=self.root/'outside-binding';outside.write_text('fixture')
+        with patch('nativepeers.grok_hooks.sys.platform','darwin'):
+            observation=kernel_sandbox(dict(spec,binding_path=str(outside)))
+        self.assertFalse(observation['verified']);self.assertIn('owned binding directory',observation['reason'])
 
     def test_actual_entrypoint_denies_unverified_owned_tool_call_with_exit_two(self):
         source=Path(__file__).resolve().parents[2]
@@ -276,10 +321,23 @@ class GrokTests(unittest.TestCase):
         path.write_text(before)
         install(self.j,home=self.home)
         self.assertTrue(path.read_text().startswith(before))
+        import tomllib
+        profiles=tomllib.loads(path.read_text())['profiles']
+        for name in ('nativepeers-analysis','nativepeers-workspace'):
+            self.assertEqual(profiles[name]['read_only'],[str(self.j.root.resolve()/'compat'),str(self.j.root.resolve()/'bindings')])
+            self.assertEqual(profiles[name]['read_write'],[str(self.j.root.resolve())])
         self.assertEqual(install(self.j,home=self.home)['operations'],[])
         with path.open('a') as stream:stream.write('\n# Later addition\n[profiles.later]\nextends = "workspace"\n')
         install(self.j,home=self.home,remove=True)
         self.assertEqual(path.read_text(),before+'\n# Later addition\n[profiles.later]\nextends = "workspace"\n')
+
+    def test_profile_readiness_never_materializes_missing_protected_directories(self):
+        from nativepeers.grok_install import profile_readiness
+        self.j.root.joinpath('bindings').rmdir()
+        self.j.root.joinpath('compat/runtime.json').unlink();self.j.root.joinpath('compat').rmdir()
+        before={str(path) for path in self.root.rglob('*')}
+        profile_readiness(self.j,dict(cwd=str(self.root),provider_home=str(self.home)))
+        self.assertEqual({str(path) for path in self.root.rglob('*')},before)
 
     def test_installer_preserves_concurrent_sandbox_edits(self):
         path=self.home/'sandbox.toml';calls=0
