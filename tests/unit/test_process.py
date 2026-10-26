@@ -3,8 +3,9 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 
-from nativepeers.process import ancestry, identity, matches, signal_owned
+from nativepeers.process import ancestry, descendants, identity, matches, signal_owned
 
 
 class ProcessTests(unittest.TestCase):
@@ -14,6 +15,18 @@ class ProcessTests(unittest.TestCase):
         self.assertFalse(matches(dict(record, start="stale")))
         self.assertFalse(signal_owned(dict(record, start="stale")))
         self.assertEqual(ancestry()[0].pid, os.getpid())
+
+    def test_descendant_inspection_timeout_preserves_cause_and_birth_records(self):
+        record = dict(pid=101, ppid=1, pgid=101, uid=os.getuid(), start='fixture', executable='/fixture')
+        before = dict(record)
+        failure = subprocess.TimeoutExpired(['ps', '-axo', 'pid=,ppid='], .5)
+        with patch('nativepeers.process.owned_status', return_value='LIVE'), \
+             patch('subprocess.run', side_effect=failure) as run:
+            with self.assertRaises(TimeoutError) as error:
+                descendants([record])
+        self.assertIs(error.exception.__cause__, failure)
+        self.assertEqual(record, before)
+        self.assertEqual(run.call_args.kwargs['timeout'], .5)
 
     def test_terminal_topology_does_not_advertise_private_stdio_as_a_tui(self):
         import pty

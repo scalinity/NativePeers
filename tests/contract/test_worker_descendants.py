@@ -3,20 +3,57 @@ import json
 import os
 from pathlib import Path
 import signal
+import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from nativepeers.errors import PeerError
 from nativepeers.files import canonical
 from nativepeers.journal import Journal
 from nativepeers.models import new_id
-from nativepeers.process import identity, matches, signal_owned
+from nativepeers.process import ProcessIdentity, identity, matches, signal_owned
 from nativepeers.worker_process import Worker
 
 
 class WorkerDescendants(unittest.IsolatedAsyncioTestCase):
+    async def test_inspection_timeout_retains_unknown_child_and_worker_ownership(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();j=Journal(root/'state');group,worker,native=[new_id() for _ in range(3)]
+            lease={'spec':{'model':'sonnet'},'provider_home':str(root),'binding':str(root/'binding')}
+            j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RUNNING','{}'))
+            j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                (worker,group,None,'claude',native,'fixture','sonnet',None,None,str(root),None,'RUNNING',1,canonical(lease).decode()))
+            w=Worker(j,worker);w.emit=Mock()
+            leader=dict(w.owner,pid=101,ppid=w.owner['pid'],pgid=101,start='fixture-leader')
+            child=dict(leader,pid=102,ppid=101,start='fixture-child')
+            streams=[asyncio.StreamReader(),asyncio.StreamReader()]
+            for stream in streams:stream.feed_eof()
+            process=SimpleNamespace(pid=leader['pid'],returncode=0,stdin=Mock(),stdout=streams[0],stderr=streams[1])
+            w.provider=process;w.provider_identity=leader;w.provider_descendants={child['pid']:child}
+            def inspect(pid):
+                if pid==leader['pid']:return ProcessIdentity(**leader)
+                if pid==child['pid']:raise PermissionError('fixture child inspection denied')
+                raise AssertionError('Unexpected process inspection')
+            try:
+                with patch('nativepeers.process.identity',side_effect=inspect), \
+                     patch('subprocess.run',side_effect=subprocess.TimeoutExpired(['ps'],.5)) as run, \
+                     patch('nativepeers.process.os.kill') as kill:
+                    with self.assertRaises(PeerError) as error:await asyncio.wait_for(w.close(),4)
+                self.assertEqual(error.exception.code,'CLEANUP_UNCERTAIN')
+                self.assertEqual(run.call_count,1);kill.assert_not_called()
+                self.assertIs(w.provider,process);self.assertEqual(w.provider_descendants,{child['pid']:child})
+                self.assertEqual(j.one('SELECT state FROM workers')['state'],'RUNNING')
+                manifest=json.loads((j.root/'workers'/(worker+'.json')).read_text())
+                self.assertEqual(manifest['native_descendants'],[child])
+                self.assertEqual(manifest['cleanup']['state'],'UNCERTAIN')
+                self.assertTrue(manifest['cleanup']['output_eof'])
+                self.assertEqual(manifest['cleanup']['captured_descendants'],1)
+                w.emit.assert_not_called()
+            finally:j.close()
+
     async def test_dead_leader_cleanup_tracks_escaped_child_or_retains_uncertainty(self):
         for captured, mismatch in [(True,False),(False,False),(True,True)]:
             with self.subTest(captured=captured,mismatch=mismatch),tempfile.TemporaryDirectory() as d:

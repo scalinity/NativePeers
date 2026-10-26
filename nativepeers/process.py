@@ -125,7 +125,10 @@ def descendants(records):
     births={r['pid']:r for r in records if r and owned_status(r)=='LIVE'}
     roots=set(births)
     if not roots:return []
-    raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.5).stdout
+    try:
+        raw=subprocess.run(['/bin/ps' if sys.platform=='darwin' else '/usr/bin/ps','-axo','pid=,ppid='],capture_output=True,timeout=.5).stdout
+    except subprocess.TimeoutExpired as error:
+        raise TimeoutError('Process descendants inspection timed out') from error
     parents={int(p):int(pp) for p,pp in (line.split() for line in raw.decode().splitlines())}
     result=[]
     for _ in range(32):
