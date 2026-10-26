@@ -21,7 +21,7 @@ Inspection is read-only. `--apply` checks and records the selected worker/inbox 
 | Grok | Native launcher selects a versioned download. Owned turns pin the resolved target and preserve the existing child-only auto-update controls. | xAI-signed forward patches in 1.0, starting with qualified 1.0.70. |
 | Managed Codex | The existing manager activates an immutable package containing local queue/history patches. | Manager qualification of the affected queue, hook and worker-history seams remains required; vendor version/help cannot establish local patch compatibility. |
 
-`compat/runtime.json` previously retained only the old fingerprint. The selected new binary therefore failed `compatibility.verify` before normal delegation. Reinstall preserves existing approvals and cannot repair that difference. Status-line approval in `compat/usage-runtime.json` and quota transport approval in `compat/usage-sources.json` are separate; neither certifies workers or inbox delivery.
+`compat/runtime.json` stores exact executable approvals. A selected update whose bytes differ from that receipt fails `compatibility.verify` until the bounded check or affected-seam qualification establishes its approval. Reinstall preserves existing approvals and cannot repair that difference. Status-line approval in `compat/usage-runtime.json` and quota transport approval in `compat/usage-sources.json` are separate; neither certifies workers or inbox delivery.
 
 ## Bounded support checks
 
@@ -54,3 +54,5 @@ Missing executables report `EXECUTABLE_NOT_FOUND`. Authentication failures, stal
 Worker/inbox renewal never writes quota/status-line receipts. Quota mismatch reports `operation:quota-read` with its own inspection command; Claude PTY authorization is still explicit, and Antigravity backend freshness remains separately qualified. MCP requires a bound native caller and effective inventory. Parent return uses its own passive route check and exact delivery evidence; a successful renewal does not manufacture ingestion or replay uncertain input.
 
 Offline tests use fake executables and temporary journals. Native read-only check results, native model/permission/return checks and daily approval transitions are recorded separately in [verification](VERIFICATION.md). A source PR does not change the installed main checkout or daily receipts.
+
+The public CLI surfaces are documented in the [Claude CLI reference](https://code.claude.com/docs/en/cli-reference) and [Antigravity headless reference](https://www.antigravity.google/docs/cli/headless/). These document interfaces, not a promise of unchanged private inbox or permission semantics across every patch. The local support envelope and exact measured results remain separate.

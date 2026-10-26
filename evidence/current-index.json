@@ -3,7 +3,7 @@
   "code_commit": "a0072a37cd1cfc535f121cc8173ec33ed02aff11",
   "reviewed_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a",
   "publication_branch": "fix/runtime-approvals-issue-4",
-  "updated_at": "2026-10-26T19:02:18.525353-04:00",
+  "updated_at": "2026-10-26T19:08:26.356788-04:00",
   "current_record": "evidence/runtime-approvals-issue-4.json",
   "file_classes": {
     "product": {

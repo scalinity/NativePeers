@@ -9,14 +9,14 @@
       "status": "PASS",
       "passed": 40,
       "subtests_passed": 16,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q (nine compatibility/readiness/usage/home files)",
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py",
       "evidence": "ignored task archive: baseline-focused.txt"
     },
     "focused": {
       "status": "PASS",
       "passed": 94,
       "subtests_passed": 88,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q (fourteen affected boundary files)",
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
       "evidence": "ignored task archive: focused-2.txt"
     },
     "preliminary_full": {
@@ -31,6 +31,16 @@
     "final_full": {
       "status": "NOT_RUN",
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q"
+    },
+    "interrupted_metadata_run": {
+      "status": "FAIL",
+      "passed": 783,
+      "failed": 1,
+      "skipped": 4,
+      "subtests_passed": 742,
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "reason": "Verification metadata changed temporarily while pytest was running. Committed metadata was restored; this is not final acceptance.",
+      "evidence": "ignored task archive: committed-full-1.txt"
     }
   },
   "operation_checks": [
@@ -136,7 +146,22 @@
     "requested_model": "grok-4.7",
     "observed_model": "grok-4.7",
     "group_id": "07d35e7e-383d-4dd9-a918-56d116390447",
-    "worker_id": "3e95539d-04a7-419f-b7b1-3837d75b265c"
+    "worker_id": "3e95539d-04a7-419f-b7b1-3837d75b265c",
+    "attempts": [
+      {
+        "status": "TIMED_OUT",
+        "native_acceptance": "NOT_RUN",
+        "model_requested": "grok-4.7",
+        "model_observed": "grok-4.7",
+        "seconds": 600,
+        "findings_reported": false
+      },
+      {
+        "status": "RUNNING",
+        "scope": "Exact-history report-only resume after confirmed process/pipe closure",
+        "task_id": "e65d6af1-aab9-4092-9d7b-4ff067cab376"
+      }
+    ]
   },
   "daily_approval_changes": false,
   "installed_source_changes": false,
@@ -144,27 +169,51 @@
     {
       "id": "AC1",
       "status": "PASS",
-      "implementation": "docs/RUNTIME_UPDATES.md update/selection/receipt table; compatibility and quota paths"
+      "implementation": "docs/RUNTIME_UPDATES.md update/selection/receipt table; compatibility and quota paths",
+      "tests": [
+        "tests/unit/test_runtime_updates.py::test_worker_renewal_does_not_grant_the_separate_statusline_operation",
+        "tests/unit/test_usage_native_contracts.py"
+      ]
     },
     {
       "id": "AC2",
       "status": "PASS",
-      "implementation": "runtime-check explicit zero-input bounded support policy, guarded exact approval; managed Codex qualification remains separate"
+      "implementation": "runtime-check explicit zero-input bounded support policy, guarded exact approval; managed Codex qualification remains separate",
+      "tests": [
+        "tests/unit/test_runtime_updates.py::test_supported_patch_renews_without_model_input_and_leaves_quota_unchanged",
+        "tests/unit/test_runtime_updates.py::test_other_supported_providers_use_their_own_contract"
+      ]
     },
     {
       "id": "AC3",
       "status": "PASS",
-      "implementation": "Additive compatibility_state/reason/next_action in verify, doctor and quota errors; exact failed-check observations"
+      "implementation": "Additive compatibility_state/reason/next_action in verify, doctor and quota errors; exact failed-check observations",
+      "tests": [
+        "tests/unit/test_runtime_updates.py::test_untested_update_has_actionable_detail_without_changing_legacy_error",
+        "tests/unit/test_runtime_updates.py::test_observed_incompatibility_is_distinct_and_does_not_approve",
+        "tests/unit/test_runtime_updates.py::test_doctor_and_quota_keep_operation_specific_update_detail"
+      ]
     },
     {
       "id": "AC4",
       "status": "PASS",
-      "implementation": "Retained exact leases, full prior comparison, selected rehash, per-operation scope, unchanged home/permissions and launch paths"
+      "implementation": "Retained exact leases, full prior comparison, selected rehash, per-operation scope, unchanged home/permissions and launch paths",
+      "tests": [
+        "tests/unit/test_runtime_updates.py::test_renewal_rechecks_runtime_and_prior_approval_at_the_write_boundary",
+        "tests/unit/test_compatibility_receipts.py::CompatibilityReceiptTests::test_retained_runtime_is_scoped_to_preexisting_verified_leases_and_revocable",
+        "tests/contract/test_selected_home_launch.py",
+        "tests/unit/test_home_layout.py"
+      ]
     },
     {
       "id": "AC5",
       "status": "PASS",
-      "implementation": "tests/unit/test_runtime_updates.py plus retained compatibility/home/usage regressions; native acceptance separately NOT_RUN"
+      "implementation": "tests/unit/test_runtime_updates.py plus retained compatibility/home/usage regressions; native acceptance separately NOT_RUN",
+      "tests": [
+        "tests/unit/test_runtime_updates.py",
+        "tests/unit/test_operation_readiness.py",
+        "tests/unit/test_usage_native_contracts.py"
+      ]
     }
   ],
   "limitations": [
@@ -261,5 +310,5 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "0e263adc31a3ee5504205c3cf1ef5a5ad87dc8883a610da9e24c47400ab80ab7",
-  "updated_at": "2026-10-26T19:02:18.525353-04:00"
+  "updated_at": "2026-10-26T19:08:26.356788-04:00"
 }
