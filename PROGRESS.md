@@ -11,9 +11,11 @@
 - [x] R7 Grok prompt reopen, fixed: a Grok hook superseded during the lock wait no longer reopens the resumed policy.
 - [x] Receipt schema now lists `RETAINED`.
 - [x] Native Codex 0.164.0 blocking seam and actual guard integration passed on an operator-seeded private loaded app-server. This is not standalone-TUI qualification.
-- [ ] Final full suite, final independent review, and a live Claude special-inbox guard check.
+- [x] Native Claude live guard blocks passed on a SessionStart-registered interactive TUI. The original result is FAIL only for an early transcript flush; the read-only supplemental collection passed.
+- [x] First full integration run: 754 passed, 4 skipped, 742 subtests. Its 2 failures are stale generated fingerprint records awaiting the guarded publisher refresh; no product test failed.
+- [ ] Guarded fingerprint-record refresh, final full suite on the final source, final independent R7 recheck, installation and push.
 
-No finding was waived. Details are in docs/NOTIFICATIONS.md; raw reports and probe output stay in ignored evidence/scratch/quiet-notifications-20261026/.
+No finding was waived. The summary record is evidence/quiet-notifications-20261026.json, and details are in docs/NOTIFICATIONS.md; raw reports and probe output stay in ignored evidence/scratch/quiet-notifications-20261026/.
 
 # Grok Build provider — integrated and published
 

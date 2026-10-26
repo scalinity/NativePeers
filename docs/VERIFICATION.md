@@ -1,3 +1,14 @@
+# Quiet close-out notifications verification (2026-10-26)
+
+Summary record: [evidence/quiet-notifications-20261026.json](../evidence/quiet-notifications-20261026.json). Design, coverage and review dispositions are in [NOTIFICATIONS.md](NOTIFICATIONS.md); raw probe output stays in ignored `evidence/scratch/quiet-notifications-20261026/`.
+
+- **Source:** R1–R7 and the receipt-schema contract are fixed with regressions. R1–R6 were independently confirmed (183 tests, 195 subtests in the integration tree). R7 is integrated, and the final independent recheck is running.
+- **First full integration run:** 754 passed, 4 skipped, 742 subtests and 2 failed, in 253.76s. Both failures were generated current-source fingerprint records that were stale and need the guarded publisher refresh; no product test failed.
+- **Native Codex 0.164.0:** the generic blocking seam passed with 2 localhost requests, and the actual policy guard passed with 5. There was no external model input. The topology was a private loaded app-server with a seeded receiver, not standalone-TUI UI acceptance.
+- **Native Claude:** the live guard blocks passed on a SessionStart-registered interactive TUI, with no assistant turn or `Stop` and unchanged state and receipts. The original result stays FAIL only for an early transcript flush; the read-only supplemental collection passed. Model request counts were not instrumented.
+- **Baseline at `d7f69b6`:** 720 passed, 4 skipped, 740 subtests and 1 native-usage timing failure, in 303.60s. That test passed when rerun alone.
+- **Pending:** the final full suite on the final source, installation and publication.
+
 # Grok Build provider verification
 
 Grok Build is integrated and published on main. The owned hook/profile installation and shared four-provider instruction block are active. The complete worktree suite passed **721 tests / 740 subtests**, four Linux-only skips, in **364.96 seconds**; the complete main suite passed **721 tests / 740 subtests**, four skips, in **273.96 seconds**. [Current record](../evidence/grok-20261026.json) · [Design and scope](GROK.md).
@@ -288,12 +299,3 @@ IMPLEMENTATION.md  615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb81
 KICKOFF_PROMPT.md  18de5e0d3230bba5bab4a380108c3a8cd420d4ddc281936e4104d89138841141
 REVIEW.md          625e8ec453a673e1c616bc359cdba269741e721f685031389ddc65586d2778e1
 ```
-
-## Quiet close-out notifications (2026-10-26)
-
-Source support and native qualification are recorded separately in [NOTIFICATIONS.md](NOTIFICATIONS.md#verification).
-
-- **Parent, outside the worker sandbox:** the policy, guard-hook, install, readiness, hook-identity, Grok and Antigravity focused suites passed 98 tests and 125 subtests before the final R2–R6 and receipt-schema corrections. The final source has not been rerun there. An independent reviewer confirmed R1–R4 fixed (58 targeted tests, 89 subtests), then R1–R6 fixed (183 tests, 195 subtests in the integration tree). R7 awaits review.
-- **Native Codex 0.164.0:** the generic blocking seam and the actual NativePeers guard integration both passed on an operator-seeded receiver in a loaded private app-server, using localhost model fixtures only. This is not normal standalone-TUI identity qualification or UI acceptance. Raw output stays in ignored `evidence/scratch/`.
-- **Not yet run:** the final full suite, and a live Claude special-inbox guard check.
-- **Baseline at `d7f69b6`:** the full suite had 720 passing, 1 failing (a `test_native_no_stdin_and_drained_output` timeout), 4 Linux-only skips and 740 subtests in 303.60s. That test passed in isolation in 0.26s. The baseline is not recorded as a passing full run.

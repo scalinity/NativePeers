@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "c4ba3efccb323688a635396dba992302885e558c",
-    "evidence": "evidence/grok-20261026.json",
-    "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
-    "status": "PARTIAL: historical qualification limits; integration and close-out complete"
+    "branch": "fix/quiet-notifications",
+    "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+    "evidence": "evidence/quiet-notifications-20261026.json",
+    "source_map_sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3",
+    "status": "PARTIAL"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "e2b879e",
-    "branch": "main",
-    "code_commit": "c4ba3efccb323688a635396dba992302885e558c",
-    "last_verified_publication": "c4ba3efccb323688a635396dba992302885e558c",
+    "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
+    "branch": "fix/quiet-notifications",
+    "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+    "last_verified_publication": "d999a58754f1746278648f51b35ea579d522c524",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,81 +302,64 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/quiet-notifications",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "c4ba3efccb323688a635396dba992302885e558c",
-    "verified_remote_code_commit": "c4ba3efccb323688a635396dba992302885e558c",
+    "verified_remote_commit": "d999a58754f1746278648f51b35ea579d522c524",
+    "verified_remote_code_commit": "d999a58754f1746278648f51b35ea579d522c524",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Grok Build integrated into main and published",
+  "stage": "quiet-notifications-20261026",
   "tests_current": {
-    "scoped_source": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q --ignore=tests/unit/test_evidence_checkpoint.py",
-      "passed": 712,
-      "subtests": 728,
-      "skipped": 4,
-      "seconds": 339.13,
-      "source_commit": "a56e5d7",
-      "scope": "Excludes three publication-pointer tests; before follow-up edge-case fixes"
-    },
-    "full_worktree": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
-      "passed": 721,
+    "baseline_full": {
+      "status": "FAIL",
+      "passed": 720,
+      "failed": 1,
       "skipped": 4,
       "subtests": 740,
-      "seconds": 364.96,
-      "source_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
-      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-worktree-fixed.log",
-      "log_sha256": "c9c79263150ef27211796031c6b1ba082afe188f886eb0906764fefadd3773f6",
-      "scope": "Complete pass before the final one-line exact-PID readiness refinement; the main suite includes that refinement."
+      "seconds": 303.6,
+      "reason": "preexisting native usage timeout fixture; isolated rerun PASS"
     },
-    "full_main": {
+    "prepublication_full": {
+      "status": "FAIL",
+      "passed": 754,
+      "failed": 2,
+      "skipped": 4,
+      "subtests": 742,
+      "seconds": 253.76,
+      "reason": "generated evidence source/class fingerprints stale after authorized source change; all product checks passed"
+    },
+    "focused_final": {
       "status": "PASS",
+      "passed": 100,
+      "subtests": 57,
+      "seconds": 4.39
+    },
+    "reviewer_final": {
+      "status": "PASS",
+      "passed": 75,
+      "subtests": 15,
+      "seconds": 4.63
+    },
+    "worktree_full": {
+      "status": "PASS",
+      "passed": 757,
+      "skipped": 4,
+      "subtests": 742,
+      "seconds": 271.6,
       "command": ".venv/bin/python -m pytest -q",
-      "passed": 721,
-      "skipped": 4,
-      "subtests": 740,
-      "seconds": 273.96,
-      "source_commit": "c4ba3efccb323688a635396dba992302885e558c",
-      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-main.log",
-      "log_sha256": "a97a9d30260c6913e0865a58c8c9dcc79ce38dc79c133b10965cbf29e48f12b0"
+      "log_sha256": "3b70be522675da58f67480c9b49564bcb01a7c17d8119ded8483448cdcb0555a"
     },
-    "baseline_main": {
-      "status": "PASS",
-      "passed": 644,
-      "subtests": 656,
-      "skipped": 4,
-      "seconds": 353.39,
-      "source_commit": "ad09cdd"
+    "main_full": {
+      "status": "NOT_RUN"
     },
-    "publication_metadata": {
-      "status": "PASS",
-      "passed": 3,
-      "seconds": 0.08,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+    "installation": {
+      "status": "NOT_RUN"
     },
-    "previous_full_worktree": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
-      "passed": 721,
-      "subtests": 740,
-      "skipped": 4,
-      "skip_reason": "Linux-only process schedules on macOS",
-      "seconds": 364.26,
-      "source_commit": "ae26b647a86cb3acce84382f8a022f09bed51dbf",
-      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/feature-run/full-suite-final.log",
-      "log_sha256": "1a47d8012d3b82f2a1550b32263b0b89e52e566c234f60e8a0fe12afdc2dc8e0"
-    },
-    "finalization_catalogs": {
-      "status": "PASS",
-      "passed": 9,
-      "subtests": 14,
-      "seconds": 4.79
+    "preservation": {
+      "status": "NOT_RUN"
     }
   },
   "transports": {
@@ -385,7 +368,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-26T07:22:48.850171-04:00",
+  "updated_at": "2026-10-26T16:04:19.214469-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -958,6 +941,33 @@
         "evidence": "evidence/grok-20261026.json",
         "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
         "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Grok Build integrated into main and published",
+      "updated_at": "2026-10-26T07:22:48.850171-04:00",
+      "git": {
+        "base_commit": "e2b879e",
+        "branch": "main",
+        "code_commit": "c4ba3efccb323688a635396dba992302885e558c",
+        "last_verified_publication": "c4ba3efccb323688a635396dba992302885e558c",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "c4ba3efccb323688a635396dba992302885e558c",
+        "verified_remote_code_commit": "c4ba3efccb323688a635396dba992302885e558c",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "c4ba3efccb323688a635396dba992302885e558c",
+        "evidence": "evidence/grok-20261026.json",
+        "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
+        "status": "PARTIAL: historical qualification limits; integration and close-out complete"
       }
     }
   ],
