@@ -415,16 +415,28 @@ sys.stdin.read()
 
     def test_hook_context_character_boundary_counts_unicode_and_preserves_byte_bound(self):
         from nativepeers.presentation import render
+        from nativepeers.grok import context_characters
         self.hook('SessionStart');peer=self.peer();payload=self.message(peer,'')
-        prefix=len(render(payload));payload['body']['text']='🙂'*(10000-prefix)
-        self.assertEqual(len(render(payload)),10000)
+        prefix=context_characters(render(payload));remaining=10000-prefix
+        payload['body']['text']='🙂'*(remaining//2)+'x'*(remaining%2)
+        self.assertEqual(context_characters(render(payload)),10000)
         self.assertGreater(len(render(payload).encode()),10000)
         self.assertEqual(asyncio.run(queue_native_hook(peer,payload))['stage'],'SUBMITTED_UNCONFIRMED')
         self.j.db.execute('UPDATE messages SET payload_json=? WHERE message_id=?',(canonical(payload).decode(),payload['message_id']))
         output=self.hook('PreToolUse',toolName='read_file')
         self.assertEqual(output['hookSpecificOutput']['additionalContext'],render(payload))
         self.assertLessEqual(len(canonical(output)),65536)
-        payload['body']['text']+='🙂'
+        payload['body']['text']+='x'
         with self.assertRaises(PeerError) as error:asyncio.run(queue_native_hook(peer,payload))
         self.assertEqual(error.exception.code,'PAYLOAD_TOO_LARGE')
         self.assertEqual(error.exception.details['rendered_characters'],10001)
+
+    def test_hook_batch_keeps_astral_text_within_the_conservative_native_bound(self):
+        from nativepeers.presentation import render
+        from nativepeers.grok import context_characters
+        self.hook('SessionStart');peer=self.peer()
+        first=self.message(peer,'🙂'*2000+'a'*1000);second=self.message(peer,'🙂'*2000+'b'*1000)
+        combined=render(first)+'\n\n'+render(second)
+        self.assertLess(len(combined),10000);self.assertGreater(context_characters(combined),10000)
+        self.assertEqual(self.hook('PreToolUse',toolName='read_file')['hookSpecificOutput']['additionalContext'],render(first))
+        self.assertEqual(self.hook('PreToolUse',toolName='read_file')['hookSpecificOutput']['additionalContext'],render(second))

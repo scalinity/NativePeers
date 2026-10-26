@@ -10,14 +10,20 @@ HOOK_CONTEXT_LIMIT=10000
 HOOK_OUTPUT_LIMIT=65536
 
 
+def context_characters(text):
+    """Use the conservative UTF-16 bound for native character clipping."""
+    return len(text.encode('utf-16-le'))//2
+
+
 def hook_frame(message):
     """Keep a complete frame within Grok's native character and output limits."""
     from .files import canonical
     from .presentation import render
     text=render(message)
-    require(len(text)<=HOOK_CONTEXT_LIMIT and len(canonical({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':text}}))<=HOOK_OUTPUT_LIMIT,
+    characters=context_characters(text)
+    require(characters<=HOOK_CONTEXT_LIMIT and len(canonical({'hookSpecificOutput':{'hookEventName':'PreToolUse','additionalContext':text}}))<=HOOK_OUTPUT_LIMIT,
             'PAYLOAD_TOO_LARGE','Rendered Grok message exceeds the native hook context limit',
-            details=dict(rendered_characters=len(text),context_character_limit=HOOK_CONTEXT_LIMIT,output_byte_limit=HOOK_OUTPUT_LIMIT))
+            details=dict(rendered_characters=characters,character_unit='UTF-16 code units',context_character_limit=HOOK_CONTEXT_LIMIT,output_byte_limit=HOOK_OUTPUT_LIMIT))
     return text
 
 

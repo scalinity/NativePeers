@@ -9,7 +9,7 @@ import uuid
 
 from .errors import PeerError,require
 from .files import canonical
-from .grok import executable,native_home,summaries,hook_frame,HOOK_CONTEXT_LIMIT,HOOK_OUTPUT_LIMIT
+from .grok import executable,native_home,summaries,hook_frame,context_characters,HOOK_CONTEXT_LIMIT,HOOK_OUTPUT_LIMIT
 from .journal import Journal
 from .process import ancestry
 from .registry import Registry
@@ -133,7 +133,7 @@ def observe(journal,event,kind):
                 journal.event(row['message_id'],'grok-hook-output-refused',dict(attempt_id=row['attempt_id'],native_id=native,error=error.json()))
                 continue
             content='\n\n'.join([*messages,value])
-            if len(content)>HOOK_CONTEXT_LIMIT or len(canonical({'hookSpecificOutput':{'hookEventName':kind,'additionalContext':content}}))>HOOK_OUTPUT_LIMIT:break
+            if context_characters(content)>HOOK_CONTEXT_LIMIT or len(canonical({'hookSpecificOutput':{'hookEventName':kind,'additionalContext':content}}))>HOOK_OUTPUT_LIMIT:break
             messages.append(value)
             journal.event(row['message_id'],'grok-hook-output-unconfirmed',dict(attempt_id=row['attempt_id'],native_id=native,prompt_id=event.get('promptId')))
     # Grok 1.0.70 discards allowing UserPromptSubmit output. PreToolUse is its
