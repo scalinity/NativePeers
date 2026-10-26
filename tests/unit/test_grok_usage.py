@@ -1,7 +1,11 @@
 import json
+from pathlib import Path
+import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
+from nativepeers.compatibility import fingerprint
 from nativepeers.errors import PeerError
 from nativepeers.usage.collectors import GrokCollector
 from nativepeers.usage.grok_native import parse, session_usage
@@ -50,6 +54,37 @@ class GrokUsageTests(unittest.TestCase):
 
 
 class GrokUsageAsyncTests(unittest.IsolatedAsyncioTestCase):
+    async def test_usage_keeps_current_and_retained_worker_runtime_authorization(self):
+        for retained in (False,True):
+            with self.subTest(retained=retained),tempfile.TemporaryDirectory() as temporary:
+                root=Path(temporary);binary=root/'old-grok';binary.write_bytes(b'old Grok fixture')
+                newer=root/'new-grok';newer.write_bytes(b'new Grok fixture')
+                old=fingerprint(binary);current=fingerprint(newer) if retained else old
+                receipt={'providers':{'grok':current},'retained':{'grok':{
+                    old['sha256']:{'fingerprint':old,'workers':['owned-worker'],'revoked':False}}}}
+                (root/'compat').mkdir();(root/'compat/runtime.json').write_text(json.dumps(receipt))
+                row=dict(worker_id='owned-worker',provider='grok',lease_json=json.dumps({'verified_runtime':old}))
+                journal=SimpleNamespace(root=root,one=lambda *args:row)
+                command=AsyncMock(return_value={'exit_code':0,'stdout':json.dumps(report()).encode()})
+                with patch('nativepeers.usage.native_command.run_native',command):
+                    value=await session_usage(journal,root,NATIVE,binary,root,turn=1)
+                self.assertEqual(value['total_tokens'],23254)
+                self.assertEqual(command.await_args.args[2],['--no-auto-update','usage',NATIVE,'1'])
+
+    async def test_revoked_retained_runtime_never_runs_the_usage_command(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);binary=root/'old-grok';binary.write_bytes(b'old Grok fixture')
+            newer=root/'new-grok';newer.write_bytes(b'new Grok fixture');old=fingerprint(binary)
+            receipt={'providers':{'grok':fingerprint(newer)},'retained':{'grok':{
+                old['sha256']:{'fingerprint':old,'workers':['owned-worker'],'revoked':True}}}}
+            (root/'compat').mkdir();(root/'compat/runtime.json').write_text(json.dumps(receipt))
+            row=dict(worker_id='owned-worker',provider='grok',lease_json=json.dumps({'verified_runtime':old}))
+            journal=SimpleNamespace(root=root,one=lambda *args:row)
+            command=AsyncMock()
+            with patch('nativepeers.usage.native_command.run_native',command),self.assertRaises(PeerError) as error:
+                await session_usage(journal,root,NATIVE,binary,root)
+            self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH');command.assert_not_awaited()
+
     async def test_account_quota_stays_unknown_without_running_a_native_command(self):
         with patch('nativepeers.usage.native_command.run_native',side_effect=AssertionError('unexpected command')):
             value=await GrokCollector().collect(None,None)

@@ -41,14 +41,15 @@ def parse(value, native_id, *, turn=None):
 
 
 async def session_usage(journal, home, native_id, executable, cwd, *, turn=None):
-    require(journal.one("SELECT worker_id FROM workers WHERE provider='grok' AND native_id=?",(native_id,)),
+    worker=journal.one("SELECT worker_id FROM workers WHERE provider='grok' AND native_id=?",(native_id,))
+    require(worker,
         'OWNERSHIP_UNKNOWN','Grok session usage requires an owned worker UUID')
-    verify(journal,'grok',executable)
+    verify(journal,'grok',executable,worker_id=worker['worker_id'])
     from .native_command import run_native
     arguments=['--no-auto-update','usage',native_id]
     if turn is not None:arguments.append(str(turn))
     response=await run_native('grok',executable,arguments,home,timeout=10)
     require(response['exit_code']==0,'SOURCE_UNAVAILABLE','Grok persisted usage could not be read')
     result=parse(response['stdout'],native_id,turn=turn)
-    verify(journal,'grok',executable)
+    verify(journal,'grok',executable,worker_id=worker['worker_id'])
     return result
