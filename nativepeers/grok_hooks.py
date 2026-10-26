@@ -24,16 +24,22 @@ def kernel_sandbox(spec):
     if sys.platform!='darwin':return dict(result,reason='Kernel permission probe is qualified only on macOS')
     if not spec.get('state_root'):return dict(result,reason='The exact NativePeers state root is required')
     try:
+        state_root=Path(spec['state_root']).resolve();journal=state_root/'journal.sqlite3'
+        if not (cwd.is_dir() and state_root.is_dir() and journal.is_file()):
+            return dict(result,reason='Kernel checks require existing workspace/state directories and the native journal file')
         import ctypes
         library=ctypes.CDLL('/usr/lib/libsandbox.dylib',use_errno=True)
         check=library.sandbox_check;check.restype=ctypes.c_int
         check.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int]
-        targets=[(cwd/'.npeer-kernel-probe',profile=='analysis'),
-                 (Path(spec['state_root']).resolve()/'grok-kernel-denied/.npeer-kernel-probe',True)]
-        if profile=='workspace':targets.append((cwd.parent/'.npeer-kernel-probe',True))
-        for path,denied in targets:
-            state=check(ctypes.c_int(os.getpid()),ctypes.c_char_p(b'file-write-data'),ctypes.c_int(1),ctypes.c_char_p(os.fsencode(path)))
-            result['checks'].append(dict(path=str(path),operation='file-write-data',result=state,expected_denied=denied))
+        # sandbox_check denies missing paths even without a matching deny rule.
+        # Check existing objects and require both allowed and denied operations.
+        targets=[(cwd,'file-write-create',profile=='analysis'),
+                 (state_root,'file-write-create',False),(state_root,'file-read-metadata',False),
+                 (journal,'file-write-data',False),(journal,'file-read-metadata',False)]
+        if profile=='workspace':targets.append((cwd.parent,'file-write-create',True))
+        for path,operation,denied in targets:
+            state=check(ctypes.c_int(os.getpid()),ctypes.c_char_p(operation.encode()),ctypes.c_int(1),ctypes.c_char_p(os.fsencode(path)))
+            result['checks'].append(dict(path=str(path),operation=operation,result=state,expected_denied=denied))
         result['verified']=profile in ('analysis','workspace') and all(c['result']==(1 if c['expected_denied'] else 0) for c in result['checks'])
     except (OSError,AttributeError,ValueError) as error:result['reason']=type(error).__name__
     return result

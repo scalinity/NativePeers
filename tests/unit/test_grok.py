@@ -185,28 +185,45 @@ class GrokTests(unittest.TestCase):
             restype=None
             def __call__(self,*args):return 1
         with patch('ctypes.CDLL',return_value=SimpleNamespace(sandbox_check=Check())),patch('nativepeers.grok_hooks.sys.platform','darwin'):
-            self.assertTrue(kernel_sandbox(spec)['verified'])
+            self.assertFalse(kernel_sandbox(spec)['verified'])
             self.assertFalse(kernel_sandbox(dict(spec,permission_profile='workspace'))['verified'])
 
     @unittest.skipUnless(sys.platform=='darwin','Requires macOS Seatbelt')
-    def test_kernel_check_uses_real_variadic_path_arguments_under_seatbelt(self):
+    def test_kernel_check_uses_existing_directories_and_journal_under_seatbelt(self):
         source=Path(__file__).resolve().parents[2]
         cwd=self.root.resolve()/'allowed';cwd.mkdir()
-        state=self.j.root.resolve();denied=state/'grok-kernel-denied'
-        parent_probe=cwd.parent/'.npeer-kernel-probe'
-        denied.mkdir()
-        for probe in (cwd/'.npeer-kernel-probe',denied/'.npeer-kernel-probe',parent_probe):probe.write_text('fixture\n')
-        profile='(version 1)\n(allow default)\n(deny file-write* (literal '+json.dumps(str(parent_probe))+') (subpath '+json.dumps(str(denied))+'))\n'
-        spec=dict(cwd=str(cwd),state_root=str(state),permission_profile='workspace')
+        state=self.j.root.resolve();root=self.root.resolve();journal=state/'journal.sqlite3'
+        outside='(require-all (subpath '+json.dumps(str(root))+') (require-not (subpath '+json.dumps(str(cwd))+')) (require-not (subpath '+json.dumps(str(state))+')))'
+        profiles=[('workspace','(version 1)(allow default)(deny file-write* '+outside+')',True),
+                  ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(cwd))+'))',True),
+                  ('workspace','(version 1)(allow default)',False),
+                  ('analysis','(version 1)(allow default)(deny file-write*)',False)]
         program='import json,sys; from nativepeers.grok_hooks import kernel_sandbox; print(json.dumps(kernel_sandbox(json.loads(sys.argv[1]))))'
-        result=subprocess.run(['/usr/bin/sandbox-exec','-p',profile,sys.executable,'-c',program,json.dumps(spec)],
-            cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
-            capture_output=True,text=True,timeout=10)
-        self.assertEqual(result.returncode,0,result.stderr)
-        observation=json.loads(result.stdout)
-        self.assertTrue(observation['verified'],observation)
-        self.assertEqual([(check['path'],check['result']) for check in observation['checks']],
-            [(str(cwd/'.npeer-kernel-probe'),0),(str(denied/'.npeer-kernel-probe'),1),(str(parent_probe),1)])
+        for permission,profile,verified in profiles:
+            with self.subTest(permission=permission,verified=verified):
+                spec=dict(cwd=str(cwd),state_root=str(state),permission_profile=permission)
+                result=subprocess.run(['/usr/bin/sandbox-exec','-p',profile,sys.executable,'-c',program,json.dumps(spec)],
+                    cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
+                    capture_output=True,text=True,timeout=10)
+                self.assertEqual(result.returncode,0,result.stderr)
+                observation=json.loads(result.stdout)
+                self.assertEqual(observation['verified'],verified,observation)
+                if verified:
+                    self.assertEqual([(check['path'],check['operation'],check['result']) for check in observation['checks']],
+                        [(str(cwd),'file-write-create',1 if permission=='analysis' else 0),
+                         (str(state),'file-write-create',0),(str(state),'file-read-metadata',0),
+                         (str(journal),'file-write-data',0),(str(journal),'file-read-metadata',0)]+
+                        ([(str(root),'file-write-create',1)] if permission=='workspace' else []))
+        self.assertEqual(list(root.rglob('.npeer-kernel-probe')),[])
+
+    def test_kernel_check_refuses_missing_workspace_state_or_journal_without_creating_probes(self):
+        absent=self.root/'absent';empty=self.root/'empty-state';empty.mkdir()
+        for cwd,state in [(absent,self.j.root),(self.root,absent),(self.root,empty)]:
+            with self.subTest(cwd=cwd,state=state),patch('nativepeers.grok_hooks.sys.platform','darwin'):
+                observation=kernel_sandbox(dict(cwd=str(cwd),state_root=str(state),permission_profile='analysis'))
+                self.assertFalse(observation['verified']);self.assertEqual(observation['checks'],[])
+                self.assertIn('existing',observation['reason'])
+        self.assertFalse(absent.exists());self.assertEqual(list(empty.iterdir()),[])
 
     def test_actual_entrypoint_denies_unverified_owned_tool_call_with_exit_two(self):
         source=Path(__file__).resolve().parents[2]
