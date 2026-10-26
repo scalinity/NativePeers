@@ -1,0 +1,547 @@
+{
+  "active_intervals": [
+    {
+      "end": 1792990983.609231,
+      "reservation_ids": [
+        "stream-probe-1"
+      ],
+      "start": 1792990980.056322
+    },
+    {
+      "end": 1792991904,
+      "reservation_ids": [
+        "dc9e4535-828c-4fa3-826c-822ed9f9bfdd"
+      ],
+      "start": 1792991895.960737
+    },
+    {
+      "end": 1792991996,
+      "reservation_ids": [
+        "aec64ca9-d922-4a04-a092-2bbd93e9c85e"
+      ],
+      "start": 1792991984.9201422
+    },
+    {
+      "end": 1792994896.054249,
+      "kind": "zero-inference-sandbox-probes",
+      "native_id": "c01cf4f4-8f70-4477-95be-04b25386dd3f",
+      "start": 1792994874.237011,
+      "submitted_turns": 0
+    },
+    {
+      "end": 1792995771.126397,
+      "kind": "refused-zero-inference-launches",
+      "start": 1792995770.126397,
+      "submitted_turns": 0
+    },
+    {
+      "end": 1792995981.349,
+      "kind": "zero-inference-sandbox-probes",
+      "native_id": "f1bf7464-5aa1-4a61-a962-1a57f7236bda",
+      "start": 1792995979.663662,
+      "submitted_turns": 0
+    },
+    {
+      "end": 1792996901.288,
+      "reservation_ids": [
+        "c0760df4-a17a-4ef6-b254-2e1e8bc401fb",
+        "790dfe8d-de39-4bdc-85f3-7d6522d213d1"
+      ],
+      "start": 1792996834.042393
+    },
+    {
+      "end": 1792997027.005,
+      "reservation_ids": [
+        "e6364053-4aa3-490b-846a-52f9d10ca98b",
+        "4306d954-8920-4b55-a015-c9855a5988b8"
+      ],
+      "start": 1792996962.785761
+    },
+    {
+      "end": 1792997110.813,
+      "reservation_ids": [
+        "ab377c05-6fdd-4d4b-a4ac-0ce93f130d87",
+        "a609f8bb-b949-4763-a8f2-da91a0630f66",
+        "83f5004e-4f53-4d0e-a406-2243264724fe"
+      ],
+      "start": 1792997062.874968
+    },
+    {
+      "end": 1792997233.446,
+      "reservation_ids": [
+        "2eb99cb6-7fe0-4839-a4e7-c1ac8c194e7a",
+        "622311be-3b47-4b0b-b821-1c7d821e3c11"
+      ],
+      "start": 1792997195.866448
+    },
+    {
+      "end": 1792997352.837,
+      "reservation_ids": [
+        "5054786a-1781-4ae9-b9a2-a242c47416a5",
+        "0a96956d-d65b-48fd-bdf5-5feb4cd4be8f"
+      ],
+      "start": 1792997319.48307
+    },
+    {
+      "end": 1792997619.054,
+      "reservation_ids": [
+        "2eb9a6d6-fe5e-492f-8a90-5fe826eb4d55",
+        "6edf0263-febc-48aa-893a-481ebaabb70c",
+        "3d0c8c67-bb0d-4a34-a604-b575140ccf93"
+      ],
+      "start": 1792997528.557678
+    },
+    {
+      "end": 1792997773.573,
+      "reservation_ids": [
+        "3e1f7016-6dc0-4592-8fd2-3dbdfec7c2b7",
+        "23d5880a-20fa-441e-bdc8-f81189911b9d",
+        "50064de5-a5f2-416f-8367-69599ca89fad"
+      ],
+      "start": 1792997703.786707
+    },
+    {
+      "end": 1792998593.805,
+      "reservation_ids": [
+        "bad15666-4479-4340-a3be-135ca928b699"
+      ],
+      "start": 1792998572.46012
+    },
+    {
+      "end": 1792999846.016,
+      "reservation_ids": [
+        "ccd97781-111a-4335-a424-9aeef778366f",
+        "afc00f23-2e51-4eae-9b60-98008d6e6cfd"
+      ],
+      "start": 1792999776.064718
+    },
+    {
+      "start": 1793000615.884,
+      "end": 1793000616.044,
+      "reservation_ids": [
+        "native-local-shell-fefca75c-592f-43be-bb8a-19357941c880"
+      ]
+    },
+    {
+      "start": 1793000714.258,
+      "end": 1793000715.003,
+      "reservation_ids": [
+        "native-local-shell-724cb273-c533-4129-a3a0-76965e7c6355"
+      ]
+    },
+    {
+      "start": 1793000869.7,
+      "end": 1793000891.087,
+      "reservation_ids": [
+        "71ea1020-6e24-4cdf-b9b7-5b15737b2cb3",
+        "native-local-shell-10d88eb5-b2f1-4e20-a7f0-770900e0565d"
+      ]
+    },
+    {
+      "start": 1793001432.614,
+      "end": 1793001433.337,
+      "reservation_ids": [
+        "native-local-shell-539f8e60-4ced-43d1-9ee8-0fb932a5a7e8"
+      ]
+    }
+  ],
+  "active_seconds": 572.1047427654266,
+  "ceiling": {
+    "active_seconds": 1800,
+    "concurrent_workers": 4,
+    "submitted_turns": 24
+  },
+  "consumed_turns": 28,
+  "delegation_reserve": 0,
+  "notes": [
+    "Trust-only TUI startup submitted no model input.",
+    "Implementation and independent-review workers are separate from fixture acceptance turns.",
+    "Zero-inference sandbox probes count native startup/hook processing only; paused disposable TUI time submits no model input. Two refused launches took under one second combined and are conservatively tracked as a separate one-second interval.",
+    "Four direct local-shell commands emitted native user_message_chunk/turn_completed records with no model usage. They were initially excluded; this conservative correction counts them. No ceiling is raised and no further native input is authorized by this run."
+  ],
+  "outstanding_native_requests": [],
+  "reservations": [
+    {
+      "admitted_at": 1792990980.056322,
+      "at": 1792990979.9766479,
+      "count": 1,
+      "id": "stream-probe-1",
+      "label": "native streaming-json fixture probe",
+      "native_session_id": "97432fc5-c7a9-4039-85a8-a2c4abef549b",
+      "observed_completed_at": 1792990983.609231,
+      "observed_turns": 1,
+      "settled_at": 1792990983.609231,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792991895.960737,
+      "at": 1792991872.3930628,
+      "count": 1,
+      "id": "dc9e4535-828c-4fa3-826c-822ed9f9bfdd",
+      "label": "interactive Grok whoami fixture",
+      "native_session_id": "ca815486-ff59-431e-964b-597a22908e4a",
+      "observed_completed_at": 1792991904,
+      "observed_turns": 1,
+      "settled_at": 1792991930.424601,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792991984.9201422,
+      "at": 1792991984.91968,
+      "count": 1,
+      "id": "aec64ca9-d922-4a04-a092-2bbd93e9c85e",
+      "label": "interactive Grok whoami exact feature module retry",
+      "native_session_id": "ca815486-ff59-431e-964b-597a22908e4a",
+      "observed_completed_at": 1792991996,
+      "observed_turns": 1,
+      "settled_at": 1792992045.3940191,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792996834.042393,
+      "at": 1792996834.041909,
+      "count": 1,
+      "id": "c0760df4-a17a-4ef6-b254-2e1e8bc401fb",
+      "label": "Grok acceptance parent workspace canary",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792996901.288,
+      "observed_turns": 1,
+      "settled_at": 1792996949.18431,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792996864.712736,
+      "at": 1792996863.285783,
+      "count": 1,
+      "id": "790dfe8d-de39-4bdc-85f3-7d6522d213d1",
+      "label": "Grok acceptance canary worker 0",
+      "native_session_id": "db66adef-30bc-4abd-8fe9-69a7b66815f1",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792996868.383318,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792996962.785761,
+      "at": 1792996962.785215,
+      "count": 1,
+      "id": "e6364053-4aa3-490b-846a-52f9d10ca98b",
+      "label": "Grok acceptance parent canary2",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792997027.005,
+      "observed_turns": 1,
+      "settled_at": 1792997062.811852,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792996989.138776,
+      "at": 1792996987.627465,
+      "count": 1,
+      "id": "4306d954-8920-4b55-a015-c9855a5988b8",
+      "label": "Grok acceptance canary worker 0",
+      "native_session_id": "3934b91d-eec4-4b88-9fae-cc95c2711e57",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997007.974215,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997062.874968,
+      "at": 1792997062.874204,
+      "count": 1,
+      "id": "ab377c05-6fdd-4d4b-a4ac-0ce93f130d87",
+      "label": "Grok acceptance parent parallel",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792997110.813,
+      "observed_turns": 1,
+      "settled_at": 1792997195.801236,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997070.722178,
+      "at": 1792997069.430481,
+      "count": 1,
+      "id": "a609f8bb-b949-4763-a8f2-da91a0630f66",
+      "label": "Grok acceptance parallel worker 0",
+      "native_session_id": "009fade8-7f3c-45c3-be35-f334d1097689",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997093.144445,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997070.7226639,
+      "at": 1792997069.4309719,
+      "count": 1,
+      "id": "83f5004e-4f53-4d0e-a406-2243264724fe",
+      "label": "Grok acceptance parallel worker 1",
+      "native_session_id": "a16a5064-c813-4b42-84be-690a1e940773",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997093.14484,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997195.866448,
+      "at": 1792997195.865644,
+      "count": 1,
+      "id": "2eb99cb6-7fe0-4839-a4e7-c1ac8c194e7a",
+      "label": "Grok acceptance parent resume",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792997233.446,
+      "observed_turns": 1,
+      "settled_at": 1792997319.4077802,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997202.857791,
+      "at": 1792997202.857093,
+      "count": 1,
+      "id": "622311be-3b47-4b0b-b821-1c7d821e3c11",
+      "label": "Grok acceptance resume worker",
+      "native_session_id": "3934b91d-eec4-4b88-9fae-cc95c2711e57",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997213.439805,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997319.48307,
+      "at": 1792997319.4822521,
+      "count": 1,
+      "id": "5054786a-1781-4ae9-b9a2-a242c47416a5",
+      "label": "Grok acceptance parent cancel",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792997352.837,
+      "observed_turns": 1,
+      "settled_at": 1792997426.065443,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997326.495161,
+      "at": 1792997326.494588,
+      "count": 1,
+      "id": "0a96956d-d65b-48fd-bdf5-5feb4cd4be8f",
+      "label": "Grok acceptance cancel worker",
+      "native_session_id": "589e88eb-3dda-4975-8bc7-dee6fbdf0a5b",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997341.070436,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997528.557678,
+      "at": 1792997528.557133,
+      "count": 1,
+      "id": "2eb9a6d6-fe5e-492f-8a90-5fe826eb4d55",
+      "label": "Grok acceptance parent crossclaude",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792997619.054,
+      "observed_turns": 1,
+      "settled_at": 1792997703.7143471,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997541.609538,
+      "at": 1792997540.921531,
+      "count": 1,
+      "id": "6edf0263-febc-48aa-893a-481ebaabb70c",
+      "label": "claude cross-direction worker initial",
+      "native_session_id": "6fea1960-3844-4555-9e58-1efd7851b367",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997565.7899141,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997576.5997949,
+      "at": 1792997540.922076,
+      "count": 1,
+      "id": "3d0c8c67-bb0d-4a34-a604-b575140ccf93",
+      "label": "claude cross-direction reply worker",
+      "native_session_id": "6fea1960-3844-4555-9e58-1efd7851b367",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997603.182701,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997703.786707,
+      "at": 1792997703.7860942,
+      "count": 1,
+      "id": "3e1f7016-6dc0-4592-8fd2-3dbdfec7c2b7",
+      "label": "Grok acceptance parent crosscodex",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792997773.573,
+      "observed_turns": 1,
+      "settled_at": 1792997819.363335,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997713.695215,
+      "at": 1792997712.211179,
+      "count": 1,
+      "id": "23d5880a-20fa-441e-bdc8-f81189911b9d",
+      "label": "codex cross-direction worker initial",
+      "native_session_id": "01a176fd-f12c-7741-ad7b-e64050187812",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997749.24602,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792997750.787235,
+      "at": 1792997750.7866938,
+      "count": 1,
+      "id": "50064de5-a5f2-416f-8367-69599ca89fad",
+      "label": "Untrusted Grok caller refusal",
+      "native_session_id": "3cc2a69a-15f3-4485-b781-d37bfb777ed8",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792997759.881956,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792998572.46012,
+      "at": 1792998572.4592,
+      "count": 1,
+      "id": "bad15666-4479-4340-a3be-135ca928b699",
+      "label": "Grok acceptance parent closefixture",
+      "native_session_id": "2efc989e-e7f9-460c-b561-818ad3f93a0f",
+      "observed_completed_at": 1792998593.805,
+      "observed_turns": 1,
+      "settled_at": 1792998686.108277,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792999776.064718,
+      "at": 1792999776.064196,
+      "count": 1,
+      "id": "ccd97781-111a-4335-a424-9aeef778366f",
+      "label": "Installed Grok host parent",
+      "native_session_id": "4ec6d9fe-0492-4bca-a739-10e20d6bca6f",
+      "observed_completed_at": 1792999846.016,
+      "observed_turns": 1,
+      "settled_at": 1793000449.928461,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1792999797.485348,
+      "at": 1792999797.4846451,
+      "count": 1,
+      "id": "afc00f23-2e51-4eae-9b60-98008d6e6cfd",
+      "label": "Installed Grok global-control workspace worker",
+      "native_session_id": "25c1293d-55ec-4890-87fa-4bd7941ae3b4",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1792999823.361901,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "admitted_at": 1793000869.776709,
+      "at": 1793000869.776167,
+      "count": 1,
+      "id": "71ea1020-6e24-4cdf-b9b7-5b15737b2cb3",
+      "label": "Installed Unicode-path Grok workspace worker",
+      "native_session_id": "b215813a-7779-477a-bd09-b9a70c98db7f",
+      "observed_completed_at": null,
+      "observed_turns": 1,
+      "settled_at": 1793000890.024823,
+      "state": "settled",
+      "tranche": "M1"
+    },
+    {
+      "id": "native-local-shell-fefca75c-592f-43be-bb8a-19357941c880",
+      "label": "Native local shell command; no model usage",
+      "count": 1,
+      "tranche": "M1",
+      "state": "settled",
+      "at": 1793000615.884,
+      "admitted_at": 1793000615.884,
+      "settled_at": 1793000616.044,
+      "observed_turns": 1,
+      "native_session_id": "4ec6d9fe-0492-4bca-a739-10e20d6bca6f",
+      "observed_completed_at": 1793000616.044,
+      "native_model_calls": 0,
+      "source_path": "/Users/danny/.grok/sessions/%2FUsers%2Fdanny%2FDocuments%2FTools%2FNativePeers%2Fevidence%2Fscratch%2Fgrok-20261026%2Ffixture/4ec6d9fe-0492-4bca-a739-10e20d6bca6f/updates.jsonl",
+      "prompt_id": "fefca75c-592f-43be-bb8a-19357941c880"
+    },
+    {
+      "id": "native-local-shell-724cb273-c533-4129-a3a0-76965e7c6355",
+      "label": "Native local shell command; no model usage",
+      "count": 1,
+      "tranche": "M1",
+      "state": "settled",
+      "at": 1793000714.258,
+      "admitted_at": 1793000714.258,
+      "settled_at": 1793000715.003,
+      "observed_turns": 1,
+      "native_session_id": "4ec6d9fe-0492-4bca-a739-10e20d6bca6f",
+      "observed_completed_at": 1793000715.003,
+      "native_model_calls": 0,
+      "source_path": "/Users/danny/.grok/sessions/%2FUsers%2Fdanny%2FDocuments%2FTools%2FNativePeers%2Fevidence%2Fscratch%2Fgrok-20261026%2Ffixture/4ec6d9fe-0492-4bca-a739-10e20d6bca6f/updates.jsonl",
+      "prompt_id": "724cb273-c533-4129-a3a0-76965e7c6355"
+    },
+    {
+      "id": "native-local-shell-10d88eb5-b2f1-4e20-a7f0-770900e0565d",
+      "label": "Native local shell command; no model usage",
+      "count": 1,
+      "tranche": "M1",
+      "state": "settled",
+      "at": 1793000869.7,
+      "admitted_at": 1793000869.7,
+      "settled_at": 1793000891.087,
+      "observed_turns": 1,
+      "native_session_id": "05635d42-5ffb-46b5-b57d-88f1ad17e682",
+      "observed_completed_at": 1793000891.087,
+      "native_model_calls": 0,
+      "source_path": "/Users/danny/.grok/sessions/unicode-0476b18e5bb2af6d/05635d42-5ffb-46b5-b57d-88f1ad17e682/updates.jsonl",
+      "prompt_id": "10d88eb5-b2f1-4e20-a7f0-770900e0565d"
+    },
+    {
+      "id": "native-local-shell-539f8e60-4ced-43d1-9ee8-0fb932a5a7e8",
+      "label": "Native local shell command; no model usage",
+      "count": 1,
+      "tranche": "M1",
+      "state": "settled",
+      "at": 1793001432.614,
+      "admitted_at": 1793001432.614,
+      "settled_at": 1793001433.337,
+      "observed_turns": 1,
+      "native_session_id": "05635d42-5ffb-46b5-b57d-88f1ad17e682",
+      "observed_completed_at": 1793001433.337,
+      "native_model_calls": 0,
+      "source_path": "/Users/danny/.grok/sessions/unicode-0476b18e5bb2af6d/05635d42-5ffb-46b5-b57d-88f1ad17e682/updates.jsonl",
+      "prompt_id": "539f8e60-4ced-43d1-9ee8-0fb932a5a7e8"
+    }
+  ],
+  "reserved_turns": 0,
+  "schema_version": 1,
+  "updated_at_unix": 1793002098.022914,
+  "submitted_model_task_inputs": 24,
+  "native_local_shell_inputs": 4,
+  "budget_status": "FAIL: conservative top-level native input count exceeds 24"
+}

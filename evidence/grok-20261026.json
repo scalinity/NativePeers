@@ -1,0 +1,1101 @@
+{
+  "schema_version": 1,
+  "stage": "Grok Build candidate: PARTIAL; main integration held",
+  "status": "PARTIAL",
+  "reviewed_commit": "e2b879e",
+  "updated_at": "2026-10-26T05:03:09.688794-04:00",
+  "tests": {
+    "scoped_source": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q --ignore=tests/unit/test_evidence_checkpoint.py",
+      "passed": 712,
+      "subtests": 728,
+      "skipped": 4,
+      "seconds": 339.13,
+      "source_commit": "a56e5d7",
+      "scope": "Excludes three publication-pointer tests; before follow-up edge-case fixes"
+    },
+    "full_worktree": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 721,
+      "subtests": 740,
+      "skipped": 4,
+      "skip_reason": "Linux-only process schedules on macOS",
+      "seconds": 277.55,
+      "source_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-closeout.log",
+      "log_sha256": "0fa171d6c217dccc65ce11d916a8e35793677b6c2eeb2b215f131653df791886"
+    },
+    "full_main": {
+      "status": "NOT_RUN",
+      "reason": "Main integration held; main remains at ad09cdd."
+    },
+    "baseline_main": {
+      "status": "PASS",
+      "passed": 644,
+      "subtests": 656,
+      "skipped": 4,
+      "seconds": 353.39,
+      "source_commit": "ad09cdd"
+    },
+    "publication_metadata": {
+      "status": "PASS",
+      "passed": 3,
+      "seconds": 0.09,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+    },
+    "previous_full_worktree": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 721,
+      "subtests": 740,
+      "skipped": 4,
+      "skip_reason": "Linux-only process schedules on macOS",
+      "seconds": 364.26,
+      "source_commit": "ae26b647a86cb3acce84382f8a022f09bed51dbf",
+      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/feature-run/full-suite-final.log",
+      "log_sha256": "1a47d8012d3b82f2a1550b32263b0b89e52e566c234f60e8a0fe12afdc2dc8e0"
+    }
+  },
+  "operation_checks": [
+    {
+      "operation": "grok_identity_trusted",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Exact native UUID, owner and incarnation; interactive-whoami.json"
+    },
+    {
+      "operation": "grok_identity_untrusted",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "CALLER_UNBOUND in untrusted folder; untrusted.stdout.jsonl"
+    },
+    {
+      "operation": "grok_native_title",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Exact native title resolved from native summary"
+    },
+    {
+      "operation": "claude_grok_exchange",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Claude hello, Grok reply, Claude acknowledgment; exact native history reconciliation"
+    },
+    {
+      "operation": "codex_to_grok",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Codex hello native Grok ingestion and visible inbox"
+    },
+    {
+      "operation": "two_analysis_workers",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Distinct native UUIDs and overlapping in-flight intervals"
+    },
+    {
+      "operation": "workspace_patch",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "One fixture file, whole-tree and worker-delta artifacts"
+    },
+    {
+      "operation": "owned_uuid_resume",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Same UUID, native shell, persisted native turn 2 usage"
+    },
+    {
+      "operation": "owned_cancellation",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Observed native sleep; 18 descendants captured, provider exit and output EOF"
+    },
+    {
+      "operation": "runtime_mismatch",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Changed/missing runtime refuses before catalog subprocess"
+    },
+    {
+      "operation": "account_quota_unknown",
+      "status": "PASS",
+      "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "No documented qualified native allowance source; no account inference"
+    },
+    {
+      "operation": "installed_grok",
+      "status": "PASS",
+      "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Guarded exact-hash initial approval, second install zero operations, owned-only uninstall plan and installed native workspace passed; subsequently uninstalled while main is held."
+    },
+    {
+      "operation": "host_unicode_worker",
+      "status": "PASS",
+      "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Approved nested Unicode fixture, hashed native session path, exact model, native shell and patch artifacts; worker and fixture removed after recovery copies."
+    },
+    {
+      "operation": "preservation",
+      "status": "FAIL",
+      "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "25 of 28 protected-path snapshots match (16 unchanged existing-file hashes and nine still absent). Codex config, auxiliary Claude metadata and the later Grok trust file differ. Original-provider approval values, shared instructions, capability entries and protected branch match."
+    },
+    {
+      "operation": "teardown",
+      "status": "BLOCKED",
+      "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "evidence": "Fixtures removed, owned processes closed, sixteen Grok histories deleted and three Codex histories archived. Unmerged feature and four exact Claude histories retained with reasons."
+    },
+    {
+      "operation": "grok_to_codex_live",
+      "status": "NOT_RUN",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "Routing and hook contracts have offline coverage; no reverse Codex live turn submitted.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "antigravity_grok_live",
+      "status": "BLOCKED",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "Preexisting Antigravity executable CAPABILITY_MISMATCH; approval preserved.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "live_budget",
+      "status": "FAIL",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "28 conservative native inputs / 24 ceiling, 24 model-task inputs plus four local-shell inputs; 572.1047427654266 recorded active seconds / 1800, peak two owned Grok workers / four. The separate three-worker review batch also stayed within the four-worker limit.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "codex_config_investigation",
+      "status": "BLOCKED",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "Writer and changed keys unresolved after bounded log/tool-call/backup searches; no matching original bytes recovered.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "main_integration",
+      "status": "BLOCKED",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "Explicit investigation hold and failed live budget; local and remote main stay at ad09cdd.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "owned_process_cleanup",
+      "status": "PASS",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "All captured owned births dead, worker output EOF proved; final process inventory empty and native leader list reports no background service processes.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "fixture_removal",
+      "status": "PASS",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "Both Git fixtures removed after verified bundles, worker archives and NativePeers state copies; 89 retained recovery-file records.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "host_activation_rollback",
+      "status": "PASS",
+      "provider": "grok",
+      "parent_context": "Final close-out",
+      "evidence": "Owned Grok hooks/profiles uninstalled idempotently, global shared instructions and the two fixture trust grants restored to exact baseline bytes. A later root-folder trust grant is preserved and recorded as new drift.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+    },
+    {
+      "operation": "native_history_authentication_preservation_inventory",
+      "status": "NOT_RUN",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "parent_context": "Final close-out",
+      "evidence": "No complete initial native-history/authentication hash inventory was captured for this run; the protected-path snapshot is narrower and cannot establish that comparison retrospectively."
+    }
+  ],
+  "runtime_scopes": [
+    {
+      "provider": "grok",
+      "operation": "interactive hooks, worker profiles, native streaming, resume, cancellation, usage",
+      "sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "version": "grok 1.0.70 (f50904eaee6c) [stable]"
+    }
+  ],
+  "runtime": {
+    "executable": "/Users/danny/.grok/downloads/grok-1.0.70-macos-aarch64",
+    "executable_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+    "version": "grok 1.0.70 (f50904eaee6c) [stable]",
+    "scope": "Native identity, hook inbox, fixed analysis/workspace workers, exact UUID resume/cancel and owned-turn usage; evidence/grok-20261026.json",
+    "model_requested": "grok-4.7",
+    "model_observed": "grok-4.7",
+    "account_quota": "UNKNOWN"
+  },
+  "budget_path": "evidence/live-budget-grok-20261026.json",
+  "live_evidence_directory": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026",
+  "reviews": {
+    "sol": {
+      "group_id": "52a54d3d-bad0-4cb7-80a8-1ad2303ae20d",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "effort": "xhigh",
+      "reviewed_commit": "e2b879e",
+      "workers": [
+        "3fe2e27d-f102-425b-87c6-5ef087f06274",
+        "f7a18b73-034e-484f-a8b5-7c7a12981e7e"
+      ],
+      "report": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/review-2-report.md"
+    },
+    "claude": {
+      "worker_id": "d7c886cd-da60-4d41-a02c-9b4ce8bb0d30",
+      "requested": "opus",
+      "observed": "claude-opus-5-5",
+      "original": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/opus-review-verbatim.md",
+      "followup": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/opus-followup-verbatim.md",
+      "verdict": "Approve with Suggestions; all original critical/warnings addressed; follow-up findings separately fixed"
+    },
+    "dispositions": [
+      {
+        "id": "R01",
+        "finding": "Native context clipping",
+        "status": "ADDRESSED",
+        "commits": [
+          "2a89127",
+          "a2726be"
+        ],
+        "disposition": "Bound complete frames before admission and batching, including conservative UTF-16 units; uncertain prior emissions are retained."
+      },
+      {
+        "id": "R02",
+        "finding": "Pinned resume home",
+        "status": "ADDRESSED",
+        "commits": [
+          "14fd6cd"
+        ],
+        "disposition": "Preserve the leased GROK_HOME in manual resume commands."
+      },
+      {
+        "id": "R03",
+        "finding": "Catalog before runtime verification",
+        "status": "ADDRESSED",
+        "commits": [
+          "17659de"
+        ],
+        "disposition": "Verify the exact resolved executable before any catalog subprocess."
+      },
+      {
+        "id": "R04",
+        "finding": "Completed response lost at optional usage deadline",
+        "status": "ADDRESSED",
+        "commits": [
+          "e37985c"
+        ],
+        "disposition": "Keep the terminal response and report usage unknown if telemetry reaches the deadline."
+      },
+      {
+        "id": "R05",
+        "finding": "Retained runtime usage authorization",
+        "status": "ADDRESSED",
+        "commits": [
+          "a2700e3"
+        ],
+        "disposition": "Carry the exact owning worker identity through runtime checks; retained and revoked cases covered."
+      },
+      {
+        "id": "R06",
+        "finding": "Successful workspace enforcement coverage",
+        "status": "ADDRESSED",
+        "commits": [
+          "b5cdb37",
+          "a56e5d7"
+        ],
+        "disposition": "Add positive observation/tool-grant regressions and separate passing native workspace acceptance."
+      },
+      {
+        "id": "O01",
+        "finding": "Apple Silicon variadic ABI",
+        "status": "ADDRESSED",
+        "commits": [
+          "19f5538"
+        ],
+        "disposition": "Declare the three fixed sandbox_check ctypes argument types and exercise actual kernel allow/deny queries."
+      },
+      {
+        "id": "O02",
+        "finding": "Writable NativePeers control state",
+        "status": "ADDRESSED",
+        "commits": [
+          "80d4a38",
+          "a56e5d7"
+        ],
+        "disposition": "Remove worker journal/control write grants; owned hooks read existing state, and the controller proves readiness outside the sandbox."
+      },
+      {
+        "id": "O03",
+        "finding": "Logical input and model-round ceiling",
+        "status": "ADDRESSED",
+        "commits": [
+          "58f52da"
+        ],
+        "disposition": "Document the current dual ceiling and separate counters."
+      },
+      {
+        "id": "O04",
+        "finding": "Malformed runtime receipt",
+        "status": "ADDRESSED",
+        "commits": [
+          "2c722fb"
+        ],
+        "disposition": "Return typed binding refusal while passive diagnostics stay usable."
+      },
+      {
+        "id": "O05",
+        "finding": "Vacuous missing-path kernel probes",
+        "status": "ADDRESSED",
+        "commits": [
+          "d861c69"
+        ],
+        "disposition": "Probe existing objects with positive and negative controls."
+      },
+      {
+        "id": "W1",
+        "finding": "Hashed long or Unicode native session directory",
+        "status": "ADDRESSED",
+        "commits": [
+          "14ab06d"
+        ],
+        "disposition": "Resolve unique native summary and .cwd metadata; installed nested Unicode worker passed."
+      },
+      {
+        "id": "S1",
+        "finding": "Process exit during readiness retry",
+        "status": "ADDRESSED",
+        "commits": [
+          "eab3d6f"
+        ],
+        "disposition": "Retain same-birth positive proof across exit and retry races without releasing uncertain ownership."
+      },
+      {
+        "id": "S2",
+        "finding": "Astral context character count",
+        "status": "ADDRESSED",
+        "commits": [
+          "a2726be"
+        ],
+        "disposition": "Bound conservative UTF-16 units as well as JSON bytes."
+      },
+      {
+        "id": "S3",
+        "finding": "Global selected-home Grok control files",
+        "status": "ADDRESSED",
+        "commits": [
+          "a16b9c2"
+        ],
+        "disposition": "Check native hooks and sandbox files as existing protected objects; native installed worker passed."
+      },
+      {
+        "id": "DOC",
+        "finding": "Stale O02 disposition row",
+        "status": "ADDRESSED",
+        "commits": [],
+        "disposition": "Update the ignored consolidated report to the final design and native outcome."
+      },
+      {
+        "id": "PROCESS",
+        "finding": "Shared descendant timeout exception mismatch",
+        "status": "ADDRESSED",
+        "commits": [
+          "318d283"
+        ],
+        "disposition": "Apply the explicitly approved normalization without extending the timeout or weakening birth/ownership rules."
+      },
+      {
+        "id": "NATIVE-SHELL",
+        "finding": "Native shell inventory name differs from CLI selector",
+        "status": "ADDRESSED",
+        "commits": [
+          "a56e5d7"
+        ],
+        "disposition": "Map run_terminal_command to the run_terminal_cmd selector; retain failed canary and fresh successful acceptance."
+      },
+      {
+        "id": "EVIDENCE-STATUS",
+        "finding": "Publication-index test omitted FAIL from valid outcomes",
+        "status": "ADDRESSED",
+        "commits": [
+          "ddf64dc18b0fb151543450766aefe2d2e0b69cf7"
+        ],
+        "disposition": "Accept the four specified status values without changing recorded failed outcomes; three metadata checks and complete 721-test suite pass."
+      }
+    ],
+    "scope": "Initial Sol and Opus reviews pinned e2b879e. Exact-history Opus follow-up inspected current files and did not independently verify HEAD/diff objects. Later fixes have targeted regressions and the complete suite; no further model turn was submitted only to restate review formatting."
+  },
+  "limitations": [
+    "Antigravity current runtime has a preexisting CAPABILITY_MISMATCH; its approval is preserved and no Antigravity live turn is submitted by this slice.",
+    "Grok cannot wake an idle interactive CLI.",
+    "Imported MCP catalogs and child startup processes can remain; fixed native tool grants, MCP denial and kernel restrictions bound operations.",
+    "Account quota remains unknown.",
+    "Native network blocking for children is unavailable on macOS."
+  ],
+  "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
+    "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
+    "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
+    "nativepeers/antigravity.py": "0fb4b85a10815fa9042b95650ec02fe29481e5ccfc127c5e497c34a3e595dca8",
+    "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
+    "nativepeers/artifacts.py": "e44d0a323f082d5b108b1269906f7d59f2e726042fb616f64b3693e78fc51cb5",
+    "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
+    "nativepeers/caller.py": "785a1de1f771e3221eec105377e2d937e6a74097eabe10e80e372b495d859374",
+    "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
+    "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
+    "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
+    "nativepeers/cli.py": "bd50b3ab9a2db87891e94033793bb7e734a6d8541395492d2c3b112e96ac3f59",
+    "nativepeers/compatibility.py": "cfc4ff8d7254f099a68ffcf5c95af0bf34a34c9eed04dda30c7259e05330439d",
+    "nativepeers/completion_delivery.py": "64f066572d5c7011e6439a4af712d17c5ae9ee29b484d691002e008cc478d2c0",
+    "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
+    "nativepeers/core.py": "d48e7c66ac88034ea25ea62b5d3956500f07b573f23b7111c3209be856209b5b",
+    "nativepeers/delegation.py": "db02d4f17bff22e32a710c774635a3046f56eebaa1fdc6612c4d5491882e2b79",
+    "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
+    "nativepeers/fallback.py": "9bd6e6555e8f3850ee6e8bf088c5b1a6c23e0dcec99b52202b500938a074bd11",
+    "nativepeers/files.py": "63fc1a6a5511e6d2477658be52cbe8c7c39f3f10cc3b43f9f52e687c8c2eaeda",
+    "nativepeers/grok.py": "ef04d38d50e77b6f60f26324e0ec3720397676cfcc93dd3b929d52a6162fded6",
+    "nativepeers/grok_hooks.py": "1c7da98a0726776be03d6e185217d640cefafa875bcf527ee1f4769e68a0b5e9",
+    "nativepeers/grok_install.py": "caf6a4fb0c2348697586c0174f7a221fc7f197e611c310b0efbcf2d39f75974a",
+    "nativepeers/grok_worker.py": "d516aa46e525ef08ebc8da93e7681bd7a44c840ed9efaf5f7d78072ae2576051",
+    "nativepeers/history_cleanup.py": "27c46e81c59c560777f4aff384add710434e56a783c646420b582f406a5991ba",
+    "nativepeers/hooks.py": "08ed935cb977bc79559ec23024c11bca675eef10fbf553e333bfe88ede9d1d51",
+    "nativepeers/install.py": "cd4e70c9bfe23a9cd5c6fab603b25d02343450b8d1734b1adc9fa222e0bb9a74",
+    "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
+    "nativepeers/journal.py": "f83b65b37fe796755c0d403cf2472924c2b38619a6cbf86d64cce008881accdd",
+    "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
+    "nativepeers/mcp_server.py": "e692c818b4323742534854cda1b57ff8c2f2bbae80d3d6a543e284acd507a6ca",
+    "nativepeers/models.py": "46f5f8125f85726326c1cd977e5d71bb57e845af4d683e9dc9c9b8f325e83162",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "bb890667ed5219febd70f306094424a1106f81bbafbd327b288ce66ee32d505b",
+    "nativepeers/presentation.py": "dea4b873f78d0002d3b0bf9ee6c5807cdd221739be8cb6b609458b2869ea0e80",
+    "nativepeers/process.py": "ac4e1d8aec27217853a7c37571da00b8e56ae784e1376968204dc50d042de049",
+    "nativepeers/profiles.py": "4ff9abb649949cd3511f19b5e9cfe2bc9b8b3917483f1b75e38d8973d2b91ac5",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
+    "nativepeers/readiness.py": "a5146c2c726338cd4b33055f76eb313144b4dcbf1f8785a68f8a94a3077212cd",
+    "nativepeers/receipts.py": "6b11626b83a6dd5730da8332ba90bf25e36ad7fab813e4cb24dcaa9697a956ef",
+    "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
+    "nativepeers/recovery.py": "50025afac127c99e926ead24455d0dd8b6b64d39977546ddd79f061e3465fd9e",
+    "nativepeers/registry.py": "0a36a1e1f22911ffe85da38d5fc57004790da9ddf5f530854af7beae4f60acb0",
+    "nativepeers/routing.py": "f399885c91ce136db46ea1fad8c32f4793ea32497ccc9eba84f8f18e0cf21d2d",
+    "nativepeers/supervisor.py": "84eaa8877b8759dcaadda07cf036680b99d0f412368416e7a96e5d80cc02800f",
+    "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
+    "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
+    "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
+    "nativepeers/usage/collectors.py": "181542738e4d16d18852edb769679398e5d1b32ee3a716a3c8a59c1fd43b5b0c",
+    "nativepeers/usage/config.py": "aa427528e54572d6be732c48692f4a741cacc9967848723898daeb7bf1d81554",
+    "nativepeers/usage/contracts.py": "40d99b98a5496733097df005af303a4abefe0108e0da85160fb438e80ebea5e6",
+    "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
+    "nativepeers/usage/forecast.py": "ed637f520ddd798ce0201d430ce70ce14e1612ef72a5cdbd0c5de48e0b6c400f",
+    "nativepeers/usage/grok_native.py": "a0d2411c77c88623a0db1e8c860fb471b9195932a6639426aef840d2dc6b271c",
+    "nativepeers/usage/import_snapshot.py": "d952602ae271dcc076b7b268e9e96c216b186f53ddbf481a2b4310e0a60a17d3",
+    "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
+    "nativepeers/usage/native_command.py": "0102b9b9fae9f22d4d1dfc6cbee1f87ec9dd2a5d938d3c5bef5275cb2fe3c462",
+    "nativepeers/usage/normalize.py": "f6d3c9f6343ad6f08ed4ee575c49cdbb3f59789cbe67c38de8704e5ae8b41e35",
+    "nativepeers/usage/service.py": "21472e05c8f45b1d498b8d57da3ba6a372ea67db10c15d2626e849a26e08339e",
+    "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
+    "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
+    "nativepeers/worker_process.py": "2abdcefbf391e6d4b945a8e898638a0e59bd3acea24317c960f10ae961289a55",
+    "nativepeers/worker_report.py": "50c1115e4af6d2a8fcd65fc37972d01e07abac807d6a5e8acb4bad0517ca7cc4",
+    "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
+    "nativepeers/workspace_retirement.py": "4b2493aeff87eccf6ba8e5443d8d880a72375843471f4bd8153311f6a0e28f62",
+    "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
+    "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
+    "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
+    "schemas/peer.v1.json": "f92135c15ecc1372d7eda7e8d3afe09d27a6aa09da53c91b68e389f9b6008024",
+    "schemas/receipt.v1.json": "bd1568d47c1046ea5503a5adf38cd8bec7118a289206c6af44da276395e73511",
+    "schemas/requirements.v1.json": "326106aac17bbe21e5ec8a79f8896f31e72321beb8c113cfd886fb685ea9ced1",
+    "schemas/result.v1.json": "5e068908cec9b218ef912da8b4b22118a1015fb5f3be9001dff68b889a932990",
+    "schemas/spawn.v1.json": "35d533194d57a52923960016e938304642fa7086ace0c1657c4699522a2de888",
+    "schemas/usage-import.v1.json": "15d57cd7510f356176b2c799470495ba489989ca9d37eac7e0292a991a2d9d2d",
+    "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
+    "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
+  },
+  "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
+  "baseline_commit": "ad09cddcc2483151cb9fdef305a9cac41c81e89d",
+  "blockers": [
+    "FAIL: conservative native-input count 28 exceeds the fixed ceiling 24. No more native input is submitted by this run.",
+    "FAIL: Codex configuration, auxiliary Claude native metadata and the later Grok trust file hashes differ from their baselines. Codex writer/changed keys are unresolved; the current files are preserved.",
+    "BLOCKED: main integration is held pending the explicitly requested Codex configuration investigation; the required post-integration main suite is NOT_RUN.",
+    "BLOCKED: preexisting Antigravity executable mismatch prevents its live Grok messaging checks without separately qualifying that runtime.",
+    "BLOCKED: unmerged feature worktree/branch and four Claude histories are retained; broad deletion would remove unique work or potentially unrelated histories.",
+    "NOT_RUN: complete native-history/authentication before-and-after hash inventory; no initial inventory captured for this run."
+  ],
+  "budget_summary": {
+    "status": "FAIL",
+    "ceiling": {
+      "active_seconds": 1800,
+      "concurrent_workers": 4,
+      "submitted_turns": 24
+    },
+    "consumed_turns": 28,
+    "submitted_model_task_inputs": 24,
+    "native_local_shell_inputs": 4,
+    "active_seconds": 572.1047427654266,
+    "peak_concurrent_owned_grok_workers": 2,
+    "reserved_turns": 0,
+    "outstanding_native_requests": [],
+    "ledger_sha256": "aaf0a768739046cc9726e25d3a7cb5598b4c5bfd6f2bbb7c8e2ac76eef466977"
+  },
+  "preservation": {
+    "files": [
+      {
+        "path": "/Users/danny/.claude.json",
+        "before_sha256": "e5b74e6176672bb86dcfe04dbf2a4335182c009b364baa8f3e4ce4e64f7693ef",
+        "after_sha256": "c6f06cf0b052fe07990b46999d09803540d370b9254b2e0653724de9f75b17fb",
+        "equal": false
+      },
+      {
+        "path": "/Users/danny/.claude/CLAUDE.md",
+        "before_sha256": "4092826c62e1ec692b031478e0735fc3342ed318df5f758aff6ee05a2455543f",
+        "after_sha256": "4092826c62e1ec692b031478e0735fc3342ed318df5f758aff6ee05a2455543f",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.claude/settings.json",
+        "before_sha256": "367639942c82e33141f3e9fbf099f9d7aca60ea4a8fa0ed432d9a78f7ba16249",
+        "after_sha256": "367639942c82e33141f3e9fbf099f9d7aca60ea4a8fa0ed432d9a78f7ba16249",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.codex/config.toml",
+        "before_sha256": "28c1b11e89f93931b1d58e90d54f5defb241548e9ef736560bf0157075f30797",
+        "after_sha256": "2295896b8638ba184145fd6fc96c07bc2b8f2be944678d33734868f05a005981",
+        "equal": false
+      },
+      {
+        "path": "/Users/danny/.codex/hooks.json",
+        "before_sha256": "6f2b752ac241478c1ab251e1701b2279316eb9a808ba5c23bdd77f863470f196",
+        "after_sha256": "6f2b752ac241478c1ab251e1701b2279316eb9a808ba5c23bdd77f863470f196",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.config/ghostty/config",
+        "before_sha256": "7882ed8fac2335b39f7c8ceb8e3489cdbccd9b88d3415add1ab8c820592848ea",
+        "after_sha256": "7882ed8fac2335b39f7c8ceb8e3489cdbccd9b88d3415add1ab8c820592848ea",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.gemini/config/hooks.json",
+        "before_sha256": "35a3c5579e7a7693cda9184c6ee1ab304b8f1caff7150384204f85157a50c2c8",
+        "after_sha256": "35a3c5579e7a7693cda9184c6ee1ab304b8f1caff7150384204f85157a50c2c8",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.gemini/config/mcp_config.json",
+        "before_sha256": "ad825b72f67426c0eeba9cc795315e6461be2c31f03b33cfa36b9c6cc4b5e61e",
+        "after_sha256": "ad825b72f67426c0eeba9cc795315e6461be2c31f03b33cfa36b9c6cc4b5e61e",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.grok/config.toml",
+        "before_sha256": "1acf21e89ce5ea00d29bf94783a6649a9fe574bfc1bfa906960cb24f3427950a",
+        "after_sha256": "1acf21e89ce5ea00d29bf94783a6649a9fe574bfc1bfa906960cb24f3427950a",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.grok/trusted_folders.toml",
+        "before_sha256": "b89823bcdfbd5d8d5210b581b8280a4d97094abfcf40c906982308f13d13e34b",
+        "after_sha256": "226ad2f74ba91b53b078d1e95d46f563a42dc85fbf421b0a168f0542391e9013",
+        "equal": false
+      },
+      {
+        "path": "/Users/danny/.local/bin/claude",
+        "before_sha256": "ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd",
+        "after_sha256": "ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.local/bin/codex",
+        "before_sha256": "5e43a50bc0295856456ea6b33c2e9505a1fef4e3b5fbd14f04c54c8261b48a04",
+        "after_sha256": "5e43a50bc0295856456ea6b33c2e9505a1fef4e3b5fbd14f04c54c8261b48a04",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.local/bin/codex-mcp",
+        "before_sha256": "3dacd9008e847a4b407f78f81615256a545e579b8d5cbe11c7187282e969421e",
+        "after_sha256": "3dacd9008e847a4b407f78f81615256a545e579b8d5cbe11c7187282e969421e",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.local/share/codex-mcp-manager/current/bin/codex",
+        "before_sha256": "c4c21c09769795d2ce490c391d5c3531235822e091ec532d164813bdaa198b93",
+        "after_sha256": "c4c21c09769795d2ce490c391d5c3531235822e091ec532d164813bdaa198b93",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.local/share/codex-mcp-manager/current/mcp-customization.json",
+        "before_sha256": "f11c0524b0e5bb971f38239733323245c358cc6fdbd58fe3dd226d711d94dac5",
+        "after_sha256": "f11c0524b0e5bb971f38239733323245c358cc6fdbd58fe3dd226d711d94dac5",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.local/share/codex-mcp-manager/installed.json",
+        "before_sha256": "f11c0524b0e5bb971f38239733323245c358cc6fdbd58fe3dd226d711d94dac5",
+        "after_sha256": "f11c0524b0e5bb971f38239733323245c358cc6fdbd58fe3dd226d711d94dac5",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.local/state/nativepeers/compat/verified.json",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/.zshrc",
+        "before_sha256": "71144527c54bd1fcf21f5a7facd0a08369532bcb2e26546c4228e7def09b63ff",
+        "after_sha256": "71144527c54bd1fcf21f5a7facd0a08369532bcb2e26546c4228e7def09b63ff",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/codex-launcher",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/manager.py",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/name_session.py",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/patches/interactive-mcp.patch",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/patches/session-naming-native.patch",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/smoke.py",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/test_manager.py",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/CodexMCP/test_name_session.py",
+        "before_sha256": null,
+        "after_sha256": null,
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/evidence/capabilities.json",
+        "before_sha256": "a37693d966e82c93cb8a1a958067822ea0d544412622f07258960b94df6ac069",
+        "after_sha256": "a37693d966e82c93cb8a1a958067822ea0d544412622f07258960b94df6ac069",
+        "equal": true
+      },
+      {
+        "path": "/Users/danny/Library/LaunchAgents/local.codex.autoupdate.plist",
+        "before_sha256": "472d86e637ee2b409eee8c11be74680572e9484eb882c5c172e1dc86d742ed57",
+        "after_sha256": "472d86e637ee2b409eee8c11be74680572e9484eb882c5c172e1dc86d742ed57",
+        "equal": true
+      }
+    ],
+    "claude_outside_owned": {
+      "before_sha256": "847013de6e879f422a21f057fb2c629c3d7abf7b4cd38d9797179bca2d4fe14c",
+      "after_sha256": "847013de6e879f422a21f057fb2c629c3d7abf7b4cd38d9797179bca2d4fe14c",
+      "equal": true
+    },
+    "runtime_approvals": {
+      "antigravity": {
+        "before_sha256": "4697d0c1f6f553a0c4ea501d838f48ced692e5c510021220d8d46760e8cf5ddd",
+        "after_sha256": "4697d0c1f6f553a0c4ea501d838f48ced692e5c510021220d8d46760e8cf5ddd",
+        "equal": true
+      },
+      "claude": {
+        "before_sha256": "faea72b86199e571b3a258b5f8a83505e12eb8c7773298246ff199a307c0e6a7",
+        "after_sha256": "faea72b86199e571b3a258b5f8a83505e12eb8c7773298246ff199a307c0e6a7",
+        "equal": true
+      },
+      "codex": {
+        "before_sha256": "c9f99831dda98bb2bcd59d9f242d5319cae10eb020863b19c0cdbba64feb1643",
+        "after_sha256": "c9f99831dda98bb2bcd59d9f242d5319cae10eb020863b19c0cdbba64feb1643",
+        "equal": true
+      }
+    },
+    "other_provider_capability_entries": {
+      "antigravity": {
+        "before_sha256": "e777058d9952b3c88da88af8609bcbcb4a404df4858dafbfb00191ee8a61945d",
+        "after_sha256": "e777058d9952b3c88da88af8609bcbcb4a404df4858dafbfb00191ee8a61945d",
+        "equal": true
+      },
+      "claude": {
+        "before_sha256": "f8602b6ce6474b6fecd03f8a4d5a7c6547354a4bf51b4a00ce03bcc30a912ccb",
+        "after_sha256": "f8602b6ce6474b6fecd03f8a4d5a7c6547354a4bf51b4a00ce03bcc30a912ccb",
+        "equal": true
+      },
+      "codex": {
+        "before_sha256": "71a559b261fbe4799b7a0a57fe9e21717a48f082d4428bd8193c43b783ef11ee",
+        "after_sha256": "71a559b261fbe4799b7a0a57fe9e21717a48f082d4428bd8193c43b783ef11ee",
+        "equal": true
+      }
+    },
+    "protected_branch": {
+      "before": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
+      "after": "12113034ca18ea75aa6f72062fa08f12bc2458ab",
+      "equal": true
+    },
+    "status": "FAIL",
+    "codex_config_intermediate_sha256": "479c14d7bce1cf51453204f5e6d5bf330d5e3a26bb760181ec5255bff25c5372",
+    "investigation": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/codex-config-investigation.md",
+    "current_codex_daemon_auto_start": false,
+    "native_history_authentication_inventory": {
+      "status": "NOT_RUN",
+      "reason": "Initial inventory not captured. The 28 protected-path snapshots do not cover this entire requirement."
+    },
+    "snapshot_counts": {
+      "protected_paths": 28,
+      "existing_before": 19,
+      "existing_file_hashes_equal": 16,
+      "absent_both": 9,
+      "different": 3
+    },
+    "measured_at": "2026-10-26T04:58:29.392583-04:00",
+    "late_trust_drift": {
+      "status": "FAIL",
+      "decision_time": "2026-10-26T04:56:33-04:00",
+      "path": "/Users/danny/.grok/trusted_folders.toml",
+      "new_trust_target": "/Users/danny/Documents/Tools/NativePeers",
+      "new_native_summary_uuid": "01a1776c-fbe0-78d1-8fec-16d23d821a98",
+      "owned": false,
+      "writer": "UNKNOWN",
+      "disposition": "Preserved. Both approved disposable fixture rows remain absent; prior exact baseline restoration is separately recorded."
+    },
+    "runtime_receipt_reconstruction": {
+      "baseline_receipt_sha256": "a24fb71eafad28570849af434cbbbbc3b033ac0bef1b9c023d48e39ccc2321ea",
+      "current_receipt_sha256": "679d5dad8bef49deb7a5fc75de3f24dbdfe4276908ed34e17cf44065a4883e62",
+      "remove_only_new_grok_entry_reconstructs_exact_baseline": false,
+      "matching_serializations": []
+    },
+    "approval_entry_hash_method": "SHA-256 of canonical parsed JSON provider values"
+  },
+  "doctor": {
+    "status": "PASS",
+    "scope": "Passive rows captured for all four providers; runtime approval is distinct from installed integrations, quota and MCP readiness.",
+    "providers": [
+      {
+        "provider": "claude",
+        "state": "PASS",
+        "expected_sha256": "ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd",
+        "current_sha256": "ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd"
+      },
+      {
+        "provider": "codex",
+        "state": "PASS",
+        "expected_sha256": "c4c21c09769795d2ce490c391d5c3531235822e091ec532d164813bdaa198b93",
+        "current_sha256": "c4c21c09769795d2ce490c391d5c3531235822e091ec532d164813bdaa198b93"
+      },
+      {
+        "provider": "antigravity",
+        "state": "CAPABILITY_MISMATCH",
+        "expected_sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
+        "current_sha256": "cab004f3c5c6cb7dc8b8712d3bc30431bd4480b17ff38a07eb1865abeffd2f27"
+      },
+      {
+        "provider": "grok",
+        "state": "PASS",
+        "expected_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+        "current_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      }
+    ],
+    "operations": [
+      {
+        "provider": "claude",
+        "integration_states": [
+          "MODIFIED",
+          "PRESENT"
+        ],
+        "states": {
+          "inbox": "APPROVED",
+          "mcp": "UNKNOWN",
+          "quota": "CAPABILITY_MISMATCH",
+          "worker_turns": "APPROVED"
+        }
+      },
+      {
+        "provider": "codex",
+        "integration_states": [
+          "MODIFIED",
+          "PRESENT"
+        ],
+        "states": {
+          "inbox": "APPROVED",
+          "mcp": "UNKNOWN",
+          "quota": "APPROVED",
+          "worker_turns": "APPROVED"
+        }
+      },
+      {
+        "provider": "antigravity",
+        "integration_states": [
+          "MODIFIED",
+          "PRESENT"
+        ],
+        "states": {
+          "inbox": "CAPABILITY_MISMATCH",
+          "mcp": "UNKNOWN",
+          "quota": "CAPABILITY_MISMATCH",
+          "worker_turns": "CAPABILITY_MISMATCH"
+        }
+      },
+      {
+        "provider": "grok",
+        "integration_states": [
+          "MISSING",
+          "PRESENT"
+        ],
+        "states": {
+          "inbox": "APPROVED",
+          "mcp": "UNKNOWN",
+          "quota": "UNKNOWN",
+          "worker_turns": "APPROVED"
+        }
+      }
+    ],
+    "installed_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-installed-feature.json",
+    "final_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-final-candidate.json",
+    "unchanged_main_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-final-main.json",
+    "unchanged_main_result": "PASS: command succeeds with its original three provider rows."
+  },
+  "host_installation": {
+    "qualification_status": "PASS",
+    "currently_installed": false,
+    "runtime_approval_retained": true,
+    "shared_instructions_restored": true,
+    "fixture_trust_restored": true,
+    "reason": "Keep unchanged live main coherent while integration is held.",
+    "install_record": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/host-install.json",
+    "rollback_record": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/host-activation-held.json",
+    "current_trust_file_matches_baseline": false
+  },
+  "cleanup": {
+    "fixture_removed": true,
+    "grok_histories_deleted": 16,
+    "grok_failed_start_histories_absent": 2,
+    "codex_histories_archived": [
+      {
+        "native_id": "01a176ac-f88b-7750-a64e-d77eb3504fd2",
+        "state": "ARCHIVED",
+        "metadata": [
+          {
+            "native_id": "01a176ac-f88b-7750-a64e-d77eb3504fd2",
+            "archived": true,
+            "pinned": false
+          }
+        ]
+      },
+      {
+        "native_id": "01a176ac-f870-75f1-bcaa-b6bd08afaf29",
+        "state": "ARCHIVED",
+        "metadata": [
+          {
+            "native_id": "01a176ac-f870-75f1-bcaa-b6bd08afaf29",
+            "archived": true,
+            "pinned": false
+          }
+        ]
+      },
+      {
+        "native_id": "01a176fd-f12c-7741-ad7b-e64050187812",
+        "state": "ARCHIVED",
+        "metadata": [
+          {
+            "native_id": "01a176fd-f12c-7741-ad7b-e64050187812",
+            "archived": true,
+            "pinned": false
+          }
+        ]
+      }
+    ],
+    "claude_histories_kept": [
+      {
+        "worker_id": "2bac48da-346e-4deb-8d8a-33ea451e2e92",
+        "native_id": "5f71784d-f25f-4472-a234-a3513a400351",
+        "cwd": "/Users/danny/Documents/Tools/NativePeers/.worktrees/2bac48da-346e-4deb-8d8a-33ea451e2e92",
+        "state": "RELEASED_RESUMABLE",
+        "path": "/Users/danny/.claude/projects/-Users-danny-Documents-Tools-NativePeers--worktrees-2bac48da-346e-4deb-8d8a-33ea451e2e92/5f71784d-f25f-4472-a234-a3513a400351.jsonl",
+        "sha256": "5f2a9b8c3f7a225727371f40dabea40bc2bff69d4bb165c6d5d85968db18524f",
+        "reason": "Exact native transcript retained; broad project purge could touch unrelated histories, and verbatim review provenance remains recoverable"
+      },
+      {
+        "worker_id": "7ea3350e-b43a-40df-9f09-be00c9dc7e88",
+        "native_id": "9ba7d34c-f52d-4e26-8895-79d94e2d670d",
+        "cwd": "/Users/danny/Documents/Tools/NativePeers/.worktrees/7ea3350e-b43a-40df-9f09-be00c9dc7e88",
+        "state": "RELEASED_RESUMABLE",
+        "path": "/Users/danny/.claude/projects/-Users-danny-Documents-Tools-NativePeers--worktrees-7ea3350e-b43a-40df-9f09-be00c9dc7e88/9ba7d34c-f52d-4e26-8895-79d94e2d670d.jsonl",
+        "sha256": "720ea88bacb007a9b167a86268c8c1c5654983795e1496062b6c4f0a9114e688",
+        "reason": "Exact native transcript retained; broad project purge could touch unrelated histories, and verbatim review provenance remains recoverable"
+      },
+      {
+        "worker_id": "d7c886cd-da60-4d41-a02c-9b4ce8bb0d30",
+        "native_id": "cf88afdf-a65c-4f68-aa1a-d162198161a7",
+        "cwd": "/Users/danny/Documents/Tools/NativePeers",
+        "state": "RELEASED_RESUMABLE",
+        "path": "/Users/danny/.claude/projects/-Users-danny-Documents-Tools-NativePeers/cf88afdf-a65c-4f68-aa1a-d162198161a7.jsonl",
+        "sha256": "017d6446688007526345dd82c41e538421ae006d4a4f0d7b430861374d366976",
+        "reason": "Exact native transcript retained; broad project purge could touch unrelated histories, and verbatim review provenance remains recoverable"
+      },
+      {
+        "worker_id": "64e6c17b-08e4-4c97-b063-03405c0ce48f",
+        "native_id": "6fea1960-3844-4555-9e58-1efd7851b367",
+        "cwd": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/fixture",
+        "state": "RELEASED_RESUMABLE",
+        "path": "/Users/danny/.claude/projects/-Users-danny-Documents-Tools-NativePeers-evidence-scratch-grok-20261026-fixture/6fea1960-3844-4555-9e58-1efd7851b367.jsonl",
+        "sha256": "72dd5475629d56a95647230a77cbf2a24fdebd07be0755176064a2535df3ed55",
+        "reason": "Exact native transcript retained; broad project purge could touch unrelated histories, and verbatim review provenance remains recoverable"
+      }
+    ],
+    "recovery_records": 89,
+    "recovery_manifest": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/fixture-recovery-manifest.json",
+    "no_grok_or_leader_process": true,
+    "kept": [
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/.worktrees/grok-provider",
+        "reason": "Unmerged implementation; main integration held. Includes the local CodeGraph index and verification scratch."
+      },
+      {
+        "path": "feat/grok-provider (local and origin)",
+        "reason": "Published unmerged implementation and close-out record."
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/backups/grok-20261026",
+        "reason": "Verified fixture bundles, unique worker patches/state, and shared-instruction recovery."
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026",
+        "reason": "Verbatim reviews, failed attempts, raw native proof, preservation investigation and cleanup receipts."
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/2bac48da-346e-4deb-8d8a-33ea451e2e92",
+        "reason": "Verified initial author-worker recovery archive."
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/7ea3350e-b43a-40df-9f09-be00c9dc7e88",
+        "reason": "Verified initial author-worker recovery archive."
+      },
+      {
+        "path": "four exact Claude native histories and three archived Codex histories",
+        "reason": "Native provenance retained; no verified exact Claude deletion path, and native Codex archive retains recoverable results."
+      },
+      {
+        "path": "fix/review-2885497 (local and origin)",
+        "reason": "Explicitly protected unrelated unmerged branch; untouched."
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers root Grok trust entry and native summary 01a1776c-fbe0-78d1-8fec-16d23d821a98",
+        "reason": "New metadata appeared after disposable cleanup, with no matching owned session record; writer and ownership are unknown, so it is preserved."
+      }
+    ],
+    "main_ledger_removed_after_verified_copies": true,
+    "git_worktree_prune": "PASS"
+  },
+  "main": {
+    "integration_status": "BLOCKED",
+    "local_commit": "ad09cddcc2483151cb9fdef305a9cac41c81e89d",
+    "push_status": "NOT_RUN",
+    "push_command": "git -C /Users/danny/Documents/Tools/NativePeers push origin main",
+    "note": "Command is for a later authorized integration after all required checks hold."
+  },
+  "suggested_model_selection": "NativePeers accepts a per-worker `model` for Claude, Codex, Antigravity and Grok; Grok uses an exact model ID from its native catalog.",
+  "commits": [
+    "2f299b62acb525f7a75d8ad20d91664443a5ac77 feat(grok): add native CLI identity and owned worker support",
+    "e2b879e57e0f98496c02bbe9b774447c6824c201 docs(grok): describe native profiles and qualification boundaries",
+    "a2700e381b8f9712ec98a55c385fa1cf3fa5a19f fix(grok): retain worker runtime authorization for usage reads",
+    "14fd6cd371de063a71cf908a158f6f06520f2dcb fix(grok): preserve the leased home in manual resume commands",
+    "58f52da2ff2dced80a5df1076963caec0901d1b7 docs(grok): clarify native round and logical task limits",
+    "19f5538b5b5af09130843dbe75086c948e848d77 fix(grok): declare the sandbox variadic ABI on Apple Silicon",
+    "17659de8bac16995dba8dd08915806863e227958 fix(grok): verify the runtime before model catalog execution",
+    "2a89127cf93541bd9976b5855573420864cfdbe8 fix(grok): bound native hook context without losing queued messages",
+    "e37985c262c6cfab2bf312b4f197a1bd95ba82a2 fix(grok): retain completed responses across optional usage deadlines",
+    "2c722fb8d02f17b61b5bb0bfea7828b0f0ef9200 fix(grok): retain passive diagnostics for malformed runtime receipts",
+    "d861c69d054fe6e09ec493bd9860e041d9a19123 fix(grok): probe existing filesystem objects for kernel enforcement",
+    "b5cdb37d853aec55254cdb2cc6b91538ac2f33c8 test(grok): cover successful workspace observation and tool grants",
+    "508c631cb23d747cbdea85ed93e84c0662522313 fix(grok): protect runtime approvals and worker bindings from writes",
+    "318d283628776cb4b60477352ac2774fafd4e601 fix(process): normalize descendant inspection timeouts",
+    "b0921335d6265acce2664f91291b5a69384bfa96 test(grok): retain native stream and catalog recordings",
+    "80d4a38a24f04ce2b16abfdb18c7b875e24481c1 fix(grok): keep owned hooks and control state read-only",
+    "a56e5d7792d3c0a84e3b63ffe43d71e7b32f49bc fix(grok): verify native worker readiness outside its sandbox",
+    "a2726beb42fd5104c3d0b4ddcd9641edf94674c9 fix(grok): bound astral hook context conservatively",
+    "a16b9c28dc085ff67664e80e0ffaf99e489f90b0 fix(grok): verify installed hook and sandbox file protection",
+    "14ab06daf497f7b60185af2b76f634964b5d99c5 fix(grok): resolve hashed native session directories",
+    "eab3d6f6ef9fa15e0eda57af8eb537024bf8719f fix(grok): retain proved readiness across process exit races",
+    "ae26b647a86cb3acce84382f8a022f09bed51dbf docs(grok): record native qualification and exact runtime evidence",
+    "ddf64dc18b0fb151543450766aefe2d2e0b69cf7 test(evidence): accept explicit failed verification outcomes"
+  ],
+  "historical_checks": [
+    {
+      "check": "publication_metadata_before_status_contract_fix",
+      "status": "FAIL",
+      "passed": 2,
+      "failed": 1,
+      "seconds": 0.15,
+      "reason": "Existing contract omitted the required FAIL state; corrected assertion and fresh publication validation follow."
+    }
+  ]
+}
