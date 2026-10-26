@@ -24,6 +24,7 @@ sys.path.insert(0,ROOT)
 from nativepeers.journal import Journal
 from nativepeers.process import identity
 args=sys.argv[1:]
+profile=args[args.index('--sandbox')+1].removeprefix('nativepeers-')
 native=args[args.index('--resume')+1] if '--resume' in args else args[args.index('--session-id')+1]
 scenario=Path(__file__).with_suffix('.scenario').read_text()
 text=sys.stdin.read()
@@ -33,21 +34,33 @@ home=Path(os.environ['GROK_HOME']);cwd=Path.cwd();j=Journal()
 binding=json.loads(Path(os.environ['NPEER_BOOTSTRAP']).read_text());worker=binding['worker_id']
 folder=home/'sessions'/quote(str(cwd),safe='')/native;folder.mkdir(parents=True,exist_ok=True)
 summary=folder/'summary.json';old=json.loads(summary.read_text()) if summary.exists() else {}
-summary.write_text(json.dumps({'info':{'id':native,'cwd':str(cwd)},'current_model_id':'wrong-model' if scenario=='model' else 'grok-4.7','sandbox_profile':'nativepeers-analysis','inputs':old.get('inputs',[])+[text],'resume':'--resume' in args}))
+summary.write_text(json.dumps({'info':{'id':native,'cwd':str(cwd)},'current_model_id':'wrong-model' if scenario=='model' else 'grok-4.7','sandbox_profile':'nativepeers-analysis' if scenario=='wrong-profile' else 'nativepeers-'+profile,'inputs':old.get('inputs',[])+[text],'resume':'--resume' in args}))
 owner=identity(os.getpid()).json()
 time.sleep(.1)
 if scenario!='no-hook':
     if scenario=='wrong-process':owner=dict(owner,start=owner['start']+'-wrong')
     j.event(worker,'native-hook-observed',{'native_id':native,'model':'grok-4.7','process':owner})
-    j.event(worker,'grok-kernel-check',{'native_id':native,'process':owner,'profile':'analysis','verified':scenario!='no-kernel'})
-events=[{'type':'available_commands','tools':['read_file','grep','list_dir'],'commands':[]},
-        {'type':'text','data':'GROK_'},{'type':'text','data':'OK'}]
+    # Synthetic contract metadata only; this process has no native sandbox.
+    j.event(worker,'grok-kernel-check',{'native_id':native,'process':owner,'profile':'analysis' if scenario=='wrong-kernel-profile' else profile,'verified':scenario!='no-kernel'})
+tools=['read_file','grep','list_dir']+(['run_terminal_cmd','write','search_replace'] if profile=='workspace' else [])
+events=[{'type':'available_commands','tools':tools,'commands':[]}]
+if scenario=='workspace':
+    events.extend([
+        {'type':'tool_call','toolName':'write','toolCallId':'write_1','kind':'edit','status':'in_progress','rawInput':{'path':'owned-result.txt','content':'before'}},
+        {'type':'tool_call_update','toolCallId':'write_1','status':'completed','rawOutput':{'written':True}},
+        {'type':'tool_call','toolName':'search_replace','toolCallId':'edit_1','kind':'edit','status':'in_progress','rawInput':{'path':'owned-result.txt','old_string':'before','new_string':'after'}},
+        {'type':'tool_call_update','toolCallId':'edit_1','status':'completed','rawOutput':{'replaced':True}}])
+events.extend([{'type':'text','data':'GROK_'},{'type':'text','data':'OK'}])
 if scenario=='unsafe':events.append({'type':'available_commands','tools':['read_file','web_search']})
 if scenario in ('mcp-catalog','mcp-call'):
     events.append({'type':'available_commands','tools':['read_file','grep','list_dir','codegraph__codegraph_explore','mcp__example__read']})
 if scenario=='mcp-call':events.append({'type':'tool_call','toolName':'codegraph__codegraph_explore','toolCallId':'call_1','kind':'other','status':'in_progress','rawInput':{}})
 if scenario not in ('no-end','hang'):events.append({'type':'end','stopReason':'cancelled' if scenario=='cancel' else 'end_turn','sessionId':('00000000-0000-0000-0000-000000000000' if scenario=='identity' else native),'requestId':'native-request','num_turns':1,'modelUsage':{'grok-4.7-build':{'modelCalls':1}}})
 for event in events:
+    if scenario=='workspace' and event.get('type')=='tool_call':
+        target=cwd/'owned-result.txt'
+        if event['toolName']=='write':target.write_text('before')
+        elif event['toolName']=='search_replace':target.write_text(target.read_text().replace('before','after'))
     line=(json.dumps(event)+'\\n').encode()
     for start in range(0,len(line),13):os.write(1,line[start:start+13])
 if scenario=='hang':
@@ -93,13 +106,13 @@ class GrokStreamTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(unexpected_builtin=name),self.assertRaises(PeerError):
                 Stream(new_id(),'analysis').observe({'type':'available_commands','tools':['read_file',name]})
 
-    async def fixture(self,scenario):
+    async def fixture(self,scenario,profile='analysis'):
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup);root=Path(temporary.name).resolve()
         binary=root/'grok';binary.write_text('#!'+sys.executable+'\n'+FAKE.replace('ROOT',repr(str(Path(__file__).resolve().parents[2]))));binary.chmod(0o700)
         binary.with_suffix('.scenario').write_text(scenario)
         journal=Journal(root/'state');self.addCleanup(journal.close)
         group,worker,task,native=new_id(),new_id(),new_id(),new_id()
-        spec=dict(provider='grok',model='grok-4.7',permission_profile='analysis',cwd=str(root),provider_home=str(root/'native'))
+        spec=dict(provider='grok',model='grok-4.7',permission_profile=profile,cwd=str(root),provider_home=str(root/'native'))
         lease=dict(spec=spec,grants={},provider_home=spec['provider_home'],binding=str(journal.root/'bindings'/new_id()),
                    executable=str(binary),expires_at=time.time()+30,parent_key='parent')
         journal.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group,'parent','{}','RESERVED','{}'))
@@ -126,6 +139,37 @@ class GrokStreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(worker.model_observed,'grok-4.7');self.assertIn('grok-4.7-build',second['model_usage'])
             finally:await worker.close_provider()
         self.assertEqual(worker.provider_cleanup['state'],'CLOSED');self.assertTrue(worker.provider_cleanup['output_eof'])
+
+    async def test_offline_workspace_stream_accepts_edit_tools_and_matching_observations(self):
+        """Exercise production observation with synthetic proof, not native enforcement."""
+        worker,binary=await self.fixture('workspace',profile='workspace')
+        with patch.object(worker,'verify_grok'),patch.object(worker,'grok_observation',wraps=worker.grok_observation) as observe, \
+             patch('nativepeers.usage.grok_native.session_usage',new_callable=AsyncMock,return_value={'native_turn_number':1,'total_tokens':19}):
+            try:
+                result=await worker.grok_turn('offline workspace fixture')
+                self.assertEqual(result['status'],'completed');self.assertEqual(result['text'],'GROK_OK')
+                self.assertEqual((Path(worker.row['cwd'])/'owned-result.txt').read_text(),'after')
+                self.assertGreaterEqual(observe.call_count,2)
+                event=worker.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='effective-tool-profile' ORDER BY sequence DESC",(worker.row['worker_id'],))
+                value=json.loads(event['payload_json'])
+                self.assertEqual(value['profile'],'workspace');self.assertEqual(value['sandbox'],'nativepeers-workspace')
+                self.assertEqual(value['tools'],['read_file','grep','list_dir','run_terminal_cmd','write','search_replace'])
+                self.assertEqual(value['denied_advertised_tools'],[])
+                self.assertEqual(worker.model_observed,'grok-4.7');self.assertTrue(worker.lease['grok_native_created'])
+            finally:await worker.close_provider()
+        self.assertEqual(worker.provider_cleanup['state'],'CLOSED');self.assertTrue(worker.provider_cleanup['output_eof'])
+
+    async def test_offline_workspace_stream_rejects_mismatched_observation_proofs(self):
+        for scenario in ('wrong-profile','no-hook','wrong-process','no-kernel','wrong-kernel-profile'):
+            with self.subTest(scenario=scenario):
+                worker,binary=await self.fixture(scenario,profile='workspace')
+                with patch.object(worker,'verify_grok'),patch('nativepeers.usage.grok_native.session_usage',new_callable=AsyncMock) as usage:
+                    try:
+                        with self.assertRaises(PeerError) as caught:await worker.grok_turn('offline workspace fixture')
+                        self.assertEqual(caught.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+                        self.assertIsNone(worker.model_observed);usage.assert_not_called()
+                    finally:await worker.close_provider()
+                self.assertEqual(worker.provider_cleanup['state'],'CLOSED');self.assertTrue(worker.provider_cleanup['output_eof'])
 
     async def test_wrong_uuid_model_hook_birth_kernel_and_missing_terminal_fail(self):
         for scenario,code in [('identity','OWNERSHIP_CONFLICT'),('model','MODEL_UNAVAILABLE'),
