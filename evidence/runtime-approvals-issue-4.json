@@ -1,22 +1,22 @@
 {
   "schema_version": 1,
-  "stage": "Issue 4 source-only runtime update workflow",
-  "status": "PARTIAL",
+  "stage": "Issue 4 source PR verified; installed runtime unchanged",
+  "status": "PASS",
   "reviewed_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
-  "scope": "Candidate source verification only. Main remains installed and unchanged; historical native checks retain their original scope.",
+  "scope": "Source-only issue-4 PR. PASS applies to the offline suite, exact signed metadata/snapshot checks and temporary-journal transitions named here. Native worker execution, inbox ingestion, effective permission/MCP and quota transport acceptance remain separately NOT_RUN. Main and daily approvals are unchanged.",
   "tests": {
     "unchanged_focused_baseline": {
       "status": "PASS",
       "passed": 40,
       "subtests_passed": 16,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py",
       "evidence": "ignored task archive: baseline-focused.txt"
     },
     "focused": {
       "status": "PASS",
       "passed": 102,
       "subtests_passed": 88,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
       "evidence": "ignored task archive: focused-reviewed-final.txt"
     },
     "preliminary_full": {
@@ -29,9 +29,17 @@
       "evidence": "ignored task archive: candidate-full.txt"
     },
     "final_full": {
-      "status": "NOT_RUN",
+      "status": "PASS",
+      "passed": 792,
+      "skipped": 4,
+      "failed": 0,
+      "subtests_passed": 742,
+      "duration_seconds": 262.26,
+      "run_head": "22195967ba8d70d87876420215140195b6c73269",
       "product_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q"
+      "command": ".venv/bin/python -m pytest -q",
+      "evidence": "ignored task archive: full-reviewed-source.txt",
+      "scope": "Completed frozen source-identical run. The final publication-head complete rerun is retained in the task archive and reported in the PR."
     },
     "interrupted_metadata_run": {
       "status": "FAIL",
@@ -39,7 +47,7 @@
       "failed": 1,
       "skipped": 4,
       "subtests_passed": 742,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "command": ".venv/bin/python -m pytest -q",
       "reason": "Verification metadata changed temporarily while pytest was running. Committed metadata was restored; this is not final acceptance.",
       "evidence": "ignored task archive: committed-full-1.txt"
     },
@@ -49,7 +57,7 @@
       "skipped": 4,
       "subtests_passed": 742,
       "source_head": "1d22f2aa7dfec0868fea0ec4697a10c9f5da23ef",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "command": ".venv/bin/python -m pytest -q",
       "evidence": "ignored task archive: frozen-full-2.txt"
     },
     "frozen_full_before_review_fixes": {
@@ -58,8 +66,14 @@
       "skipped": 4,
       "subtests_passed": 742,
       "source_head": "6c79dfbd0bace02614c3a6272678b7637cc4a8f9",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "command": ".venv/bin/python -m pytest -q",
       "evidence": "ignored task archive: frozen-full-3.txt"
+    },
+    "skipped_checks": {
+      "status": "NOT_RUN",
+      "count": 4,
+      "reason": "Linux /proc exit-between-stat-and-exe schedules are skipped on macOS",
+      "file": "tests/unit/test_usage_exit_race.py"
     }
   },
   "operation_checks": [
@@ -69,7 +83,8 @@
       "operation": "signed-update-metadata-and-temporary-approval",
       "status": "PASS",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged"
+      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -77,7 +92,8 @@
       "operation": "worker-execution",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No native qualification model input authorized"
+      "scope": "No native qualification model input authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -85,7 +101,8 @@
       "operation": "native-inbox-ingestion",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No disposable native message qualification authorized"
+      "scope": "No disposable native message qualification authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -93,7 +110,8 @@
       "operation": "bound-mcp",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Effective native inventory not exercised for issue 4"
+      "scope": "Effective native inventory not exercised for issue 4",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -101,7 +119,8 @@
       "operation": "quota-transport",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Independent quota receipts and freshness qualification unchanged"
+      "scope": "Independent quota receipts and freshness qualification unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -109,7 +128,8 @@
       "operation": "signed-update-metadata-and-temporary-approval",
       "status": "PASS",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged"
+      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -117,7 +137,8 @@
       "operation": "worker-execution",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No native qualification model input authorized"
+      "scope": "No native qualification model input authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -125,7 +146,8 @@
       "operation": "native-inbox-ingestion",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No disposable native message qualification authorized"
+      "scope": "No disposable native message qualification authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -133,7 +155,8 @@
       "operation": "bound-mcp",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Effective native inventory not exercised for issue 4"
+      "scope": "Effective native inventory not exercised for issue 4",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -141,7 +164,8 @@
       "operation": "quota-transport",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Independent quota receipts and freshness qualification unchanged"
+      "scope": "Independent quota receipts and freshness qualification unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     }
   ],
   "runtime_scopes": [
@@ -159,8 +183,8 @@
     }
   ],
   "review": {
-    "status": "PARTIAL",
-    "scope": "Two completed independent native read-only reviews; all required corrections implemented, correction recheck running.",
+    "status": "PASS",
+    "scope": "Independent native read-only reviews completed; all required corrections fixed and independently rechecked.",
     "reports": [
       {
         "provider": "grok",
@@ -183,7 +207,7 @@
       }
     ],
     "correction_task": "5fea79be-99d5-40ee-9dd6-cedb770d94e1",
-    "correction_status": "RUNNING",
+    "correction_status": "COMPLETED",
     "tests_run_by_reviewers": [],
     "dispositions": [
       {
@@ -222,7 +246,29 @@
         "test": "tests/unit/test_runtime_updates.py::test_quota_readiness_does_not_inherit_worker_operation_details"
       }
     ],
-    "informational_disposition": "Existing retained-only revocation and historical installation semantics are unchanged; verify still refuses revoked hashes. Full native semantic equivalence is not claimed. Canaries permit bounded exact-hash admission, visibly SUPPORTED_UPDATE/NOT_RUN, with existing native execution gates intact."
+    "informational_disposition": "Existing retained-only revocation and historical installation semantics are unchanged; verify still refuses revoked hashes. Full native semantic equivalence is not claimed. Canaries permit bounded exact-hash admission, visibly SUPPORTED_UPDATE/NOT_RUN, with existing native execution gates intact.",
+    "correction_model_requested": "grok-4.7-build-fast",
+    "correction_model_observed": "grok-4.7-build-fast",
+    "correction_report_sha256": "a1873fae647727435c462a5f04a089c2ebe118345356cd6f2e018f69fcf86a91",
+    "required_findings_unfixed": [],
+    "residual_information": [
+      {
+        "finding": "Intermediate bounded receipt missing native_acceptance would display UNKNOWN",
+        "disposition": "No such daily receipt was written; new receipts always carry NOT_RUN, while SUPPORTED_UPDATE still limits any old intermediate receipt."
+      },
+      {
+        "finding": "Same-hash legacy inspection response says NOT_RUN beside APPROVED",
+        "disposition": "NOT_RUN describes this metadata inspection; historical native qualification is retained on the unchanged receipt and doctor scope."
+      },
+      {
+        "finding": "Live-path OSError inside snapshot context is described as snapshot inspection failure",
+        "disposition": "The machine state remains CHECK_UNAVAILABLE with the actual OSError cause; it never claims missing executable, authentication failure or compatibility success."
+      },
+      {
+        "finding": "No current changed-Grok native renewal check",
+        "disposition": "No changed Grok runtime was available or approved. Its future patch envelope has offline coverage only; current Grok approval is a comparison control."
+      }
+    ]
   },
   "daily_approval_changes": false,
   "installed_source_changes": false,
@@ -283,7 +329,7 @@
     "No daily approval transition or candidate installation performed.",
     "Native model execution, inbox ingestion, bound MCP and quota-source acceptance NOT_RUN."
   ],
-  "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+  "code_commit": "22195967ba8d70d87876420215140195b6c73269",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -371,8 +417,10 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525",
-  "updated_at": "2026-10-26T19:38:35.462328-04:00",
-  "native_metadata_command": "PYTHONPATH=. /Users/danny/Documents/Tools/NativePeers/.venv/bin/python evidence/scratch/runtime-approvals-issue-4/temporary-native-renewal.py",
+  "updated_at": "2026-10-26T19:48:56.255274-04:00",
+  "native_metadata_command": "PYTHONPATH=. .venv/bin/python evidence/scratch/runtime-approvals-issue-4/temporary-native-renewal.py",
   "native_metadata_evidence": "ignored task archive: native-temporary-renewals-final.json",
-  "base_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a"
+  "base_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a",
+  "product_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+  "command_note": "Public commands use the worktree .venv helper symlink; exact local invocations and import provenance are retained in the ignored verification archive."
 }

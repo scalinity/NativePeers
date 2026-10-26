@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+  "code_commit": "22195967ba8d70d87876420215140195b6c73269",
   "reviewed_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
   "publication_branch": "fix/runtime-approvals-issue-4",
-  "updated_at": "2026-10-26T19:38:35.462328-04:00",
+  "updated_at": "2026-10-26T19:48:56.255274-04:00",
   "current_record": "evidence/runtime-approvals-issue-4.json",
   "file_classes": {
     "product": {
@@ -261,7 +261,8 @@
       "operation": "signed-update-metadata-and-temporary-approval",
       "status": "PASS",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged"
+      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -269,7 +270,8 @@
       "operation": "worker-execution",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No native qualification model input authorized"
+      "scope": "No native qualification model input authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -277,7 +279,8 @@
       "operation": "native-inbox-ingestion",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No disposable native message qualification authorized"
+      "scope": "No disposable native message qualification authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -285,7 +288,8 @@
       "operation": "bound-mcp",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Effective native inventory not exercised for issue 4"
+      "scope": "Effective native inventory not exercised for issue 4",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
@@ -293,7 +297,8 @@
       "operation": "quota-transport",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Independent quota receipts and freshness qualification unchanged"
+      "scope": "Independent quota receipts and freshness qualification unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -301,7 +306,8 @@
       "operation": "signed-update-metadata-and-temporary-approval",
       "status": "PASS",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged"
+      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -309,7 +315,8 @@
       "operation": "worker-execution",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No native qualification model input authorized"
+      "scope": "No native qualification model input authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -317,7 +324,8 @@
       "operation": "native-inbox-ingestion",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No disposable native message qualification authorized"
+      "scope": "No disposable native message qualification authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -325,7 +333,8 @@
       "operation": "bound-mcp",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Effective native inventory not exercised for issue 4"
+      "scope": "Effective native inventory not exercised for issue 4",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
@@ -333,7 +342,8 @@
       "operation": "quota-transport",
       "status": "NOT_RUN",
       "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Independent quota receipts and freshness qualification unchanged"
+      "scope": "Independent quota receipts and freshness qualification unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

@@ -1,3 +1,17 @@
+# Routine CLI update verification — source PR (2026-10-26)
+
+The issue-4 source workflow passes **102 focused tests / 88 subtests** and **792 complete-suite tests / 742 subtests**, with four macOS skips for Linux `/proc` exit-between-stat-and-exe schedules. The frozen complete run at `22195967ba8d70d87876420215140195b6c73269` took 262.26 seconds on Python 3.14.9. Its product/test tree is `68fc83a98911b7c03b764a29db8b7bb1863ef751`. The final publication-head rerun and complete raw output are retained separately and reported in the PR. [Source-only record](../evidence/runtime-approvals-issue-4.json) · [Update workflow and support envelope](RUNTIME_UPDATES.md).
+
+Actual vendor-signature, copied-executable digest, sandboxed version/help, marker and temporary-journal admission checks pass for Claude **2.1.311**, SHA-256 `85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161`, and Antigravity **1.4.7**, SHA-256 `b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32`. The temporary transitions preserve Codex/Grok records and refuse status-line admission without its own receipt. These are zero-model-input metadata and temporary-state checks, not native worker, inbox, kernel permission, bound MCP or quota-source acceptance. No daily receipt, provider home, installed launcher, permission setting or main source was changed.
+
+Independent native read-only reviews used exact requested/observed `grok-4.7` and `grok-4.7-build-fast`. The initial 600-second attempt timed out without a report; its exact-history report-only resume completed. A separate complete production review and correction recheck completed. Required findings are fixed with public red/green regressions: persist qualification refusals, reject equal-version rebuilds and conflicting version banners, preserve `SUPPORTED_UPDATE`/`NOT_RUN`, bind all canaries to one snapshot across swap/restore, and keep worker details out of quota rows. The correction review approves these changes and ran no tests. Informational residuals and their reasons remain in the record; no required finding is waived.
+
+The unchanged focused baseline passed 40 tests / 16 subtests. The preliminary candidate full run had 780 passes, two installed-snapshot fingerprint failures and four skips. A later run had 783 passes, one metadata-consistency failure and four skips because verification metadata changed while it ran; that run is not final acceptance. The original records and outputs remain retained. Current source pointers describe this source-only record and never transfer historical native PASS results to new binaries or source.
+
+Private captures, verbatim reviews, metadata proofs and all intermediate runs are retained in the project-owned ignored issue-4 archive. Main remains at its existing installed snapshot; merging changes every session's next `npeer` invocation. No merge, installation, daily approval renewal, unrelated-session restart or all-provider native acceptance is part of this source PR.
+
+---
+
 # Quiet close-out notifications verification (2026-10-26)
 
 Interactive close-out windows, sender retention, receiving guards and retained inbox reads are integrated and installed. The final repaired worktree suite passed **764 tests / 742 subtests**, with four Linux-only skips, in **250.98 seconds**. The final main suite passed **764 tests / 742 subtests**, with four Linux-only skips, in **272.25 seconds**. [Current record](../evidence/quiet-notifications-20261026.json) · [Design and scope](NOTIFICATIONS.md).

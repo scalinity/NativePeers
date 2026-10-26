@@ -216,10 +216,10 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/runtime-approvals-issue-4",
-    "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+    "code_commit": "22195967ba8d70d87876420215140195b6c73269",
     "evidence": "evidence/runtime-approvals-issue-4.json",
     "source_map_sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525",
-    "status": "PARTIAL"
+    "status": "PASS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
     "branch": "fix/runtime-approvals-issue-4",
-    "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
-    "last_verified_publication": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+    "code_commit": "22195967ba8d70d87876420215140195b6c73269",
+    "last_verified_publication": "22195967ba8d70d87876420215140195b6c73269",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,26 +305,26 @@
     "branch": "fix/runtime-approvals-issue-4",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
-    "verified_remote_code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+    "verified_remote_commit": "22195967ba8d70d87876420215140195b6c73269",
+    "verified_remote_code_commit": "22195967ba8d70d87876420215140195b6c73269",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Issue 4 source-only runtime update workflow",
+  "stage": "Issue 4 source PR verified; installed runtime unchanged",
   "tests_current": {
     "unchanged_focused_baseline": {
       "status": "PASS",
       "passed": 40,
       "subtests_passed": 16,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py",
       "evidence": "ignored task archive: baseline-focused.txt"
     },
     "focused": {
       "status": "PASS",
       "passed": 102,
       "subtests_passed": 88,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
       "evidence": "ignored task archive: focused-reviewed-final.txt"
     },
     "preliminary_full": {
@@ -337,9 +337,17 @@
       "evidence": "ignored task archive: candidate-full.txt"
     },
     "final_full": {
-      "status": "NOT_RUN",
+      "status": "PASS",
+      "passed": 792,
+      "skipped": 4,
+      "failed": 0,
+      "subtests_passed": 742,
+      "duration_seconds": 262.26,
+      "run_head": "22195967ba8d70d87876420215140195b6c73269",
       "product_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q"
+      "command": ".venv/bin/python -m pytest -q",
+      "evidence": "ignored task archive: full-reviewed-source.txt",
+      "scope": "Completed frozen source-identical run. The final publication-head complete rerun is retained in the task archive and reported in the PR."
     },
     "interrupted_metadata_run": {
       "status": "FAIL",
@@ -347,7 +355,7 @@
       "failed": 1,
       "skipped": 4,
       "subtests_passed": 742,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "command": ".venv/bin/python -m pytest -q",
       "reason": "Verification metadata changed temporarily while pytest was running. Committed metadata was restored; this is not final acceptance.",
       "evidence": "ignored task archive: committed-full-1.txt"
     },
@@ -357,7 +365,7 @@
       "skipped": 4,
       "subtests_passed": 742,
       "source_head": "1d22f2aa7dfec0868fea0ec4697a10c9f5da23ef",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "command": ".venv/bin/python -m pytest -q",
       "evidence": "ignored task archive: frozen-full-2.txt"
     },
     "frozen_full_before_review_fixes": {
@@ -366,8 +374,14 @@
       "skipped": 4,
       "subtests_passed": 742,
       "source_head": "6c79dfbd0bace02614c3a6272678b7637cc4a8f9",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "command": ".venv/bin/python -m pytest -q",
       "evidence": "ignored task archive: frozen-full-3.txt"
+    },
+    "skipped_checks": {
+      "status": "NOT_RUN",
+      "count": 4,
+      "reason": "Linux /proc exit-between-stat-and-exe schedules are skipped on macOS",
+      "file": "tests/unit/test_usage_exit_race.py"
     }
   },
   "transports": {
@@ -376,7 +390,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-26T19:38:35.462328-04:00",
+  "updated_at": "2026-10-26T19:48:56.255274-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1137,6 +1151,33 @@
         "code_commit": "6a187820c672b3cda1367bc9e00e1bc27e709476",
         "evidence": "evidence/runtime-approvals-issue-4.json",
         "source_map_sha256": "73a80de55f86dd47a3bb320c991076c9242cb3293eb03fc2d235a1d5aceb9cda",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Issue 4 source-only runtime update workflow",
+      "updated_at": "2026-10-26T19:38:35.462328-04:00",
+      "git": {
+        "base_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "last_verified_publication": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "verified_remote_code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "evidence": "evidence/runtime-approvals-issue-4.json",
+        "source_map_sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525",
         "status": "PARTIAL"
       }
     }
