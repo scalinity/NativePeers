@@ -14,7 +14,7 @@ from .control import group_call
 from .errors import PeerError,SupervisorNotStarted,require
 from .files import async_advisory_lock,atomic_json,canonical,private_directory,sha256
 from .launch import launch_environment,provider_home,home_environment
-from .models import bounded_text,new_id,title
+from .models import WAIT_MAX_MS,bounded_text,new_id,title
 from .notifications import claim_wait,wait_generations,wait_output,settle_deferred
 from .process import matches
 from .profiles import ROOT,PYTHON
@@ -64,7 +64,7 @@ class Delegation:
             if 'model' in worker:
                 require(worker['model'].strip() and not any(ord(c)<32 for c in worker['model']),
                         'PROTOCOL_ERROR','Worker model must be a nonempty native model ID or alias')
-        from .policy import load
+        from .policy import load,spawn_limits
         local=load(self.journal)
         workers=request.get('workers');require(isinstance(workers,list) and 0<len(workers)<=local['workers_per_group'],'CAPACITY_UNAVAILABLE','Batch exceeds configured worker limit')
         require(request.get('schema_version',1)==1,'PROTOCOL_ERROR','Unknown spawn schema version')
@@ -77,11 +77,16 @@ class Delegation:
         require(len(workers)<=limits.get('max_concurrent_workers',4)<=min(local['workers_per_group'],caller.grants.get('max_concurrent_workers',4)),
                 'CAPACITY_UNAVAILABLE','Batch exceeds the caller concurrency ceiling')
         require(not request.get('survive_parent') or caller.grants.get('survive_parent'),'APPROVAL_BLOCKED','Detached survival requires an explicit operator grant')
-        wall=limits.get('wall_time_seconds',local['task_wall_seconds']);turns=limits.get('max_task_turns_per_worker',local['max_task_turns'])
-        for field,requested,budget_ceiling in (('wall_time_seconds',wall,local['task_wall_seconds']),
-                                               ('max_task_turns_per_worker',turns,local['max_task_turns'])):
-            require(1<=requested<=budget_ceiling,'BUDGET_EXHAUSTED',f'limits.{field} requested {requested} exceeds ceiling {budget_ceiling}',
-                    details={'field':'limits.'+field,'requested':requested,'ceiling':budget_ceiling})
+        effective_limits=spawn_limits(local,limits)
+        wall=effective_limits['wall_time_seconds']['effective'];turns=effective_limits['max_task_turns_per_worker']['effective']
+        native_turns=effective_limits['max_native_turns_per_task']['effective']
+        for field,requested,key in (('wall_time_seconds',wall,'task_wall_seconds'),('wall_time_seconds',wall,'group_wall_seconds'),
+                                    ('max_task_turns_per_worker',turns,'max_task_turns'),('max_native_turns_per_task',native_turns,'native_max_turns')):
+            budget_ceiling=local[key];source=local['sources'][key]
+            mismatch='; task_wall_seconds must fit group_wall_seconds' if key=='group_wall_seconds' else ''
+            require(budget_ceiling is None or requested<=budget_ceiling,'BUDGET_EXHAUSTED',
+                    f'limits.{field} requested {requested} exceeds ceiling {budget_ceiling}; {key} from {source["source"]} ({source["policy_file"]})'+mismatch,
+                    details=dict(field='limits.'+field,requested=requested,ceiling=budget_ceiling,**source))
         group_id=new_id();policy=dict(original_request=original,workers=[],initial_tasks=[],completion_mode=request.get('completion_mode','push'),
             followup_grace_seconds=min(local['followup_grace_seconds'],max(0,limits.get('followup_grace_seconds',local['followup_grace_seconds']))),wall_time_seconds=wall,group_wall_seconds=local['group_wall_seconds'],
             depth=depth,allow_sibling_messages=bool(request.get('allow_sibling_messages',False)),survive_parent=bool(request.get('survive_parent',False)),
@@ -137,7 +142,7 @@ class Delegation:
             workspace=spec.get('workspace',{'mode':'inherit-read-only'})
             require(profile!='analysis' or workspace.get('mode','inherit-read-only')=='inherit-read-only','PROTOCOL_ERROR','Analysis uses a read-only workspace')
             require(profile!='workspace' or workspace.get('mode') in ('isolated-worktree','isolated-copy'),'WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require an isolated worktree or explicit isolated copy')
-            spec.update(permission_profile=profile,cwd=parent['cwd'],wall_time_seconds=wall,max_task_turns=turns)
+            spec.update(permission_profile=profile,cwd=parent['cwd'],wall_time_seconds=wall,max_task_turns=turns,native_max_turns=native_turns)
             spec['model']=spec.get('model',codex_config.get('model') if spec['provider']=='codex' else claude_config.get('model','sonnet'))
             if spec['provider']=='antigravity':
                 configured=json.loads(agy_settings.read_text()).get('model') if agy_settings.exists() else None
@@ -247,7 +252,7 @@ class Delegation:
             pool_blocked=[d for d in quota['demands'] if d['ceiling'] is not None and d['active_workers']+d['proposed_workers']>d['ceiling']]
             from .completion_delivery import annotate,readiness
             return annotate(dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],ready_scope='worker_execution',usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
-                workers=planned,baseline=frozen.baseline,failures=failures,
+                workers=planned,baseline=frozen.baseline,failures=failures,limits=effective_limits,
                 input_preparation=dict(selected_files=len(frozen.untracked)+frozen.baseline.get('dirty_input_files',0),selected_bytes=sum(len(data) for data,mode in frozen.untracked.values())+frozen.baseline.get('dirty_input_bytes',0),dirty_patch_bytes=len(frozen.patch or b''),time_limit_seconds=20,input_limit_bytes=10485760),
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
                 native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
@@ -389,7 +394,7 @@ class Delegation:
             'queued_tasks':sum(t['state']=='QUEUED' for t in current),
             'initial_batch_complete':all(states[t] in TERMINAL for t in initial) if initial else None,
             'latest_completion_phase':max(visible,default=None),
-            'deadline':policy['created_at']+policy.get('group_wall_seconds',policy.get('wall_time_seconds',0)) if 'created_at' in policy else None,
+            'deadline':policy['created_at']+policy.get('group_wall_seconds',policy.get('wall_time_seconds',0)) if 'created_at' in policy and policy.get('group_wall_seconds',policy.get('wall_time_seconds')) is not None else None,
             'last_native_activity':dict(at=activity['at'],category=activity['kind'],task_id=activity['subject_id']) if activity else None,
             'activity_is_success':False}
 
@@ -493,10 +498,10 @@ class Delegation:
         return {'ready':True,'result':self._render_result(status,policy,handle),'notification_output_uncertain':claimed,
                 'notification_disposition':('tool-result-output-pending-observation' if claimed else 'retained-result-read') if generations else 'batch-notification-unchanged'}
 
-    async def wait(self,caller,handle,timeout_ms=30000,on_timeout=None):
-        require(type(timeout_ms) is int and 1<=timeout_ms<=30000,'PROTOCOL_ERROR',
-                f'timeout_ms requested {timeout_ms!r}; must be an integer from 1 to 30000 ms (ceiling 30000)',
-                details={'field':'timeout_ms','requested':timeout_ms,'minimum':1,'ceiling':30000})
+    async def wait(self,caller,handle,timeout_ms=WAIT_MAX_MS,on_timeout=None):
+        require(type(timeout_ms) is int and 1<=timeout_ms<=WAIT_MAX_MS,'PROTOCOL_ERROR',
+                f'timeout_ms requested {timeout_ms!r}; must be an integer from 1 to {WAIT_MAX_MS} ms (ceiling {WAIT_MAX_MS})',
+                details={'field':'timeout_ms','requested':timeout_ms,'minimum':1,'ceiling':WAIT_MAX_MS})
         require(on_timeout in (None,'push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         terminal=self.terminal_wait(caller,handle,timeout_ms)
         if terminal is not None:

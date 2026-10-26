@@ -436,7 +436,7 @@ class Worker:
             await self.provider.wait();await drain
             require(terminal is not None or evidence.synthetic,'WORKER_CRASHED','Claude exited without a terminal result')
             self.journal.event(self.running_task,'provider-internal-rounds',{'assistant_events':evidence.rounds,'num_turns':(terminal or {}).get('num_turns')})
-            error=evidence.failure(terminal,self.provider.returncode)
+            error=evidence.failure(terminal,self.provider.returncode,native_max_turns=self.spec.get('native_max_turns',128))
             return dict(status='failed' if error else 'completed',text=terminal.get('result','') if not error else error['message'],
                         native_turn_ids=[self.turn] if self.turn else [],error=error,usage=(terminal or {}).get('usage'))
         finally:
@@ -522,7 +522,7 @@ class Worker:
         async def stderr():
             while chunk:=await self.provider.stderr.read(4096):
                 errors.extend(chunk);del errors[:-65536]
-        drain=asyncio.create_task(stderr());stream=Stream(self.expected_native,self.spec['permission_profile'])
+        drain=asyncio.create_task(stderr());stream=Stream(self.expected_native,self.spec['permission_profile'],native_max_turns=self.spec.get('native_max_turns',128))
         try:
             while line:=await self.provider.stdout.readline():
                 kind=stream.observe(json.loads(line))

@@ -17,7 +17,7 @@ from .delegation import Delegation,TERMINAL,supervisor_environment
 from .errors import ControllerNotStarted,PeerError,require
 from .files import advisory_lock,async_advisory_lock,atomic_json,canonical
 from .journal import Journal
-from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,new_id
+from .models import PEER_FRAME,CONTROL_RESPONSE,INLINE_BODY,WAIT_MAX_MS,new_id
 from .notifications import claim_wait,wait_generations,wait_output,release_wait,settle_deferred
 from .process import refresh_captured,identity,matches,signal_owned,owned_status,signal_captured
 from .profiles import ROOT,PYTHON
@@ -469,7 +469,7 @@ class Group:
 
     async def wait(self,payload,reader):
         require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Wait requires the owning parent')
-        timeout=payload.get('timeout_ms',30000)/1000;require(0<timeout<=30,'PROTOCOL_ERROR','Wait exceeds 30 seconds')
+        timeout=payload.get('timeout_ms',WAIT_MAX_MS)/1000;require(0<timeout<=WAIT_MAX_MS/1000,'PROTOCOL_ERROR','Wait exceeds 30 seconds')
         mode=payload.get('on_timeout') or ('push' if self.policy['completion_mode']=='push' else 'retain')
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         waiter=new_id();deadline=time.monotonic()+timeout;output=False
@@ -555,7 +555,8 @@ class Group:
             if not error.may_have_received and budget and reservation:budget.settle(reservation,observed_turns=0)
 
     def lifetime_deadline(self):
-        return self.policy['created_at']+self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
+        seconds=self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
+        return self.policy['created_at']+seconds if seconds is not None else float('inf')
 
     async def monitor(self):
         while True:
