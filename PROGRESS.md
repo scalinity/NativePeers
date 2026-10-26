@@ -1,4 +1,4 @@
-# Quiet close-out notifications — source complete, final checks pending
+# Quiet close-out notifications — implemented, verified and published
 
 - [x] Stable-peer close-out policy: `notifications open|close|status`, MCP `peer_notifications`, durable cutoffs, pre-submission `RETAINED`, and `inbox --retained`.
 - [x] Consumption guard in the owned Claude/Codex `UserPromptSubmit` hook, Grok/Antigravity pending-frame filters, installer/readiness support, owned instructions and docs.
@@ -10,10 +10,15 @@
 - [x] R6 completion diagnostics, fixed: group status and results include `delivery.suppression`.
 - [x] R7 Grok prompt reopen, fixed: a Grok hook superseded during the lock wait no longer reopens the resumed policy.
 - [x] Receipt schema now lists `RETAINED`.
-- [x] Native Codex 0.164.0 blocking seam and actual guard integration passed on an operator-seeded private loaded app-server. This is not standalone-TUI qualification.
+- [x] Native Codex 0.164.0 blocking seam and actual guard integration passed on an operator-seeded private loaded app-server. This is not standalone-TUI qualification. The final-source policy rerun also passed, with 5 localhost requests.
 - [x] Native Claude live guard blocks passed on a SessionStart-registered interactive TUI. The original result is FAIL only for an early transcript flush; the read-only supplemental collection passed.
-- [x] First full integration run: 754 passed, 4 skipped, 742 subtests. Its 2 failures are stale generated fingerprint records awaiting the guarded publisher refresh; no product test failed.
-- [ ] Guarded fingerprint-record refresh, final full suite on the final source, final independent R7 recheck, installation and push.
+- [x] First full integration run: 754 passed, 4 skipped, 742 subtests. Its 2 failures were stale generated fingerprint records; no product test failed.
+- [x] Final review approved R1–R7 (75 tests, 15 subtests). The parent's final focused run passed 100 tests and 57 subtests.
+- [x] Complete worktree suite: 757 passed, 4 Linux-only skips, 742 subtests, in 271.60s.
+- [x] Feature source `d999a58` published; record commit `1907b5e` fast-forwarded local main.
+- [x] Installed the Claude/Codex guards, native Codex trust for the third hook, owned skills and the shared instruction block. Repeat installs perform zero operations, and runtime approvals, non-owned settings, Grok files and protected state are unchanged.
+- [x] Main suite: 757 tests and 742 subtests, four Linux-only skips, 255.65s. Verified source is published on main.
+- [x] Remove the integration worktree and local/remote feature branch; archive and retire both owned worker worktrees with verified recovery copies. Preserve native histories and protected state.
 
 No finding was waived. The summary record is evidence/quiet-notifications-20261026.json, and details are in docs/NOTIFICATIONS.md; raw reports and probe output stay in ignored evidence/scratch/quiet-notifications-20261026/.
 

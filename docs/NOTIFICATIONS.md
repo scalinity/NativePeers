@@ -44,7 +44,7 @@ Grok `PreToolUse` and Antigravity `PreInvocation` filter pending frames before e
 |------|----------------|----------------------|
 | Claude interactive, native inbox | Pre-submission retention; owned `UserPromptSubmit` guard with `suppressOriginalPrompt` | The live guard was checked on one SessionStart-registered interactive TUI (below). Its blocks passed with no assistant turn; the original run is recorded FAIL only for an early transcript flush. [Claude's hooks documentation](https://code.claude.com/docs/en/hooks#userpromptsubmit) says `UserPromptSubmit` fires for cross-session messages to main conversations. |
 | Codex standalone, native queue | Pre-submission retention; owned `UserPromptSubmit` guard with native hook trust | The native block seam and the actual NativePeers guard integration passed on an operator-seeded receiver in a loaded private app-server (below). Normal standalone-TUI identity qualification and UI acceptance are not done. |
-| Grok hook inbox | Retention; `PreToolUse` filter; prompt reopen | Not qualified by this change |
+| Grok hook inbox | Retention; `PreToolUse` filter; prompt reopen | Not qualified; no Grok live turn ran for this change |
 | Antigravity hook inbox | Retention; `PreInvocation` filter | The current executable has a preexisting `CAPABILITY_MISMATCH` and is not reapproved here. |
 | Controller completions | Route `RETAINED`; unsubmitted reservation released | Source tests only |
 
@@ -52,7 +52,7 @@ A configured hook definition does not prove that a running native process has lo
 
 ## Verification
 
-Source tests: `tests/unit/test_notification_policy.py`, `tests/unit/test_notification_guard_hooks.py`, and the quiet-frame and supersession tests in `tests/unit/test_grok.py` and `tests/unit/test_antigravity.py`. The first full run of the integration tree passed 754 tests and 742 subtests, with 4 skips, in 253.76s. Its only 2 failures were the two generated current-source fingerprint records: they were stale and need the guarded publisher refresh, and no product test failed. The final full suite on the final source, installation and publication are still pending. The `d7f69b6` baseline had 720 passing, 4 skips, 740 subtests and 1 native-usage timing failure in 303.60s; that test passed when rerun alone. The summary record is `evidence/quiet-notifications-20261026.json`.
+Source tests: `tests/unit/test_notification_policy.py`, `tests/unit/test_notification_guard_hooks.py`, and the quiet-frame and supersession tests in `tests/unit/test_grok.py` and `tests/unit/test_antigravity.py`. The final reviewer's focused run passed 75 tests and 15 subtests in 4.63s, and the parent's final focused run passed 100 tests and 57 subtests in 4.39s. The final complete worktree suite passed 757 tests and 742 subtests, with 4 Linux-only skips, in 271.60s. An earlier full integration run had 2 failures, both stale generated current-source fingerprint records; no product test failed. The `d7f69b6` baseline had 720 passing, 4 skips, 740 subtests and 1 native-usage timing failure in 303.60s; that test passed when rerun alone. The summary record is `evidence/quiet-notifications-20261026.json`.
 
 The parent ran a native receiver seam probe on the immutable Codex 0.164.0 executable (SHA-256 `3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc`). `thread/queue/add` dispatched automatically. `decision:block` and `continue:false` each produced zero model requests and no assistant output, and a fresh allowed input produced one model request. The run made two localhost Responses fixture requests in total and sent no external model input. Blocked bodies were absent from requests and history, and the owned app-server exited. The topology was a private loaded app-server, not interactive TUI acceptance, so this proves only the native blocking seam. Raw output stays ignored under `evidence/scratch/quiet-notifications-20261026/native-seam/`. No runtime approval changed.
 
@@ -64,7 +64,7 @@ The parent then ran the actual shared guard in the owned native `UserPromptSubmi
 - The run made five localhost model requests and sent no external model input.
 - The native UUID and owner PID/start matched the registered provisional fixture owner.
 
-This used an operator-seeded receiver on a loaded private app-server; it is not normal standalone-TUI identity qualification or UI acceptance. Raw output stays ignored under `evidence/scratch/quiet-notifications-20261026/native-policy/`.
+This used an operator-seeded receiver on a loaded private app-server; it is not normal standalone-TUI identity qualification or UI acceptance. Raw output stays ignored under `evidence/scratch/quiet-notifications-20261026/native-policy/`. The actual-policy run passed again on the final source, with 5 localhost requests and no external input. Successful Codex probes made 12 localhost requests in total (seam 2, policy 5, final policy 5). Earlier failed diagnostic runs are recorded separately, and there is no cumulative full-session count.
 
 The parent ran a live Claude check on a genuinely SessionStart-registered interactive TUI, through the actual `hooks.observe`, with the exact frame, native UUID and owner PID/start matching:
 
@@ -74,9 +74,13 @@ The parent ran a live Claude check on a genuinely SessionStart-registered intera
 - The run used normal startup and authentication, with per-launch `dontAsk` and cross-session inbound acceptance disclosed, and no global configuration change.
 - Claude model request counts were not instrumented.
 
+## Installation
+
+Installed: the namespaced Claude and Codex `UserPromptSubmit` guards, native Codex trust for the third owned hook, owned skill updates for Claude, Codex and Antigravity, and the exact shared instruction block. Repeat installs (default and Antigravity) perform zero operations, the Grok install plan is empty, and an uninstall dry-run names only owned entries. `runtime.json` bytes are unchanged (sha256 `e05c92e9457f32dc2847db24d4b3fa4653748800c201a935b2b51a7093ccbb86`). Non-owned settings and trust are semantically unchanged, `daemon_auto_start=false` is kept, and all Grok files are unchanged. Bytes outside the shared block are exact (sha256 `e9aea8e67b5e81201a9e79e88a5643704a5e8de0a3e95a054fcb09baf4163c83`), and the protected `fix/review-2885497` branch is unchanged. An installed guard is a passive definition, not proof that an already running process has loaded it; a normal resume may be needed.
+
 ## Review dispositions
 
-All independent review findings are fixed with source regressions; none were waived. An independent reviewer confirmed R1–R4 fixed (58 targeted tests, 89 subtests), then R1–R6 fixed (183 tests, 195 subtests in the integration tree). R7 is integrated, and the final independent recheck is running:
+All independent review findings are fixed with source regressions; none were waived. An independent reviewer confirmed R1–R4 fixed (58 targeted tests, 89 subtests), then R1–R6 fixed (183 tests, 195 subtests in the integration tree). The final recheck approved R1–R7 (75 tests, 15 subtests):
 
 - **R1 budget, fixed.** Quiet-retained completions consumed a turn. They now call `release_unsubmitted` instead of a zero-turn settle; the regression uses a real cap-1 ledger.
 - **R2 metadata ID lookup, fixed.** The footer ID could be hidden by body lines. Eight or more `Message:` body lines could push the footer ID out of the lookup. The ID now comes from the final references section.

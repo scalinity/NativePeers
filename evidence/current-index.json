@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+  "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
   "reviewed_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-  "publication_branch": "fix/quiet-notifications",
-  "updated_at": "2026-10-26T16:04:19.214469-04:00",
+  "publication_branch": "main",
+  "updated_at": "2026-10-26T16:13:16.798111-04:00",
   "current_record": "evidence/quiet-notifications-20261026.json",
   "file_classes": {
     "product": {
@@ -302,8 +302,8 @@
     {
       "operation": "owned host installation and current main suite",
       "parent_context": "live main checkout after verified worktree suite",
-      "status": "NOT_RUN",
-      "scope": "pending"
+      "status": "PASS",
+      "scope": "Full main suite757tests742subtests4Linuxskips255.65s; owned hook installation and trust; repeat installs0ops; owned-only uninstall dry-run; source published to main. Hook presence does not establish loaded state in existing native processes."
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

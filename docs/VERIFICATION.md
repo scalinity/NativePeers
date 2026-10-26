@@ -2,12 +2,16 @@
 
 Summary record: [evidence/quiet-notifications-20261026.json](../evidence/quiet-notifications-20261026.json). Design, coverage and review dispositions are in [NOTIFICATIONS.md](NOTIFICATIONS.md); raw probe output stays in ignored `evidence/scratch/quiet-notifications-20261026/`.
 
-- **Source:** R1–R7 and the receipt-schema contract are fixed with regressions. R1–R6 were independently confirmed (183 tests, 195 subtests in the integration tree). R7 is integrated, and the final independent recheck is running.
-- **First full integration run:** 754 passed, 4 skipped, 742 subtests and 2 failed, in 253.76s. Both failures were generated current-source fingerprint records that were stale and need the guarded publisher refresh; no product test failed.
-- **Native Codex 0.164.0:** the generic blocking seam passed with 2 localhost requests, and the actual policy guard passed with 5. There was no external model input. The topology was a private loaded app-server with a seeded receiver, not standalone-TUI UI acceptance.
-- **Native Claude:** the live guard blocks passed on a SessionStart-registered interactive TUI, with no assistant turn or `Stop` and unchanged state and receipts. The original result stays FAIL only for an early transcript flush; the read-only supplemental collection passed. Model request counts were not instrumented.
+- **Review:** R1–R7 and the receipt-schema contract are fixed with regressions and independently approved. The final reviewer's run passed 75 tests and 15 subtests in 4.63s, and the parent's final focused run passed 100 tests and 57 subtests in 4.39s.
+- **Complete worktree suite:** 757 passed, 4 Linux-only skips and 742 subtests, in 271.60s. An earlier integration run had 2 failures, both stale generated current-source fingerprint records; no product test failed.
+- **Publication:** feature source commit `d999a58754f1746278648f51b35ea579d522c524` was published, and record commit `1907b5e` fast-forwarded local main.
+- **Installation:** Installed: the namespaced Claude and Codex `UserPromptSubmit` guards, native Codex trust for the third owned hook, owned skill updates for Claude, Codex and Antigravity, and the exact shared instruction block. Repeat installs (default and Antigravity) perform zero operations, the Grok install plan is empty, and an uninstall dry-run names only owned entries. `runtime.json` bytes are unchanged (sha256 `e05c92e9457f32dc2847db24d4b3fa4653748800c201a935b2b51a7093ccbb86`). Non-owned settings and trust are semantically unchanged, `daemon_auto_start=false` is kept, and all Grok files are unchanged. Bytes outside the shared block are exact (sha256 `e9aea8e67b5e81201a9e79e88a5643704a5e8de0a3e95a054fcb09baf4163c83`), and the protected `fix/review-2885497` branch is unchanged. An installed guard is a passive definition, not proof that an already running process has loaded it; a normal resume may be needed.
+- **Native Codex 0.164.0:** the seam probe made 2 localhost requests, the actual-policy probe made 5, and the final-source policy rerun made 5: 12 in total from successful probes, with no external model input. Earlier failed diagnostics are recorded separately, and there is no cumulative full-session count. The scope was a private loaded app-server with a seeded receiver.
+- **Native Claude:** the special-inbox guard was checked on a registered interactive TUI. The original harness result stays FAIL because of an early transcript flush, and the separate read-only supplemental collection passed. Request counts were not instrumented.
+- **Not qualified:** standalone Codex TUI UI acceptance, any Grok live turn, and Antigravity reapproval.
 - **Baseline at `d7f69b6`:** 720 passed, 4 skipped, 740 subtests and 1 native-usage timing failure, in 303.60s. That test passed when rerun alone.
-- **Pending:** the final full suite on the final source, installation and publication.
+
+The complete main suite passed **757 tests and 742 subtests**, with four Linux-only skips, in **255.65 seconds**. Verified source is published on main. Both owned worker worktrees have verified recovery archives; the integration worktree and local/remote feature branch are removed. Native histories and the protected branch remain intact.
 
 # Grok Build provider verification
 

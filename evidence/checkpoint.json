@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/quiet-notifications",
-    "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+    "branch": "main",
+    "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
     "evidence": "evidence/quiet-notifications-20261026.json",
     "source_map_sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3",
-    "status": "PARTIAL"
+    "status": "PASS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -233,9 +233,9 @@
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-    "branch": "fix/quiet-notifications",
-    "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
-    "last_verified_publication": "d999a58754f1746278648f51b35ea579d522c524",
+    "branch": "main",
+    "code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+    "last_verified_publication": "1907b5e065686dfdfed0de34c6e531db4695381c",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,11 +302,11 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/quiet-notifications",
+    "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "d999a58754f1746278648f51b35ea579d522c524",
-    "verified_remote_code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+    "verified_remote_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
+    "verified_remote_code_commit": "1907b5e065686dfdfed0de34c6e531db4695381c",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -353,13 +353,33 @@
       "log_sha256": "3b70be522675da58f67480c9b49564bcb01a7c17d8119ded8483448cdcb0555a"
     },
     "main_full": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "passed": 757,
+      "skipped": 4,
+      "subtests": 742,
+      "seconds": 255.65,
+      "command": ".venv/bin/python -m pytest -q",
+      "log_sha256": "8ab31b0ad4ec783afe783cf315e33e926151a7e239e4a33a48173059b0a849d5"
     },
     "installation": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "default_repeat_operations": 0,
+      "antigravity_repeat_operations": 0,
+      "grok_plan_operations": 0,
+      "uninstall_owned_only": true
     },
     "preservation": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "runtime_receipt_byte_identical": true,
+      "nonowned_configuration_unchanged": true,
+      "shared_outside_bytes_identical": true,
+      "protected_branch_unchanged": true
+    },
+    "publication_consistency": {
+      "status": "PASS",
+      "passed": 3,
+      "seconds": 0.06,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
     }
   },
   "transports": {
@@ -368,7 +388,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-26T16:04:19.214469-04:00",
+  "updated_at": "2026-10-26T16:13:16.798111-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -968,6 +988,33 @@
         "evidence": "evidence/grok-20261026.json",
         "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
         "status": "PARTIAL: historical qualification limits; integration and close-out complete"
+      }
+    },
+    {
+      "stage": "quiet-notifications-20261026",
+      "updated_at": "2026-10-26T16:04:19.214469-04:00",
+      "git": {
+        "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
+        "branch": "fix/quiet-notifications",
+        "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+        "last_verified_publication": "d999a58754f1746278648f51b35ea579d522c524",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/quiet-notifications",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "d999a58754f1746278648f51b35ea579d522c524",
+        "verified_remote_code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/quiet-notifications",
+        "code_commit": "d999a58754f1746278648f51b35ea579d522c524",
+        "evidence": "evidence/quiet-notifications-20261026.json",
+        "source_map_sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3",
+        "status": "PARTIAL"
       }
     }
   ],
