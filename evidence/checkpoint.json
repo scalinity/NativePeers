@@ -222,7 +222,7 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "feat/grok-provider",
-    "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+    "code_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
     "evidence": "evidence/grok-20261026.json",
     "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
     "status": "PARTIAL"
@@ -240,8 +240,8 @@
   "git": {
     "base_commit": "e2b879e",
     "branch": "feat/grok-provider",
-    "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
-    "last_verified_publication": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+    "code_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
+    "last_verified_publication": "b8209441e1d4e0de367625e45495851e12a5afdb",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,8 +305,8 @@
     "branch": "feat/grok-provider",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
-    "verified_remote_code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+    "verified_remote_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
+    "verified_remote_code_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -325,15 +325,15 @@
     },
     "full_worktree": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
       "passed": 721,
-      "subtests": 740,
       "skipped": 4,
-      "skip_reason": "Linux-only process schedules on macOS",
-      "seconds": 277.55,
-      "source_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
-      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-closeout.log",
-      "log_sha256": "0fa171d6c217dccc65ce11d916a8e35793677b6c2eeb2b215f131653df791886"
+      "subtests": 740,
+      "seconds": 364.96,
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
+      "scope": "Before final one-line complete-PID readiness refinement, which is covered by focused tests and the required main full suite.",
+      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-worktree-fixed.log",
+      "log_sha256": "c9c79263150ef27211796031c6b1ba082afe188f886eb0906764fefadd3773f6"
     },
     "full_main": {
       "status": "NOT_RUN",
@@ -348,10 +348,8 @@
       "source_commit": "ad09cdd"
     },
     "publication_metadata": {
-      "status": "PASS",
-      "passed": 3,
-      "seconds": 0.09,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+      "status": "NOT_RUN",
+      "reason": "Regenerated metadata validation follows."
     },
     "previous_full_worktree": {
       "status": "PASS",
@@ -364,6 +362,12 @@
       "source_commit": "ae26b647a86cb3acce84382f8a022f09bed51dbf",
       "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/feature-run/full-suite-final.log",
       "log_sha256": "1a47d8012d3b82f2a1550b32263b0b89e52e566c234f60e8a0fe12afdc2dc8e0"
+    },
+    "finalization_catalogs": {
+      "status": "PASS",
+      "passed": 9,
+      "subtests": 14,
+      "seconds": 4.79
     }
   },
   "transports": {
@@ -372,7 +376,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-26T05:03:09.688794-04:00",
+  "updated_at": "2026-10-26T07:11:36.210649-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -861,6 +865,60 @@
       "current_review": {
         "branch": "feat/grok-provider",
         "code_commit": "ae26b647a86cb3acce84382f8a022f09bed51dbf",
+        "evidence": "evidence/grok-20261026.json",
+        "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Grok Build candidate: PARTIAL; main integration held",
+      "updated_at": "2026-10-26T05:03:09.688794-04:00",
+      "git": {
+        "base_commit": "e2b879e",
+        "branch": "feat/grok-provider",
+        "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+        "last_verified_publication": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "feat/grok-provider",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+        "verified_remote_code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "feat/grok-provider",
+        "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+        "evidence": "evidence/grok-20261026.json",
+        "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Grok Build candidate: PARTIAL; main integration held",
+      "updated_at": "2026-10-26T07:03:31.258506-04:00",
+      "git": {
+        "base_commit": "e2b879e",
+        "branch": "feat/grok-provider",
+        "code_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
+        "last_verified_publication": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "feat/grok-provider",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
+        "verified_remote_code_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "feat/grok-provider",
+        "code_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
         "evidence": "evidence/grok-20261026.json",
         "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
         "status": "PARTIAL"

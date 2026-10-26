@@ -3,7 +3,7 @@
   "stage": "Grok Build candidate: PARTIAL; main integration held",
   "status": "PARTIAL",
   "reviewed_commit": "e2b879e",
-  "updated_at": "2026-10-26T05:03:09.688794-04:00",
+  "updated_at": "2026-10-26T07:11:36.210649-04:00",
   "tests": {
     "scoped_source": {
       "status": "PASS",
@@ -17,15 +17,15 @@
     },
     "full_worktree": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
       "passed": 721,
-      "subtests": 740,
       "skipped": 4,
-      "skip_reason": "Linux-only process schedules on macOS",
-      "seconds": 277.55,
-      "source_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
-      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-closeout.log",
-      "log_sha256": "0fa171d6c217dccc65ce11d916a8e35793677b6c2eeb2b215f131653df791886"
+      "subtests": 740,
+      "seconds": 364.96,
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
+      "scope": "Before final one-line complete-PID readiness refinement, which is covered by focused tests and the required main full suite.",
+      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-worktree-fixed.log",
+      "log_sha256": "c9c79263150ef27211796031c6b1ba082afe188f886eb0906764fefadd3773f6"
     },
     "full_main": {
       "status": "NOT_RUN",
@@ -40,10 +40,8 @@
       "source_commit": "ad09cdd"
     },
     "publication_metadata": {
-      "status": "PASS",
-      "passed": 3,
-      "seconds": 0.09,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+      "status": "NOT_RUN",
+      "reason": "Regenerated metadata validation follows."
     },
     "previous_full_worktree": {
       "status": "PASS",
@@ -56,6 +54,12 @@
       "source_commit": "ae26b647a86cb3acce84382f8a022f09bed51dbf",
       "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/feature-run/full-suite-final.log",
       "log_sha256": "1a47d8012d3b82f2a1550b32263b0b89e52e566c234f60e8a0fe12afdc2dc8e0"
+    },
+    "finalization_catalogs": {
+      "status": "PASS",
+      "passed": 9,
+      "subtests": 14,
+      "seconds": 4.79
     }
   },
   "operation_checks": [
@@ -464,6 +468,16 @@
           "ddf64dc18b0fb151543450766aefe2d2e0b69cf7"
         ],
         "disposition": "Accept the four specified status values without changing recorded failed outcomes; three metadata checks and complete 721-test suite pass."
+      },
+      {
+        "id": "CATALOG-READINESS",
+        "finding": "Existing timeout fixture could expire before signal-handler readiness",
+        "status": "ADDRESSED",
+        "commits": [
+          "76cf2ef",
+          "b820944"
+        ],
+        "disposition": "Wait for the real fake process readiness before catalog timeout, preserve real ps discovery and assert SIGKILL; focused catalog suites9tests14subtests pass. Wait for complete matching PID contents before admission; read-only follow-up confirmed selective launch, cleanup and SIGKILL assertion."
       }
     ],
     "scope": "Initial Sol and Opus reviews pinned e2b879e. Exact-history Opus follow-up inspected current files and did not independently verify HEAD/diff objects. Later fixes have targeted regressions and the complete suite; no further model turn was submitted only to restate review formatting."
@@ -475,7 +489,7 @@
     "Account quota remains unknown.",
     "Native network blocking for children is unavailable on macOS."
   ],
-  "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+  "code_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -1096,6 +1110,24 @@
       "failed": 1,
       "seconds": 0.15,
       "reason": "Existing contract omitted the required FAIL state; corrected assertion and fresh publication validation follow."
+    },
+    {
+      "check": "finalization_worktree_first",
+      "status": "FAIL",
+      "passed": 720,
+      "failed": 1,
+      "skipped": 4,
+      "subtests": 740,
+      "seconds": 355.21,
+      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-worktree.log",
+      "cause": "Existing fake native process could time out before installing its SIGTERM-ignore handler; fixture readiness corrected in76cf2ef."
     }
-  ]
+  ],
+  "integration_authorization": {
+    "status": "AUTHORIZED",
+    "config_hold": "CLEARED",
+    "possible_ultra_mode_explanation": "Not independently established",
+    "main_merge_push_cleanup_requested": true,
+    "historical_failures_retained": true
+  }
 }

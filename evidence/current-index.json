@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "ddf64dc18b0fb151543450766aefe2d2e0b69cf7",
+  "code_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
   "reviewed_commit": "e2b879e",
   "publication_branch": "feat/grok-provider",
-  "updated_at": "2026-10-26T05:03:09.688794-04:00",
+  "updated_at": "2026-10-26T07:11:36.210649-04:00",
   "current_record": "evidence/grok-20261026.json",
   "file_classes": {
     "product": {
@@ -116,7 +116,7 @@
     },
     "tests": {
       "files": {
-        "tests/contract/test_antigravity_catalog.py": "ce4a5789ce80351cfaea275c6c1d1f7425b820f4e38543370034aacd1b0d396c",
+        "tests/contract/test_antigravity_catalog.py": "ada78b7acfb866b65049a5c6f5870203eed41aa2c8af68aa91c669421a350be8",
         "tests/contract/test_antigravity_stream.py": "b784a2eb8702918ba023877ceef929ab40d15d8fd38bd575238f7be413bc050e",
         "tests/contract/test_bootstrap.py": "2568e17e1166c701d096f8073cd02fa282670248bc5324eac3e2424a096e6721",
         "tests/contract/test_controller_boundaries.py": "65f3e849f167316b1edac64fa7dde1df0bf0df05d9499df42c55b182cebf57d7",
@@ -243,7 +243,7 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 125,
-      "sha256": "2f8f1c79f1f0f399094126633ec80ddab066fa7c3e04a8c009fee381271d4245"
+      "sha256": "56b53853027921c5316ac348eb9aba3a6d789b27e9a5517ca3c195f3a0a0a271"
     }
   },
   "operation_checks": [
