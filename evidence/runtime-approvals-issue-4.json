@@ -2,7 +2,7 @@
   "schema_version": 1,
   "stage": "Issue 4 source-only runtime update workflow",
   "status": "PARTIAL",
-  "reviewed_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a",
+  "reviewed_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
   "scope": "Candidate source verification only. Main remains installed and unchanged; historical native checks retain their original scope.",
   "tests": {
     "unchanged_focused_baseline": {
@@ -14,10 +14,10 @@
     },
     "focused": {
       "status": "PASS",
-      "passed": 95,
+      "passed": 102,
       "subtests_passed": 88,
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
-      "evidence": "ignored task archive: focused-3.txt"
+      "evidence": "ignored task archive: focused-reviewed-final.txt"
     },
     "preliminary_full": {
       "status": "FAIL",
@@ -30,7 +30,7 @@
     },
     "final_full": {
       "status": "NOT_RUN",
-      "source_head": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+      "product_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q"
     },
     "interrupted_metadata_run": {
@@ -51,6 +51,15 @@
       "source_head": "1d22f2aa7dfec0868fea0ec4697a10c9f5da23ef",
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
       "evidence": "ignored task archive: frozen-full-2.txt"
+    },
+    "frozen_full_before_review_fixes": {
+      "status": "PASS",
+      "passed": 785,
+      "skipped": 4,
+      "subtests_passed": 742,
+      "source_head": "6c79dfbd0bace02614c3a6272678b7637cc4a8f9",
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "evidence": "ignored task archive: frozen-full-3.txt"
     }
   },
   "operation_checks": [
@@ -150,37 +159,70 @@
     }
   ],
   "review": {
-    "status": "NOT_RUN",
-    "state": "Independent Grok review still running",
-    "provider": "grok",
-    "requested_model": "grok-4.7",
-    "observed_model": "grok-4.7",
-    "group_id": "07d35e7e-383d-4dd9-a918-56d116390447",
-    "worker_id": "3e95539d-04a7-419f-b7b1-3837d75b265c",
-    "attempts": [
+    "status": "PARTIAL",
+    "scope": "Two completed independent native read-only reviews; all required corrections implemented, correction recheck running.",
+    "reports": [
       {
-        "status": "TIMED_OUT",
-        "native_acceptance": "NOT_RUN",
+        "provider": "grok",
         "model_requested": "grok-4.7",
         "model_observed": "grok-4.7",
-        "seconds": 600,
-        "findings_reported": false
+        "worker_id": "3e95539d-04a7-419f-b7b1-3837d75b265c",
+        "initial_attempt": "TIMED_OUT after 600 seconds without report",
+        "report_task": "e65d6af1-aab9-4092-9d7b-4ff067cab376",
+        "status": "COMPLETED",
+        "report_sha256": "c13410299dc54cab0ed56d6900dddda2eb51badfd733484bc27b9deb9ba03ceb"
       },
       {
-        "status": "RUNNING",
-        "scope": "Exact-history report-only resume after confirmed process/pipe closure",
-        "task_id": "e65d6af1-aab9-4092-9d7b-4ff067cab376"
+        "provider": "grok",
+        "model_requested": "grok-4.7-build-fast",
+        "model_observed": "grok-4.7-build-fast",
+        "worker_id": "641ea235-15b1-414d-9b48-913331f257f4",
+        "report_task": "53823069-09ee-42de-82fc-3d2c1a01c59e",
+        "status": "COMPLETED",
+        "report_sha256": "337ccf12f57f78f5c0e01b253be8460c7cd596be134a0aeb1225ba2fdd6fdbed"
       }
     ],
-    "final_production_review": {
-      "status": "NOT_RUN",
-      "state": "RUNNING",
-      "provider": "grok",
-      "requested_model": "grok-4.7-build-fast",
-      "group_id": "d43e3987-4bf5-47ff-9446-dea016b6f453",
-      "worker_id": "641ea235-15b1-414d-9b48-913331f257f4",
-      "scope": "Separate complete production diff review, including final unavailable-executable and statusline corrections"
-    }
+    "correction_task": "5fea79be-99d5-40ee-9dd6-cedb770d94e1",
+    "correction_status": "RUNNING",
+    "tests_run_by_reviewers": [],
+    "dispositions": [
+      {
+        "finding": "Remember completed qualification refusals",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_completed_series_refusal_remains_visible_in_passive_doctor"
+      },
+      {
+        "finding": "Reject same-version rebuild as forward patch",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_same_version_rebuild_needs_qualification_instead_of_forward_patch_approval"
+      },
+      {
+        "finding": "Refuse conflicting version triples",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_ambiguous_version_banner_is_not_a_supported_patch"
+      },
+      {
+        "finding": "Keep native behavior NOT_RUN visible",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_renewed_doctor_rows_keep_native_behavior_unrun"
+      },
+      {
+        "finding": "Bind checked bytes to approved digest across swap/restore",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_swap_and_restore_cannot_approve_bytes_whose_options_failed"
+      },
+      {
+        "finding": "Keep bounded admission SUPPORTED_UPDATE",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_bounded_admission_stays_distinct_from_native_qualification"
+      },
+      {
+        "finding": "Do not leak worker operation details into quota",
+        "status": "FIXED",
+        "test": "tests/unit/test_runtime_updates.py::test_quota_readiness_does_not_inherit_worker_operation_details"
+      }
+    ],
+    "informational_disposition": "Existing retained-only revocation and historical installation semantics are unchanged; verify still refuses revoked hashes. Full native semantic equivalence is not claimed. Canaries permit bounded exact-hash admission, visibly SUPPORTED_UPDATE/NOT_RUN, with existing native execution gates intact."
   },
   "daily_approval_changes": false,
   "installed_source_changes": false,
@@ -197,7 +239,7 @@
     {
       "id": "AC2",
       "status": "PASS",
-      "implementation": "runtime-check explicit zero-input bounded support policy, guarded exact approval; managed Codex qualification remains separate",
+      "implementation": "Snapshot-bound vendor canaries and strictly newer supported patches; guarded exact worker/inbox admission remains SUPPORTED_UPDATE with native acceptance NOT_RUN; managed Codex qualification stays separate",
       "tests": [
         "tests/unit/test_runtime_updates.py::test_supported_patch_renews_without_model_input_and_leaves_quota_unchanged",
         "tests/unit/test_runtime_updates.py::test_other_supported_providers_use_their_own_contract"
@@ -206,7 +248,7 @@
     {
       "id": "AC3",
       "status": "PASS",
-      "implementation": "Additive compatibility_state/reason/next_action in verify, doctor and quota errors; exact failed-check observations",
+      "implementation": "Distinct recorded refusals, ambiguous/rebuilt version refusal, bounded admission scope, unavailable vs missing executable and quota-specific actions",
       "tests": [
         "tests/unit/test_runtime_updates.py::test_untested_update_has_actionable_detail_without_changing_legacy_error",
         "tests/unit/test_runtime_updates.py::test_observed_incompatibility_is_distinct_and_does_not_approve",
@@ -241,7 +283,7 @@
     "No daily approval transition or candidate installation performed.",
     "Native model execution, inbox ingestion, bound MCP and quota-source acceptance NOT_RUN."
   ],
-  "code_commit": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+  "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -258,7 +300,7 @@
     "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
     "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
     "nativepeers/cli.py": "03fd23dc15df04081200df4c71237af19e196dabc8fc04a0bf23d5c32c46b775",
-    "nativepeers/compatibility.py": "3c0710df26e9f6294397c307990bb01143926286ae23e0e77a3ae96cf9dd4568",
+    "nativepeers/compatibility.py": "3dced17990544c81f194a65080c42a2f05945158e4bb74917399a2d4db55ca8f",
     "nativepeers/completion_delivery.py": "7617097e4fc4310f5532810121ea1b9dc49e2878379e99b15055b139178b9f78",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "9bbb0b97bc7100c6c27a66fa46899bf7db798da2fb147111ea6160fa8eff5aa5",
@@ -288,13 +330,13 @@
     "nativepeers/profiles.py": "4ff9abb649949cd3511f19b5e9cfe2bc9b8b3917483f1b75e38d8973d2b91ac5",
     "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
     "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
-    "nativepeers/readiness.py": "eff074834e0784b8bc96432d5fb5bd76a72c3108a612c047b7a8b846c7b24497",
+    "nativepeers/readiness.py": "822f8a5ef517692c6cd58964f4d834c3db73f05761a1a8de42db6f9e610fa984",
     "nativepeers/receipts.py": "ca559249b8983fb77cbb3554faa70d41446deadda46a870faf49eb198dcbf7cd",
     "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
     "nativepeers/recovery.py": "50025afac127c99e926ead24455d0dd8b6b64d39977546ddd79f061e3465fd9e",
     "nativepeers/registry.py": "0a36a1e1f22911ffe85da38d5fc57004790da9ddf5f530854af7beae4f60acb0",
     "nativepeers/routing.py": "2678f4c1154223e0725d227be87f38bac9a5c180db4c7759e24abd1ffdfccad6",
-    "nativepeers/runtime_updates.py": "adc9f67e07fb56020f7bae424d3e76fa95c2fef7360722c6666a4f6662c02b2d",
+    "nativepeers/runtime_updates.py": "5fdcece1d051e8bf37fd6166f109c3885a23ad82ad1e0a25c506ff8360fffd1d",
     "nativepeers/supervisor.py": "24c194849ef7b86bb9bef8142a7e8318ee5be68d7a47be6edd3d92a9d6b0a2e1",
     "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
     "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
@@ -328,8 +370,9 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "73a80de55f86dd47a3bb320c991076c9242cb3293eb03fc2d235a1d5aceb9cda",
-  "updated_at": "2026-10-26T19:16:44.602326-04:00",
+  "source_map_sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525",
+  "updated_at": "2026-10-26T19:38:35.462328-04:00",
   "native_metadata_command": "PYTHONPATH=. /Users/danny/Documents/Tools/NativePeers/.venv/bin/python evidence/scratch/runtime-approvals-issue-4/temporary-native-renewal.py",
-  "native_metadata_evidence": "ignored task archive: native-temporary-renewals-final.json"
+  "native_metadata_evidence": "ignored task archive: native-temporary-renewals-final.json",
+  "base_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a"
 }
