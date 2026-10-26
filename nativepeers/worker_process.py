@@ -529,7 +529,9 @@ class Worker:
                 require(usage.get('native_turn_number')==expected_usage_turn,
                         'SOURCE_SCHEMA_MISMATCH','Grok persisted usage did not identify a new turn after this owned input')
                 result['usage']=usage
-            except Exception as error:
+            except (Exception,asyncio.CancelledError) as error:
+                # Only optional telemetry follows the validated terminal result.
+                # A deadline here cannot erase the completed native response.
                 code=error.code if isinstance(error,PeerError) else type(error).__name__
                 result['usage']={'status':'UNKNOWN','source':'grok-usage-session','counter_scope':'unknown','error':code}
                 result['usage_error']='Grok native persisted task usage unavailable: '+code

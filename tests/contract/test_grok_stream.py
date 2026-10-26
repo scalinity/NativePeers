@@ -205,3 +205,42 @@ class GrokStreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(second['usage']['status'],'UNKNOWN');self.assertNotIn('total_tokens',second['usage'])
                 self.assertEqual(read.await_args_list[-1].kwargs,{'turn':2})
             finally:await worker.close_provider()
+
+    async def test_optional_usage_deadline_preserves_the_validated_terminal_response(self):
+        worker,binary=await self.fixture('success')
+        async def stalled_usage(*args,**kwargs):
+            # Reschedule only after Grok has exited and its terminal response,
+            # hook identity, model and tool inventory have all been accepted.
+            self.assertEqual(worker.provider.returncode,0)
+            deadline.reschedule(asyncio.get_running_loop().time()+.02)
+            await asyncio.Event().wait()
+        with patch.object(worker,'verify_grok'),patch('nativepeers.usage.grok_native.session_usage',side_effect=stalled_usage):
+            try:
+                async with asyncio.timeout(None) as deadline:
+                    worker.turn_task=asyncio.create_task(worker.grok_turn('fixture'))
+                    result=await worker.turn_task
+                self.assertTrue(deadline.expired())
+                self.assertEqual(result['status'],'completed');self.assertEqual(result['text'],'GROK_OK')
+                self.assertIsNone(result['error']);self.assertEqual(result['usage']['status'],'UNKNOWN')
+                self.assertEqual(result['usage']['counter_scope'],'unknown')
+                self.assertEqual(result['usage']['error'],'CancelledError')
+            finally:await worker.close_provider()
+        self.assertEqual(worker.provider_cleanup['state'],'CLOSED');self.assertTrue(worker.provider_cleanup['output_eof'])
+
+    async def test_deadline_before_terminal_response_still_cancels_the_native_turn(self):
+        worker,binary=await self.fixture('hang')
+        with patch.object(worker,'verify_grok'),patch('nativepeers.usage.grok_native.session_usage',new_callable=AsyncMock) as usage:
+            task=worker.turn_task=asyncio.create_task(worker.grok_turn('fixture'))
+            try:
+                with self.assertRaises(TimeoutError):
+                    async with asyncio.timeout(None) as deadline:
+                        async with asyncio.timeout(3):
+                            while not worker.turn or not worker.provider_descendants:await asyncio.sleep(.02)
+                        deadline.reschedule(asyncio.get_running_loop().time()+.02)
+                        await task
+                self.assertTrue(task.cancelled());usage.assert_not_called()
+            finally:
+                if not task.done():task.cancel()
+                await asyncio.gather(task,return_exceptions=True)
+                await worker.close_provider()
+        self.assertEqual(worker.provider_cleanup['state'],'CLOSED');self.assertTrue(worker.provider_cleanup['output_eof'])
