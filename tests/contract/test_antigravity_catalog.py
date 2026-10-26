@@ -1,12 +1,15 @@
 import asyncio
 import os
 from pathlib import Path
+import signal
+import subprocess
 import sys
 import tempfile
 import unittest
 from unittest.mock import AsyncMock,Mock,patch
 
 from nativepeers.antigravity import catalog
+from nativepeers.launch import launch_environment
 
 
 class CatalogTests(unittest.IsolatedAsyncioTestCase):
@@ -60,7 +63,24 @@ time.sleep(.2)
             root=Path(directory);pid=root/'pid';binary=root/'fake-agy'
             binary.write_text('#!'+sys.executable+'\nimport os,signal\nfrom pathlib import Path\nsignal.signal(signal.SIGTERM,signal.SIG_IGN)\nPath('+repr(str(pid))+').write_text(str(os.getpid()))\nsignal.pause()\n')
             binary.chmod(0o700)
-            with self.assertRaises(TimeoutError):
-                await asyncio.wait_for(catalog(binary,timeout=.2,terminate_grace=.05),3)
-            self.assertTrue(pid.exists())
-            with self.assertRaises(ProcessLookupError):os.kill(int(pid.read_text()),0)
+            create=subprocess.Popen
+            process=create([str(binary),'models'],env=launch_environment('antigravity'),stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE,stderr=subprocess.PIPE,start_new_session=True,close_fds=True)
+            def launch(argv,*args,**kwargs):
+                if argv==[str(binary),'models']:return process
+                return create(argv,*args,**kwargs)
+            try:
+                # Establish SIGTERM ignore before the catalog's response deadline.
+                async with asyncio.timeout(3):
+                    while not pid.exists():
+                        self.assertIsNone(process.poll(),'Fixture exited before readiness')
+                        await asyncio.sleep(.01)
+                self.assertEqual(int(pid.read_text()),process.pid)
+                with patch('subprocess.Popen',side_effect=launch),self.assertRaises(TimeoutError):
+                    await asyncio.wait_for(catalog(binary,timeout=.2,terminate_grace=.05),3)
+                self.assertEqual(process.returncode,-signal.SIGKILL)
+                with self.assertRaises(ProcessLookupError):os.kill(process.pid,0)
+            finally:
+                if process.poll() is None:process.kill()
+                process.wait(timeout=3)
+                process.stdout.close();process.stderr.close()
