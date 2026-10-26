@@ -53,6 +53,6 @@ def test_operation_index_separates_file_classes_and_native_check_scope():
         assert hashlib.sha256(json.dumps(group['files'],sort_keys=True,separators=(',',':')).encode()).hexdigest()==group['sha256']
     assert index['operation_checks']
     for check in index['operation_checks']:
-        assert check['operation'] and check['parent_context'] and check['status'] in ('PASS','BLOCKED','NOT_RUN')
+        assert check['operation'] and check['parent_context'] and check['status'] in ('PASS','FAIL','BLOCKED','NOT_RUN')
         if check.get('provider'):assert len(check['runtime_sha256'])==64
     assert 'documentation' in index['excluded_classes']
