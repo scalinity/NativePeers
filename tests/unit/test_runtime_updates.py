@@ -194,3 +194,18 @@ def test_worker_renewal_does_not_grant_the_separate_statusline_operation(runtime
         assert check_runtime(j,'claude',apply=True)['approved']
     with pytest.raises(PeerError) as error:verify_usage(j,'claude',binary)
     assert error.value.code=='CAPABILITY_MISMATCH'
+
+
+def test_unreadable_executable_is_not_reported_as_missing_or_incompatible(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,_=runtime;original=Path.open
+    def denied(path,*args,**kwargs):
+        if path.resolve()==binary.resolve():raise PermissionError('fixture executable is not readable')
+        return original(path,*args,**kwargs)
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch.object(Path,'open',new=denied):
+        with pytest.raises(PeerError) as error:check_runtime(j,'claude',apply=True)
+        assert error.value.code=='CAPABILITY_MISMATCH'
+        assert error.value.details['compatibility_state']=='CHECK_UNAVAILABLE'
+        row=diagnose(j,{'claude':binary})[0]
+        assert row['compatibility_state']=='CHECK_UNAVAILABLE'
+        assert row['error']=='PermissionError'

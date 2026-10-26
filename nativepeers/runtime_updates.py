@@ -39,8 +39,12 @@ def check_runtime(journal,provider,*,apply=False):
     from .usage.collectors import executable
     selected=executable(provider)
     try:runtime=fingerprint(selected,fresh=True)
-    except OSError:
+    except FileNotFoundError:
         raise PeerError('EXECUTABLE_NOT_FOUND','The selected native executable is unavailable') from None
+    except OSError as error:
+        raise PeerError('CAPABILITY_MISMATCH','The selected native executable could not be inspected',
+            details={'compatibility_state':'CHECK_UNAVAILABLE','operations':['worker_turns','inbox'],
+                     'cause':type(error).__name__,'next_action':'Inspect access to the selected executable, then retry runtime-check.'}) from None
     path=journal.root/'compat/runtime.json'
     document=json.loads(path.read_text()) if path.exists() else {}
     prior=document.get('providers',{}).get(provider)

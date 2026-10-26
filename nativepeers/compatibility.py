@@ -153,6 +153,9 @@ def diagnose(journal, executables=None):
         try:actual=fingerprint(path)
         except OSError as exception:actual=None;error=type(exception).__name__
         detail=update_status(provider,expected,actual,document)
+        if actual is None and error!='FileNotFoundError':
+            detail.update(compatibility_state='CHECK_UNAVAILABLE',reason='The selected executable could not be inspected.',
+                          next_action='Inspect access to the selected executable, then rerun doctor.')
         matches=bool(expected and actual and expected['sha256']==actual['sha256'] and detail['compatibility_state']!='REVOKED')
         results.append(dict(provider=provider,state='PASS' if matches else 'CAPABILITY_MISMATCH',
             expected=expected,current=actual,error=error,affected_operations=operations.get(provider,[]),
