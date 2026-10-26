@@ -72,7 +72,8 @@ async def apply(journal,registry,caller,action):
                 # Only OPEN->QUIET advances cutoffs; a repeated close never absorbs later fresh requests.
                 messages=db.execute('SELECT COALESCE(MAX(rowid),0) FROM messages').fetchone()[0]
                 routes=db.execute('SELECT COALESCE(MAX(rowid),0) FROM completion_routes').fetchone()[0]
-                db.execute("INSERT INTO notification_policies VALUES(?,'QUIET',?,?,?,NULL,?) ON CONFLICT(peer_key) DO UPDATE SET state='QUIET',"
+                db.execute("INSERT INTO notification_policies(peer_key,state,message_cutoff,route_cutoff,closed_at,opened_at,incarnation_id) "
+                           "VALUES(?,'QUIET',?,?,?,NULL,?) ON CONFLICT(peer_key) DO UPDATE SET state='QUIET',"
                            "message_cutoff=MAX(message_cutoff,excluded.message_cutoff),route_cutoff=MAX(route_cutoff,excluded.route_cutoff),"
                            "closed_at=excluded.closed_at,incarnation_id=excluded.incarnation_id",(caller.key,messages,routes,now,caller.incarnation))
             elif action=='open':reopen(db,caller.key,caller.incarnation,now,'explicit-open')

@@ -12,6 +12,38 @@ import time
 from .files import advisory_lock, atomic_json, canonical, private_directory
 from .models import new_id
 
+POLICY_TABLE = """notification_policies (peer_key TEXT PRIMARY KEY,state TEXT NOT NULL,message_cutoff INTEGER NOT NULL,
+ route_cutoff INTEGER NOT NULL,closed_at REAL,opened_at REAL,incarnation_id TEXT NOT NULL)"""
+POLICY_COLUMNS = (('peer_key','TEXT',0,1),('state','TEXT',1,0),('message_cutoff','INTEGER',1,0),('route_cutoff','INTEGER',1,0),
+                  ('closed_at','REAL',0,0),('opened_at','REAL',0,0),('incarnation_id','TEXT',1,0))
+# Known obsolete shape observed in a live version-1 journal: composite (peer_key, incarnation_id) key.
+# Compared with whitespace runs collapsed; repaired only while empty. Anything else is refused.
+LEGACY_POLICY_SQL = ("CREATE TABLE notification_policies (peer_key TEXT NOT NULL,incarnation_id TEXT NOT NULL,state TEXT NOT NULL, "
+                     "message_cutoff INTEGER NOT NULL,route_cutoff INTEGER NOT NULL,closed_at REAL,opened_at REAL,PRIMARY KEY(peer_key,incarnation_id))")
+LEGACY_POLICY_COLUMNS = (('peer_key','TEXT',1,1),('incarnation_id','TEXT',1,2),('state','TEXT',1,0),('message_cutoff','INTEGER',1,0),
+                         ('route_cutoff','INTEGER',1,0),('closed_at','REAL',0,0),('opened_at','REAL',0,0))
+
+
+def policy_shape(db):
+    """(kind, sql) for the notification policy table; kind is 'absent', 'canonical', 'legacy' or 'unknown'."""
+    found = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='notification_policies'").fetchone()
+    if not found:
+        return 'absent', None
+    columns = tuple((c[1], c[2].upper(), c[3], c[5]) for c in db.execute('PRAGMA table_info(notification_policies)'))
+    extras = db.execute("SELECT count(*) FROM sqlite_master WHERE tbl_name='notification_policies' AND type!='table' "
+                        "AND NOT (type='index' AND name LIKE 'sqlite_autoindex_%')").fetchone()[0]
+    if columns == POLICY_COLUMNS and not extras:
+        return 'canonical', found[0]
+    if columns == LEGACY_POLICY_COLUMNS and ' '.join(found[0].split()) == LEGACY_POLICY_SQL and not extras:
+        return 'legacy', found[0]
+    return 'unknown', found[0]
+
+
+def policy_mismatch(shape):
+    from .errors import PeerError
+    return PeerError('CAPABILITY_MISMATCH', f'Unsupported notification policy table ({shape}); no migration applied')
+
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS peer_instances (
  peer_key TEXT NOT NULL, incarnation_id TEXT PRIMARY KEY, native_id TEXT NOT NULL,
@@ -66,11 +98,10 @@ CREATE TABLE IF NOT EXISTS task_usage (task_id TEXT NOT NULL,attempt_index INTEG
  worker_id TEXT NOT NULL,provider TEXT NOT NULL,home TEXT NOT NULL,model TEXT NOT NULL,
  effort TEXT,started_at REAL NOT NULL,completed_at REAL NOT NULL,payload_json TEXT NOT NULL,
  PRIMARY KEY(task_id,attempt_index));
-CREATE TABLE IF NOT EXISTS notification_policies (peer_key TEXT PRIMARY KEY,state TEXT NOT NULL,message_cutoff INTEGER NOT NULL,
- route_cutoff INTEGER NOT NULL,closed_at REAL,opened_at REAL,incarnation_id TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS @POLICY@;
 CREATE INDEX IF NOT EXISTS messages_exchange ON messages(exchange_id);
 PRAGMA user_version=1;
-"""
+""".replace("@POLICY@",POLICY_TABLE)
 
 
 class Journal:
@@ -105,6 +136,9 @@ class Journal:
                 if self.db.execute("PRAGMA user_version").fetchone()[0] != 1:
                     from .errors import PeerError
                     raise PeerError('CAPABILITY_MISMATCH','Unsupported read-only journal schema; no migration applied')
+                shape = policy_shape(self.db)[0]
+                if shape not in ('absent', 'canonical'):
+                    raise policy_mismatch(shape)
                 self.host_id = json.loads((self.root/"host.json").read_text())["host_id"]
             except sqlite3.Error as error:
                 if self.db:self.db.close()
@@ -132,12 +166,35 @@ class Journal:
             version = self.db.execute("PRAGMA user_version").fetchone()[0]
             if version not in (0, 1):
                 raise RuntimeError("CAPABILITY_MISMATCH: unsupported journal schema; no migration applied")
-            self.db.executescript(SCHEMA)
+            try:
+                self._repair_empty_legacy_policy()
+                self.db.executescript(SCHEMA)
+            except BaseException:
+                self.db.close()
+                raise
         host = self.root/"host.json"
         with advisory_lock(self.root/"locks/host.lock"):
             if not host.exists():
                 atomic_json(host, {"host_id": new_id()})
             self.host_id = json.loads(host.read_text())["host_id"]
+
+    def _repair_empty_legacy_policy(self):
+        """Under the schema lock: recreate only the known obsolete policy table, and only while it holds no rows."""
+        if policy_shape(self.db)[0] in ('absent', 'canonical'):
+            return
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            shape = policy_shape(self.db)[0]
+            if shape == 'legacy' and not self.db.execute("SELECT EXISTS(SELECT 1 FROM notification_policies)").fetchone()[0]:
+                self.db.execute("DROP TABLE notification_policies")
+                self.db.execute("CREATE TABLE " + POLICY_TABLE)
+            elif shape not in ('absent', 'canonical'):
+                raise policy_mismatch(shape if shape != 'legacy' else 'obsolete with existing rows')
+            self.db.execute("COMMIT")
+        except BaseException:
+            if self.db.in_transaction:
+                self.db.execute("ROLLBACK")
+            raise
 
     @contextmanager
     def transaction(self):
