@@ -6,6 +6,8 @@ The implementation lives at `/Users/danny/Documents/Tools/NativePeers`. The inst
 
 The latest reliability corrections are described in [the ce4a4ac review resolutions](docs/REVIEW_CE4A4AC.md); [current verification](docs/VERIFICATION.md) separates offline checks from operation-specific native acceptance. Commands include `spawn --check`, `delta-preview`, and `cleanup --plan`; MCP supports `peer_ack` and `task_groups`, and exact message refresh supports older windows. Current native acceptance remains scoped to its recorded fingerprints.
 
+For routine native patch updates, use the [bounded runtime-check workflow](docs/RUNTIME_UPDATES.md); worker/inbox and quota approval remain separate.
+
 See [daily commands](docs/USAGE.md), [runtime and permissions](docs/RUNTIME.md), [installation and rollback](docs/INSTALLATION.md), and the durable [progress checkpoint](PROGRESS.md). The canonical [implementation contract](docs/IMPLEMENTATION.md) remains unchanged. [Acceptance results](evidence/acceptance.json) distinguish real native runs from unit, mock and passive checks. An unrun check is not a pass.
 
 Launch conversations normally:

@@ -9,9 +9,29 @@ from .files import advisory_lock,atomic_json
 _cache={}
 
 
-def fingerprint(path):
-    path=Path(path).resolve(strict=True);info=path.stat();key=(str(path),info.st_size,info.st_mtime_ns)
-    if key not in _cache:
+def update_status(provider,expected,actual,document):
+    """Add detail without changing the existing machine-facing refusal code."""
+    state='UPDATE_UNTESTED' if expected else 'QUALIFICATION_REQUIRED'
+    reason='The selected executable has not been checked; a different hash is not an observed incompatibility.'
+    if actual is None:state='EXECUTABLE_NOT_FOUND';reason='The selected executable is unavailable.'
+    elif document.get('retained',{}).get(provider,{}).get(actual['sha256'],{}).get('revoked'):
+        state='REVOKED';reason='This exact runtime approval was revoked.'
+    else:
+        check=document.get('update_checks',{}).get(provider,{})
+        if check.get('runtime')==actual:
+            state=check['compatibility_state'];reason=check['reason']
+    action={'EXECUTABLE_NOT_FOUND':'Restore the selected native executable, then rerun doctor.',
+            'REVOKED':'Select a qualified non-revoked runtime; routine renewal cannot override revocation.',
+            'INCOMPATIBLE':'Inspect the named missing contract and qualify/adapt the affected seam; see docs/RUNTIME_UPDATES.md.',
+            'PROVENANCE_UNVERIFIED':'Inspect the vendor installation and its code signature.',
+            'QUALIFICATION_REQUIRED':'Qualify the affected native seams; see docs/RUNTIME_UPDATES.md.'}
+    return dict(compatibility_state=state,reason=reason,operations=['worker_turns','inbox'],
+        next_action=action.get(state,f'npeer runtime-check --provider {provider} --apply --json'))
+
+
+def fingerprint(path,*,fresh=False):
+    path=Path(path).resolve(strict=True);info=path.stat();key=(str(path),info.st_dev,info.st_ino,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+    if fresh or key not in _cache:
         with path.open('rb') as stream:_cache[key]=hashlib.file_digest(stream,'sha256').hexdigest()
     return {'path':str(path),'sha256':_cache[key],'size':info.st_size}
 
@@ -37,11 +57,13 @@ def verify(journal,provider,executable,*,worker_id=None):
     retained=document.get('retained',{}).get(provider,{}).get(actual['sha256'],{})
     old_allowed=bool(pinned and not retained.get('revoked') and worker_id in retained.get('workers',[])
                      and all(retained.get('fingerprint',{}).get(k)==actual[k] for k in ('path','sha256','size')))
-    require(actual['sha256']==expected['sha256'] or old_allowed,'CAPABILITY_MISMATCH','Native executable changed; passive compatibility review is required before this operation')
+    require(not retained.get('revoked') and (actual['sha256']==expected['sha256'] or old_allowed),
+            'CAPABILITY_MISMATCH','Native executable is not approved for worker/inbox operations',
+            details=update_status(provider,expected,actual,document))
     return actual
 
 
-def update_verified(journal,replacements,*,initialize=False,expected=None):
+def update_verified(journal,replacements,*,initialize=False,expected=None,selected=None):
     """Retire only explicit approvals, scoped to leases already verified with them."""
     receipt=journal.root/'compat/runtime.json'
     with advisory_lock(journal.root/'locks/runtime.lock'):
@@ -51,7 +73,7 @@ def update_verified(journal,replacements,*,initialize=False,expected=None):
             require(set(expected)==set(replacements),'PROTOCOL_ERROR','Guard every selected runtime transition')
             for provider,actual in replacements.items():
                 current=document['providers'].get(provider,{})
-                require(current and all(current.get(k)==expected[provider].get(k) for k in ('path','sha256','size')),
+                require(current and current==expected[provider],
                         'CAPABILITY_MISMATCH','The runtime approval changed before the guarded transition')
                 retained=document.get('retained',{}).get(provider,{}).get(actual['sha256'],{})
                 require(not retained.get('revoked'),'CAPABILITY_MISMATCH','The target runtime approval was explicitly revoked')
@@ -70,6 +92,11 @@ def update_verified(journal,replacements,*,initialize=False,expected=None):
                 history[old['sha256']]={'fingerprint':old,'workers':sorted(set(workers+prior.get('workers',[]))),
                                        'revoked':prior.get('revoked',False)}
             document['providers'][provider]=actual
+        if selected is not None:
+            require(set(selected)==set(replacements),'PROTOCOL_ERROR','Recheck every selected runtime')
+            for provider,path in selected.items():
+                require(fingerprint(path,fresh=True)=={k:replacements[provider][k] for k in ('path','sha256','size')},
+                        'CAPABILITY_MISMATCH','Selected runtime changed before approval',details={'compatibility_state':'UPDATE_RACED'})
         if changed:atomic_json(receipt,document)
         return changed
 
@@ -106,11 +133,12 @@ def diagnose(journal, executables=None):
     receipt=journal.root/'compat/runtime.json'
     receipt_error=None
     try:
-        providers=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
+        document=json.loads(receipt.read_text()) if receipt.exists() else {}
+        providers=document.get('providers',{})
         if not isinstance(providers,dict) or any(not isinstance(value,dict) for value in providers.values()):
             raise ValueError('Invalid runtime provider entries')
     except (OSError,ValueError,TypeError,AttributeError) as error:
-        providers={};receipt_error='Runtime receipt unreadable: '+type(error).__name__
+        document={};providers={};receipt_error='Runtime receipt unreadable: '+type(error).__name__
     from .grok import executable as grok_executable
     executables=executables or {'claude':Path.home()/'.local/bin/claude',
         'codex':Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',
@@ -124,9 +152,12 @@ def diagnose(journal, executables=None):
         expected=providers.get(provider);error=receipt_error
         try:actual=fingerprint(path)
         except OSError as exception:actual=None;error=type(exception).__name__
-        matches=bool(expected and actual and expected['sha256']==actual['sha256'])
+        detail=update_status(provider,expected,actual,document)
+        matches=bool(expected and actual and expected['sha256']==actual['sha256'] and detail['compatibility_state']!='REVOKED')
         results.append(dict(provider=provider,state='PASS' if matches else 'CAPABILITY_MISMATCH',
             expected=expected,current=actual,error=error,affected_operations=operations.get(provider,[]),
             verification_scope=(expected or {}).get('scope','Installed executable receipt; live acceptance remains scoped to its recorded source/runtime fingerprints'),
-            next_action='No executable change detected' if matches else 'Inspect the executable change and rerun affected passive/native integration checks before recording a new receipt'))
+            **dict(detail,compatibility_state='APPROVED' if matches else detail['compatibility_state'],
+                   reason='The exact selected runtime is approved.' if matches else detail['reason'],
+                   next_action='No executable change detected' if matches else detail['next_action'])))
     return results

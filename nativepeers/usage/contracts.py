@@ -76,7 +76,10 @@ def verified(journal,provider,binary):
     receipt=json.loads(path.read_text()).get(provider) if path.exists() else None
     require(receipt and receipt.get('qualified'),'SOURCE_NOT_QUALIFIED','Native '+provider+' quota transport is not qualified; inspect the usage-only contract')
     require(receipt['runtime']==fingerprint(binary) and receipt['browser_guard_sha256']==hashlib.sha256(BROWSER_PROFILE.encode()).hexdigest(),
-        'CAPABILITY_MISMATCH','Native usage executable or browser-launch guard changed')
+        'CAPABILITY_MISMATCH','Native usage executable or browser-launch guard changed',
+        details={'compatibility_state':'UPDATE_UNTESTED','operation':'quota-read',
+                 'reason':'The exact quota transport or browser guard requires its own inspection; worker/inbox renewal does not qualify it.',
+                 'next_action':f'.venv/bin/python tests/probes/usage_source_verify.py inspect --provider {provider} --json'})
     if provider=='claude':
         require(receipt.get('pty_authorized') and receipt['route']=='native-pty-usage','SOURCE_NOT_QUALIFIED','Claude PTY usage collection is not authorized')
         require(receipt.get('managed_startup')==managed_claude_startup(),'SOURCE_NOT_QUALIFIED','Managed Claude startup configuration changed since inspection')

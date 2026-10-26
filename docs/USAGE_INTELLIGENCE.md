@@ -109,6 +109,8 @@ Current source corrections and native checks are recorded in [LIVE_USAGE_SOURCES
 
 ## Qualifying a native quota transport
 
+Worker/inbox patch renewal uses [runtime-check](RUNTIME_UPDATES.md). It never grants quota approval; an unknown quota transport does not itself disable otherwise approved worker/inbox operations. Quota mismatches carry `operation:quota-read` and a separate inspection action.
+
 Usage-only receipts live under the existing private state `compat/usage-sources.json`. They pin the executable and browser guard; they do not renew worker/inbox compatibility. No native package is activated. The fixed probe has no arbitrary prompt/RPC action:
 
 ```sh

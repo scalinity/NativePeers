@@ -55,6 +55,10 @@ Usage intelligence and its exact commands, native sources, installation, freshne
 
 ## Claude executable maintenance
 
+Routine supported patches use `npeer runtime-check --provider claude --apply --json`. It checks the signed adapter support envelope without model input and renews only worker/inbox approval. Run without `--apply` for read-only inspection. See [runtime updates](RUNTIME_UPDATES.md) for supported series, races, separate quota checks and diagnostic details.
+
+The following native qualification is for a changed seam or a release outside that envelope. It requires the explicit input authorization described below; routine renewal never launches it automatically.
+
 After an update, run `npeer doctor --json` and inspect the separate worker, inbox and quota rows. Follow [the bounded renewal probe](../tests/probes/claude_runtime_verify.py) for worker/inbox qualification. Use a new private run directory for each attempt, beneath this project's ignored `evidence/scratch`; never replay an existing launch to repair uncertain delivery. Review the installed version, help, exact fingerprint and the [official changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md) before selecting the reviewed SHA-256.
 
 ```sh
