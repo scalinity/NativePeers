@@ -16,10 +16,14 @@ class Core:
         self.router=Router(journal,self.registry)
         from .compatibility import verify
         from pathlib import Path
-        for provider,kind in [('claude','claude-inbox'),('codex','codex-native-queue')]:
+        for provider,kind in [('claude','claude-inbox'),('codex','codex-native-queue'),('grok','grok-native-hook')]:
             adapter=self.router.adapters[kind]
             async def checked(peer,message,provider=provider,adapter=adapter):
-                executable=Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
+                if provider=='grok':
+                    from .grok import executable as selected_grok
+                    executable=selected_grok()
+                else:
+                    executable=Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
                 verify(journal,provider,executable)
                 test=journal.root/'test-budget.json'
                 if test.exists() and message['from']['kind']=='peer':

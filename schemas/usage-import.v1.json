@@ -5,7 +5,7 @@
   "required":["schema_version","provider","observed_at","pools"],
   "properties":{
     "schema_version":{"const":1},
-    "provider":{"enum":["claude","codex","antigravity"]},
+    "provider":{"enum":["claude","codex","antigravity","grok"]},
     "home_label":{"type":"string","maxLength":128},
     "observed_at":{"type":"number","minimum":0},
     "models":{"type":"array","maxItems":64,"items":{"type":"string","minLength":1,"maxLength":512}},

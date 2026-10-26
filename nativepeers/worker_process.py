@@ -49,6 +49,7 @@ class Worker:
         self.lease=json.loads(self.row['lease_json']);self.spec=self.lease['spec'];self.binding=Path(self.lease['binding'])
         self.spec['model']=model_selection(self.row)
         self.home=recorded_home(journal,self.row);self.lease['provider_home']=str(self.home)
+        if self.row['provider']=='grok':self.spec['provider_home']=str(self.home)
         from .worker_visibility import requested
         requested(self.row,self.lease)
         journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(self.lease).decode(),worker_id))
@@ -91,7 +92,7 @@ class Worker:
                     require(expected in CLAUDE_ALIAS_FAMILIES or model==expected,'MODEL_UNAVAILABLE','Claude alias semantics are unverified; select an exact native model',details={'requested':requested})
                     require(claude_model_matches(expected,model,allow_multiple=True),
                             'MODEL_UNAVAILABLE','Provider selected a different Claude model family',details={'requested':requested,'observed':model})
-            if self.model_observed or self.row['provider'] in ('codex','antigravity') or expected.startswith('claude-'):
+            if self.model_observed or self.row['provider'] in ('codex','antigravity','grok') or expected.startswith('claude-'):
                 require(model==expected,'MODEL_UNAVAILABLE','Provider selected a different model than the exact requested model',
                         details={'requested':requested,'observed':model})
             self.model_observed=model
@@ -165,6 +166,12 @@ class Worker:
                 'servers':[{ 'name':s['name'],'tools':list(s['tools']),'runtime_status':s.get('runtimeStatus')} for s in inventory['data']],
                 'sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
         elif self.row['provider']=='antigravity':self.verify_antigravity()
+        elif self.row['provider']=='grok':
+            from .grok_worker import catalog,arguments
+            self.verify_grok()
+            models=await catalog(self.lease['executable'],home=self.home)
+            require(self.spec['model'] in models['models'],'MODEL_UNAVAILABLE','The immutable Grok worker executable does not advertise the exact model')
+            arguments(self.spec,self.native)
         else:
             # Preflight validates argv/environment. Native initialization begins only after first input.
             require(Path(self.lease['executable']).is_file(),'EXECUTABLE_NOT_FOUND','Installed Claude executable is unavailable')
@@ -226,7 +233,7 @@ class Worker:
                 budget.admit(reservation)
             require(time.time()<deadline,'BUDGET_EXHAUSTED','The original logical-task deadline has elapsed')
             async with asyncio.timeout(deadline-time.time()):
-                turn={'codex':self.codex_turn,'claude':self.claude_turn,'antigravity':self.antigravity_turn}[self.row['provider']]
+                turn={'codex':self.codex_turn,'claude':self.claude_turn,'antigravity':self.antigravity_turn,'grok':self.grok_turn}[self.row['provider']]
                 self.turn_task=asyncio.create_task(turn(text))
                 result=await self.turn_task
         except BaseException as error:
@@ -255,6 +262,11 @@ class Worker:
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
         record['usage_intelligence']={'at_admission':usage_assessment,'account_usage_is_local_task_usage':False}
+        if self.row['provider']=='grok':
+            record['native_model_usage']=result.get('model_usage')
+            record['native_request_id']=result.get('native_request_id')
+            record['native_headless_usage']=result.get('native_headless_usage')
+            if result.get('usage_error'):record['verification']['limitations'].append(result['usage_error'])
         if self.row['provider']=='codex':record['history_visibility']=dict(self.lease['history_visibility'])
         if self.row['worktree_id']:
             from .worktrees import git,changes
@@ -434,6 +446,97 @@ class Worker:
     def verify_antigravity(self):
         from .antigravity_install import verify_worker_ready
         verify_worker_ready(self.journal,self.spec,self.lease['executable'],worker_id=self.row['worker_id'])
+
+    def verify_grok(self):
+        from .grok_install import verify_worker_ready
+        verify_worker_ready(self.journal,self.spec,self.lease['executable'],worker_id=self.row['worker_id'])
+
+    def grok_observation(self,sequence):
+        """Only this launch's hook and exact native summary certify its identity."""
+        from .grok import summaries
+        self.refresh_provider_identity()
+        rows=self.journal.all("SELECT payload_json FROM events WHERE subject_id=? AND kind='native-hook-observed' AND sequence>? AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC",
+                              (self.row['worker_id'],sequence,self.expected_native))
+        observed=next((value for row in rows if (value:=json.loads(row['payload_json'])).get('process')==self.provider_identity),None)
+        require(observed,'PERMISSION_CAPABILITY_UNKNOWN','No verified native Grok hook observed this turn process after launch')
+        checks=self.journal.all("SELECT payload_json FROM events WHERE subject_id=? AND kind='grok-kernel-check' AND sequence>? AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC",
+                               (self.row['worker_id'],sequence,self.expected_native))
+        kernel=next((value for row in checks if (value:=json.loads(row['payload_json'])).get('process')==self.provider_identity),None)
+        require(kernel and kernel.get('verified') is True and kernel.get('profile')==self.spec['permission_profile'],
+                'PERMISSION_CAPABILITY_UNKNOWN','Grok owned hook did not prove inherited kernel write restrictions for this process')
+        native=summaries(native_id=self.expected_native,home=self.home)
+        require(len(native)==1 and Path(native[0]['cwd']).resolve()==Path(self.row['cwd']).resolve(),
+                'OWNERSHIP_CONFLICT','Grok did not persist the exact owned native session and workspace')
+        require(native[0].get('model'),'MODEL_UNAVAILABLE','Grok exact native summary did not report its selected model')
+        require(native[0].get('sandbox_profile')=='nativepeers-'+self.spec['permission_profile'],
+                'PERMISSION_CAPABILITY_UNKNOWN','Grok native session persisted a different sandbox profile')
+        self.lease['grok_native_created']=True
+        self.bind(self.expected_native,model=native[0]['model'])
+        return observed
+
+    async def grok_turn(self,text):
+        from .grok_worker import arguments,Stream
+        from .usage.grok_native import session_usage
+        self.check_submission()
+        if self.provider:await self.close_provider()
+        self.verify_grok()
+        self.expected_native=self.native or new_id()
+        spec=dict(self.spec,native_session_id=self.expected_native)
+        env=apply_home('grok',self.home,launch_environment('grok'))
+        env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
+        sequence=self.journal.one('SELECT COALESCE(MAX(sequence),0) AS sequence FROM events')['sequence']
+        resume_id=self.native if self.lease.get('grok_native_created') or self.lease.get('released_native') else None
+        previous_usage_turn=0
+        if resume_id:
+            try:previous_usage_turn=(await session_usage(self.journal,self.home,resume_id,self.lease['executable'],self.row['cwd']))['native_turn_number']
+            except Exception:previous_usage_turn=None
+        self.provider=await asyncio.create_subprocess_exec(str(Path(self.lease['executable']).resolve(strict=True)),*arguments(spec,resume_id),
+            cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
+        self.provider_identity=identity(self.provider.pid).json();self.manifest();self.track_provider()
+        self.check_submission();self.input_submitted=True
+        self.provider.stdin.write(text.encode());await self.provider.stdin.drain();self.provider.stdin.close()
+        if self.canceling_task==self.running_task:await self.interrupt()
+        errors=bytearray()
+        async def stderr():
+            while chunk:=await self.provider.stderr.read(4096):
+                errors.extend(chunk);del errors[:-65536]
+        drain=asyncio.create_task(stderr());stream=Stream(self.expected_native,self.spec['permission_profile'])
+        try:
+            while line:=await self.provider.stdout.readline():
+                kind=stream.observe(json.loads(line))
+                if kind!='error' and not self.turn:
+                    self.grok_observation(sequence)
+                    self.turn=new_id();self.ingested()
+                    self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
+                if kind=='available_commands':
+                    self.journal.event(self.row['worker_id'],'effective-tool-profile',{'tools':stream.tools,'advertised_catalog':stream.advertised_tools,
+                        'denied_advertised_tools':stream.denied_advertised_tools,'profile':self.spec['permission_profile'],'sandbox':'nativepeers-'+self.spec['permission_profile'],
+                        'enforcement':'Fixed built-in allowlist, native MCPTool(*) denial, and the exact owned PreToolUse hook with inherited kernel checks; advertised MCP names are not grants.'})
+            await self.provider.wait();await drain
+            result=stream.result(self.provider.returncode)
+            if result['status']=='completed':
+                self.grok_observation(sequence)
+                require(stream.tools is not None,'PERMISSION_CAPABILITY_UNKNOWN','Grok never reported its effective tool inventory')
+            self.journal.event(self.running_task,'provider-internal-rounds',{'num_turns':result.pop('native_internal_rounds'),'counter_scope':'native prompt model rounds; logical worker task starts are separate'})
+            result['native_turn_ids']=[self.turn] if self.turn else []
+            result['native_headless_usage']=result.pop('usage')
+            try:
+                require(type(previous_usage_turn) is int and previous_usage_turn>=0,
+                        'SOURCE_SCHEMA_MISMATCH','Grok prior owned turn usage counter was unavailable')
+                expected_usage_turn=previous_usage_turn+1
+                usage=await session_usage(self.journal,self.home,self.expected_native,self.lease['executable'],self.row['cwd'],turn=expected_usage_turn)
+                require(usage.get('native_turn_number')==expected_usage_turn,
+                        'SOURCE_SCHEMA_MISMATCH','Grok persisted usage did not identify a new turn after this owned input')
+                result['usage']=usage
+            except Exception as error:
+                code=error.code if isinstance(error,PeerError) else type(error).__name__
+                result['usage']={'status':'UNKNOWN','source':'grok-usage-session','counter_scope':'unknown','error':code}
+                result['usage_error']='Grok native persisted task usage unavailable: '+code
+            return result
+        finally:
+            if not drain.done():drain.cancel()
+            await asyncio.gather(drain,return_exceptions=True)
 
     async def antigravity_turn(self,text):
         from .antigravity import arguments

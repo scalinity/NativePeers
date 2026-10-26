@@ -27,7 +27,8 @@
             "enum": [
               "claude",
               "codex",
-              "antigravity"
+              "antigravity",
+              "grok"
             ]
           },
           "title": {

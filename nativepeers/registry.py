@@ -28,7 +28,7 @@ class Registry:
             home_explicit=bool(home_environment(provider,home))
         descriptor = dict(schema_version=1, peer_key=key.json(), handle=key.handle,
                           incarnation_id=incarnation, title=title(native_title) if native_title else None,
-                          title_source=("nativepeers-worker-role" if provider=='antigravity' and owner_kind=='owned-worker-controller' else "native-explicit") if native_title else "unknown", owner=owner,
+                          title_source=("nativepeers-worker-role" if provider in ('antigravity','grok') and owner_kind=='owned-worker-controller' else "native-explicit") if native_title else "unknown", owner=owner,
                           owner_kind=owner_kind, cwd=str(Path(cwd).resolve()), transport=transport,
                           lifecycle="unknown", policy=policy or {}, capabilities=capabilities or {},
                           home=str(home.resolve()), home_label=label, provider_home_explicit=home_explicit, last_evidence_at=time.time())
@@ -89,6 +89,10 @@ class Registry:
                     from .antigravity import summaries
                     names=summaries(native_id=peer['peer_key']['native_session_id'],home=Path(peer['home']))
                     native_title=names[0]['title'] if names else None
+                elif peer['peer_key']['provider']=='grok':
+                    from .grok import summaries
+                    names=summaries(native_id=peer['peer_key']['native_session_id'],home=Path(peer['home']))
+                    native_title=names[0]['title'] if len(names)==1 else None
                 else:native_title=claude_metadata.get((peer['home'],peer.get('provider_home_explicit'),peer['peer_key']['native_session_id'],peer['owner']['pid']))
                 if native_title and native_title!=peer['title']:
                     peer['title']=title(native_title);peer['title_source']='native-explicit'
@@ -110,7 +114,7 @@ class Registry:
         if ":" in selector:
             qualifier, possible_alias = selector.split(":", 1)
             possible_provider=qualifier.split('@',1)[0]
-            if possible_provider in ('codex','claude','antigravity'):
+            if possible_provider in ('codex','claude','antigravity','grok'):
                 provider=possible_provider;alias=possible_alias
                 if '@' in qualifier:label=qualifier.split('@',1)[1]
         alias = title(alias)

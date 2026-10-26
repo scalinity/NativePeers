@@ -25,11 +25,11 @@ def parser():
     def command(name):
         child=subs.add_parser(name);child.add_argument('--json',action='store_true',default=argparse.SUPPRESS);return child
     command('whoami')
-    q=command('usage');q.add_argument('--provider',choices=['claude','codex','antigravity']);q.add_argument('--model');q.add_argument('--home-label')
+    q=command('usage');q.add_argument('--provider',choices=['claude','codex','antigravity','grok']);q.add_argument('--model');q.add_argument('--home-label')
     q.add_argument('--refresh',action='store_true');q.add_argument('--details',action='store_true');q.add_argument('--recommend',action='store_true')
     q.add_argument('--requirements',type=Path);q.add_argument('--preference',choices=['quality-first','balanced','quota-preserving','fast','exact-model-only'],default='balanced')
     q=command('usage-import');q.add_argument('--file',type=Path,required=True)
-    q=command('list');q.add_argument('--provider',choices=['claude','codex','antigravity']);q.add_argument('--include-offline',action='store_true')
+    q=command('list');q.add_argument('--provider',choices=['claude','codex','antigravity','grok']);q.add_argument('--include-offline',action='store_true')
     q=command('resolve');q.add_argument('--to',required=True)
     q=command('groups');q.add_argument('--mine',action='store_true',required=True);q.add_argument('--limit',type=int,default=20);q.add_argument('--cursor')
     for name in ['send','reply']:
@@ -63,10 +63,10 @@ def parser():
     q=command('resume-command');q.add_argument('worker_id');q.add_argument('--explain',action='store_true')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
-    q=command('runtime-revoke');q.add_argument('--provider',choices=['claude','codex','antigravity'],required=True);q.add_argument('--sha256',required=True)
+    q=command('runtime-revoke');q.add_argument('--provider',choices=['claude','codex','antigravity','grok'],required=True);q.add_argument('--sha256',required=True)
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
-        q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true');q.add_argument('--usage',action='store_true')
+        q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true');q.add_argument('--grok',action='store_true');q.add_argument('--usage',action='store_true')
     return p
 
 
@@ -176,6 +176,7 @@ async def dispatch(args,journal):
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED','SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):
+        require(sum(bool(getattr(args,option,False)) for option in ('usage','antigravity','grok'))<=1,'PROTOCOL_ERROR','Choose one of --usage, --antigravity or --grok')
         if getattr(args,'usage',False):
             require(not args.antigravity,'PROTOCOL_ERROR','Choose --usage or --antigravity')
             require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot install usage collection')
@@ -184,6 +185,10 @@ async def dispatch(args,journal):
         if args.antigravity:
             from .antigravity_install import install as install_antigravity
             return install_antigravity(journal,dry_run=args.dry_run,remove=name=='uninstall')
+        if args.grok:
+            require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot install Grok integration')
+            from .grok_install import install as install_grok
+            return install_grok(journal,dry_run=args.dry_run,remove=name=='uninstall')
         from .install import install,uninstall
         return await (install if name=='install' else uninstall)(journal,dry_run=args.dry_run)
     raise PeerError('PROTOCOL_ERROR','Unknown command')

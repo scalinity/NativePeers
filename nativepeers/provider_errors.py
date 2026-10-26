@@ -96,7 +96,7 @@ def reset_time(error):
 def diagnostic(error,*,submitted=False,code=None,provider='claude'):
     """Bounded structured provider error, distinct from model output."""
     code=code or classify(error)
-    name={'claude':'Claude','antigravity':'Antigravity','codex':'Codex'}.get(provider,'The provider')
+    name={'claude':'Claude','antigravity':'Antigravity','codex':'Codex','grok':'Grok'}.get(provider,'The provider')
     messages={'AUTH_REQUIRED':name+' native login is unavailable for the selected home.',
               'QUOTA_EXHAUSTED':name+' usage limit reached.', 'RATE_LIMITED':'The provider rate-limited this task.'}
     raw=json.dumps(error,ensure_ascii=False)

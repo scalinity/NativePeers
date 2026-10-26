@@ -26,7 +26,7 @@ TERMINAL={'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
 def supervisor_environment(journal):
     # This is a fresh independent application context, not a copy of a provider tool shell.
     # The allowlist is fixed before launch; there is no guard-deletion retry loop.
-    names={'HOME','USER','LOGNAME','PATH','SHELL','TMPDIR','LANG','CODEX_HOME','CLAUDE_CONFIG_DIR',
+    names={'HOME','USER','LOGNAME','PATH','SHELL','TMPDIR','LANG','CODEX_HOME','CLAUDE_CONFIG_DIR','GROK_HOME',
            'OPENAI_API_KEY','OPENAI_BASE_URL','ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','ANTHROPIC_BASE_URL',
            'CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY',
            'AWS_PROFILE','AWS_REGION','GOOGLE_CLOUD_PROJECT','SSL_CERT_FILE','HTTPS_PROXY','HTTP_PROXY','NO_PROXY'}
@@ -60,6 +60,7 @@ class Delegation:
         from .protocol import validate
         validate(request,json.loads((ROOT/'schemas/spawn.v1.json').read_text()))
         for worker in request['workers']:
+            if worker['provider']=='grok':require(not worker.get('fallbacks'),'PROTOCOL_ERROR','Grok workers do not support provider fallbacks')
             if 'model' in worker:
                 require(worker['model'].strip() and not any(ord(c)<32 for c in worker['model']),
                         'PROTOCOL_ERROR','Worker model must be a nonempty native model ID or alias')
@@ -99,6 +100,12 @@ class Delegation:
             except (PeerError,OSError) as error:
                 if any(w['provider']=='antigravity' for w in workers):raise
                 agy_catalog_error=error.json() if isinstance(error,PeerError) else {'code':'MODEL_UNAVAILABLE','message':'Antigravity native catalog is unavailable: '+type(error).__name__}
+        grok_catalog=None
+        if 'grok' in homes:
+            from .grok import executable as grok_executable
+            from .grok_worker import catalog as grok_models
+            grok_binary=Path(grok_executable()).resolve(strict=True)
+            grok_catalog=await grok_models(grok_binary,home=homes['grok'])
         catalog=None
         if any(w.get('provider')=='codex' for w in workers):
             from .worker_visibility import FLAG
@@ -120,7 +127,7 @@ class Delegation:
             identity_preflight(parent['cwd'])
         prepared=[];batch_baseline=snapshot(parent['cwd'])
         for source in workers:
-            require(isinstance(source,dict) and source.get('provider') in ('claude','codex','antigravity'),'PROTOCOL_ERROR','Unknown worker provider')
+            require(isinstance(source,dict) and source.get('provider') in ('claude','codex','antigravity','grok'),'PROTOCOL_ERROR','Unknown worker provider')
             spec=dict(source);spec['title']=title(spec['title']);spec['task']=bounded_text(spec['task'])
             profile=spec.get('permission_profile','analysis');require(profile in parent.get('policy',{}).get('profiles',['analysis']),
                 'PERMISSION_CAPABILITY_UNKNOWN','Requested worker profile exceeds the verified parent ceiling')
@@ -134,6 +141,9 @@ class Delegation:
                 configured=json.loads(agy_settings.read_text()).get('model') if agy_settings.exists() else None
                 default=configured if configured in agy_catalog else next((slug for slug,name in agy_catalog.items() if name==configured),None)
                 spec['model']=source.get('model',default)
+            if spec['provider']=='grok':
+                spec['model']=source.get('model',grok_catalog['default'])
+                spec['provider_home']=str(homes['grok'])
             require(isinstance(spec['model'],str) and spec['model'].strip() and not any(ord(c)<32 for c in spec['model']),
                     'PROTOCOL_ERROR','Worker model must be a nonempty native model ID or alias')
             if spec['provider']=='codex':
@@ -147,6 +157,10 @@ class Delegation:
                 spec['model_display_name']=agy_catalog[spec['model']]
                 effort=spec.get('reasoning_effort')
                 require(effort is None or spec['model'].endswith('-'+effort),'EFFORT_UNSUPPORTED','Antigravity effort must match the pinned model slug')
+            if spec['provider']=='grok':
+                from .grok_worker import arguments
+                require(spec['model'] in grok_catalog['models'],'MODEL_UNAVAILABLE','Exact Grok model is absent from the native catalog')
+                arguments(spec)
             refs=spec.get('context_refs',[])
             require(isinstance(refs,list) and len(refs)<=16 and all(isinstance(r,str) for r in refs),'PROTOCOL_ERROR','Context references must be registered artifact handles')
             from .artifacts import Artifacts
@@ -156,7 +170,7 @@ class Delegation:
             grants=dict(worker_id=worker_id,group_id=group_id,depth=depth,max_depth=ceiling,profiles=[profile],
                 can_spawn=depth<limits.get('max_depth',1),max_concurrent_workers=limits.get('max_concurrent_workers',4),
                 message_targets=[caller.key],allow_sibling_messages=policy['allow_sibling_messages'])
-            executable=(Path.home()/{'claude':'.local/bin/claude','codex':'.local/share/codex-mcp-manager/current/bin/codex','antigravity':'.local/bin/agy'}[spec['provider']]).resolve(strict=True)
+            executable=grok_binary if spec['provider']=='grok' else (Path.home()/{'claude':'.local/bin/claude','codex':'.local/share/codex-mcp-manager/current/bin/codex','antigravity':'.local/bin/agy'}[spec['provider']]).resolve(strict=True)
             lease=dict(provider_home=str(homes[spec['provider']]),provider_home_explicit=('CLAUDE_CONFIG_DIR' in os.environ) if spec['provider']=='claude' else True,spec=spec,grants=grants,binding=str(binding),parent_key=caller.key,expires_at=time.time()+wall+600,
                 executable=str(executable),live_budget_file=test_budget.get('path'),live_tranche=test_budget.get('tranche','first_cross_provider_delegations'))
             fallbacks=spec.get('fallbacks',[])
@@ -210,6 +224,9 @@ class Delegation:
                     if provider=='antigravity':
                         from .antigravity_install import verify_worker_ready
                         verify_worker_ready(self.journal,spec,lease['executable'])
+                    elif provider=='grok':
+                        from .grok_install import verify_worker_ready
+                        verify_worker_ready(self.journal,spec,lease['executable'])
                     elif provider=='claude':claude_arguments(self.journal,Path(lease['binding']),spec,new_id(),home=Path(lease['provider_home']))
                     else:codex_config(self.journal,Path(lease['binding']),spec['permission_profile'],home=Path(lease['provider_home']))
                 except PeerError as error:failures.append(dict(provider=provider,title=spec['title'],error=error.json()))
@@ -232,7 +249,7 @@ class Delegation:
                 input_preparation=dict(selected_files=len(frozen.untracked)+frozen.baseline.get('dirty_input_files',0),selected_bytes=sum(len(data) for data,mode in frozen.untracked.values())+frozen.baseline.get('dirty_input_bytes',0),dirty_patch_bytes=len(frozen.patch or b''),time_limit_seconds=20,input_limit_bytes=10485760),
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
                 native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
-                                for provider in ('codex','antigravity') if provider in homes],
+                                for provider in ('codex','antigravity','grok') if provider in homes],
                 client_request_id=request_id,existing_group_id=prior['group_id'] if prior else None,
                 limitations=['A plan does not reserve capacity or guarantee later entitlement, runtime tools or unchanged files/configuration.']),
                 readiness(self.journal,caller.key),push=policy['completion_mode']=='push')
@@ -260,7 +277,7 @@ class Delegation:
                 for worker in prepared:
                     spec=worker['lease']['spec']
                     for ref in spec.get('context_refs',[]):Artifacts(self.journal).grant(ref,caller.key,[worker['worker_id']])
-                    native_id=new_id() if spec['provider']=='claude' else None
+                    native_id=new_id() if spec['provider'] in ('claude','grok') else None
                     db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker['worker_id'],group_id,None,spec['provider'],native_id,spec['title'],spec['model'],None,spec.get('reasoning_effort'),spec['cwd'],None,'RESERVED',1,canonical(worker['lease']).decode()))
                     db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(worker['task_id'],worker['worker_id'],None,None,'QUEUED',None,None,1,canonical({'text':spec['task'],'initial':True}).decode()))
         if raced:return dict(self.status(caller,raced['group_id']),client_request_id=request_id)

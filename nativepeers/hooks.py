@@ -18,6 +18,12 @@ from .registry import Registry
 
 
 def observe(provider, event, journal):
+    if provider=='grok':
+        from .grok_hooks import observe as grok_observe
+        return grok_observe(journal,event,event.get('hook_event_name'))
+    # Grok deliberately supplies Claude aliases, including session_id. An outer
+    # Claude process must never turn that native Grok UUID into a Claude peer.
+    require(not ('sessionId' in event or 'hookEventName' in event),'CALLER_UNBOUND','A Grok-native hook cannot register as another provider')
     binary=(Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')).resolve()
     ancestors=[p.json() for p in ancestry()[1:]]
     owners=[p for p in ancestors if p['executable']==str(binary)]
@@ -95,14 +101,21 @@ def observe(provider, event, journal):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--provider',choices=['claude','codex'],required=True);args=parser.parse_args()
-    journal=None
+    parser=argparse.ArgumentParser();parser.add_argument('--provider',choices=['claude','codex','grok'],required=True);args=parser.parse_args()
+    journal=None;event=None
     try:
         raw=sys.stdin.buffer.read(65537)
         require(len(raw)<=65536,'PAYLOAD_TOO_LARGE','Hook input too large')
-        event=json.loads(raw);journal=Journal();observe(args.provider,event,journal)
+        event=json.loads(raw);journal=Journal();result=observe(args.provider,event,journal)
+        if args.provider=='grok':
+            print(json.dumps(result))
+            if result.get('decision')=='deny' and os.getenv('NPEER_BOOTSTRAP'):raise SystemExit(2)
     except Exception as error:
         print('NativePeers registration unavailable: '+type(error).__name__,file=sys.stderr)
+        if args.provider=='grok':
+            if os.getenv('NPEER_BOOTSTRAP') and isinstance(event,dict) and event.get('hookEventName')=='pre_tool_use':
+                print(json.dumps({'decision':'deny','reason':'NativePeers could not verify the owned worker tool grant.'}));raise SystemExit(2)
+            print('{}')
     finally:
         if journal:journal.close()
 

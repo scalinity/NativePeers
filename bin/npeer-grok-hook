@@ -1,0 +1,4 @@
+#!/bin/sh
+NPEER_PROJECT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+export PYTHONPATH="$NPEER_PROJECT${PYTHONPATH:+:$PYTHONPATH}"
+exec "$NPEER_PROJECT/.venv/bin/python" -m nativepeers.grok_hooks "$@"

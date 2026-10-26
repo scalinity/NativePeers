@@ -27,10 +27,11 @@ class ReadinessTests(unittest.TestCase):
             skill=self.project/'integrations'/provider/'skills/nativepeers/SKILL.md'
             skill.parent.mkdir(parents=True);skill.write_text('fixture '+provider+' skill\n')
         (self.project/'bin').mkdir()
-        for name in ('npeer','npeer-hook','npeer-antigravity-hook'):
+        for name in ('npeer','npeer-hook','npeer-antigravity-hook','npeer-grok-hook'):
             path=self.project/'bin'/name;path.write_text('#!/bin/sh\n');path.chmod(0o755)
         for item in (patch('nativepeers.install.ROOT',self.project),
                      patch('nativepeers.antigravity_install.ROOT',self.project),
+                     patch('nativepeers.grok_install.ROOT',self.project),
                      patch('nativepeers.antigravity_install.PYTHON',Path(sys.executable)),
                      patch('pathlib.Path.home',return_value=self.home),
                      patch('pathlib.Path.cwd',return_value=self.cwd),
@@ -83,9 +84,13 @@ class ReadinessTests(unittest.TestCase):
             report=readiness(self.journal)
         self.assertTrue(report['passive'])
         self.assertEqual(report['selected_homes'],{'claude':str(self.claude),'codex':str(self.codex),
-                                                  'antigravity':str((self.home/'.gemini/antigravity-cli').resolve())})
+                                                  'antigravity':str((self.home/'.gemini/antigravity-cli').resolve()),
+                                                  'grok':str((self.home/'.grok').resolve())})
         self.assertEqual(report['native_effective_precedence'],'unknown')
         for provider,data in report['providers'].items():
+            if provider=='grok':
+                self.assertEqual(self.states(report,'grok','hooks'),['MISSING'])
+                continue
             self.assertEqual({item['state'] for item in data['checks']},{'PRESENT'},provider)
         self.assertEqual(report['entrypoint']['state'],'PRESENT')
         self.assertEqual(self.snapshot(),before)

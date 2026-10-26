@@ -46,7 +46,7 @@ def readiness(journal):
     runtime inventory. The journal is used only for its root path.
     """
     installer=installation.Installer(journal,native=False)
-    homes={provider:provider_home(provider) for provider in ('claude','codex','antigravity')}
+    homes={provider:provider_home(provider) for provider in ('claude','codex','antigravity','grok')}
     checks={provider:[] for provider in homes}
     for provider in ('claude','codex'):
         path=homes[provider]/('settings.json' if provider=='claude' else 'hooks.json')
@@ -83,6 +83,8 @@ def readiness(journal):
     hook=installation.ROOT/'bin/npeer-antigravity-hook'
     checks['antigravity'].append(_check('hook_entrypoint',hook,
         'MISSING' if not hook.is_file() else 'PRESENT' if os.access(hook,os.X_OK) else 'DISABLED'))
+    from .grok_install import hook_readiness as grok_hook_readiness,profile_readiness as grok_profile_readiness
+    checks['grok'].extend(grok_hook_readiness(home=homes['grok'])+grok_profile_readiness(journal,home=homes['grok']))
     command=installer.command
     try:
         command_state=('PRESENT' if command.is_symlink() and command.resolve()==(installation.ROOT/'bin/npeer').resolve()
@@ -110,7 +112,9 @@ def operation_readiness(journal):
         config_override=home_environment(provider,home)
         quota={'state':'UNKNOWN','operation':'quota-read'}
         try:
-            if provider=='codex':
+            if provider=='grok':
+                quota.update(reason='Grok exposes owned-session usage; no documented native account quota source is available')
+            elif provider=='codex':
                 from .compatibility import verify
                 verified_runtime=verify(journal,provider,executable(provider))
                 quota.update(state='APPROVED',runtime=verified_runtime,contract='native-account-quota-rpc')
@@ -121,7 +125,7 @@ def operation_readiness(journal):
             quota.update(state=error.code if isinstance(error,PeerError) else 'UNKNOWN',reason=str(error)[:256])
         broad={'state':'APPROVED' if item['state']=='PASS' else item['state'],
                'runtime':item['current'],'approved_runtime':item['expected'],'scope':item['verification_scope']}
-        checks=integrations['providers'][provider]['checks']
+        checks=integrations['providers'].get(provider,{}).get('checks',[{'state':'UNKNOWN'}])
         results.append(dict(provider=provider,selected_home=str(home),
             configuration_layout='implicit ~/.claude.json' if provider=='claude' and not config_override else 'explicit native provider home',
             operations={'quota':quota,'worker_turns':dict(broad),'inbox':dict(broad),

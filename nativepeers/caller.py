@@ -69,9 +69,23 @@ def native_ancestor(owner, ancestors):
     return any(all(owner[k]==candidate[k] for k in ('pid','pgid','uid','start','executable')) for candidate in ancestors)
 
 
-def nearest_native(ancestors, *executables):
-    binaries={(Path.home()/name).resolve() for name in (
-        '.local/bin/agy','.local/bin/claude','.local/share/codex-mcp-manager/current/bin/codex')}
+def native_binaries(journal=None):
+    from .grok import executable as grok_executable
+    binaries={(Path.home()/name).resolve():provider for provider,name in (
+        ('antigravity','.local/bin/agy'),('codex','.local/share/codex-mcp-manager/current/bin/codex'),('claude','.local/bin/claude'))}
+    binaries[grok_executable()]='grok'
+    if journal is not None and isinstance(journal.root,(str,os.PathLike)):
+        path=Path(journal.root)/'compat/runtime.json'
+        document=json.loads(path.read_text()) if path.exists() else {}
+        records=[document.get('providers',{}).get('grok',{})]
+        records.extend(value.get('fingerprint',{}) for value in document.get('retained',{}).get('grok',{}).values())
+        for record in records:
+            if record.get('path'):binaries[Path(record['path'])]='grok'
+    return binaries
+
+
+def nearest_native(ancestors, *executables,journal=None):
+    binaries=set(native_binaries(journal))
     binaries.update(Path(executable) for executable in executables)
     return next((p for p in ancestors if Path(p['executable']) in binaries),None)
 
@@ -94,7 +108,7 @@ def verify_owned_binding(journal, value, ancestors, *, provider=None, native_id=
             'CALLER_UNBOUND','Owned hook or binding differs from the worker provider/native identity')
     process=manifest.get('native_process')
     require(process,'CALLER_UNBOUND','Owned native process is not recorded')
-    nearest=nearest_native(ancestors,process['executable'])
+    nearest=nearest_native(ancestors,process['executable'],journal=journal)
     require(nearest is not None and native_ancestor(process,[nearest]),
             'CALLER_UNBOUND','Owned binding belongs to an enclosing or different native process')
     return row
@@ -115,7 +129,7 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
                 verify_owned_binding(journal,value,ancestors,provider=peer['peer_key']['provider'],
                                      native_id=peer['peer_key']['native_session_id'])
             if peer['owner_kind']=='interactive-standalone':
-                nearest=nearest_native(ancestors,peer['owner']['executable'])
+                nearest=nearest_native(ancestors,peer['owner']['executable'],journal=journal)
                 require(nearest is not None and native_ancestor(peer['owner'],[nearest]),
                         'CALLER_UNBOUND','Interactive binding belongs to an enclosing native session')
         grants=value.get('grants',{})
@@ -125,13 +139,12 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
     native = os.getenv("CODEX_THREAD_ID")
     ancestors = [p.json() for p in ancestry()]
     # A nested CLI cannot borrow an enclosing conversation's verified identity.
-    binaries={(Path.home()/name).resolve():provider for provider,name in (
-        ('antigravity','.local/bin/agy'),('codex','.local/share/codex-mcp-manager/current/bin/codex'),
-        ('claude','.local/bin/claude'))}
+    binaries=native_binaries(journal)
     nearest=next((p for p in ancestors if Path(p['executable']) in binaries),None)
-    if nearest and binaries[Path(nearest['executable'])]=='antigravity':
-        candidates=registry.for_owner('antigravity',nearest)
-        require(len(candidates)==1,'CALLER_UNBOUND','Antigravity owner has no unique hook-observed native session')
+    if nearest and binaries[Path(nearest['executable'])] in ('antigravity','grok'):
+        provider=binaries[Path(nearest['executable'])]
+        candidates=registry.for_owner(provider,nearest)
+        require(len(candidates)==1,'CALLER_UNBOUND',provider+' owner has no unique hook-observed native session')
         p=candidates[0]
         return Caller('peer',p['handle'],p['incarnation_id'],p.get('policy',{}))
     if nearest and binaries[Path(nearest['executable'])]=='claude':

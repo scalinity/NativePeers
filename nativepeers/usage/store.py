@@ -24,7 +24,7 @@ def scope(provider,home):
     # Metadata only: never open credential files or query a credential store.
     markers=[]
     names={'codex':['auth.json','config.toml'],'claude':['.credentials.json','settings.json'],
-           'antigravity':['settings.json']}[provider]
+           'antigravity':['settings.json'],'grok':['config.toml']}[provider]
     for name in names:
         path=Path(home)/name
         try:
@@ -36,7 +36,7 @@ def scope(provider,home):
     except OSError:runtime=None
     flags={k:bool(os.environ.get(k)) for k in {
         'claude':('CLAUDE_CONFIG_DIR','ANTHROPIC_API_KEY','ANTHROPIC_AUTH_TOKEN','ANTHROPIC_BASE_URL','CLAUDE_CODE_USE_BEDROCK','CLAUDE_CODE_USE_VERTEX','CLAUDE_CODE_USE_FOUNDRY'),
-        'codex':('OPENAI_API_KEY','OPENAI_BASE_URL'),'antigravity':()}[provider]}
+        'codex':('OPENAI_API_KEY','OPENAI_BASE_URL'),'antigravity':(),'grok':('GROK_HOME',)}[provider]}
     if provider=='claude' and _home_layout.get() is not None:flags['CLAUDE_CONFIG_DIR']=_home_layout.get()
     return sha256(dict(provider=provider,home=str(Path(home).resolve()),markers=markers,runtime=runtime,route_flags=flags))
 

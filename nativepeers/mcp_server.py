@@ -26,7 +26,7 @@ STRING={'type':'string'}
 SPAWN_SCHEMA=json.loads((Path(__file__).resolve().parent.parent/'schemas/spawn.v1.json').read_text())
 REQUIREMENTS_SCHEMA=json.loads((Path(__file__).resolve().parent.parent/'schemas/requirements.v1.json').read_text())
 TOOLS={
- 'usage_status':('Read native quota pools, freshness and local task consumption; optionally refresh metadata or request explained recommendations. No inference, account mutation or model substitution.',object_schema({'provider':{'enum':['claude','codex','antigravity']},'model':STRING,'home_label':STRING,'refresh':{'type':'boolean'},'requirements':REQUIREMENTS_SCHEMA,'preference':{'enum':['quality-first','balanced','quota-preserving','fast','exact-model-only']}})),
+ 'usage_status':('Read native quota pools, freshness and local task consumption; optionally refresh metadata or request explained recommendations. No inference, account mutation or model substitution.',object_schema({'provider':{'enum':['claude','codex','antigravity','grok']},'model':STRING,'home_label':STRING,'refresh':{'type':'boolean'},'requirements':REQUIREMENTS_SCHEMA,'preference':{'enum':['quality-first','balanced','quota-preserving','fast','exact-model-only']}})),
  'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
  'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
  'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
@@ -55,7 +55,8 @@ class Facade:
         if self.binding is None:
             try:
                 caller=bind_caller(self.journal,Registry(self.journal),allow_external=False)
-                return {'state':'BOUND','provider':'antigravity','grants':dict(caller.grants,can_spawn=caller.grants.get('can_spawn',not caller.grants.get('worker_id')))}
+                peer=Registry(self.journal).verify(caller.key,caller.incarnation)
+                return {'state':'BOUND','provider':peer['peer_key']['provider'],'grants':dict(caller.grants,can_spawn=caller.grants.get('can_spawn',not caller.grants.get('worker_id')))}
             except PeerError as error:
                 bootstrap=os.getenv('NPEER_BOOTSTRAP')
                 if error.code=='CALLER_NOT_READY' and bootstrap and not os.getenv('NPEER_BINDING'):
@@ -72,7 +73,7 @@ class Facade:
 
     def names(self):
         state=self.binding_state()
-        if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity'):return ['task_status']
+        if state.get('state')!='BOUND' and state.get('provider') not in ('claude','antigravity','grok'):return ['task_status']
         granted=state.get('grants',{})
         names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read','usage_status']
         if granted.get('can_spawn'):names += ['worker_spawn','worker_resume','task_cancel']

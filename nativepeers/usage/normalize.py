@@ -4,7 +4,7 @@ import math
 from zoneinfo import ZoneInfo
 from ..errors import require
 
-PROVIDERS = ('claude', 'codex', 'antigravity')
+PROVIDERS = ('claude', 'codex', 'antigravity', 'grok')
 
 
 def number(value, minimum=0, maximum=None):

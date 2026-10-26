@@ -12,6 +12,9 @@ from .normalize import codex
 
 
 def executable(provider):
+    if provider=='grok':
+        from ..grok import executable as grok_executable
+        return grok_executable()
     return Path.home()/{'codex':'.local/share/codex-mcp-manager/current/bin/codex',
         'claude':'.local/bin/claude','antigravity':'.local/bin/agy'}[provider]
 
@@ -139,5 +142,15 @@ class NativeCollector:
         return payload
 
 
+class GrokCollector:
+    async def collect(self,journal,home):
+        # `grok usage UUID` measures a persisted conversation, not an account
+        # allowance. Do not turn owned-task tokens into subscription quota.
+        return dict(source='grok-account-quota-unavailable',route='native-grok',
+            pools=[],models=[],coverage='unknown',
+            collection=dict(outcome='UNAVAILABLE',freshness_basis='no-documented-native-account-source'),
+            limitations=['Grok exposes persisted session usage; native account quota is unknown.'])
+
+
 COLLECTORS={'codex':CodexCollector(),'claude':NativeCollector('claude'),
-            'antigravity':NativeCollector('antigravity')}
+            'antigravity':NativeCollector('antigravity'),'grok':GrokCollector()}

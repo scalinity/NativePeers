@@ -67,12 +67,21 @@ def resume_command(journal,caller,worker_id,*,explain=False):
         from .history_cleanup import resume_archive_state
         archive_state=resume_archive_state(journal,row)
     command=['codex','resume',row['native_id']] if row['provider']=='codex' else ['agy','--conversation',row['native_id']] if row['provider']=='antigravity' else ['claude','--resume',row['native_id']]
+    if row['provider']=='grok':
+        from .grok_worker import arguments
+        lease=json.loads(row['lease_json']);args=arguments(dict(lease['spec'],model=model_selection(row)),row['native_id'])
+        for flag in ('--prompt-file','--output-format'):
+            index=args.index(flag);del args[index:index+2]
+        command=[str(Path(lease['executable']).resolve(strict=True)),*args]
     model=model_selection(row)
-    if model:command+=['--model',model]
+    if model and row['provider']!='grok':command+=['--model',model]
     if row['provider']=='codex' and row['effort_requested']:
         command+=['--config','model_reasoning_effort='+json.dumps(row['effort_requested'])]
     elif row['effort_requested']:command+=['--effort',row['effort_requested']]
     environment=home_environment(row['provider'],recorded_home(journal,row),explicit=json.loads(row.get('lease_json') or '{}').get('provider_home_explicit'))
+    if row['provider']=='grok':
+        from .launch import launch_environment
+        environment.update({k:v for k,v in launch_environment('grok').items() if k.startswith('GROK_')})
     prefix=('env -u CLAUDE_CONFIG_DIR ' if row['provider']=='claude' and not environment else '')+''.join(key+'='+shlex.quote(value)+' ' for key,value in environment.items())
     unarchive=['codex','unarchive',row['native_id']] if archive_state['archived'] is True else None
     launch=(prefix+shlex.join(unarchive)+' && ' if unarchive else '')+prefix+shlex.join(command)

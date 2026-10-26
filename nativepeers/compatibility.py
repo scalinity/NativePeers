@@ -100,12 +100,14 @@ def diagnose(journal, executables=None):
     """Passive comparison only: never certify an update or launch a provider."""
     receipt=journal.root/'compat/runtime.json'
     providers=json.loads(receipt.read_text()).get('providers',{}) if receipt.exists() else {}
+    from .grok import executable as grok_executable
     executables=executables or {'claude':Path.home()/'.local/bin/claude',
         'codex':Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',
-        'antigravity':Path.home()/'.local/bin/agy'}
+        'antigravity':Path.home()/'.local/bin/agy','grok':grok_executable()}
     operations={'claude':['interactive inbox','structured worker turns'],
         'codex':['native queue','private worker app-server'],
-        'antigravity':['native hook inbox','streaming worker turns']}
+        'antigravity':['native hook inbox','streaming worker turns'],
+        'grok':['native hook inbox','streaming worker turns']}
     results=[]
     for provider,path in executables.items():
         expected=providers.get(provider);error=None

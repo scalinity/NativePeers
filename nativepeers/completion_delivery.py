@@ -29,9 +29,11 @@ def readiness(journal, parent_key):
             require(worker and worker['state'] in ('READY', 'RUNNING', 'IDLE_GRACE'),
                     'TARGET_OFFLINE', 'Parent worker controller has released ownership')
             value['generation'] = worker['generation']
-        elif kind == 'antigravity-native-hook':
+        elif kind in ('antigravity-native-hook','grok-native-hook'):
             from .compatibility import verify
-            value['runtime'] = verify(journal, 'antigravity', Path.home()/'.local/bin/agy')
+            from .grok import executable as grok_executable
+            provider=peer['peer_key']['provider']
+            value['runtime'] = verify(journal,provider,grok_executable() if provider=='grok' else Path.home()/'.local/bin/agy')
             value.update(state='NEXT_INVOCATION', reason='The hook cannot wake an idle parent',
                          next_action='Collect retained results or use the next normal native invocation')
             return value

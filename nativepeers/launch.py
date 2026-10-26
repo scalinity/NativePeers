@@ -11,6 +11,7 @@ def launch_environment(provider: str) -> dict[str, str]:
                    "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX",
                    "CLAUDE_CODE_USE_FOUNDRY", "AWS_PROFILE", "AWS_REGION", "GOOGLE_CLOUD_PROJECT"},
         "antigravity": set(),
+        "grok": {"GROK_HOME"},
     }
     if provider not in provider_names:
         raise ValueError("Unsupported provider")
@@ -18,7 +19,13 @@ def launch_environment(provider: str) -> dict[str, str]:
     if provider == "claude" and os.getenv("CLAUDECODE"):
         raise RuntimeError("CAPABILITY_MISMATCH: nested Claude launch contract requires verification")
     allowed = common | provider_names[provider]
-    return {k: v for k, v in os.environ.items() if k in allowed or k.startswith("LC_")}
+    environment={k: v for k, v in os.environ.items() if k in allowed or k.startswith("LC_")}
+    if provider=='grok':
+        environment.update(GROK_DISABLE_AUTOUPDATER='1',GROK_CLAUDE_HOOKS_ENABLED='false',
+            GROK_CLAUDE_MCPS_ENABLED='false',GROK_CLAUDE_SKILLS_ENABLED='false',
+            GROK_SUBAGENTS='false',GROK_WORKFLOWS='0',GROK_MANAGED_MCPS_ENABLED='false',
+            GROK_MANAGED_MCP_GATEWAY_TOOLS_ENABLED='false')
+    return environment
 
 
 def provider_home(provider):
@@ -26,12 +33,15 @@ def provider_home(provider):
     if provider == 'antigravity':
         from .antigravity import native_home
         return native_home().resolve()
+    if provider == 'grok':
+        from .grok import native_home
+        return native_home().resolve()
     variable,default={'codex':('CODEX_HOME','.codex'),'claude':('CLAUDE_CONFIG_DIR','.claude')}[provider]
     return Path(os.environ.get(variable,Path.home()/default)).expanduser().resolve()
 
 
 def home_environment(provider,home,*,explicit=None):
-    variable={'codex':'CODEX_HOME','claude':'CLAUDE_CONFIG_DIR'}.get(provider)
+    variable={'codex':'CODEX_HOME','claude':'CLAUDE_CONFIG_DIR','grok':'GROK_HOME'}.get(provider)
     if provider=='claude':
         from pathlib import Path
         if explicit is None:
@@ -43,7 +53,7 @@ def home_environment(provider,home,*,explicit=None):
 def apply_home(provider,home,environment,*,explicit=None):
     """Replace ambient selection while preserving Claude's implicit config layout."""
     environment=dict(environment)
-    variable={'claude':'CLAUDE_CONFIG_DIR','codex':'CODEX_HOME'}.get(provider)
+    variable={'claude':'CLAUDE_CONFIG_DIR','codex':'CODEX_HOME','grok':'GROK_HOME'}.get(provider)
     if variable:environment.pop(variable,None)
     environment.update(home_environment(provider,home,explicit=explicit))
     return environment

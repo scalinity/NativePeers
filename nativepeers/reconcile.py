@@ -114,6 +114,7 @@ async def observe(journal,registry,router,message_id,*,cursor=None,max_bytes=104
         if scan is None:details.update(byte_range=None,inspected_ranges=[],next_cursor=None)
         if error is not None:details.update(reason='Native history is unavailable',error=type(error).__name__)
         elif provider=='antigravity' and reason is None:details['reason']='No exact persisted Antigravity USER_INPUT envelope was observed; ephemeral hook output alone does not prove ingestion.'
+        elif provider=='grok' and reason is None:details['reason']='No exact Grok-native model-facing user envelope was observed; hook output alone does not prove ingestion.'
         outcome['reconciliation']=details
         return outcome
     path=Path(peer['native_transcript']) if peer.get('native_transcript') else None
@@ -134,10 +135,17 @@ async def observe(journal,registry,router,message_id,*,cursor=None,max_bytes=104
                     async with asyncio.timeout(20):await client.close()
     if path is None and peer['peer_key']['provider']=='claude':
         path=home/'projects'/str(peer['cwd']).replace('/','-').replace('.','-')/(native+'.jsonl')
+    if provider=='grok':
+        from .grok import summaries
+        names=summaries(native_id=native,home=home)
+        require(len(names)==1,'OWNERSHIP_UNKNOWN','Grok receipt requires its unique native summary')
+        expected=Path(names[0]['path']).parent/'chat_history.jsonl'
+        require(path is None or path.resolve()==expected.resolve(),'OWNERSHIP_UNKNOWN','Grok native history differs from its exact session summary')
+        path=expected
     if path is None or not path.exists():return unconfirmed()
     require(path.resolve().is_relative_to(home.resolve()) and not path.is_symlink(),'OWNERSHIP_UNKNOWN','Native history path is outside its provider home')
     path=path.resolve()
-    if provider=='antigravity':require(native in path.resolve().parts,'OWNERSHIP_UNKNOWN','Antigravity history path differs from its native UUID')
+    if provider in ('antigravity','grok'):require(native in path.resolve().parts,'OWNERSHIP_UNKNOWN','Native history path differs from its native UUID')
     try:
         scope=['receipt-scan',message_id,hashlib.sha256(canonical([
             record['payload_json'],peer['handle'],provider,native,str(path)])).hexdigest()]
@@ -171,6 +179,9 @@ async def observe(journal,registry,router,message_id,*,cursor=None,max_bytes=104
         elif provider=='antigravity':
             if event.get('type')!='USER_INPUT' or any(event.get(key,native)!=native for key in ('conversation_id','conversationId','sessionId')):continue
             content=event.get('content');event_id=event.get('step_index')
+        elif provider=='grok':
+            if event.get('type')!='user' or event.get('sessionId',native)!=native:continue
+            content=event.get('content');event_id=event.get('prompt_index')
         else:continue
         from .presentation import matches as readable_match
         try:matching=any(readable_match(text,wanted) or any(canonical(frame)==canonical(wanted) for frame in frames(text)) for text in texts(content))
