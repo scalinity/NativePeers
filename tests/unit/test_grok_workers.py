@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock,patch
 from nativepeers.caller import Caller
 from nativepeers.delegation import Delegation
 from nativepeers.errors import PeerError
-from nativepeers.grok_worker import arguments,allowed_tools
+from nativepeers.grok_worker import arguments,allowed_tools,tool_ids,HookEvidence
 from nativepeers.journal import Journal
 from nativepeers.launch import launch_environment,provider_home,home_environment,apply_home
 from nativepeers.models import new_id,PeerKey,home_id
@@ -26,11 +26,14 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
                 args=arguments(spec)
                 self.assertEqual(args[args.index('--session-id')+1],spec['native_session_id'])
                 self.assertEqual(args[args.index('--sandbox')+1],'nativepeers-'+profile)
-                self.assertEqual(args[args.index('--tools')+1],','.join(allowed_tools(profile)))
+                self.assertEqual(args[args.index('--tools')+1],','.join(tool_ids(profile)))
                 self.assertEqual(args[args.index('--permission-mode')+1],'dontAsk')
                 self.assertEqual(args[args.index('--max-turns')+1],'8')
                 self.assertEqual(args[args.index('--deny')+1],'MCPTool(*)')
                 self.assertIn('--no-auto-update',args);self.assertIn('--no-subagents',args);self.assertIn('--disable-web-search',args)
+                if profile=='workspace':
+                    self.assertIn('run_terminal_command',allowed_tools(profile))
+                    self.assertIn('run_terminal_cmd',tool_ids(profile))
                 native=new_id();resume=arguments(spec,native)
                 self.assertNotIn('--session-id',resume);self.assertEqual(resume[resume.index('--resume')+1],native)
         with self.assertRaises(PeerError) as caught:arguments(dict(model='grok-4.7',permission_profile='analysis',reasoning_effort='high'))
@@ -112,3 +115,45 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(result['native_env']['GROK_HOME'],str(root));self.assertEqual(result['native_env']['GROK_DISABLE_AUTOUPDATER'],'1')
             self.assertIn('GROK_HOME='+str(root),shlex.split(result['command']))
             self.assertNotIn('GROK_HOME='+str(ambient),shlex.split(result['command']))
+
+    def hook_event(self,native):
+        return {'method':'_x.ai/session/update','params':{'sessionId':native,'update':{'sessionUpdate':'hook_execution',
+            'event_name':'session_start','runs':[{'name':'project/nativepeers:session_start[0].hooks[0]','status':{'status':'success'}}]},
+            '_meta':{'eventId':'native-hook-fixture'}}}
+
+    def test_native_hook_reader_ignores_old_records_and_waits_for_complete_new_lines(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory).resolve();native=new_id();initial=HookEvidence(root,root,native)
+            path=initial.path;path.parent.mkdir(parents=True)
+            old=(json.dumps(self.hook_event(native))+'\n').encode();path.write_bytes(old)
+            cursor=HookEvidence(root,root,native);self.assertIsNone(cursor.read())
+            fresh=(json.dumps(self.hook_event(native))+'\n').encode()
+            with path.open('ab') as stream:stream.write(fresh[:19])
+            self.assertIsNone(cursor.read())
+            with path.open('ab') as stream:stream.write(fresh[19:])
+            proof=cursor.read()
+            self.assertEqual(proof['native_id'],native);self.assertEqual(proof['from_offset'],len(old))
+            self.assertEqual(proof['to_offset'],len(old)+len(fresh));self.assertEqual(cursor.read(),proof)
+
+    def test_native_hook_reader_refuses_replacement_truncation_and_oversized_appends(self):
+        for change,code in [('replace','OWNERSHIP_CONFLICT'),('truncate','OWNERSHIP_CONFLICT'),('oversize','SOURCE_OUTPUT_LIMIT')]:
+            with self.subTest(change=change),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory).resolve();initial=HookEvidence(root,root,new_id());path=initial.path;path.parent.mkdir(parents=True)
+                path.write_text('{}\n');cursor=HookEvidence(root,root,initial.native_id)
+                if change=='replace':
+                    replacement=path.with_suffix('.new');replacement.write_text('{}\n');replacement.replace(path)
+                elif change=='truncate':path.write_text('')
+                else:
+                    with path.open('ab') as stream:stream.write(b'x'*(HookEvidence.LIMIT+1))
+                with self.assertRaises(PeerError) as caught:cursor.read()
+                self.assertEqual(caught.exception.code,code)
+
+    def test_native_hook_reader_requires_exact_uuid_and_successful_owned_handler(self):
+        for invalid,code in [('uuid','OWNERSHIP_CONFLICT'),('status','PERMISSION_CAPABILITY_UNKNOWN')]:
+            with self.subTest(invalid=invalid),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory).resolve();native=new_id();cursor=HookEvidence(root,root,native);cursor.path.parent.mkdir(parents=True)
+                event=self.hook_event(new_id() if invalid=='uuid' else native)
+                if invalid=='status':event['params']['update']['runs'][0]['status']['status']='error'
+                cursor.path.write_text(json.dumps(event)+'\n')
+                with self.assertRaises(PeerError) as caught:cursor.read()
+                self.assertEqual(caught.exception.code,code)

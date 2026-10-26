@@ -76,11 +76,11 @@ def verify_worker_ready(journal,spec,executable,*,worker_id=None):
     checks=hook_readiness(spec)+profile_readiness(journal,spec)
     require(all(check['state']=='PRESENT' for check in checks if check.get('required',True)),'PERMISSION_CAPABILITY_UNKNOWN',
             'Owned Grok-native hooks, sandbox profiles or entrypoint are absent, modified or unresolved',details=checks)
-    from .grok_worker import arguments,allowed_tools
+    from .grok_worker import arguments,tool_ids
     args=arguments(spec)
     sandbox='nativepeers-'+spec['permission_profile']
     def option(name):return args[args.index(name)+1] if name in args and args.index(name)+1<len(args) else None
-    require(option('--sandbox')==sandbox and option('--tools')==','.join(allowed_tools(spec['permission_profile']))
+    require(option('--sandbox')==sandbox and option('--tools')==','.join(tool_ids(spec['permission_profile']))
             and '--no-auto-update' in args,'PERMISSION_CAPABILITY_UNKNOWN','Grok launch must retain its native sandbox and fixed tool inventory')
 
 

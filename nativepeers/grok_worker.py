@@ -5,19 +5,73 @@ import os
 from pathlib import Path
 import re
 import signal
+import stat
 import subprocess
+from urllib.parse import quote
 
 from .errors import PeerError,require
 from .provider_errors import classify,diagnostic
 
 
+class HookEvidence:
+    """Read only this launch's bounded native SessionStart append."""
+    LIMIT=1048576
+
+    def __init__(self,home,cwd,native_id):
+        self.native_id=native_id
+        self.path=Path(home)/'sessions'/quote(str(Path(cwd).resolve()),safe='')/native_id/'updates.jsonl'
+        self.offset=0;self.file_id=None;self.pending=b'';self.read_bytes=0;self.proof=None
+        require(self.path.resolve()==self.path,'OWNERSHIP_CONFLICT','Grok native updates path contains a symlink')
+        try:
+            info=self.path.lstat()
+            require(stat.S_ISREG(info.st_mode),'OWNERSHIP_CONFLICT','Grok native updates is not a regular file')
+            self.offset=info.st_size;self.file_id=(info.st_dev,info.st_ino)
+        except FileNotFoundError:pass
+
+    def read(self):
+        try:descriptor=os.open(self.path,os.O_RDONLY|os.O_NOFOLLOW)
+        except FileNotFoundError:return None
+        with os.fdopen(descriptor,'rb') as stream:
+            info=os.fstat(stream.fileno());file_id=(info.st_dev,info.st_ino)
+            require(stat.S_ISREG(info.st_mode) and (self.file_id is None or self.file_id==file_id)
+                    and info.st_size>=self.offset,'OWNERSHIP_CONFLICT','Grok native updates was replaced or truncated during this launch')
+            self.file_id=file_id
+            if self.proof:return self.proof
+            require(info.st_size-self.offset<=self.LIMIT-self.read_bytes,'SOURCE_OUTPUT_LIMIT','Fresh Grok hook updates exceed 1 MiB')
+            stream.seek(self.offset);data=stream.read(self.LIMIT-self.read_bytes+1)
+        require(self.read_bytes+len(data)<=self.LIMIT,'SOURCE_OUTPUT_LIMIT','Fresh Grok hook updates exceed 1 MiB')
+        start=self.offset-len(self.pending);self.offset+=len(data);self.read_bytes+=len(data);self.pending+=data
+        lines=self.pending.split(b'\n');self.pending=lines.pop()
+        for line in lines:
+            end=start+len(line)+1
+            try:event=json.loads(line)
+            except ValueError:raise PeerError('PROTOCOL_ERROR','Grok native updates contains malformed JSON') from None
+            params=event.get('params',{}) if isinstance(event,dict) else {};update=params.get('update',{})
+            if event.get('method')=='_x.ai/session/update' and update.get('sessionUpdate')=='hook_execution' and update.get('event_name')=='session_start':
+                require(params.get('sessionId')==self.native_id,'OWNERSHIP_CONFLICT','Grok native hook execution names another session UUID')
+                for run in update.get('runs',[]):
+                    name=run.get('name') if isinstance(run,dict) else None
+                    if isinstance(name,str) and re.fullmatch(r'(?:project|user|global)/nativepeers:session_start\[0\]\.hooks\[0\]',name):
+                        require(run.get('status',{}).get('status')=='success','PERMISSION_CAPABILITY_UNKNOWN','The owned Grok SessionStart hook did not complete successfully')
+                        self.proof=dict(native_id=self.native_id,handler=name,path=str(self.path),from_offset=start,to_offset=end,
+                                        event_id=params.get('_meta',{}).get('eventId'),event=event)
+                        return self.proof
+            start=end
+        return None
+
+
 def allowed_tools(profile):
     require(profile in ('analysis','workspace'),'PERMISSION_CAPABILITY_UNKNOWN','Unknown Grok worker profile')
-    return ('read_file','grep','list_dir')+(('run_terminal_cmd','write','search_replace') if profile=='workspace' else ())
+    return ('read_file','grep','list_dir')+(('run_terminal_command','write','search_replace') if profile=='workspace' else ())
+
+
+def tool_ids(profile):
+    """The native stream uses display names; CLI tool filters use internal IDs."""
+    return tuple('run_terminal_cmd' if tool=='run_terminal_command' else tool for tool in allowed_tools(profile))
 
 
 def arguments(spec,native_id=None):
-    tools=allowed_tools(spec['permission_profile'])
+    tools=tool_ids(spec['permission_profile'])
     # A requested kernel sandbox keeps tools in this process, never a leader.
     args=['--no-auto-update','--prompt-file','/dev/stdin','--output-format','streaming-json',
           '--model',spec['model'],'--sandbox','nativepeers-'+spec['permission_profile'],

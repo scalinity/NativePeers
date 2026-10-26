@@ -451,31 +451,48 @@ class Worker:
         from .grok_install import verify_worker_ready
         verify_worker_ready(self.journal,self.spec,self.lease['executable'],worker_id=self.row['worker_id'])
 
-    def grok_observation(self,sequence):
-        """Only this launch's hook and exact native summary certify its identity."""
+    def grok_observation(self,launch):
+        """The controller verifies the native birth, kernel and fresh hook record."""
         from .grok import summaries
+        from .grok_hooks import kernel_sandbox
         self.refresh_provider_identity()
-        rows=self.journal.all("SELECT payload_json FROM events WHERE subject_id=? AND kind='native-hook-observed' AND sequence>? AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC",
-                              (self.row['worker_id'],sequence,self.expected_native))
-        observed=next((value for row in rows if (value:=json.loads(row['payload_json'])).get('process')==self.provider_identity),None)
-        require(observed,'PERMISSION_CAPABILITY_UNKNOWN','No verified native Grok hook observed this turn process after launch')
-        checks=self.journal.all("SELECT payload_json FROM events WHERE subject_id=? AND kind='grok-kernel-check' AND sequence>? AND json_extract(payload_json,'$.native_id')=? ORDER BY sequence DESC",
-                               (self.row['worker_id'],sequence,self.expected_native))
-        kernel=next((value for row in checks if (value:=json.loads(row['payload_json'])).get('process')==self.provider_identity),None)
-        require(kernel and kernel.get('verified') is True and kernel.get('profile')==self.spec['permission_profile'],
-                'PERMISSION_CAPABILITY_UNKNOWN','Grok owned hook did not prove inherited kernel write restrictions for this process')
+        process=launch['process'];state=owned_status(process);cached=False
+        if state=='LIVE':
+            current=identity(process['pid']).json()
+            require(all(current[k]==process[k] for k in ('pid','start','uid'))
+                    and current['executable']==str(Path(self.lease['executable']).resolve(strict=True)),
+                    'OWNERSHIP_CONFLICT','Grok native process birth or executable changed during this launch')
+            kernel=kernel_sandbox(dict(self.spec,state_root=str(self.journal.root),binding_path=str(self.binding)),pid=current['pid'])
+            after=identity(current['pid']).json()
+            require(after==current,'OWNERSHIP_CONFLICT','Grok native process changed during its kernel permission check')
+            require(kernel.get('verified') is True and kernel.get('profile')==self.spec['permission_profile'] and kernel.get('checked_pid')==current['pid'],
+                    'PERMISSION_CAPABILITY_UNKNOWN','The controller could not prove Grok native kernel write restrictions')
+            launch['kernel']=kernel;launch['checked_process']=current
+        else:
+            require(state=='DEAD' and self.provider.returncode is not None and launch.get('kernel') and launch.get('checked_process')
+                    and all(launch['checked_process'][k]==process[k] for k in ('pid','start','uid')),
+                    'PERMISSION_CAPABILITY_UNKNOWN','Grok exited before its exact native process kernel permissions were proved')
+            kernel=launch['kernel'];current=launch['checked_process'];cached=True
         native=summaries(native_id=self.expected_native,home=self.home)
+        require(native,'CALLER_NOT_READY','Grok has not persisted its owned session summary yet')
         require(len(native)==1 and Path(native[0]['cwd']).resolve()==Path(self.row['cwd']).resolve(),
                 'OWNERSHIP_CONFLICT','Grok did not persist the exact owned native session and workspace')
-        require(native[0].get('model'),'MODEL_UNAVAILABLE','Grok exact native summary did not report its selected model')
+        require(native[0].get('model'),'CALLER_NOT_READY','Grok exact native summary has not reported its selected model yet')
         require(native[0].get('sandbox_profile')=='nativepeers-'+self.spec['permission_profile'],
                 'PERMISSION_CAPABILITY_UNKNOWN','Grok native session persisted a different sandbox profile')
+        hook=launch['hook'].read()
+        require(hook,'CALLER_NOT_READY','A fresh successful owned Grok SessionStart hook record has not been flushed yet')
+        self.journal.event(self.row['worker_id'],'grok-kernel-check',dict(kernel,native_id=self.expected_native,process=current,
+            evidence_kind='parent-native-kernel-check',reused_after_native_exit=cached))
+        observed=dict(native_id=self.expected_native,model=native[0]['model'],event='SessionStart',process=current,
+            evidence_kind='parent-native-hook-execution-read',hook_execution=hook)
+        self.journal.event(self.row['worker_id'],'native-hook-observed',observed)
         self.lease['grok_native_created']=True
         self.bind(self.expected_native,model=native[0]['model'])
         return observed
 
     async def grok_turn(self,text):
-        from .grok_worker import arguments,Stream
+        from .grok_worker import arguments,Stream,HookEvidence
         from .usage.grok_native import session_usage
         self.check_submission()
         if self.provider:await self.close_provider()
@@ -484,16 +501,17 @@ class Worker:
         spec=dict(self.spec,native_session_id=self.expected_native)
         env=apply_home('grok',self.home,launch_environment('grok'))
         env.update(NPEER_HOME=str(self.journal.root),NPEER_BOOTSTRAP=str(self.binding),PYTHONPATH=str(ROOT))
-        sequence=self.journal.one('SELECT COALESCE(MAX(sequence),0) AS sequence FROM events')['sequence']
         resume_id=self.native if self.lease.get('grok_native_created') or self.lease.get('released_native') else None
         previous_usage_turn=0
         if resume_id:
             try:previous_usage_turn=(await session_usage(self.journal,self.home,resume_id,self.lease['executable'],self.row['cwd']))['native_turn_number']
             except Exception:previous_usage_turn=None
+        hook=HookEvidence(self.home,self.row['cwd'],self.expected_native)
         self.provider=await asyncio.create_subprocess_exec(str(Path(self.lease['executable']).resolve(strict=True)),*arguments(spec,resume_id),
             cwd=self.row['cwd'],env=env,stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True,limit=8*1024*1024)
         self.provider_identity=identity(self.provider.pid).json();self.manifest();self.track_provider()
+        launch=dict(process=dict(self.provider_identity),hook=hook)
         self.check_submission();self.input_submitted=True
         self.provider.stdin.write(text.encode());await self.provider.stdin.drain();self.provider.stdin.close()
         if self.canceling_task==self.running_task:await self.interrupt()
@@ -506,7 +524,14 @@ class Worker:
             while line:=await self.provider.stdout.readline():
                 kind=stream.observe(json.loads(line))
                 if kind!='error' and not self.turn:
-                    self.grok_observation(sequence)
+                    proof_deadline=time.monotonic()+min(2,self.spec.get('wall_time_seconds',1800))
+                    while True:
+                        try:self.grok_observation(launch);break
+                        except PeerError as error:
+                            if error.code!='CALLER_NOT_READY':raise
+                            require(self.provider.returncode is None and time.monotonic()<proof_deadline,
+                                'PERMISSION_CAPABILITY_UNKNOWN',error.message)
+                            await asyncio.sleep(.02)
                     self.turn=new_id();self.ingested()
                     self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
                 if kind=='available_commands':
@@ -516,7 +541,7 @@ class Worker:
             await self.provider.wait();await drain
             result=stream.result(self.provider.returncode)
             if result['status']=='completed':
-                self.grok_observation(sequence)
+                self.grok_observation(launch)
                 require(stream.tools is not None,'PERMISSION_CAPABILITY_UNKNOWN','Grok never reported its effective tool inventory')
             self.journal.event(self.running_task,'provider-internal-rounds',{'num_turns':result.pop('native_internal_rounds'),'counter_scope':'native prompt model rounds; logical worker task starts are separate'})
             result['native_turn_ids']=[self.turn] if self.turn else []
