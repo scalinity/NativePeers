@@ -33,6 +33,14 @@ def kernel_sandbox(spec,*,pid=None):
             path=Path(binding).resolve()
             if not path.is_relative_to(state_root/'bindings'):return dict(result,reason='The kernel binding check must use the owned binding directory')
             protected_files.append(path)
+        home=Path(spec.get('provider_home') or native_home()).expanduser().resolve()
+        # Native global controls are write-protected even though Grok can write
+        # other home state. A missing path is never evidence of that protection.
+        for path in (home/'sandbox.toml',home/'hooks/nativepeers.json'):
+            if path.is_symlink():return dict(result,reason='An owned Grok global control path is a symlink')
+            if path.exists():
+                if not path.is_file():return dict(result,reason='An owned Grok global control path is not a regular file')
+                protected_files.append(path)
         if not (cwd.is_dir() and state_root.is_dir() and journal.is_file()
                 and all(path.is_dir() for path in protected_dirs) and all(path.is_file() for path in protected_files)):
             return dict(result,reason='Kernel checks require existing workspace/state directories, journal, approval and current binding files')

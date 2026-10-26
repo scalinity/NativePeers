@@ -194,7 +194,9 @@ class GrokTests(unittest.TestCase):
         cwd=self.root.resolve()/'allowed';cwd.mkdir()
         state=self.j.root.resolve();root=self.root.resolve();journal=state/'journal.sqlite3'
         binding=state/'bindings/current';atomic_json(binding,{'fixture':True})
-        protected=[state/'compat/runtime.json',binding];before={path:path.read_bytes() for path in protected}
+        install(self.j,home=self.home)
+        protected=[state/'compat/runtime.json',binding,self.home.resolve()/'sandbox.toml',self.home.resolve()/'hooks/nativepeers.json']
+        before={path:path.read_bytes() for path in protected}
         outside='(require-all (subpath '+json.dumps(str(root))+') (require-not (subpath '+json.dumps(str(cwd))+')))'
         profiles=[('workspace','(version 1)(allow default)(deny file-write* '+outside+')',True),
                   ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(root))+'))',True),
@@ -206,7 +208,7 @@ from nativepeers.grok_hooks import kernel_sandbox
 from nativepeers.journal import Journal
 spec=json.loads(sys.argv[1]);observation=kernel_sandbox(spec)
 if observation['verified']:
-    for path in (Path(spec['state_root'])/'compat/runtime.json',Path(spec['binding_path']),Path(spec['state_root'])/'journal.sqlite3'):
+    for path in (Path(spec['state_root'])/'compat/runtime.json',Path(spec['binding_path']),Path(spec['state_root'])/'journal.sqlite3',Path(spec['provider_home'])/'sandbox.toml',Path(spec['provider_home'])/'hooks/nativepeers.json'):
         assert path.read_bytes()
         try:
             with path.open('a') as stream:stream.write('forbidden')
@@ -226,7 +228,7 @@ sys.stdin.read()
 '''
         for permission,profile,verified in profiles:
             with self.subTest(permission=permission,verified=verified):
-                spec=dict(cwd=str(cwd),state_root=str(state),permission_profile=permission,binding_path=str(binding))
+                spec=dict(cwd=str(cwd),state_root=str(state),permission_profile=permission,binding_path=str(binding),provider_home=str(self.home))
                 result=subprocess.run(['/usr/bin/sandbox-exec','-p',profile,sys.executable,'-c',program,json.dumps(spec)],
                     cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
                     input='',capture_output=True,text=True,timeout=10)
@@ -245,7 +247,7 @@ sys.stdin.read()
                         ([(str(root),'file-write-data',1)] if permission=='workspace' else []))
                     self.assertTrue(observation['protected_reads_and_read_only_journal'])
         # The unsandboxed controller must inspect the owned native PID directly.
-        spec=dict(cwd=str(cwd),state_root=str(state),permission_profile='workspace',binding_path=str(binding))
+        spec=dict(cwd=str(cwd),state_root=str(state),permission_profile='workspace',binding_path=str(binding),provider_home=str(self.home))
         process=subprocess.Popen(['/usr/bin/sandbox-exec','-p',profiles[0][1],sys.executable,'-c',program,json.dumps(spec)],
             cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
@@ -263,6 +265,20 @@ sys.stdin.read()
         self.assertEqual(list(root.rglob('.npeer-kernel-probe')),[])
         self.assertEqual({path:path.read_bytes() for path in protected},before)
         self.assertEqual(self.j.one('SELECT COUNT(*) AS count FROM events')['count'],0)
+
+    @unittest.skipUnless(sys.platform=='darwin','Requires macOS Seatbelt')
+    def test_kernel_global_control_checks_use_existing_selected_home_files_only(self):
+        home=self.root/'selected-grok';home.mkdir()
+        sandbox=home/'sandbox.toml';hook=home/'hooks/nativepeers.json'
+        spec=dict(cwd=str(self.root),state_root=str(self.j.root),permission_profile='analysis',provider_home=str(home))
+        def checked():return {check['path'] for check in kernel_sandbox(spec)['checks']}
+        self.assertTrue({str(sandbox),str(hook)}.isdisjoint(checked()))
+        sandbox.write_text('# existing global profile\n')
+        self.assertIn(str(sandbox.resolve()),checked());self.assertNotIn(str(hook),checked())
+        atomic_json(hook,{'hooks':{}})
+        self.assertTrue({str(sandbox.resolve()),str(hook.resolve())}.issubset(checked()))
+        local=self.root/'.grok/sandbox.toml';local.parent.mkdir();local.write_text('# editable project profile\n')
+        self.assertNotIn(str(local.resolve()),checked())
 
     def test_kernel_check_refuses_missing_workspace_state_or_journal_without_creating_probes(self):
         absent=self.root/'absent';empty=self.root/'empty-state';empty.mkdir()
