@@ -17,10 +17,12 @@ from .registry import Registry
 EVENTS={'SessionStart':'session_start','SessionEnd':'session_end','UserPromptSubmit':'user_prompt_submit','PreToolUse':'pre_tool_use'}
 
 
-def kernel_sandbox(spec):
-    """Probe inherited Seatbelt permissions without creating or changing a file."""
+def kernel_sandbox(spec,*,pid=None):
+    """Inspect one process's Seatbelt permissions without changing its files."""
     profile=spec['permission_profile'];cwd=Path(spec['cwd']).resolve()
-    result=dict(profile=profile,verified=False,checked_pid=os.getpid(),checks=[])
+    checked_pid=os.getpid() if pid is None else pid
+    result=dict(profile=profile,verified=False,checked_pid=checked_pid,checks=[])
+    if type(checked_pid) is not int or not 0<checked_pid<2**31:return dict(result,reason='A positive native PID is required')
     if sys.platform!='darwin':return dict(result,reason='Kernel permission probe is qualified only on macOS')
     if not spec.get('state_root'):return dict(result,reason='The exact NativePeers state root is required')
     try:
@@ -40,16 +42,16 @@ def kernel_sandbox(spec):
         check.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int]
         # sandbox_check denies missing paths even without a matching deny rule.
         # Check existing objects and require both allowed and denied operations.
-        targets=[(cwd,'file-write-create',profile=='analysis'),
-                 (state_root,'file-write-create',False),(state_root,'file-read-metadata',False),
-                 (journal,'file-write-data',False),(journal,'file-read-metadata',False)]
+        targets=[(cwd,'file-write-data',profile=='analysis'),(cwd,'file-read-metadata',False),
+                 (state_root,'file-write-data',True),(state_root,'file-read-metadata',False),
+                 (journal,'file-write-data',True),(journal,'file-read-data',False),(journal,'file-read-metadata',False)]
         targets.extend((path,operation,denied) for path in protected_dirs
-                       for operation,denied in (('file-write-create',True),('file-read-metadata',False)))
+                       for operation,denied in (('file-write-data',True),('file-read-metadata',False)))
         targets.extend((path,operation,denied) for path in protected_files
                        for operation,denied in (('file-write-data',True),('file-read-data',False),('file-read-metadata',False)))
-        if profile=='workspace':targets.append((cwd.parent,'file-write-create',True))
+        if profile=='workspace':targets.append((cwd.parent,'file-write-data',True))
         for path,operation,denied in targets:
-            state=check(ctypes.c_int(os.getpid()),ctypes.c_char_p(operation.encode()),ctypes.c_int(1),ctypes.c_char_p(os.fsencode(path)))
+            state=check(ctypes.c_int(checked_pid),ctypes.c_char_p(operation.encode()),ctypes.c_int(1),ctypes.c_char_p(os.fsencode(path)))
             result['checks'].append(dict(path=str(path),operation=operation,result=state,expected_denied=denied))
         result['verified']=profile in ('analysis','workspace') and all(c['result']==(1 if c['expected_denied'] else 0) for c in result['checks'])
     except (OSError,AttributeError,ValueError) as error:result['reason']=type(error).__name__
@@ -84,14 +86,10 @@ def observe(journal,event,kind):
         spec=dict(json.loads(row['lease_json'])['spec'],state_root=str(journal.root),binding_path=bootstrap)
         from .compatibility import verify
         verify(journal,'grok',owner['executable'],worker_id=row['worker_id'])
-        names=summaries(native_id=native,home=Path(spec.get('provider_home') or native_home()))
-        journal.event(row['worker_id'],'native-hook-observed',dict(native_id=native,model=event.get('modelName') or event.get('model') or (names[0]['model'] if len(names)==1 else None),event=kind,process=owner))
         kernel=kernel_sandbox(spec)
-        journal.event(row['worker_id'],'grok-kernel-check',dict(kernel,native_id=native,process=owner))
         if kind=='PreToolUse':
             from .grok_worker import allowed_tools
             name=event.get('toolName');allowed=kernel['verified'] and name in allowed_tools(spec['permission_profile']) and event.get('toolInputTruncated') is not True
-            journal.event(row['worker_id'],'grok-tool-gate',dict(native_id=native,tool=name,allowed=allowed))
             return {'decision':'allow' if allowed else 'deny',**({} if allowed else {'reason':'Tool is outside this NativePeers worker profile.'})}
         return {}
     from .compatibility import verify
@@ -145,14 +143,14 @@ def observe(journal,event,kind):
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('event',choices=EVENTS);args=parser.parse_args()
-    journal=None;event=None
+    journal=None;event=None;owned=bool(os.getenv('NPEER_BOOTSTRAP'))
     try:
         raw=sys.stdin.buffer.read(262145);require(len(raw)<=262144,'PAYLOAD_TOO_LARGE','Grok hook input too large')
-        event=json.loads(raw);journal=Journal();result=observe(journal,event,args.event);print(json.dumps(result))
+        event=json.loads(raw);journal=Journal(read_only=owned);result=observe(journal,event,args.event);print(json.dumps(result))
         if result.get('decision')=='deny' and os.getenv('NPEER_BOOTSTRAP'):raise SystemExit(2)
     except Exception as error:
         print('NativePeers Grok hook unavailable: '+getattr(error,'code',type(error).__name__)+': '+str(error),file=sys.stderr)
-        if journal:journal.event('grok-hook','hook-binding-error',dict(error=str(error),native_id=event.get('sessionId') if isinstance(event,dict) else None,event=args.event,verified_caller=False))
+        if journal and not owned:journal.event('grok-hook','hook-binding-error',dict(error=str(error),native_id=event.get('sessionId') if isinstance(event,dict) else None,event=args.event,verified_caller=False))
         if args.event=='PreToolUse' and os.getenv('NPEER_BOOTSTRAP'):
             print(json.dumps({'decision':'deny','reason':'NativePeers could not verify the owned worker tool grant.'}));raise SystemExit(2)
         print('{}')

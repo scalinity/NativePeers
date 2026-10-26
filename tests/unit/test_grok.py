@@ -195,19 +195,18 @@ class GrokTests(unittest.TestCase):
         state=self.j.root.resolve();root=self.root.resolve();journal=state/'journal.sqlite3'
         binding=state/'bindings/current';atomic_json(binding,{'fixture':True})
         protected=[state/'compat/runtime.json',binding];before={path:path.read_bytes() for path in protected}
-        read_only='(deny file-write* (subpath '+json.dumps(str(state/'compat'))+') (subpath '+json.dumps(str(state/'bindings'))+'))'
-        outside='(require-all (subpath '+json.dumps(str(root))+') (require-not (subpath '+json.dumps(str(cwd))+')) (require-not (subpath '+json.dumps(str(state))+')))'
-        profiles=[('workspace','(version 1)(allow default)(deny file-write* '+outside+')'+read_only,True),
-                  ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(cwd))+'))'+read_only,True),
+        outside='(require-all (subpath '+json.dumps(str(root))+') (require-not (subpath '+json.dumps(str(cwd))+')))'
+        profiles=[('workspace','(version 1)(allow default)(deny file-write* '+outside+')',True),
+                  ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(root))+'))',True),
                   ('workspace','(version 1)(allow default)',False),
-                  ('analysis','(version 1)(allow default)(deny file-write*)',False)]
-        program='''import json,sys
+                  ('analysis','(version 1)(allow default)(deny file-write* (subpath '+json.dumps(str(root))+'))(deny file-read-data (literal '+json.dumps(str(protected[0]))+'))',False)]
+        program='''import json,sqlite3,sys
 from pathlib import Path
 from nativepeers.grok_hooks import kernel_sandbox
 from nativepeers.journal import Journal
 spec=json.loads(sys.argv[1]);observation=kernel_sandbox(spec)
 if observation['verified']:
-    for path in (Path(spec['state_root'])/'compat/runtime.json',Path(spec['binding_path'])):
+    for path in (Path(spec['state_root'])/'compat/runtime.json',Path(spec['binding_path']),Path(spec['state_root'])/'journal.sqlite3'):
         assert path.read_bytes()
         try:
             with path.open('a') as stream:stream.write('forbidden')
@@ -216,34 +215,54 @@ if observation['verified']:
         try:(path.parent/'new-file').write_text('forbidden')
         except PermissionError:pass
         else:raise AssertionError('Protected directory creation was allowed')
-    journal=Journal(Path(spec['state_root']))
-    journal.event('seatbelt-fixture','protected-state-journal-write',{'verified':True});journal.close()
-    observation['protected_reads_and_journal_write']=True
-print(json.dumps(observation))
+    journal=Journal(Path(spec['state_root']),read_only=True)
+    assert journal.one('SELECT COUNT(*) AS count FROM events')['count']>=0
+    try:journal.event('seatbelt-fixture','forbidden-journal-write',{})
+    except sqlite3.OperationalError:pass
+    else:raise AssertionError('Read-only hook journal accepted a write')
+    journal.close();observation['protected_reads_and_read_only_journal']=True
+print(json.dumps(observation),flush=True)
+sys.stdin.read()
 '''
         for permission,profile,verified in profiles:
             with self.subTest(permission=permission,verified=verified):
                 spec=dict(cwd=str(cwd),state_root=str(state),permission_profile=permission,binding_path=str(binding))
                 result=subprocess.run(['/usr/bin/sandbox-exec','-p',profile,sys.executable,'-c',program,json.dumps(spec)],
                     cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
-                    capture_output=True,text=True,timeout=10)
+                    input='',capture_output=True,text=True,timeout=10)
                 self.assertEqual(result.returncode,0,result.stderr)
                 observation=json.loads(result.stdout)
                 self.assertEqual(observation['verified'],verified,observation)
                 if verified:
                     self.assertEqual([(check['path'],check['operation'],check['result']) for check in observation['checks']],
-                        [(str(cwd),'file-write-create',1 if permission=='analysis' else 0),
-                         (str(state),'file-write-create',0),(str(state),'file-read-metadata',0),
-                         (str(journal),'file-write-data',0),(str(journal),'file-read-metadata',0)]+
+                        [(str(cwd),'file-write-data',1 if permission=='analysis' else 0),(str(cwd),'file-read-metadata',0),
+                         (str(state),'file-write-data',1),(str(state),'file-read-metadata',0),
+                         (str(journal),'file-write-data',1),(str(journal),'file-read-data',0),(str(journal),'file-read-metadata',0)]+
                         [(str(path),operation,value) for path in (state/'compat',state/'bindings')
-                         for operation,value in (('file-write-create',1),('file-read-metadata',0))]+
+                         for operation,value in (('file-write-data',1),('file-read-metadata',0))]+
                         [(str(path),operation,value) for path in protected
                          for operation,value in (('file-write-data',1),('file-read-data',0),('file-read-metadata',0))]+
-                        ([(str(root),'file-write-create',1)] if permission=='workspace' else []))
-                    self.assertTrue(observation['protected_reads_and_journal_write'])
+                        ([(str(root),'file-write-data',1)] if permission=='workspace' else []))
+                    self.assertTrue(observation['protected_reads_and_read_only_journal'])
+        # The unsandboxed controller must inspect the owned native PID directly.
+        spec=dict(cwd=str(cwd),state_root=str(state),permission_profile='workspace',binding_path=str(binding))
+        process=subprocess.Popen(['/usr/bin/sandbox-exec','-p',profiles[0][1],sys.executable,'-c',program,json.dumps(spec)],
+            cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
+            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        try:
+            import select
+            self.assertTrue(select.select([process.stdout],[],[],5)[0],'Sandboxed child produced no readiness result')
+            child=json.loads(process.stdout.readline());parent=kernel_sandbox(spec,pid=process.pid)
+            self.assertTrue(parent['verified'],parent);self.assertEqual(parent['checked_pid'],process.pid)
+            self.assertEqual(parent['checks'],child['checks'])
+        finally:
+            try:_,error=process.communicate(input='',timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill();process.communicate();raise
+        self.assertEqual(process.returncode,0,error)
         self.assertEqual(list(root.rglob('.npeer-kernel-probe')),[])
         self.assertEqual({path:path.read_bytes() for path in protected},before)
-        self.assertEqual(self.j.one("SELECT COUNT(*) AS count FROM events WHERE kind='protected-state-journal-write'")['count'],2)
+        self.assertEqual(self.j.one('SELECT COUNT(*) AS count FROM events')['count'],0)
 
     def test_kernel_check_refuses_missing_workspace_state_or_journal_without_creating_probes(self):
         absent=self.root/'absent';empty=self.root/'empty-state';empty.mkdir()
@@ -276,6 +295,7 @@ print(json.dumps(observation))
         event=dict(self.event,hookEventName='pre_tool_use',hook_event_name='PreToolUse',toolName='read_file')
         result=subprocess.run([sys.executable,'-m','nativepeers.grok_hooks','PreToolUse'],input=json.dumps(event),capture_output=True,text=True,env=env,cwd=source,timeout=5)
         self.assertEqual(result.returncode,2);self.assertEqual(json.loads(result.stdout)['decision'],'deny')
+        self.assertEqual(self.j.one('SELECT COUNT(*) AS count FROM events')['count'],0)
 
     def owned_fixture(self):
         worker=new_id();group=new_id();binding=self.j.root/'bindings'/new_id()
@@ -289,21 +309,22 @@ print(json.dumps(observation))
 
     def test_owned_hook_requires_kernel_and_fixed_tool_proofs(self):
         worker,binding=self.owned_fixture()
+        before=self.j.db.total_changes
         with patch.dict(os.environ,{'NPEER_BOOTSTRAP':str(binding)}),patch('nativepeers.grok_hooks.kernel_sandbox',return_value={'verified':True,'profile':'analysis'}):
             self.hook('SessionStart')
             self.assertEqual(self.hook('PreToolUse',toolName='read_file'),{'decision':'allow'})
             self.assertEqual(self.hook('PreToolUse',toolName='write')['decision'],'deny')
-        event=json.loads(self.j.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='grok-kernel-check'",(worker,))['payload_json'])
-        self.assertEqual(event['native_id'],self.native);self.assertEqual(event['process'],self.owner.json());self.assertTrue(event['verified'])
         with patch.dict(os.environ,{'NPEER_BOOTSTRAP':str(binding)}),patch('nativepeers.grok_hooks.kernel_sandbox',return_value={'verified':False,'profile':'analysis'}):
             self.assertEqual(self.hook('PreToolUse',toolName='read_file')['decision'],'deny')
         self.assertEqual(self.j.all('SELECT * FROM peer_instances'),[])
+        self.assertEqual(self.j.db.total_changes,before)
 
     def test_owned_hook_uses_exact_pinned_runtime_after_current_symlink_moves(self):
         worker,binding=self.owned_fixture();new=self.root/'updated-runtime';new.write_text('updated')
+        before=self.j.db.total_changes
         with patch.dict(os.environ,{'NPEER_BOOTSTRAP':str(binding)}),patch('nativepeers.grok_hooks.executable',return_value=new),patch('nativepeers.grok_hooks.kernel_sandbox',return_value={'verified':True,'profile':'analysis'}):
             self.assertEqual(self.hook('PreToolUse',toolName='read_file'),{'decision':'allow'})
-        self.assertIsNotNone(self.j.one("SELECT * FROM events WHERE subject_id=? AND kind='native-hook-observed'",(worker,)))
+        self.assertEqual(self.j.db.total_changes,before)
 
     def test_fixture_project_hooks_can_qualify_without_ignoring_global_conflict(self):
         spec=dict(cwd=str(self.root),provider_home=str(self.home),permission_profile='analysis',model='grok-4.7')
@@ -324,8 +345,7 @@ print(json.dumps(observation))
         import tomllib
         profiles=tomllib.loads(path.read_text())['profiles']
         for name in ('nativepeers-analysis','nativepeers-workspace'):
-            self.assertEqual(profiles[name]['read_only'],[str(self.j.root.resolve()/'compat'),str(self.j.root.resolve()/'bindings')])
-            self.assertEqual(profiles[name]['read_write'],[str(self.j.root.resolve())])
+            self.assertNotIn('read_only',profiles[name]);self.assertNotIn('read_write',profiles[name])
         self.assertEqual(install(self.j,home=self.home)['operations'],[])
         with path.open('a') as stream:stream.write('\n# Later addition\n[profiles.later]\nextends = "workspace"\n')
         install(self.j,home=self.home,remove=True)

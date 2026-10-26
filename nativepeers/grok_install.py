@@ -21,8 +21,7 @@ def desired(home=None):
 
 def desired_profiles(state_root):
     state=Path(state_root).resolve()
-    return {'nativepeers-'+profile:dict(extends=base,read_write=[str(state)],
-            read_only=[str(state/'compat'),str(state/'bindings')],deny=[str(state/'grok-kernel-denied')])
+    return {'nativepeers-'+profile:dict(extends=base,deny=[str(state/'grok-kernel-denied')])
             for profile,base in (('analysis','read-only'),('workspace','workspace'))}
 
 
