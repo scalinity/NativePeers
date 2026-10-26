@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/notification-journal-upgrade",
-    "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+    "branch": "main",
+    "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
     "evidence": "evidence/quiet-notifications-20261026.json",
     "source_map_sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b",
-    "status": "PARTIAL"
+    "status": "PASS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -233,9 +233,9 @@
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-    "branch": "fix/notification-journal-upgrade",
-    "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
-    "last_verified_publication": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+    "branch": "main",
+    "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+    "last_verified_publication": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,11 +302,11 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/notification-journal-upgrade",
+    "branch": "main",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
-    "verified_remote_code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+    "verified_remote_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+    "verified_remote_code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -332,15 +332,35 @@
       "log_sha256": "4eaf8982c24549627c1bb3309054ee3b90e2804f4f846ab68794ad79e280f096"
     },
     "main_full": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "passed": 764,
+      "skipped": 4,
+      "subtests": 742,
+      "seconds": 272.25,
+      "command": ".venv/bin/python -m pytest -q",
+      "log_sha256": "d8f6883797e914cf55a01a3fc0b37e1e2c2cdaf32e01283a79426ebf54410eaf"
     },
     "installed_close": {
-      "status": "FAIL",
-      "reason": "Existing empty legacy composite-key table; original failure retained, repair source awaits integration"
+      "status": "PASS",
+      "repaired_legacy_empty_table": true,
+      "actual_native_caller": true,
+      "repeated_close_identical": true,
+      "reopen_keeps_cutoffs": true,
+      "evidence": "evidence/scratch/quiet-notifications-20261026/installed-upgrade-smoke.json"
     },
     "preservation": {
       "status": "PASS",
       "scope": "Protected files match recorded post-install hashes; no approval changes"
+    },
+    "installation": {
+      "status": "PASS",
+      "after_upgrade_repeat_operations": 0,
+      "owned_only_uninstall_plan": true
+    },
+    "publication_consistency": {
+      "status": "PASS",
+      "passed": 3,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
     }
   },
   "transports": {
@@ -349,7 +369,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-26T16:29:14.913396-04:00",
+  "updated_at": "2026-10-26T16:37:18.670033-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1003,6 +1023,33 @@
         "evidence": "evidence/quiet-notifications-20261026.json",
         "source_map_sha256": "05e1bdc1ec7b5ed7c186c72e4a2a84a51236dc49fd025b1ce6b5ad684e2e9ac3",
         "status": "PASS"
+      }
+    },
+    {
+      "stage": "quiet-notifications-20261026",
+      "updated_at": "2026-10-26T16:29:14.913396-04:00",
+      "git": {
+        "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
+        "branch": "fix/notification-journal-upgrade",
+        "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+        "last_verified_publication": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/notification-journal-upgrade",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+        "verified_remote_code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/notification-journal-upgrade",
+        "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+        "evidence": "evidence/quiet-notifications-20261026.json",
+        "source_map_sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b",
+        "status": "PARTIAL"
       }
     }
   ],

@@ -14,10 +14,11 @@
 - [x] Native Claude live guard blocks passed on a SessionStart-registered interactive TUI. The original result is FAIL only for an early transcript flush; the read-only supplemental collection passed.
 - [x] First full integration run: 754 passed, 4 skipped, 742 subtests. Its 2 failures were stale generated fingerprint records; no product test failed.
 - [x] Final review approved R1–R7 (75 tests, 15 subtests). The parent's final focused run passed 100 tests and 57 subtests.
-- [x] Complete worktree suite: 757 passed, 4 Linux-only skips, 742 subtests, in 271.60s.
+- [x] Final repaired worktree suite: 764 passed, 4 Linux-only skips, 742 subtests, 250.98s; earlier source checks are retained separately.
 - [x] Feature source `d999a58` published; record commit `1907b5e` fast-forwarded local main.
 - [x] Installed the Claude/Codex guards, native Codex trust for the third hook, owned skills and the shared instruction block. Repeat installs perform zero operations, and runtime approvals, non-owned settings, Grok files and protected state are unchanged.
-- [x] Main suite: 757 tests and 742 subtests, four Linux-only skips, 255.65s. Verified source is published on main.
+- [x] Final repaired main suite: 764 tests and 742 subtests, four Linux-only skips, 272.25s. Verified source is published on main.
+- [x] R8 journal upgrade: repair only the known empty obsolete table; preserve/refuse populated or unknown layouts. Seven regressions, independent 40-test review and actual installed close/repeated-close/reopen pass. Original failures remain recorded.
 - [x] Remove the integration worktree and local/remote feature branch; archive and retire both owned worker worktrees with verified recovery copies. Preserve native histories and protected state.
 
 No finding was waived. The summary record is evidence/quiet-notifications-20261026.json, and details are in docs/NOTIFICATIONS.md; raw reports and probe output stay in ignored evidence/scratch/quiet-notifications-20261026/.

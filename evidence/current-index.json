@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
+  "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
   "reviewed_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-  "publication_branch": "fix/notification-journal-upgrade",
-  "updated_at": "2026-10-26T16:29:14.913396-04:00",
+  "publication_branch": "main",
+  "updated_at": "2026-10-26T16:37:18.670033-04:00",
   "current_record": "evidence/quiet-notifications-20261026.json",
   "file_classes": {
     "product": {
@@ -308,13 +308,13 @@
       "operation": "owned host installation and current main suite",
       "parent_context": "live main checkout after verified worktree suite",
       "status": "PASS",
-      "scope": "Full main suite757tests742subtests4Linuxskips255.65s; owned hook installation and trust; repeat installs0ops; owned-only uninstall dry-run; source published to main. Hook presence does not establish loaded state in existing native processes."
+      "scope": "Final repaired main764tests742subtests4Linuxskips272.25s; owned hook/trust installation; post-upgrade repeated install0ops; owned-only uninstall dry-run. Presence does not prove old native processes loaded hooks."
     },
     {
       "operation": "Known empty legacy journal upgrade and installed close",
-      "parent_context": "Captured installed schema replayed in a private fixture; installed main verification pending",
-      "status": "NOT_RUN",
-      "scope": "Focused and exact-DDL source tests PASS; complete worktree/main suites and real close pending."
+      "parent_context": "Actual installed main CLI through verified native parent plus private exact-DDL fixtures and complete suites",
+      "status": "PASS",
+      "scope": "Known empty obsolete table atomically repaired; real close/repeated-close/reopen PASS; populated/unknown schemas preserved/refused; read-only does not migrate. Final worktree764tests742subtests250.98s; finalmain764tests742subtests272.25s;4Linux-only skips each. No model input or runtime approval/config changes for installed check."
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

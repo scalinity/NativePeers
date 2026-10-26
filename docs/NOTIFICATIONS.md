@@ -52,7 +52,9 @@ A configured hook definition does not prove that a running native process has lo
 
 ## Verification
 
-Source tests: `tests/unit/test_notification_policy.py`, `tests/unit/test_notification_guard_hooks.py`, and the quiet-frame and supersession tests in `tests/unit/test_grok.py` and `tests/unit/test_antigravity.py`. The final reviewer's focused run passed 75 tests and 15 subtests in 4.63s, and the parent's final focused run passed 100 tests and 57 subtests in 4.39s. The final complete worktree suite passed 757 tests and 742 subtests, with 4 Linux-only skips, in 271.60s. An earlier full integration run had 2 failures, both stale generated current-source fingerprint records; no product test failed. The `d7f69b6` baseline had 720 passing, 4 skips, 740 subtests and 1 native-usage timing failure in 303.60s; that test passed when rerun alone. The summary record is `evidence/quiet-notifications-20261026.json`.
+Source tests cover the stable-peer policy, receiving guards, provider hook filters, owned installers and schema upgrade. The final repaired worktree suite passed **764 tests and 742 subtests**, with four Linux-only skips, in **250.98 seconds**; the final main suite passed the same counts in **272.25 seconds**. The final upgrade review and parent focused run each passed 40 tests, including seven upgrade regressions. Earlier 757-test passes, the first run's two stale publication-fingerprint failures, and the baseline usage-source timeout plus isolated pass remain separately recorded in `evidence/quiet-notifications-20261026.json`.
+
+The actual installed close check found a known empty obsolete policy table keyed by peer and incarnation. Startup now atomically repairs only that exact empty layout; populated or unfamiliar layouts are preserved and refused, and read-only access never migrates. Actual installed close, identical repeated close and reopen with retained cutoffs pass. The original installed failure remains in the record.
 
 The parent ran a native receiver seam probe on the immutable Codex 0.164.0 executable (SHA-256 `3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc`). `thread/queue/add` dispatched automatically. `decision:block` and `continue:false` each produced zero model requests and no assistant output, and a fresh allowed input produced one model request. The run made two localhost Responses fixture requests in total and sent no external model input. Blocked bodies were absent from requests and history, and the owned app-server exited. The topology was a private loaded app-server, not interactive TUI acceptance, so this proves only the native blocking seam. Raw output stays ignored under `evidence/scratch/quiet-notifications-20261026/native-seam/`. No runtime approval changed.
 
@@ -64,7 +66,7 @@ The parent then ran the actual shared guard in the owned native `UserPromptSubmi
 - The run made five localhost model requests and sent no external model input.
 - The native UUID and owner PID/start matched the registered provisional fixture owner.
 
-This used an operator-seeded receiver on a loaded private app-server; it is not normal standalone-TUI identity qualification or UI acceptance. Raw output stays ignored under `evidence/scratch/quiet-notifications-20261026/native-policy/`. The actual-policy run passed again on the final source, with 5 localhost requests and no external input. Successful Codex probes made 12 localhost requests in total (seam 2, policy 5, final policy 5). Earlier failed diagnostic runs are recorded separately, and there is no cumulative full-session count.
+This used an operator-seeded receiver on a loaded private app-server; it is not normal standalone-TUI identity qualification or UI acceptance. Raw output stays ignored under `evidence/scratch/quiet-notifications-20261026/native-policy/`. The actual-policy run passed again on the final source, with 5 localhost requests and no external input. Successful Codex probes made 17 localhost requests in total (seam 2, policy 5, final policy 5, repaired-source policy 5). Earlier failed diagnostic runs are recorded separately, and there is no cumulative full-session count.
 
 The parent ran a live Claude check on a genuinely SessionStart-registered interactive TUI, through the actual `hooks.observe`, with the exact frame, native UUID and owner PID/start matching:
 
@@ -80,7 +82,7 @@ Installed: the namespaced Claude and Codex `UserPromptSubmit` guards, native Cod
 
 ## Review dispositions
 
-All independent review findings are fixed with source regressions; none were waived. An independent reviewer confirmed R1–R4 fixed (58 targeted tests, 89 subtests), then R1–R6 fixed (183 tests, 195 subtests in the integration tree). The final recheck approved R1–R7 (75 tests, 15 subtests):
+All independent review findings are fixed with source regressions; none were waived. An independent reviewer confirmed R1–R4 fixed (58 targeted tests, 89 subtests), then R1–R6 fixed (183 tests, 195 subtests in the integration tree). The final recheck approved R1–R7 (75 tests, 15 subtests); the journal correction passed an independent 40-test review:
 
 - **R1 budget, fixed.** Quiet-retained completions consumed a turn. They now call `release_unsubmitted` instead of a zero-turn settle; the regression uses a real cap-1 ledger.
 - **R2 metadata ID lookup, fixed.** The footer ID could be hidden by body lines. Eight or more `Message:` body lines could push the footer ID out of the lookup. The ID now comes from the final references section.
@@ -90,3 +92,5 @@ All independent review findings are fixed with source regressions; none were wai
 - **R5 owned-worker lifecycle, fixed.** A worker could close its own policy and turn later parent follow-ups into `RETAINED`. Open and close now require an interactive peer, workers no longer see `peer_notifications`, and owned-worker admission ignores stale policy rows.
 - **R6 completion diagnostics, fixed.** Group status and results dropped the guard's suppression for completion messages. They now include it as an optional `delivery.suppression`.
 - **R7 Grok prompt reopen after supersession, fixed.** The Grok `UserPromptSubmit` reopen captured its peer before the lock wait. A hook superseded during that wait could reopen the resumed policy under the old incarnation. It now applies the shared guard's in-transaction current-owner rule before reopening.
+
+- **R8 installed journal upgrade, fixed.** The known empty incarnation-keyed policy table is repaired atomically before writes. Populated and unknown layouts remain intact, read-only access never migrates, and close uses explicit columns. Seven regressions, the exact measured-DDL fixture and actual installed close/reopen pass.
