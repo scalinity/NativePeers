@@ -1,3 +1,11 @@
+# Grok Build provider verification
+
+Grok 1.0.70 is implemented as the fourth native provider. The [current Grok record](../evidence/grok-20261026.json) separates native fixture acceptance, exact runtime approval, installation, source tests and teardown. [Grok scope and design](GROK.md) describes identity, hook inbox behavior, fixed worker tools, native filesystem enforcement and token accounting.
+
+The durable allowance is [24 top-level turns, four concurrent workers and 30 active minutes](../evidence/live-budget-grok-20261026.json). Failed canaries remain counted; author/review tasks are recorded separately from fixture acceptance. The final-source complete suite and installed-host checks remain pending until their observed results are recorded. Antigravity's existing runtime mismatch is preserved and does not authorize an unrelated approval update.
+
+---
+
 # Open issues 1 and 2 verification
 
 Completion readiness, exact retained delivery details, read-only context artifacts, bounded-wait help and field-specific budget errors have focused regression coverage. The broader product suite passed **641 tests / 656 subtests**, with four Linux-only skips and zero failures, in 312.83 seconds. The three generated-publication consistency checks pass separately after the verified source commit is published. Seven focused completion tests also pass after strengthening the final review assertion; production source is unchanged. Commands, exit codes, source/runtime fingerprints, independent review outcomes and native proof are recorded in [the issue verification record](../evidence/open-issues-20261023.json).

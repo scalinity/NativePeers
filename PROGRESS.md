@@ -1,3 +1,18 @@
+# Grok Build provider — qualification
+
+- [x] Add exact native identity, trusted-hook inbox, fourth-provider routing and owned worker lifecycle.
+- [x] Add fixed analysis/workspace profiles, native catalog attribution, exact executable guarding and owned-turn token accounting.
+- [x] Complete two GPT-6.1 Sol/xhigh reviews, independent native Claude Opus review and follow-up, retaining verbatim findings.
+- [x] Pass disposable identity, native-history messaging, concurrent analysis, workspace patch, resume and cancellation checks.
+- [x] Correct review findings and native shell-name mismatch; retain every failed attempt and its budget use.
+- [ ] Publish the qualified feature source and pass the complete suite including publication checks.
+- [ ] Install owned hooks/profiles and approve only the exact Grok runtime; verify idempotence, uninstall plan and global-control protection.
+- [ ] Integrate local main, run its complete suite, push, and remove the merged task worktree/branch and disposable fixture sessions.
+
+Current record: [evidence/grok-20261026.json](evidence/grok-20261026.json). Existing provider approvals and the unrelated `fix/review-2885497` branch remain outside this lane's changes.
+
+---
+
 # Open issues 1 and 2 — complete
 
 - [x] Expose parent push readiness separately from worker/quota/MCP readiness across CLI/MCP preflight, spawn, wait, status/result and caller identity.

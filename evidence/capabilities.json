@@ -91,6 +91,15 @@
       "requested_model": "gpt-6.1-sol",
       "unloaded_target_live": "NOT_RUN separately; no core loaded-owner transport fallback required",
       "version": "0.163.0"
+    },
+    "grok": {
+      "executable": "/Users/danny/.grok/downloads/grok-1.0.70-macos-aarch64",
+      "executable_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "version": "grok 1.0.70 (f50904eaee6c) [stable]",
+      "scope": "Native identity, hook inbox, fixed analysis/workspace workers, exact UUID resume/cancel and owned-turn usage; evidence/grok-20261026.json",
+      "model_requested": "grok-4.7",
+      "model_observed": "grok-4.7",
+      "account_quota": "UNKNOWN"
     }
   },
   "schema_fingerprints": {
