@@ -73,6 +73,28 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(PeerError):
                     await delegation.spawn(caller,{'workers':[{'provider':'grok','title':'bad','task':'fixture','fallbacks':[{'provider':'antigravity','model':'gemini-fixture'}]}]},check=True)
 
+    async def test_unapproved_runtime_cannot_launch_the_catalog_even_for_spawn_check(self):
+        from nativepeers.compatibility import fingerprint
+        from nativepeers.files import atomic_json
+        for check in (False,True):
+            for approval in ('missing','changed'):
+                with self.subTest(check=check,approval=approval),tempfile.TemporaryDirectory() as directory:
+                    root=Path(directory).resolve();home=root/'.grok';home.mkdir();binary=root/'grok';binary.write_text('approved fixture')
+                    journal=Journal(root/'state');self.addCleanup(journal.close);registry=Registry(journal)
+                    parent=registry.register('codex',root,new_id(),'parent',identity(os.getpid()).json(),root,{'kind':'fake'})
+                    caller=Caller('peer',parent['handle'],parent['incarnation_id']);delegation=Delegation(journal,registry)
+                    if approval=='changed':
+                        atomic_json(journal.root/'compat/runtime.json',{'providers':{'grok':fingerprint(binary)}})
+                        binary.write_text('changed unapproved fixture runtime')
+                    with patch('nativepeers.grok.executable',return_value=binary),patch.dict(os.environ,{'GROK_HOME':str(home)}), \
+                         patch('nativepeers.grok_worker.catalog',new_callable=AsyncMock,side_effect=AssertionError('Unapproved catalog was called')) as catalog, \
+                         patch('nativepeers.grok_worker.subprocess.Popen') as process:
+                        with self.assertRaises(PeerError) as caught:
+                            await delegation.spawn(caller,{'workers':[{'provider':'grok','title':'fixture','task':'fixture'}]},check=check)
+                        self.assertEqual(caught.exception.code,'CAPABILITY_MISMATCH')
+                        catalog.assert_not_called();process.assert_not_called()
+                    self.assertEqual(journal.one('SELECT COUNT(*) AS n FROM workers')['n'],0)
+
     def test_manual_resume_uses_leased_binary_uuid_model_home_and_profile(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve();binary=root/'grok-1.0.70';binary.touch();native=new_id()

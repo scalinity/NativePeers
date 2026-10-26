@@ -104,7 +104,9 @@ class Delegation:
         if 'grok' in homes:
             from .grok import executable as grok_executable
             from .grok_worker import catalog as grok_models
+            from .compatibility import verify
             grok_binary=Path(grok_executable()).resolve(strict=True)
+            verify(self.journal,'grok',grok_binary)
             grok_catalog=await grok_models(grok_binary,home=homes['grok'])
         catalog=None
         if any(w.get('provider')=='codex' for w in workers):
