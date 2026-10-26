@@ -180,6 +180,41 @@ class GrokStreamTests(unittest.IsolatedAsyncioTestCase):
                 with self.assertRaises(PeerError) as caught:worker.grok_observation(launch)
                 self.assertEqual(caught.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
 
+    async def test_cached_native_proof_waits_for_reap_after_liveness_lookup_races(self):
+        from types import SimpleNamespace
+        worker,binary=await self.fixture('success')
+        with patch.object(worker,'verify_grok'),patch.object(worker,'grok_observation',wraps=worker.grok_observation) as observe, \
+             patch('nativepeers.usage.grok_native.session_usage',new_callable=AsyncMock,return_value={'native_turn_number':1}):
+            try:
+                await worker.grok_turn('fixture');launch=observe.call_args.args[0];process=worker.provider
+                for race in ('dead-before-reap','gone-before-check','gone-after-check'):
+                    with self.subTest(race=race):
+                        worker.provider=SimpleNamespace(returncode=None)
+                        lookups=[SimpleNamespace(json=lambda:dict(launch['checked_process'])),ProcessLookupError()] if race=='gone-after-check' else [ProcessLookupError()]
+                        with patch.object(worker,'refresh_provider_identity'), \
+                             patch('nativepeers.worker_process.owned_status',return_value='DEAD' if race=='dead-before-reap' else 'LIVE'), \
+                             patch('nativepeers.worker_process.identity',side_effect=lookups):
+                            with self.assertRaises(PeerError) as caught:worker.grok_observation(launch)
+                            self.assertEqual(caught.exception.code,'CALLER_NOT_READY')
+                        worker.provider.returncode=0
+                        with patch.object(worker,'refresh_provider_identity'),patch('nativepeers.worker_process.owned_status',return_value='DEAD'):
+                            self.assertEqual(worker.grok_observation(launch)['native_id'],worker.native)
+                worker.provider=process
+            finally:
+                if not hasattr(worker.provider,'stdin'):worker.provider=process
+                await worker.close_provider()
+
+    async def test_native_exit_race_never_accepts_an_unproved_first_kernel_check(self):
+        from types import SimpleNamespace
+        worker,binary=await self.fixture('success');process=dict(worker.owner,pid=12345,start='offline-fixture-birth')
+        worker.provider=SimpleNamespace(returncode=None);worker.provider_identity=process
+        for state in ('DEAD','LIVE'):
+            with self.subTest(state=state),patch.object(worker,'refresh_provider_identity'), \
+                 patch('nativepeers.worker_process.owned_status',return_value=state), \
+                 patch('nativepeers.worker_process.identity',side_effect=ProcessLookupError()):
+                with self.assertRaises(PeerError) as caught:worker.grok_observation({'process':process,'hook':None})
+                self.assertEqual(caught.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+
     async def test_offline_workspace_stream_accepts_edit_tools_and_matching_observations(self):
         """Exercise production observation with synthetic proof, not native enforcement."""
         worker,binary=await self.fixture('workspace',profile='workspace')

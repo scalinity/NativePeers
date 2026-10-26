@@ -458,20 +458,23 @@ class Worker:
         self.refresh_provider_identity()
         process=launch['process'];state=owned_status(process);cached=False
         if state=='LIVE':
-            current=identity(process['pid']).json()
-            require(all(current[k]==process[k] for k in ('pid','start','uid'))
-                    and current['executable']==str(Path(self.lease['executable']).resolve(strict=True)),
-                    'OWNERSHIP_CONFLICT','Grok native process birth or executable changed during this launch')
-            kernel=kernel_sandbox(dict(self.spec,state_root=str(self.journal.root),binding_path=str(self.binding)),pid=current['pid'])
-            after=identity(current['pid']).json()
-            require(after==current,'OWNERSHIP_CONFLICT','Grok native process changed during its kernel permission check')
-            require(kernel.get('verified') is True and kernel.get('profile')==self.spec['permission_profile'] and kernel.get('checked_pid')==current['pid'],
-                    'PERMISSION_CAPABILITY_UNKNOWN','The controller could not prove Grok native kernel write restrictions')
-            launch['kernel']=kernel;launch['checked_process']=current
-        else:
-            require(state=='DEAD' and self.provider.returncode is not None and launch.get('kernel') and launch.get('checked_process')
+            try:
+                current=identity(process['pid']).json()
+                require(all(current[k]==process[k] for k in ('pid','start','uid'))
+                        and current['executable']==str(Path(self.lease['executable']).resolve(strict=True)),
+                        'OWNERSHIP_CONFLICT','Grok native process birth or executable changed during this launch')
+                kernel=kernel_sandbox(dict(self.spec,state_root=str(self.journal.root),binding_path=str(self.binding)),pid=current['pid'])
+                after=identity(current['pid']).json()
+                require(after==current,'OWNERSHIP_CONFLICT','Grok native process changed during its kernel permission check')
+                require(kernel.get('verified') is True and kernel.get('profile')==self.spec['permission_profile'] and kernel.get('checked_pid')==current['pid'],
+                        'PERMISSION_CAPABILITY_UNKNOWN','The controller could not prove Grok native kernel write restrictions')
+                launch['kernel']=kernel;launch['checked_process']=current
+            except ProcessLookupError:state='DEAD'
+        if state!='LIVE':
+            require(state=='DEAD' and launch.get('kernel') and launch.get('checked_process')
                     and all(launch['checked_process'][k]==process[k] for k in ('pid','start','uid')),
                     'PERMISSION_CAPABILITY_UNKNOWN','Grok exited before its exact native process kernel permissions were proved')
+            require(self.provider.returncode is not None,'CALLER_NOT_READY','Waiting for the verified Grok native process to be reaped')
             kernel=launch['kernel'];current=launch['checked_process'];cached=True
         native=summaries(native_id=self.expected_native,home=self.home)
         require(native,'CALLER_NOT_READY','Grok has not persisted its owned session summary yet')
