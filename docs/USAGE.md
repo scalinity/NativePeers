@@ -71,6 +71,9 @@ For Gemini, use `"provider":"antigravity","model":"gemini-4-argon-high"`. This s
 
 [Antigravity setup, shell shortcuts and native limitations](ANTIGRAVITY.md) cover the new provider. `npeer list --provider antigravity --json` and `npeer resolve --to "antigravity:Exact Native Title" --json` use native interactive titles. Owned Gemini workers retain their NativePeers role titles and separate native UUIDs; the role is not claimed as a native CLI history rename.
 
+For Grok Build, select `"provider":"grok","model":"grok-4.7"` and use `examples/two-grok-workers.json`. `grok models` supplies its selected-home native catalog; omit `reasoning_effort` because that command advertises no per-model effort menu. Resolve only exact Grok-native titles with `npeer resolve --to "grok:Exact Native Title" --json`. Grok hook messages wait for its next native tool invocation and retain uncertain delivery until its own session record confirms ingestion. See [Grok setup and verification](GROK.md). Grok fallback routing is unavailable.
+
+
 
 ## Implementation workers
 

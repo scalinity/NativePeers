@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "client_request_id": "example-two-grok-workers-1",
+  "completion_mode": "wait",
+  "failure_policy": "collect-all",
+  "workers": [
+    {
+      "provider": "grok",
+      "model": "grok-4.7",
+      "title": "Grok Fixture Numbers",
+      "task": "Read the disposable fixture values.json and report its sum. Do not change files.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      }
+    },
+    {
+      "provider": "grok",
+      "model": "grok-4.7",
+      "title": "Grok Fixture Review",
+      "task": "Read the disposable fixture README.md and report one concrete check. Do not change files.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      }
+    }
+  ],
+  "limits": {
+    "max_concurrent_workers": 2,
+    "max_depth": 1,
+    "wall_time_seconds": 180,
+    "max_task_turns_per_worker": 4
+  },
+  "allow_sibling_messages": false
+}

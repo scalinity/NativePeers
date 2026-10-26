@@ -1,6 +1,6 @@
 # NativePeers
 
-NativePeers connects eligible native Claude Code CLI, managed Codex TUI and Antigravity CLI conversations on this Mac. It routes by exact native title or stable native identity, and launches separate native worker conversations of all three providers. Python performs routing and supervision; it does not add a reasoning model. Each delegation has one finite supervisor that exits after its work and follow-up grace.
+NativePeers connects eligible native Claude Code CLI, managed Codex TUI, Antigravity CLI and Grok Build conversations on this Mac. It routes by exact native title or stable native identity, and launches separate native worker conversations of all four providers. Python performs routing and supervision; it does not add a reasoning model. Each delegation has one finite supervisor that exits after its work and follow-up grace.
 
 The implementation lives at `/Users/danny/Documents/Tools/NativePeers`. The installed command is `/Users/danny/.local/bin/npeer`; private state defaults to `/Users/danny/.local/state/nativepeers`. New interactive native sessions register through the installed namespaced lifecycle hooks. Codex runs its startup hooks on the first native turn; a named empty TUI is preserved in native discovery and becomes a NativePeers peer when that hook runs. Existing sessions that started before installation need their next normal native launch/resume to register. No active production conversation is restarted or adopted.
 
@@ -57,3 +57,5 @@ A [copy-ready GPT-6 Pro review prompt](docs/GPT6_PRO_REVIEW_PROMPT.txt) pins the
 Explicit Claude worker fallback to an exact Gemini selection is documented in [Provider errors and fallback](docs/PROVIDER_FALLBACK.md), with a ready-to-tailor [spawn example](examples/claude-gemini-fallback.json). Native chat notices show readable results and exact references; structured records remain available through the CLI/MCP. Current inference acceptance remains scoped to its recorded source/runtime; the cumulative test ceilings were removed and usage history is retained.
 
 Native [usage intelligence](docs/USAGE_INTELLIGENCE.md) adds `npeer usage`, bound `usage_status`, multi-pool quota assessment, shared-pool planning, explicit model-preserving quota policy and separately attributed task estimates. Collectors never submit inference or change account/billing settings.
+
+[Grok Build integration](docs/GROK.md) covers exact native identities, hook inboxes, fixed worker profiles and persisted task usage. Account quota stays unknown; verification is scoped to the recorded runtime and checks.
