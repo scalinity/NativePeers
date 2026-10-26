@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import tempfile
 import unittest
 from unittest.mock import AsyncMock,patch
@@ -78,10 +79,14 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
             spec=dict(model='grok-4.7',provider='grok',permission_profile='analysis',cwd=str(root))
             row=dict(worker_id='worker',provider='grok',native_id=native,model_requested='grok-4.7',model_observed='grok-4.7',effort_requested=None,
                      cwd=str(root),lease_json=json.dumps(dict(executable=str(binary),provider_home=str(root),spec=spec)))
-            with patch('nativepeers.recovery.owned_worker',return_value=(row,{})),patch('nativepeers.recovery.assert_released'):
+            ambient=root/'ambient home'
+            with patch.dict(os.environ,{'GROK_HOME':str(ambient)}), \
+                 patch('nativepeers.recovery.owned_worker',return_value=(row,{})),patch('nativepeers.recovery.assert_released'):
                 result=resume_command(None,None,'worker')
             argv=result['native_argv']
             self.assertEqual(argv[0],str(binary));self.assertEqual(argv[argv.index('--resume')+1],native)
             self.assertEqual(argv[argv.index('--model')+1],'grok-4.7');self.assertIn('--no-auto-update',argv)
             self.assertNotIn('--prompt-file',argv);self.assertNotIn('--output-format',argv)
             self.assertEqual(result['native_env']['GROK_HOME'],str(root));self.assertEqual(result['native_env']['GROK_DISABLE_AUTOUPDATER'],'1')
+            self.assertIn('GROK_HOME='+str(root),shlex.split(result['command']))
+            self.assertNotIn('GROK_HOME='+str(ambient),shlex.split(result['command']))

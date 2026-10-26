@@ -81,7 +81,7 @@ def resume_command(journal,caller,worker_id,*,explain=False):
     environment=home_environment(row['provider'],recorded_home(journal,row),explicit=json.loads(row.get('lease_json') or '{}').get('provider_home_explicit'))
     if row['provider']=='grok':
         from .launch import launch_environment
-        environment.update({k:v for k,v in launch_environment('grok').items() if k.startswith('GROK_')})
+        environment.update({k:v for k,v in launch_environment('grok').items() if k.startswith('GROK_') and k!='GROK_HOME'})
     prefix=('env -u CLAUDE_CONFIG_DIR ' if row['provider']=='claude' and not environment else '')+''.join(key+'='+shlex.quote(value)+' ' for key,value in environment.items())
     unarchive=['codex','unarchive',row['native_id']] if archive_state['archived'] is True else None
     launch=(prefix+shlex.join(unarchive)+' && ' if unarchive else '')+prefix+shlex.join(command)
