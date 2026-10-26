@@ -188,6 +188,26 @@ class GrokTests(unittest.TestCase):
             self.assertTrue(kernel_sandbox(spec)['verified'])
             self.assertFalse(kernel_sandbox(dict(spec,permission_profile='workspace'))['verified'])
 
+    @unittest.skipUnless(sys.platform=='darwin','Requires macOS Seatbelt')
+    def test_kernel_check_uses_real_variadic_path_arguments_under_seatbelt(self):
+        source=Path(__file__).resolve().parents[2]
+        cwd=self.root.resolve()/'allowed';cwd.mkdir()
+        state=self.j.root.resolve();denied=state/'grok-kernel-denied'
+        parent_probe=cwd.parent/'.npeer-kernel-probe'
+        denied.mkdir()
+        for probe in (cwd/'.npeer-kernel-probe',denied/'.npeer-kernel-probe',parent_probe):probe.write_text('fixture\n')
+        profile='(version 1)\n(allow default)\n(deny file-write* (literal '+json.dumps(str(parent_probe))+') (subpath '+json.dumps(str(denied))+'))\n'
+        spec=dict(cwd=str(cwd),state_root=str(state),permission_profile='workspace')
+        program='import json,sys; from nativepeers.grok_hooks import kernel_sandbox; print(json.dumps(kernel_sandbox(json.loads(sys.argv[1]))))'
+        result=subprocess.run(['/usr/bin/sandbox-exec','-p',profile,sys.executable,'-c',program,json.dumps(spec)],
+            cwd=cwd,env=dict(os.environ,PYTHONPATH=str(source),PYTHONDONTWRITEBYTECODE='1'),
+            capture_output=True,text=True,timeout=10)
+        self.assertEqual(result.returncode,0,result.stderr)
+        observation=json.loads(result.stdout)
+        self.assertTrue(observation['verified'],observation)
+        self.assertEqual([(check['path'],check['result']) for check in observation['checks']],
+            [(str(cwd/'.npeer-kernel-probe'),0),(str(denied/'.npeer-kernel-probe'),1),(str(parent_probe),1)])
+
     def test_actual_entrypoint_denies_unverified_owned_tool_call_with_exit_two(self):
         source=Path(__file__).resolve().parents[2]
         env=dict(os.environ,NPEER_HOME=str(self.j.root),NPEER_BOOTSTRAP=str(self.j.root/'bindings/missing'),PYTHONPATH=str(source))

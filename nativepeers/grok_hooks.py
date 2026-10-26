@@ -27,6 +27,7 @@ def kernel_sandbox(spec):
         import ctypes
         library=ctypes.CDLL('/usr/lib/libsandbox.dylib',use_errno=True)
         check=library.sandbox_check;check.restype=ctypes.c_int
+        check.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int]
         targets=[(cwd/'.npeer-kernel-probe',profile=='analysis'),
                  (Path(spec['state_root']).resolve()/'grok-kernel-denied/.npeer-kernel-probe',True)]
         if profile=='workspace':targets.append((cwd.parent/'.npeer-kernel-probe',True))
