@@ -18,9 +18,14 @@ class HookEvidence:
     LIMIT=1048576
 
     def __init__(self,home,cwd,native_id):
-        self.native_id=native_id
-        self.path=Path(home)/'sessions'/quote(str(Path(cwd).resolve()),safe='')/native_id/'updates.jsonl'
+        self.native_id=native_id;self.home=Path(home).resolve();self.cwd=Path(cwd).resolve()
+        self.encoded=quote(str(self.cwd),safe='');self.path=self.native_path()
         self.offset=0;self.file_id=None;self.pending=b'';self.read_bytes=0;self.proof=None
+        if self.path is None:
+            require(not any((self.home/'sessions').glob('*/'+native_id+'/updates.jsonl')),
+                    'OWNERSHIP_CONFLICT','Existing Grok updates has no unique validated native summary')
+            if len(self.encoded.encode())<=255:self.path=self.home/'sessions'/self.encoded/native_id/'updates.jsonl'
+        if self.path is None:return
         require(self.path.resolve()==self.path,'OWNERSHIP_CONFLICT','Grok native updates path contains a symlink')
         try:
             info=self.path.lstat()
@@ -28,7 +33,32 @@ class HookEvidence:
             self.offset=info.st_size;self.file_id=(info.st_dev,info.st_ino)
         except FileNotFoundError:pass
 
+    def native_path(self):
+        from .grok import summaries
+        rows=summaries(native_id=self.native_id,home=self.home)
+        if not rows:return None
+        require(len(rows)==1 and Path(rows[0]['cwd']).resolve()==self.cwd,
+                'OWNERSHIP_CONFLICT','Grok hook updates has no unique matching native UUID and workspace')
+        path=Path(rows[0]['path']).parent/'updates.jsonl'
+        require(path.resolve()==path and path.is_relative_to(self.home/'sessions') and path.parent.name==self.native_id,
+                'OWNERSHIP_CONFLICT','Grok native updates is outside the selected native home')
+        if path.parent.parent.name!=self.encoded:
+            marker=path.parent.parent/'.cwd'
+            try:
+                info=marker.lstat()
+                require(stat.S_ISREG(info.st_mode) and info.st_size<=16384,'OWNERSHIP_CONFLICT','Grok hashed session group has no regular bounded .cwd marker')
+                cwd=marker.read_text().rstrip('\r\n')
+                require(Path(cwd).is_absolute() and Path(cwd).resolve()==self.cwd,
+                        'OWNERSHIP_CONFLICT','Grok hashed session group .cwd marker names another workspace')
+            except (OSError,UnicodeError):raise PeerError('OWNERSHIP_CONFLICT','Grok hashed session group .cwd marker is missing or unreadable') from None
+        return path
+
     def read(self):
+        path=self.native_path()
+        if path is None:return None
+        require(self.path is None or self.path==path or self.file_id is None and self.offset==0,
+                'OWNERSHIP_CONFLICT','Grok native session moved during this launch')
+        self.path=path
         try:descriptor=os.open(self.path,os.O_RDONLY|os.O_NOFOLLOW)
         except FileNotFoundError:return None
         with os.fdopen(descriptor,'rb') as stream:

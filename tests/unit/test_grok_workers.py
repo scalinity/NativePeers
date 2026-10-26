@@ -121,10 +121,14 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
             'event_name':'session_start','runs':[{'name':'project/nativepeers:session_start[0].hooks[0]','status':{'status':'success'}}]},
             '_meta':{'eventId':'native-hook-fixture'}}}
 
+    def native_summary(self,path,native,cwd):
+        (path.parent/'summary.json').write_text(json.dumps({'info':{'id':native,'cwd':str(cwd)}}))
+
     def test_native_hook_reader_ignores_old_records_and_waits_for_complete_new_lines(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory).resolve();native=new_id();initial=HookEvidence(root,root,native)
             path=initial.path;path.parent.mkdir(parents=True)
+            self.native_summary(path,native,root)
             old=(json.dumps(self.hook_event(native))+'\n').encode();path.write_bytes(old)
             cursor=HookEvidence(root,root,native);self.assertIsNone(cursor.read())
             fresh=(json.dumps(self.hook_event(native))+'\n').encode()
@@ -139,6 +143,7 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
         for change,code in [('replace','OWNERSHIP_CONFLICT'),('truncate','OWNERSHIP_CONFLICT'),('oversize','SOURCE_OUTPUT_LIMIT')]:
             with self.subTest(change=change),tempfile.TemporaryDirectory() as directory:
                 root=Path(directory).resolve();initial=HookEvidence(root,root,new_id());path=initial.path;path.parent.mkdir(parents=True)
+                self.native_summary(path,initial.native_id,root)
                 path.write_text('{}\n');cursor=HookEvidence(root,root,initial.native_id)
                 if change=='replace':
                     replacement=path.with_suffix('.new');replacement.write_text('{}\n');replacement.replace(path)
@@ -152,8 +157,39 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
         for invalid,code in [('uuid','OWNERSHIP_CONFLICT'),('status','PERMISSION_CAPABILITY_UNKNOWN')]:
             with self.subTest(invalid=invalid),tempfile.TemporaryDirectory() as directory:
                 root=Path(directory).resolve();native=new_id();cursor=HookEvidence(root,root,native);cursor.path.parent.mkdir(parents=True)
+                self.native_summary(cursor.path,native,root)
                 event=self.hook_event(new_id() if invalid=='uuid' else native)
                 if invalid=='status':event['params']['update']['runs'][0]['status']['status']='error'
                 cursor.path.write_text(json.dumps(event)+'\n')
                 with self.assertRaises(PeerError) as caught:cursor.read()
                 self.assertEqual(caught.exception.code,code)
+
+    def test_hashed_native_session_groups_resolve_unicode_and_deep_workspaces_lazily(self):
+        from urllib.parse import quote
+        for kind in ('unicode','deep'):
+            with self.subTest(kind=kind),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory).resolve();home=root/'native';native=new_id()
+                cwd=root/('研究'*20) if kind=='unicode' else root.joinpath(*['nested-directory-'+str(n) for n in range(15)])
+                cwd.mkdir(parents=True);self.assertGreater(len(quote(str(cwd),safe='').encode()),255)
+                cursor=HookEvidence(home,cwd,native);self.assertIsNone(cursor.path);self.assertIsNone(cursor.read())
+                path=home/'sessions'/('project-'+'a'*24)/native/'updates.jsonl';path.parent.mkdir(parents=True)
+                (path.parent.parent/'.cwd').write_text(str(cwd)+'\n');self.native_summary(path,native,cwd)
+                line=(json.dumps(self.hook_event(native))+'\n').encode();path.write_bytes(line)
+                self.assertEqual(cursor.read()['from_offset'],0);self.assertEqual(cursor.path,path)
+                resumed=HookEvidence(home,cwd,native);self.assertIsNone(resumed.read())
+                with path.open('ab') as stream:stream.write(line)
+                self.assertEqual(resumed.read()['from_offset'],len(line))
+
+    def test_native_hook_reader_refuses_unvalidated_existing_history_and_wrong_hash_markers(self):
+        for invalid in ('missing-summary','missing-marker','wrong-marker','symlink-marker','wrong-cwd'):
+            with self.subTest(invalid=invalid),tempfile.TemporaryDirectory() as directory:
+                root=Path(directory).resolve();cwd=root/'workspace';cwd.mkdir();home=root/'native';native=new_id()
+                path=home/'sessions'/('project-'+'b'*24)/native/'updates.jsonl';path.parent.mkdir(parents=True)
+                path.write_text(json.dumps(self.hook_event(native))+'\n')
+                if invalid!='missing-summary':self.native_summary(path,native,root if invalid=='wrong-cwd' else cwd)
+                marker=path.parent.parent/'.cwd'
+                if invalid=='symlink-marker':
+                    target=root/'marker';target.write_text(str(cwd));marker.symlink_to(target)
+                elif invalid!='missing-marker':marker.write_text(str(root if invalid=='wrong-marker' else cwd))
+                with self.assertRaises(PeerError) as caught:HookEvidence(home,cwd,native)
+                self.assertEqual(caught.exception.code,'OWNERSHIP_CONFLICT')
