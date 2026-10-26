@@ -1,20 +1,14 @@
-# Grok Build provider — partial, main integration held
+# Grok Build provider — integrated and published
 
-- [x] Add exact native identity, trusted-hook inbox, fourth-provider routing and owned worker lifecycle.
-- [x] Add fixed analysis/workspace profiles, native catalog attribution, exact executable guarding and owned-turn token accounting.
-- [x] Complete two GPT-6.1 Sol/xhigh reviews, independent native Claude Opus review and follow-up, retaining verbatim findings.
-- [x] Pass disposable identity, native-history messaging, concurrent analysis, workspace patch, resume and cancellation checks.
-- [x] Correct review findings and native shell-name mismatch; retain every failed attempt and its budget use.
-- [x] Publish the qualified feature source and pass the complete suite including publication checks: 721 tests / 740 subtests, four Linux-only skips, 277.55 seconds at `ddf64dc`.
-- [x] Install owned hooks/profiles and approve only the exact Grok runtime; verify zero-operation reinstall, owned-only uninstall plan, global-control protection and an approved nested Unicode-path worker.
-- [x] Remove temporary host activation, restore shared instructions and fixture trust to their initial bytes, remove disposable fixture repositories after verified recovery copies, and close all owned processes.
-- [x] Delete sixteen created Grok histories through the native command and archive three disposable Codex histories; retain four exact Claude histories without a verified UUID-scoped deletion path.
-- [ ] Resolve failed byte preservation: Codex config writer/changed keys remain unknown after log, tool-call and backup investigation; auxiliary Claude metadata changed, and a later root-folder grant changed Grok trust after exact fixture cleanup. Current files and the unowned root-session summary are retained.
-- [ ] Complete the required native-history/authentication before-and-after comparison; this run did not capture its initial hash inventory and cannot establish it retrospectively.
-- [ ] Resolve the live-budget failure: corrected conservative input count is 28 against 24, including four local-shell inputs originally excluded despite native turn records. No more input is submitted by this run.
-- [ ] Integrate local main and run its complete suite only after the holds are resolved, then remove the merged feature worktree and branch. The unmerged feature and recovery files are retained.
+- [x] Implement fourth-provider identity, trusted hook inbox, fixed worker profiles, exact executable/model attribution, resume/cancel and owned-turn usage.
+- [x] Address both GPT-6.1 Sol reviews, independent Claude Opus review and follow-up; retain verbatim findings and dispositions.
+- [x] Complete the recorded disposable live checks and installer/global-control/Unicode-path acceptance.
+- [x] Pass complete worktree suite: 721 tests / 740 subtests, four Linux-only skips, 364.96 seconds.
+- [x] Clear the config-preservation hold through explicit finalization authorization, preserving the current config and independently updated Codex approval.
+- [x] Fast-forward main, install the owned Grok integration and shared block, and pass the complete main suite: 721 tests / 740 subtests, four skips, 273.96 seconds.
+- [x] Push main, remove the merged feature worktree and local/remote branch, prune, and retain verified recovery content with reasons.
 
-Current verdict: **PARTIAL**. Record: [evidence/grok-20261026.json](evidence/grok-20261026.json). Main remains at `ad09cdd`; the feature source is published separately. Existing provider approvals and the unrelated `fix/review-2885497` branch match their baselines. Grok runtime approval is retained while its host hook/profile integration is uninstalled.
+The original qualification record is **PARTIAL**: historical live input is 28/24, the complete initial history/authentication inventory is missing, Grok→Codex live acceptance is unrun, and Antigravity live messaging is blocked by its existing runtime mismatch. These limits remain in [the record](evidence/grok-20261026.json). The current merge/push/cleanup request is complete; no further live input is part of this run.
 
 ---
 

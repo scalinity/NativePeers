@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stage": "Grok Build candidate: PARTIAL; main integration held",
-  "status": "PARTIAL",
+  "stage": "Grok Build integrated into main and published",
+  "status": "PARTIAL: historical qualification limits; integration and close-out complete",
   "reviewed_commit": "e2b879e",
-  "updated_at": "2026-10-26T07:11:36.210649-04:00",
+  "updated_at": "2026-10-26T07:22:48.850171-04:00",
   "tests": {
     "scoped_source": {
       "status": "PASS",
@@ -17,19 +17,26 @@
     },
     "full_worktree": {
       "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
       "passed": 721,
       "skipped": 4,
       "subtests": 740,
       "seconds": 364.96,
-      "command": ".venv/bin/python -m pytest -q",
       "source_commit": "76cf2ef6306a6a75893faefce8c88d13f01b03b3",
-      "scope": "Before final one-line complete-PID readiness refinement, which is covered by focused tests and the required main full suite.",
       "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-worktree-fixed.log",
-      "log_sha256": "c9c79263150ef27211796031c6b1ba082afe188f886eb0906764fefadd3773f6"
+      "log_sha256": "c9c79263150ef27211796031c6b1ba082afe188f886eb0906764fefadd3773f6",
+      "scope": "Complete pass before the final one-line exact-PID readiness refinement; the main suite includes that refinement."
     },
     "full_main": {
-      "status": "NOT_RUN",
-      "reason": "Main integration held; main remains at ad09cdd."
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 721,
+      "skipped": 4,
+      "subtests": 740,
+      "seconds": 273.96,
+      "source_commit": "c4ba3efccb323688a635396dba992302885e558c",
+      "log": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/full-suite-finalization-main.log",
+      "log_sha256": "a97a9d30260c6913e0865a58c8c9dcc79ce38dc79c133b10965cbf29e48f12b0"
     },
     "baseline_main": {
       "status": "PASS",
@@ -40,8 +47,10 @@
       "source_commit": "ad09cdd"
     },
     "publication_metadata": {
-      "status": "NOT_RUN",
-      "reason": "Regenerated metadata validation follows."
+      "status": "PASS",
+      "passed": 3,
+      "seconds": 0.08,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
     },
     "previous_full_worktree": {
       "status": "PASS",
@@ -69,7 +78,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Exact native UUID, owner and incarnation; interactive-whoami.json"
+      "evidence": "Exact native UUID, owner and incarnation; interactive-whoami.json",
+      "blocking_for_integration": false
     },
     {
       "operation": "grok_identity_untrusted",
@@ -77,7 +87,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "CALLER_UNBOUND in untrusted folder; untrusted.stdout.jsonl"
+      "evidence": "CALLER_UNBOUND in untrusted folder; untrusted.stdout.jsonl",
+      "blocking_for_integration": false
     },
     {
       "operation": "grok_native_title",
@@ -85,7 +96,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Exact native title resolved from native summary"
+      "evidence": "Exact native title resolved from native summary",
+      "blocking_for_integration": false
     },
     {
       "operation": "claude_grok_exchange",
@@ -93,7 +105,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Claude hello, Grok reply, Claude acknowledgment; exact native history reconciliation"
+      "evidence": "Claude hello, Grok reply, Claude acknowledgment; exact native history reconciliation",
+      "blocking_for_integration": false
     },
     {
       "operation": "codex_to_grok",
@@ -101,7 +114,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Codex hello native Grok ingestion and visible inbox"
+      "evidence": "Codex hello native Grok ingestion and visible inbox",
+      "blocking_for_integration": false
     },
     {
       "operation": "two_analysis_workers",
@@ -109,7 +123,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Distinct native UUIDs and overlapping in-flight intervals"
+      "evidence": "Distinct native UUIDs and overlapping in-flight intervals",
+      "blocking_for_integration": false
     },
     {
       "operation": "workspace_patch",
@@ -117,7 +132,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "One fixture file, whole-tree and worker-delta artifacts"
+      "evidence": "One fixture file, whole-tree and worker-delta artifacts",
+      "blocking_for_integration": false
     },
     {
       "operation": "owned_uuid_resume",
@@ -125,7 +141,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Same UUID, native shell, persisted native turn 2 usage"
+      "evidence": "Same UUID, native shell, persisted native turn 2 usage",
+      "blocking_for_integration": false
     },
     {
       "operation": "owned_cancellation",
@@ -133,7 +150,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Observed native sleep; 18 descendants captured, provider exit and output EOF"
+      "evidence": "Observed native sleep; 18 descendants captured, provider exit and output EOF",
+      "blocking_for_integration": false
     },
     {
       "operation": "runtime_mismatch",
@@ -141,7 +159,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Changed/missing runtime refuses before catalog subprocess"
+      "evidence": "Changed/missing runtime refuses before catalog subprocess",
+      "blocking_for_integration": false
     },
     {
       "operation": "account_quota_unknown",
@@ -149,7 +168,8 @@
       "parent_context": "Disposable trusted Grok parent and fixture; read-only controller diagnostics where applicable",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "No documented qualified native allowance source; no account inference"
+      "evidence": "No documented qualified native allowance source; no account inference",
+      "blocking_for_integration": false
     },
     {
       "operation": "installed_grok",
@@ -157,7 +177,8 @@
       "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Guarded exact-hash initial approval, second install zero operations, owned-only uninstall plan and installed native workspace passed; subsequently uninstalled while main is held."
+      "evidence": "Owned Grok hooks/profiles installed from main; reinstall zero operations, uninstall dry-run lists only the two owned targets. No runtime receipt bytes changed.",
+      "blocking_for_integration": false
     },
     {
       "operation": "host_unicode_worker",
@@ -165,7 +186,8 @@
       "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Approved nested Unicode fixture, hashed native session path, exact model, native shell and patch artifacts; worker and fixture removed after recovery copies."
+      "evidence": "Approved nested Unicode fixture, hashed native session path, exact model, native shell and patch artifacts; worker and fixture removed after recovery copies.",
+      "blocking_for_integration": false
     },
     {
       "operation": "preservation",
@@ -173,15 +195,17 @@
       "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "25 of 28 protected-path snapshots match (16 unchanged existing-file hashes and nine still absent). Codex config, auxiliary Claude metadata and the later Grok trust file differ. Original-provider approval values, shared instructions, capability entries and protected branch match."
+      "evidence": "25 of 28 protected-path snapshots match (16 unchanged existing-file hashes and nine still absent). Codex config, auxiliary Claude metadata and the later Grok trust file differ. Original-provider approval values, shared instructions, capability entries and protected branch match.",
+      "blocking_for_integration": false
     },
     {
       "operation": "teardown",
-      "status": "BLOCKED",
+      "status": "PASS",
       "parent_context": "Measured feature candidate before host activation rollback; final cleanup and preservation are separate records.",
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "evidence": "Fixtures removed, owned processes closed, sixteen Grok histories deleted and three Codex histories archived. Unmerged feature and four exact Claude histories retained with reasons."
+      "evidence": "Merged feature worktree and local/remote branch removed, prune complete; disposable fixtures already removed. Exact retained histories, archives and CodeGraph index have named recovery locations.",
+      "blocking_for_integration": false
     },
     {
       "operation": "grok_to_codex_live",
@@ -189,7 +213,8 @@
       "provider": "grok",
       "parent_context": "Final close-out",
       "evidence": "Routing and hook contracts have offline coverage; no reverse Codex live turn submitted.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "antigravity_grok_live",
@@ -197,7 +222,8 @@
       "provider": "grok",
       "parent_context": "Final close-out",
       "evidence": "Preexisting Antigravity executable CAPABILITY_MISMATCH; approval preserved.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "live_budget",
@@ -205,23 +231,26 @@
       "provider": "grok",
       "parent_context": "Final close-out",
       "evidence": "28 conservative native inputs / 24 ceiling, 24 model-task inputs plus four local-shell inputs; 572.1047427654266 recorded active seconds / 1800, peak two owned Grok workers / four. The separate three-worker review batch also stayed within the four-worker limit.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "codex_config_investigation",
       "status": "BLOCKED",
       "provider": "grok",
       "parent_context": "Final close-out",
-      "evidence": "Writer and changed keys unresolved after bounded log/tool-call/backup searches; no matching original bytes recovered.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "evidence": "Historical writer remains unproved. Configuration drift accepted and integration hold explicitly cleared; no longer blocks close-out.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "main_integration",
-      "status": "BLOCKED",
+      "status": "PASS",
       "provider": "grok",
       "parent_context": "Final close-out",
-      "evidence": "Explicit investigation hold and failed live budget; local and remote main stay at ad09cdd.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "evidence": "Explicit finalization authorization executed: fast-forward main, complete main suite and normal push.",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "owned_process_cleanup",
@@ -229,7 +258,8 @@
       "provider": "grok",
       "parent_context": "Final close-out",
       "evidence": "All captured owned births dead, worker output EOF proved; final process inventory empty and native leader list reports no background service processes.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "fixture_removal",
@@ -237,7 +267,8 @@
       "provider": "grok",
       "parent_context": "Final close-out",
       "evidence": "Both Git fixtures removed after verified bundles, worker archives and NativePeers state copies; 89 retained recovery-file records.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "host_activation_rollback",
@@ -245,7 +276,8 @@
       "provider": "grok",
       "parent_context": "Final close-out",
       "evidence": "Owned Grok hooks/profiles uninstalled idempotently, global shared instructions and the two fixture trust grants restored to exact baseline bytes. A later root-folder trust grant is preserved and recorded as new drift.",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "blocking_for_integration": false
     },
     {
       "operation": "native_history_authentication_preservation_inventory",
@@ -253,7 +285,24 @@
       "provider": "grok",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
       "parent_context": "Final close-out",
-      "evidence": "No complete initial native-history/authentication hash inventory was captured for this run; the protected-path snapshot is narrower and cannot establish that comparison retrospectively."
+      "evidence": "No complete initial native-history/authentication hash inventory was captured for this run; the protected-path snapshot is narrower and cannot establish that comparison retrospectively.",
+      "blocking_for_integration": false
+    },
+    {
+      "operation": "finalization_preservation",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "status": "PASS",
+      "parent_context": "Authorized main finalization",
+      "evidence": "Current Codex/Grok/Claude/Antigravity receipt bytes, Codex config/hooks, Claude settings and Grok config/trust preserved; bytes outside shared owned markers preserved."
+    },
+    {
+      "operation": "integrated_main_spawn_check",
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "status": "PASS",
+      "parent_context": "Installed main, nonreserving preflight",
+      "evidence": "Two Grok analysis selections ready; native catalog helper used no model input, no capacity reserved and no workspace created. This is preflight, not a new live worker turn."
     }
   ],
   "runtime_scopes": [
@@ -489,7 +538,7 @@
     "Account quota remains unknown.",
     "Native network blocking for children is unavailable on macOS."
   ],
-  "code_commit": "b8209441e1d4e0de367625e45495851e12a5afdb",
+  "code_commit": "c4ba3efccb323688a635396dba992302885e558c",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -576,14 +625,6 @@
   },
   "source_map_sha256": "a55ae145d502299fc1d56edddba8e7c16fd5ff5d178c95187f9dc77d1e2d9930",
   "baseline_commit": "ad09cddcc2483151cb9fdef305a9cac41c81e89d",
-  "blockers": [
-    "FAIL: conservative native-input count 28 exceeds the fixed ceiling 24. No more native input is submitted by this run.",
-    "FAIL: Codex configuration, auxiliary Claude native metadata and the later Grok trust file hashes differ from their baselines. Codex writer/changed keys are unresolved; the current files are preserved.",
-    "BLOCKED: main integration is held pending the explicitly requested Codex configuration investigation; the required post-integration main suite is NOT_RUN.",
-    "BLOCKED: preexisting Antigravity executable mismatch prevents its live Grok messaging checks without separately qualifying that runtime.",
-    "BLOCKED: unmerged feature worktree/branch and four Claude histories are retained; broad deletion would remove unique work or potentially unrelated histories.",
-    "NOT_RUN: complete native-history/authentication before-and-after hash inventory; no initial inventory captured for this run."
-  ],
   "budget_summary": {
     "status": "FAIL",
     "ceiling": {
@@ -847,7 +888,94 @@
       "remove_only_new_grok_entry_reconstructs_exact_baseline": false,
       "matching_serializations": []
     },
-    "approval_entry_hash_method": "SHA-256 of canonical parsed JSON provider values"
+    "approval_entry_hash_method": "SHA-256 of canonical parsed JSON provider values",
+    "finalization": {
+      "status": "PASS",
+      "files": [
+        {
+          "path": "/Users/danny/.codex/config.toml",
+          "before_sha256": "2295896b8638ba184145fd6fc96c07bc2b8f2be944678d33734868f05a005981",
+          "after_sha256": "2295896b8638ba184145fd6fc96c07bc2b8f2be944678d33734868f05a005981",
+          "equal": true
+        },
+        {
+          "path": "/Users/danny/.codex/hooks.json",
+          "before_sha256": "6f2b752ac241478c1ab251e1701b2279316eb9a808ba5c23bdd77f863470f196",
+          "after_sha256": "6f2b752ac241478c1ab251e1701b2279316eb9a808ba5c23bdd77f863470f196",
+          "equal": true
+        },
+        {
+          "path": "/Users/danny/.claude/settings.json",
+          "before_sha256": "367639942c82e33141f3e9fbf099f9d7aca60ea4a8fa0ed432d9a78f7ba16249",
+          "after_sha256": "367639942c82e33141f3e9fbf099f9d7aca60ea4a8fa0ed432d9a78f7ba16249",
+          "equal": true
+        },
+        {
+          "path": "/Users/danny/.grok/config.toml",
+          "before_sha256": "1acf21e89ce5ea00d29bf94783a6649a9fe574bfc1bfa906960cb24f3427950a",
+          "after_sha256": "1acf21e89ce5ea00d29bf94783a6649a9fe574bfc1bfa906960cb24f3427950a",
+          "equal": true
+        },
+        {
+          "path": "/Users/danny/.grok/trusted_folders.toml",
+          "before_sha256": "226ad2f74ba91b53b078d1e95d46f563a42dc85fbf421b0a168f0542391e9013",
+          "after_sha256": "226ad2f74ba91b53b078d1e95d46f563a42dc85fbf421b0a168f0542391e9013",
+          "equal": true
+        },
+        {
+          "path": "/Users/danny/.claude/CLAUDE.md",
+          "before_sha256": "4092826c62e1ec692b031478e0735fc3342ed318df5f758aff6ee05a2455543f",
+          "after_sha256": "ef99a819b1c3085c2b1f725624b13c409c59e1af4314f88464a9067eb172b8a8",
+          "equal": false
+        }
+      ],
+      "runtime_receipt_before_sha256": "e05c92e9457f32dc2847db24d4b3fa4653748800c201a935b2b51a7093ccbb86",
+      "runtime_receipt_after_sha256": "e05c92e9457f32dc2847db24d4b3fa4653748800c201a935b2b51a7093ccbb86",
+      "all_provider_approvals_byte_identical": true,
+      "global_outside_owned": {
+        "backup": "/Users/danny/Documents/Tools/NativePeers/backups/grok-20261026/CLAUDE.md.pre-finalization",
+        "before_sha256": "4092826c62e1ec692b031478e0735fc3342ed318df5f758aff6ee05a2455543f",
+        "after_sha256": "ef99a819b1c3085c2b1f725624b13c409c59e1af4314f88464a9067eb172b8a8",
+        "outside_before_sha256": "847013de6e879f422a21f057fb2c629c3d7abf7b4cd38d9797179bca2d4fe14c",
+        "outside_after_sha256": "847013de6e879f422a21f057fb2c629c3d7abf7b4cd38d9797179bca2d4fe14c"
+      },
+      "current_provider_approvals": {
+        "antigravity": {
+          "path": "/Users/danny/.local/bin/agy",
+          "scope": "Scoped compatibility recorded in /Users/danny/Documents/Tools/NativePeers/evidence/capabilities.json",
+          "sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
+          "size": 188472992,
+          "version": "1.4.5"
+        },
+        "claude": {
+          "path": "/Users/danny/.local/share/claude/versions/2.1.310",
+          "scope": "Claude structured worker and interactive inbox/completion; /Users/danny/Documents/Tools/NativePeers/evidence/scratch/open-issues-20261023/claude-publication/qualification.json",
+          "sha256": "ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd",
+          "size": 274068224,
+          "version": "2.1.310 (Claude Code)"
+        },
+        "codex": {
+          "path": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.164.0-e147f02ecb40-1793009714936778000/bin/codex",
+          "scope": "Scoped computer-use lifecycle; packaged smoke, fresh app-server, native hooks, queue ingestion, zero-input history load and first-turn resume registration with localhost fixtures. External model inputs NOT_INSTRUMENTED; paid-model acceptance NOT_RUN. Current selected only for hook ancestry (NativePeers hooks.py:20-25). Record: /Users/danny/Documents/Tools/CodexForge/artifacts/computer-use-owner-metadata/scoped-installed-native-compat-1793010850480782000/qualification.json",
+          "sha256": "3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc",
+          "size": 299740968,
+          "version": "0.164.0"
+        },
+        "grok": {
+          "path": "/Users/danny/.grok/downloads/grok-1.0.70-macos-aarch64",
+          "scope": "Worker/inbox compatibility recorded in /Users/danny/Documents/Tools/NativePeers/.worktrees/grok-provider/evidence/capabilities.json",
+          "sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+          "size": 179063008,
+          "version": "grok 1.0.70 (f50904eaee6c) [stable]"
+        }
+      }
+    },
+    "config_hold_resolution": {
+      "status": "CLEARED",
+      "drift_accepted": true,
+      "possible_ultra_mode_explanation": "Not independently established",
+      "original_hash_differences_retained": true
+    }
   },
   "doctor": {
     "status": "PASS",
@@ -862,14 +990,14 @@
       {
         "provider": "codex",
         "state": "PASS",
-        "expected_sha256": "c4c21c09769795d2ce490c391d5c3531235822e091ec532d164813bdaa198b93",
-        "current_sha256": "c4c21c09769795d2ce490c391d5c3531235822e091ec532d164813bdaa198b93"
+        "expected_sha256": "3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc",
+        "current_sha256": "3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc"
       },
       {
         "provider": "antigravity",
         "state": "CAPABILITY_MISMATCH",
         "expected_sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554",
-        "current_sha256": "cab004f3c5c6cb7dc8b8712d3bc30431bd4480b17ff38a07eb1865abeffd2f27"
+        "current_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32"
       },
       {
         "provider": "grok",
@@ -882,7 +1010,6 @@
       {
         "provider": "claude",
         "integration_states": [
-          "MODIFIED",
           "PRESENT"
         ],
         "states": {
@@ -895,7 +1022,6 @@
       {
         "provider": "codex",
         "integration_states": [
-          "MODIFIED",
           "PRESENT"
         ],
         "states": {
@@ -908,7 +1034,6 @@
       {
         "provider": "antigravity",
         "integration_states": [
-          "MODIFIED",
           "PRESENT"
         ],
         "states": {
@@ -921,7 +1046,6 @@
       {
         "provider": "grok",
         "integration_states": [
-          "MISSING",
           "PRESENT"
         ],
         "states": {
@@ -935,18 +1059,26 @@
     "installed_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-installed-feature.json",
     "final_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-final-candidate.json",
     "unchanged_main_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-final-main.json",
-    "unchanged_main_result": "PASS: command succeeds with its original three provider rows."
+    "unchanged_main_result": "PASS: command succeeds with its original three provider rows.",
+    "final_integrated_snapshot": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/doctor-integrated-main.json"
   },
   "host_installation": {
     "qualification_status": "PASS",
-    "currently_installed": false,
+    "currently_installed": true,
     "runtime_approval_retained": true,
-    "shared_instructions_restored": true,
+    "shared_instructions_restored": false,
     "fixture_trust_restored": true,
-    "reason": "Keep unchanged live main coherent while integration is held.",
+    "reason": "Owned Grok integration and four-provider shared instructions installed from main.",
     "install_record": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/host-install.json",
     "rollback_record": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/host-activation-held.json",
-    "current_trust_file_matches_baseline": false
+    "current_trust_file_matches_baseline": false,
+    "finalization_record": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/finalization-host-install.json",
+    "runtime_approval_evidence_relocated": {
+      "original": "/Users/danny/Documents/Tools/NativePeers/.worktrees/grok-provider/evidence/capabilities.json",
+      "current": "/Users/danny/Documents/Tools/NativePeers/evidence/capabilities.json",
+      "current_sha256": "6f409eae4d829b5b285a1e44b54af8268cc1bf98e8b2131fdecf8cd403af0ca5",
+      "note": "The approval remains byte-identical; its original scope string is historical. Identical qualification content is retained in main."
+    }
   },
   "cleanup": {
     "fixture_removed": true,
@@ -1030,14 +1162,6 @@
     "no_grok_or_leader_process": true,
     "kept": [
       {
-        "path": "/Users/danny/Documents/Tools/NativePeers/.worktrees/grok-provider",
-        "reason": "Unmerged implementation; main integration held. Includes the local CodeGraph index and verification scratch."
-      },
-      {
-        "path": "feat/grok-provider (local and origin)",
-        "reason": "Published unmerged implementation and close-out record."
-      },
-      {
         "path": "/Users/danny/Documents/Tools/NativePeers/backups/grok-20261026",
         "reason": "Verified fixture bundles, unique worker patches/state, and shared-instruction recovery."
       },
@@ -1064,17 +1188,29 @@
       {
         "path": "/Users/danny/Documents/Tools/NativePeers root Grok trust entry and native summary 01a1776c-fbe0-78d1-8fec-16d23d821a98",
         "reason": "New metadata appeared after disposable cleanup, with no matching owned session record; writer and ownership are unknown, so it is preserved."
+      },
+      {
+        "path": "/Users/danny/Documents/Tools/NativePeers/backups/grok-20261026/final-worktree-ignored",
+        "reason": "Verified copy of the removed worktree CodeGraph index, installer backups, raw verification files and test caches."
       }
     ],
     "main_ledger_removed_after_verified_copies": true,
-    "git_worktree_prune": "PASS"
+    "git_worktree_prune": "PASS",
+    "feature_worktree_removed": true,
+    "feature_branch_local_removed": true,
+    "feature_branch_remote_removed": true,
+    "worktree_prune": "PASS",
+    "final_worktree_recovery_manifest": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/grok-20261026/final-worktree-recovery-manifest.json"
   },
   "main": {
-    "integration_status": "BLOCKED",
-    "local_commit": "ad09cddcc2483151cb9fdef305a9cac41c81e89d",
-    "push_status": "NOT_RUN",
+    "integration_status": "PASS",
+    "merge_method": "fast-forward",
+    "previous_commit": "ad09cddcc2483151cb9fdef305a9cac41c81e89d",
+    "tested_commit": "c4ba3efccb323688a635396dba992302885e558c",
+    "push_status": "PASS",
+    "verified_remote_source_commit": "c4ba3efccb323688a635396dba992302885e558c",
     "push_command": "git -C /Users/danny/Documents/Tools/NativePeers push origin main",
-    "note": "Command is for a later authorized integration after all required checks hold."
+    "publication_scope": "Source commit verified on origin/main; final documentation and metadata commit is a descendant."
   },
   "suggested_model_selection": "NativePeers accepts a per-worker `model` for Claude, Codex, Antigravity and Grok; Grok uses an exact model ID from its native catalog.",
   "commits": [
@@ -1100,7 +1236,11 @@
     "14ab06daf497f7b60185af2b76f634964b5d99c5 fix(grok): resolve hashed native session directories",
     "eab3d6f6ef9fa15e0eda57af8eb537024bf8719f fix(grok): retain proved readiness across process exit races",
     "ae26b647a86cb3acce84382f8a022f09bed51dbf docs(grok): record native qualification and exact runtime evidence",
-    "ddf64dc18b0fb151543450766aefe2d2e0b69cf7 test(evidence): accept explicit failed verification outcomes"
+    "ddf64dc18b0fb151543450766aefe2d2e0b69cf7 test(evidence): accept explicit failed verification outcomes",
+    "f583ed9e01e71d429c5870532e1525b65add1fb3 docs(grok): record partial qualification and preservation holds",
+    "76cf2ef6306a6a75893faefce8c88d13f01b03b3 test(antigravity): wait for signal fixture readiness",
+    "b8209441e1d4e0de367625e45495851e12a5afdb test(antigravity): wait for the complete fixture PID",
+    "c4ba3efccb323688a635396dba992302885e558c docs(grok): record finalization authorization and checks"
   ],
   "historical_checks": [
     {
@@ -1124,10 +1264,30 @@
     }
   ],
   "integration_authorization": {
-    "status": "AUTHORIZED",
+    "status": "EXECUTED",
     "config_hold": "CLEARED",
     "possible_ultra_mode_explanation": "Not independently established",
     "main_merge_push_cleanup_requested": true,
     "historical_failures_retained": true
+  },
+  "historical_qualification_exceptions": [
+    "FAIL: conservative native-input count 28 exceeds the fixed ceiling 24. No more native input is submitted by this run.",
+    "FAIL: Codex configuration, auxiliary Claude native metadata and the later Grok trust file hashes differ from their baselines. Codex writer/changed keys are unresolved; the current files are preserved.",
+    "BLOCKED: main integration is held pending the explicitly requested Codex configuration investigation; the required post-integration main suite is NOT_RUN.",
+    "BLOCKED: preexisting Antigravity executable mismatch prevents its live Grok messaging checks without separately qualifying that runtime.",
+    "BLOCKED: unmerged feature worktree/branch and four Claude histories are retained; broad deletion would remove unique work or potentially unrelated histories.",
+    "NOT_RUN: complete native-history/authentication before-and-after hash inventory; no initial inventory captured for this run."
+  ],
+  "blockers": [],
+  "integration_closeout": {
+    "status": "COMPLETE",
+    "main_integrated": true,
+    "main_full_suite": "PASS",
+    "main_source_pushed": true,
+    "owned_grok_integration_installed": true,
+    "global_owned_block_installed": true,
+    "feature_worktree_removed": true,
+    "feature_branch_local_and_remote_removed": true,
+    "new_model_inputs": 0
   }
 }
