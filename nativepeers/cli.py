@@ -64,6 +64,7 @@ def parser():
     q=command('resume-command');q.add_argument('worker_id');q.add_argument('--explain',action='store_true')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
+    q=command('runtime-check');q.add_argument('--provider',choices=['claude','codex','antigravity','grok'],required=True);q.add_argument('--apply',action='store_true')
     q=command('runtime-revoke');q.add_argument('--provider',choices=['claude','codex','antigravity','grok'],required=True);q.add_argument('--sha256',required=True)
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
@@ -81,7 +82,7 @@ async def dispatch(args,journal):
     core=Core(journal)
     try:caller=bind_caller(journal,core.registry)
     except PeerError:
-        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','usage','usage-import','history-cleanup'):raise
+        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','runtime-check','usage','usage-import','history-cleanup'):raise
         caller=Caller('external-local','external-local')
     name=args.command
     if name=='whoami':
@@ -170,6 +171,10 @@ async def dispatch(args,journal):
         require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot change retained runtime approvals')
         from .compatibility import revoke
         return revoke(journal,args.provider,args.sha256)
+    if name=='runtime-check':
+        from .runtime_updates import check_runtime
+        require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Owned workers cannot renew runtime approvals')
+        return check_runtime(journal,args.provider,apply=args.apply)
     if name=='doctor':
         from .compatibility import diagnose
         from .readiness import readiness,operation_readiness

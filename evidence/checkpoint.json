@@ -215,10 +215,10 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "main",
-    "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
-    "evidence": "evidence/quiet-notifications-20261026.json",
-    "source_map_sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b",
+    "branch": "fix/runtime-approvals-issue-4",
+    "code_commit": "22195967ba8d70d87876420215140195b6c73269",
+    "evidence": "evidence/runtime-approvals-issue-4.json",
+    "source_map_sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525",
     "status": "PASS"
   },
   "feature_work": {
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-    "branch": "main",
-    "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
-    "last_verified_publication": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+    "base_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+    "branch": "fix/runtime-approvals-issue-4",
+    "code_commit": "22195967ba8d70d87876420215140195b6c73269",
+    "last_verified_publication": "22195967ba8d70d87876420215140195b6c73269",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,65 +302,86 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "main",
+    "branch": "fix/runtime-approvals-issue-4",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
-    "verified_remote_code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+    "verified_remote_commit": "22195967ba8d70d87876420215140195b6c73269",
+    "verified_remote_code_commit": "22195967ba8d70d87876420215140195b6c73269",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "quiet-notifications-20261026",
+  "stage": "Issue 4 source PR verified; installed runtime unchanged",
   "tests_current": {
-    "upgrade_focused": {
+    "unchanged_focused_baseline": {
       "status": "PASS",
       "passed": 40,
-      "seconds": 3.57
+      "subtests_passed": 16,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py",
+      "evidence": "ignored task archive: baseline-focused.txt"
     },
-    "upgrade_exact_measured_ddl": {
+    "focused": {
       "status": "PASS",
-      "private_fixture": true
+      "passed": 102,
+      "subtests_passed": 88,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_runtime_updates.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_initialization.py tests/unit/test_operation_readiness.py tests/unit/test_claude_runtime_verify.py tests/unit/test_usage_native_contracts.py tests/unit/test_usage_statusline.py tests/unit/test_home_layout.py tests/contract/test_usage_collectors.py tests/contract/test_selected_home_launch.py tests/unit/test_spawn_check.py tests/unit/test_delegation_diagnostics.py tests/unit/test_nested_caller.py tests/unit/test_owned_caller_identity.py",
+      "evidence": "ignored task archive: focused-reviewed-final.txt"
     },
-    "worktree_full": {
-      "status": "PASS",
-      "passed": 764,
+    "preliminary_full": {
+      "status": "FAIL",
+      "passed": 780,
+      "failed": 2,
       "skipped": 4,
-      "subtests": 742,
-      "seconds": 250.98,
-      "command": ".venv/bin/python -m pytest -q",
-      "log_sha256": "4eaf8982c24549627c1bb3309054ee3b90e2804f4f846ab68794ad79e280f096"
+      "subtests_passed": 742,
+      "reason": "Candidate source differs from the installed evidence snapshot; source-pointer assertions were not weakened",
+      "evidence": "ignored task archive: candidate-full.txt"
     },
-    "main_full": {
+    "final_full": {
       "status": "PASS",
-      "passed": 764,
+      "passed": 792,
       "skipped": 4,
-      "subtests": 742,
-      "seconds": 272.25,
+      "failed": 0,
+      "subtests_passed": 742,
+      "duration_seconds": 262.26,
+      "run_head": "22195967ba8d70d87876420215140195b6c73269",
+      "product_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
       "command": ".venv/bin/python -m pytest -q",
-      "log_sha256": "d8f6883797e914cf55a01a3fc0b37e1e2c2cdaf32e01283a79426ebf54410eaf"
+      "evidence": "ignored task archive: full-reviewed-source.txt",
+      "scope": "Completed frozen source-identical run. The final publication-head complete rerun is retained in the task archive and reported in the PR."
     },
-    "installed_close": {
-      "status": "PASS",
-      "repaired_legacy_empty_table": true,
-      "actual_native_caller": true,
-      "repeated_close_identical": true,
-      "reopen_keeps_cutoffs": true,
-      "evidence": "evidence/scratch/quiet-notifications-20261026/installed-upgrade-smoke.json"
+    "interrupted_metadata_run": {
+      "status": "FAIL",
+      "passed": 783,
+      "failed": 1,
+      "skipped": 4,
+      "subtests_passed": 742,
+      "command": ".venv/bin/python -m pytest -q",
+      "reason": "Verification metadata changed temporarily while pytest was running. Committed metadata was restored; this is not final acceptance.",
+      "evidence": "ignored task archive: committed-full-1.txt"
     },
-    "preservation": {
+    "frozen_full_before_unavailable_correction": {
       "status": "PASS",
-      "scope": "Protected files match recorded post-install hashes; no approval changes"
+      "passed": 784,
+      "skipped": 4,
+      "subtests_passed": 742,
+      "source_head": "1d22f2aa7dfec0868fea0ec4697a10c9f5da23ef",
+      "command": ".venv/bin/python -m pytest -q",
+      "evidence": "ignored task archive: frozen-full-2.txt"
     },
-    "installation": {
+    "frozen_full_before_review_fixes": {
       "status": "PASS",
-      "after_upgrade_repeat_operations": 0,
-      "owned_only_uninstall_plan": true
+      "passed": 785,
+      "skipped": 4,
+      "subtests_passed": 742,
+      "source_head": "6c79dfbd0bace02614c3a6272678b7637cc4a8f9",
+      "command": ".venv/bin/python -m pytest -q",
+      "evidence": "ignored task archive: frozen-full-3.txt"
     },
-    "publication_consistency": {
-      "status": "PASS",
-      "passed": 3,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py"
+    "skipped_checks": {
+      "status": "NOT_RUN",
+      "count": 4,
+      "reason": "Linux /proc exit-between-stat-and-exe schedules are skipped on macOS",
+      "file": "tests/unit/test_usage_exit_race.py"
     }
   },
   "transports": {
@@ -369,7 +390,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-26T16:37:18.670033-04:00",
+  "updated_at": "2026-10-26T19:48:56.255274-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1049,6 +1070,114 @@
         "code_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
         "evidence": "evidence/quiet-notifications-20261026.json",
         "source_map_sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "quiet-notifications-20261026",
+      "updated_at": "2026-10-26T16:37:18.670033-04:00",
+      "git": {
+        "base_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
+        "branch": "main",
+        "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+        "last_verified_publication": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "main",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+        "verified_remote_code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "main",
+        "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
+        "evidence": "evidence/quiet-notifications-20261026.json",
+        "source_map_sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b",
+        "status": "PASS"
+      }
+    },
+    {
+      "stage": "Issue 4 source-only runtime update workflow",
+      "updated_at": "2026-10-26T19:08:26.356788-04:00",
+      "git": {
+        "base_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a",
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "a0072a37cd1cfc535f121cc8173ec33ed02aff11",
+        "last_verified_publication": "a0072a37cd1cfc535f121cc8173ec33ed02aff11",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "a0072a37cd1cfc535f121cc8173ec33ed02aff11",
+        "verified_remote_code_commit": "a0072a37cd1cfc535f121cc8173ec33ed02aff11",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "a0072a37cd1cfc535f121cc8173ec33ed02aff11",
+        "evidence": "evidence/runtime-approvals-issue-4.json",
+        "source_map_sha256": "0e263adc31a3ee5504205c3cf1ef5a5ad87dc8883a610da9e24c47400ab80ab7",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Issue 4 source-only runtime update workflow",
+      "updated_at": "2026-10-26T19:16:44.602326-04:00",
+      "git": {
+        "base_commit": "e002e9b4297234d13339f194fa6ef7cfbb40e42a",
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+        "last_verified_publication": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+        "verified_remote_code_commit": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "6a187820c672b3cda1367bc9e00e1bc27e709476",
+        "evidence": "evidence/runtime-approvals-issue-4.json",
+        "source_map_sha256": "73a80de55f86dd47a3bb320c991076c9242cb3293eb03fc2d235a1d5aceb9cda",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Issue 4 source-only runtime update workflow",
+      "updated_at": "2026-10-26T19:38:35.462328-04:00",
+      "git": {
+        "base_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "last_verified_publication": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "verified_remote_code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/runtime-approvals-issue-4",
+        "code_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+        "evidence": "evidence/runtime-approvals-issue-4.json",
+        "source_map_sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525",
         "status": "PARTIAL"
       }
     }

@@ -2,7 +2,7 @@
 
 NativePeers supports Grok Build as a fourth native CLI provider. It uses the existing Grok sign-in and selected `GROK_HOME`; it never reads or copies `auth.json`, selects an API key, changes the default model, or changes global compatibility settings.
 
-The measured executable is Grok **1.0.70 (f50904eaee6c), stable**, at `/Users/danny/.grok/downloads/grok-1.0.70-macos-aarch64`, SHA-256 `5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec`. Owned launches hash and execute the resolved versioned target, pass `--no-auto-update`, and set `GROK_DISABLE_AUTOUPDATER=1`. A different binary requires separate qualification and returns `CAPABILITY_MISMATCH`.
+The measured executable is Grok **1.0.70 (f50904eaee6c), stable**, at `/Users/danny/.grok/downloads/grok-1.0.70-macos-aarch64`, SHA-256 `5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec`. Owned launches hash and execute the resolved versioned target, pass `--no-auto-update`, and set `GROK_DISABLE_AUTOUPDATER=1`. A different binary is untested and returns `CAPABILITY_MISMATCH` with operation/reason detail. Supported signed forward patches use the [bounded runtime-check workflow](RUNTIME_UPDATES.md); changed seams and unsupported release series require separate qualification.
 
 ## Identity and messages
 

@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "31a8e400b566d6c160ebc85fb914285d8d05ed6a",
-  "reviewed_commit": "d7f69b6526f1e063a72d51c2c27427e8511f1a41",
-  "publication_branch": "main",
-  "updated_at": "2026-10-26T16:37:18.670033-04:00",
-  "current_record": "evidence/quiet-notifications-20261026.json",
+  "code_commit": "22195967ba8d70d87876420215140195b6c73269",
+  "reviewed_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
+  "publication_branch": "fix/runtime-approvals-issue-4",
+  "updated_at": "2026-10-26T19:48:56.255274-04:00",
+  "current_record": "evidence/runtime-approvals-issue-4.json",
   "file_classes": {
     "product": {
       "files": {
@@ -22,8 +22,8 @@
         "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
         "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
         "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
-        "nativepeers/cli.py": "45ce117545c1ebb371c327377993f93b6ce2acb7f26af1d3fe5b485b898d5023",
-        "nativepeers/compatibility.py": "cfc4ff8d7254f099a68ffcf5c95af0bf34a34c9eed04dda30c7259e05330439d",
+        "nativepeers/cli.py": "03fd23dc15df04081200df4c71237af19e196dabc8fc04a0bf23d5c32c46b775",
+        "nativepeers/compatibility.py": "3dced17990544c81f194a65080c42a2f05945158e4bb74917399a2d4db55ca8f",
         "nativepeers/completion_delivery.py": "7617097e4fc4310f5532810121ea1b9dc49e2878379e99b15055b139178b9f78",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
         "nativepeers/core.py": "9bbb0b97bc7100c6c27a66fa46899bf7db798da2fb147111ea6160fa8eff5aa5",
@@ -53,19 +53,20 @@
         "nativepeers/profiles.py": "4ff9abb649949cd3511f19b5e9cfe2bc9b8b3917483f1b75e38d8973d2b91ac5",
         "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
         "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
-        "nativepeers/readiness.py": "294df062eb40e1f920cbf6b6f7b97bcf8f7fa88aee92514999a07b940d3d0d39",
+        "nativepeers/readiness.py": "822f8a5ef517692c6cd58964f4d834c3db73f05761a1a8de42db6f9e610fa984",
         "nativepeers/receipts.py": "ca559249b8983fb77cbb3554faa70d41446deadda46a870faf49eb198dcbf7cd",
         "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
         "nativepeers/recovery.py": "50025afac127c99e926ead24455d0dd8b6b64d39977546ddd79f061e3465fd9e",
         "nativepeers/registry.py": "0a36a1e1f22911ffe85da38d5fc57004790da9ddf5f530854af7beae4f60acb0",
         "nativepeers/routing.py": "2678f4c1154223e0725d227be87f38bac9a5c180db4c7759e24abd1ffdfccad6",
+        "nativepeers/runtime_updates.py": "5fdcece1d051e8bf37fd6166f109c3885a23ad82ad1e0a25c506ff8360fffd1d",
         "nativepeers/supervisor.py": "24c194849ef7b86bb9bef8142a7e8318ee5be68d7a47be6edd3d92a9d6b0a2e1",
         "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
         "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
         "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
-        "nativepeers/usage/collectors.py": "181542738e4d16d18852edb769679398e5d1b32ee3a716a3c8a59c1fd43b5b0c",
+        "nativepeers/usage/collectors.py": "d52d6d6034e3e33dc0364a9ccf470a6cec5892b213b6c0ed065920ed4a6cee06",
         "nativepeers/usage/config.py": "aa427528e54572d6be732c48692f4a741cacc9967848723898daeb7bf1d81554",
-        "nativepeers/usage/contracts.py": "40d99b98a5496733097df005af303a4abefe0108e0da85160fb438e80ebea5e6",
+        "nativepeers/usage/contracts.py": "fa28d801364fd2f9305e8965aabe4f0203988f13518de67017e879247b83ecb3",
         "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
         "nativepeers/usage/forecast.py": "ed637f520ddd798ce0201d430ce70ce14e1612ef72a5cdbd0c5de48e0b6c400f",
         "nativepeers/usage/grok_native.py": "a0d2411c77c88623a0db1e8c860fb471b9195932a6639426aef840d2dc6b271c",
@@ -92,8 +93,8 @@
         "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
-      "file_count": 83,
-      "sha256": "726b8c6a67ab0922a6862fcc8c822dd7f3b17b53215f9014cf3f74270e90d82b"
+      "file_count": 84,
+      "sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525"
     },
     "launchers": {
       "files": {
@@ -228,6 +229,7 @@
         "tests/unit/test_review_quota_boundaries.py": "4c9ee5bc0fdff91955e8ecab99af7d678eed0739b59f94f6ffe7962dfd2fd07a",
         "tests/unit/test_routing.py": "9fceb768781f94fe4e2163942774f991c6b235683af6453c3e8ae9bac57e712e",
         "tests/unit/test_runtime_initialization.py": "5d80859721558b9e9a5a81fc91bbd3e019c3d68689d4b88889d7ca9500412e7a",
+        "tests/unit/test_runtime_updates.py": "4bc4f3e9c05ef8c3f291fce38142d078f38b813cd9f0333b04b199a450324576",
         "tests/unit/test_spawn_check.py": "ba7332618fc6e2ed5a9f05d0f7cdd3a5fb68a49957ffbdfc9724a757244c455e",
         "tests/unit/test_usage.py": "a71c89de019e4c8fd603c3de78de2bde36660c8619523370e2378c10c0618b7d",
         "tests/unit/test_usage_batch_layout.py": "c27d5138d25ceb4bcf5f0083c08abfc2330dcc64a27d3813ceea074ed453cd61",
@@ -248,73 +250,100 @@
         "tests/unit/test_worktrees_and_contracts.py": "33f40047f20a47c59ac9aa918e7ef1faabf2f36431721f49d23c3f9371918f22",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 130,
-      "sha256": "270506017be743c642040bdb4123726f886cf57651ac79ca844f8ed889e289be"
+      "file_count": 131,
+      "sha256": "af2d4fd0b0a15b8b833be8b607d88a72d87d77f8ffc0e9cb3ea69a9655c74cef"
     }
   },
   "operation_checks": [
     {
-      "operation": "source regression suite and final independent review",
-      "parent_context": "isolated integration worktree; no provider calls",
+      "provider": "claude",
+      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
+      "operation": "signed-update-metadata-and-temporary-approval",
       "status": "PASS",
-      "scope": "R1-R7 fixed; reviewer75tests15subtests; parent100tests57subtests"
-    },
-    {
-      "provider": "codex",
-      "runtime_sha256": "3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc",
-      "operation": "native queue UserPromptSubmit blocking seam",
-      "parent_context": "owned private loaded app-server, localhost Responses fixture",
-      "status": "PASS",
-      "scope": "2 localhost requests; blocked frames zero requests and no output; no external model input; not TUI acceptance"
-    },
-    {
-      "provider": "codex",
-      "runtime_sha256": "3998a0e51bb7e4a2c8da905e9ba2f9e149c81ae44c487de59cf1e7296c04dadc",
-      "operation": "actual notification policy at native queue consumption",
-      "parent_context": "operator-seeded exact native UUID/owner in private loaded app-server",
-      "status": "PASS",
-      "scope": "Repaired final source; accepted-before-close, quiet, expiry, old reply, fresh root and human control PASS;5localhost requests; no external model input; private loaded appserver receiver, not standaloneTUI registration/UI.",
-      "tested_source_commit": "48e34940912bafc03fd15b0a00e2cc47b66b9a0d",
-      "evidence": "evidence/scratch/quiet-notifications-20261026/native-policy-upgrade/result-20261026T162341.json"
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "claude",
-      "runtime_sha256": "ffb64331bc0ee1b69efb7c2c428bd3ab516bc31b75bf60886b356c97c1c25ffd",
-      "operation": "native interactive inbox quiet and expired guard",
-      "parent_context": "SessionStart-registered disposable interactive Claude; normal implicit auth/settings; per-launch dontAsk/crossSessionInbound accept overlay; fixture controller sender",
-      "status": "PASS",
-      "scope": "Native UserPromptSubmit guard blocks both cases; transport/receipts unchanged; no assistant/Stop during blocks; single allowed control after explicit reopen has one Stop and persisted matching assistant text. Original harness FAIL early flush preserved; independent read-only post-exit SUPPLEMENTAL_PASS. No API-request instrumentation, no native peer-sender or fresh-root/human-typing qualification.",
-      "tested_source_commit": "d999a58754f1746278648f51b35ea579d522c524",
-      "later_change": "Journal-only empty legacy upgrade and named close insert are separately source/private-fixture/installed qualified; no additional Claude inference."
+      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
+      "operation": "worker-execution",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "No native qualification model input authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
-      "provider": "grok",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
-      "operation": "pending hook frame filter and prompt reopen",
-      "parent_context": "unit fixture only",
+      "provider": "claude",
+      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
+      "operation": "native-inbox-ingestion",
       "status": "NOT_RUN",
-      "scope": "native acceptance not run; historical Grok budget unchanged; source regressions PASS"
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "No disposable native message qualification authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
+      "operation": "bound-mcp",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "Effective native inventory not exercised for issue 4",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
+      "operation": "quota-transport",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "Independent quota receipts and freshness qualification unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
       "provider": "antigravity",
       "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
-      "operation": "pending hook frame filter",
-      "parent_context": "unit fixture only",
-      "status": "BLOCKED",
-      "scope": "preexisting executable CAPABILITY_MISMATCH; no live call/reapproval",
-      "approved_runtime_sha256": "b89677b741d8d9d38cf0a6911ab468fac629158194039904cbfd645fdb897554"
+      "operation": "signed-update-metadata-and-temporary-approval",
+      "status": "PASS",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
-      "operation": "owned host installation and current main suite",
-      "parent_context": "live main checkout after verified worktree suite",
-      "status": "PASS",
-      "scope": "Final repaired main764tests742subtests4Linuxskips272.25s; owned hook/trust installation; post-upgrade repeated install0ops; owned-only uninstall dry-run. Presence does not prove old native processes loaded hooks."
+      "provider": "antigravity",
+      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
+      "operation": "worker-execution",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "No native qualification model input authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     },
     {
-      "operation": "Known empty legacy journal upgrade and installed close",
-      "parent_context": "Actual installed main CLI through verified native parent plus private exact-DDL fixtures and complete suites",
-      "status": "PASS",
-      "scope": "Known empty obsolete table atomically repaired; real close/repeated-close/reopen PASS; populated/unknown schemas preserved/refused; read-only does not migrate. Final worktree764tests742subtests250.98s; finalmain764tests742subtests272.25s;4Linux-only skips each. No model input or runtime approval/config changes for installed check."
+      "provider": "antigravity",
+      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
+      "operation": "native-inbox-ingestion",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "No disposable native message qualification authorized",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
+    },
+    {
+      "provider": "antigravity",
+      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
+      "operation": "bound-mcp",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "Effective native inventory not exercised for issue 4",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
+    },
+    {
+      "provider": "antigravity",
+      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
+      "operation": "quota-transport",
+      "status": "NOT_RUN",
+      "parent_context": "temporary journal; no native parent qualification",
+      "scope": "Independent quota receipts and freshness qualification unchanged",
+      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

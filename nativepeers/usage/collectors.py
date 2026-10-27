@@ -27,7 +27,12 @@ def resolved_executable(provider):
 
 def verify_usage(journal,provider,path):
     """A reverified status-line contract does not approve worker/inbox execution."""
-    try:return verify(journal,provider,path)
+    try:
+        actual=verify(journal,provider,path)
+        approval=json.loads((journal.root/'compat/runtime.json').read_text())['providers'][provider]
+        require('operations' not in approval or 'statusline' in approval['operations'],
+                'CAPABILITY_MISMATCH','Worker/inbox-only renewal does not approve status-line capture')
+        return actual
     except PeerError as error:
         if error.code!='CAPABILITY_MISMATCH' or provider=='codex':raise
         receipt=journal.root/'compat/usage-runtime.json'

@@ -1,3 +1,17 @@
+# Routine CLI updates — issue 4 source PR (2026-10-26)
+
+- [x] Add one bounded `runtime-check --provider … --apply` path for supported vendor patches; no qualification model input, hash copying or reinstall.
+- [x] Bind signature, version/help and marker canaries to one hashed temporary executable snapshot; compare the selected runtime and complete prior approval under the runtime lock.
+- [x] Keep admitted updates visibly `SUPPORTED_UPDATE` with native acceptance `NOT_RUN`; retain separate quota/status-line/MCP/parent-return scope.
+- [x] Fix and independently recheck every required finding from the Grok 4.7 and Grok 4.7 Build Fast reviews, including swap/restore, version/refusal diagnostics and quota detail attribution.
+- [x] Pass 102 focused tests / 88 subtests and the complete corrected source suite: 792 tests / 742 subtests, four Linux-only skips.
+- [x] Pass real signed-binary snapshot checks and temporary approval/admission transitions for Claude 2.1.311 and Antigravity 1.4.7, with zero qualification model inputs.
+- [ ] Merge and any daily runtime approval transition remain owner actions. Main is the live checkout and was not edited or installed by this PR.
+
+[Source-only verification record](evidence/runtime-approvals-issue-4.json) · [Current update workflow](docs/RUNTIME_UPDATES.md). The PR records the final publication-head suite and cleanup. Native inference, original-parent ingestion, bound MCP, effective permission and quota-source checks are not implied by this record; historical checks retain their original source/runtime scope.
+
+---
+
 # Quiet close-out notifications — implemented, verified and published
 
 - [x] Stable-peer close-out policy: `notifications open|close|status`, MCP `peer_notifications`, durable cutoffs, pre-submission `RETAINED`, and `inbox --retained`.
