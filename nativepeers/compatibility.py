@@ -7,6 +7,8 @@ from .errors import PeerError,require
 from .files import advisory_lock,atomic_json
 
 _cache={}
+# A supported patch update renews on first use (runtime_updates.renew_selected); tests switch it off.
+AUTO_RENEW=True
 
 
 def update_status(provider,expected,actual,document):
@@ -36,7 +38,7 @@ def fingerprint(path,*,fresh=False):
     return {'path':str(path),'sha256':_cache[key],'size':info.st_size}
 
 
-def verify(journal,provider,executable,*,worker_id=None):
+def verify(journal,provider,executable,*,worker_id=None,renew=True):
     receipt=journal.root/'compat/runtime.json'
     require(receipt.exists(),'CAPABILITY_MISMATCH','Native compatibility has not been installed or verified for this state root')
     try:
@@ -57,8 +59,13 @@ def verify(journal,provider,executable,*,worker_id=None):
     retained=document.get('retained',{}).get(provider,{}).get(actual['sha256'],{})
     old_allowed=bool(pinned and not retained.get('revoked') and worker_id in retained.get('workers',[])
                      and all(retained.get('fingerprint',{}).get(k)==actual[k] for k in ('path','sha256','size')))
-    require(not retained.get('revoked') and (actual['sha256']==expected['sha256'] or old_allowed),
-            'CAPABILITY_MISMATCH','Native executable is not approved for worker/inbox operations',
+    approved=not retained.get('revoked') and (actual['sha256']==expected['sha256'] or old_allowed)
+    if not approved and renew and AUTO_RENEW and pinned is None and not retained.get('revoked'):
+        from .runtime_updates import renew_selected
+        if renew_selected(journal,provider,actual):return verify(journal,provider,executable,renew=False)
+        try:document=json.loads(receipt.read_text())
+        except (OSError,ValueError):pass
+    require(approved,'CAPABILITY_MISMATCH','Native executable is not approved for worker/inbox operations',
             details=update_status(provider,expected,actual,document))
     return actual
 

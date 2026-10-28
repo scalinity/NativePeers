@@ -1,3 +1,16 @@
+# Native CLI updates renew on first use (2026-10-27)
+
+- [x] Cause: renewal of a supported vendor patch needed an explicit `runtime-check --apply`, and every admission check refused a changed hash, so each native CLI update failed the first `npeer` call until someone ran it (Claude 2.1.312 passed every bounded check and sat unrenewed after the updater switched the launcher).
+- [x] `compatibility.verify` now renews once on first use for the selected Claude, Antigravity or Grok executable, running the same bounded checks as `--apply` under `locks/auto-renew.lock`; a refusal is recorded and not retried for the same bytes, a transient failure backs off 60 seconds.
+- [x] Strict paths unchanged: verification against an already pinned worker runtime, another explicit path, revoked or retired runtimes, managed Codex, `doctor` and plain `runtime-check`.
+- [x] Six offline tests (first use, refusal not retried, selected-only, backoff, revoked/retired, worker pin); with the switch off four of them fail. The one existing assertion of strict refusal now names `renew=False`.
+- [x] Live: `npeer whoami` through the fixed code renewed Claude 2.1.312 in 3.2 seconds with zero model input; native acceptance stays `NOT_RUN`.
+- [ ] Three tests in the full unit suite (`test_unbound_forged_metadata_never_becomes_human`, one `test_cancellation` Claude subtest, one `test_readonly_artifacts` subtest) fail on unmodified main inside a Claude Code session; they are unrelated to this change.
+
+[Current update workflow](docs/RUNTIME_UPDATES.md) · [Verification record](evidence/runtime-auto-renew.json)
+
+---
+
 # Routine CLI updates — issue 4 source PR (2026-10-26)
 
 - [x] Add one bounded `runtime-check --provider … --apply` path for supported vendor patches; no qualification model input, hash copying or reinstall.

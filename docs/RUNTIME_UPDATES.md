@@ -1,6 +1,6 @@
 # Native CLI updates
 
-A different executable hash means **untested**, not a demonstrated protocol failure. NativePeers keeps exact executable approval for admission and immutable leases, with a bounded on-demand renewal for supported vendor patch updates.
+A different executable hash means **untested**, not a demonstrated protocol failure. NativePeers keeps exact executable approval for admission and immutable leases, with a bounded renewal for supported vendor patch updates that runs automatically on first use and on demand.
 
 ```sh
 npeer doctor --json
@@ -11,6 +11,19 @@ npeer runtime-check --provider grok --apply --json
 ```
 
 Inspection leaves receipts unchanged and uses one private temporary executable copy, removed on completion. `--apply` checks and records selected worker/inbox admission in one command; no hash copying, reinstall, model input, usage refresh or unrelated-session restart is required. It runs only fixed `codesign`, `--version` and `--help` commands with closed stdin. Native metadata runs under the macOS no-network, no-file-write guard. Each command has a five-second deadline and metadata is limited to 256 KiB. No prompt, slash command, login, trust or permission question is answered.
+
+## Automatic renewal on first use
+
+A vendor patch update needs no command. The first admission check that finds the selected Claude, Antigravity or Grok executable different from its approval (a send to a native peer, a worker or batch admission, a worker's first verification at spawn or resume, the parent-return readiness in `whoami`) runs the same bounded check as `--apply` once and continues. A person runs `runtime-check` only to inspect, or after a refusal.
+
+- **Same envelope, same refusals.** Signature, supported release series, strictly newer patch, required options and adapter markers are checked on one private snapshot, exactly as below. A refusal (`INCOMPATIBLE`, `PROVENANCE_UNVERIFIED`, `QUALIFICATION_REQUIRED`) is recorded for those exact bytes and is not retried; the original `CAPABILITY_MISMATCH` and its detail are returned. Revoked and retired runtimes never renew.
+- **Only the selected runtime.** An explicit executable path other than the provider's selected one, a verification against a worker's already pinned runtime and `verify(..., renew=False)` stay strict. Managed Codex never renews this way.
+- **Transient failures back off.** A check that could not complete (`CHECK_UNAVAILABLE`, `UPDATE_RACED`) is not repeated for the same bytes for 60 seconds (`compat/auto-renew.json`); the refusal is returned meanwhile.
+- **One renewal at a time.** `locks/auto-renew.lock` serializes concurrent callers (30 second wait); a caller that waited sees the renewal and proceeds.
+- **Passive views stay passive.** `doctor` and `runtime-check` without `--apply` write nothing. Quota and status-line receipts are never touched.
+- **Cost.** One bounded check (a copy of the executable, `codesign`, `--version`, `--help`, a marker scan), on the first use after an update only.
+
+`compatibility.AUTO_RENEW` is a code constant, switched off by the offline tests that assert strict verification.
 
 ## Why approvals fall behind
 
@@ -39,7 +52,7 @@ Existing `CAPABILITY_MISMATCH` error codes and legacy native-qualified `PASS`/`A
 
 | Detail | Meaning and smallest action |
 |---|---|
-| `UPDATE_UNTESTED` | Selected bytes differ; run the named bounded check. This is not an observed incompatibility. |
+| `UPDATE_UNTESTED` | Selected bytes differ. The next use renews automatically when the bounded checks pass; this detail remains only for passive views or after a transient failure, and the named command repeats the check. Not an observed incompatibility. |
 | `SUPPORTED_UPDATE` | Bounded canaries passed. Inspection has `approved:false`; after `--apply`, `approved:true` means worker/inbox admission and the state remains `SUPPORTED_UPDATE`, with native behavior `NOT_RUN`. |
 | `APPROVED` | The exact selected runtime matches a legacy qualified receipt; its recorded native scope still limits the claim. |
 | `INCOMPATIBLE` | A required option or adapter marker was observed absent. Preserve the approval and qualify/adapt the affected seam. A failed `--apply` records this observation, keyed to the exact fingerprint, for later passive doctor output. |

@@ -6,6 +6,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -30,6 +31,7 @@ CONTRACTS={
         markers=['streaming-json','PreToolUse','SessionStart','additionalContext','dontAsk']),
 }
 READ_ONLY_PROFILE='(version 1)(allow default)(deny network*)(deny file-write*)'
+RENEW_BACKOFF_SECONDS=60
 
 
 def version(value):
@@ -93,7 +95,7 @@ def check_runtime(journal,provider,*,apply=False):
     retained=document.get('retained',{}).get(provider,{}).get(runtime['sha256'],{})
     if retained.get('revoked'):refuse('REVOKED','The selected runtime was explicitly revoked; renewal cannot override it')
     if prior and prior.get('sha256')==runtime['sha256']:
-        verify(journal,provider,selected)
+        verify(journal,provider,selected,renew=False)
         bounded=bool(prior.get('update_basis'))
         return dict(result,approved=True,compatibility_state='SUPPORTED_UPDATE' if bounded else 'APPROVED',
                     reason='Selected runtime admitted by bounded checks; native behavior NOT_RUN' if bounded else 'The selected runtime is already approved')
@@ -148,6 +150,32 @@ def check_runtime(journal,provider,*,apply=False):
             result['approval_written']=True
             require(fingerprint(selected,fresh=True)==runtime,'CAPABILITY_MISMATCH','Updater changed the selected runtime after approval; run runtime-check again',
                     details=dict(result,compatibility_state='UPDATE_RACED'))
-            verify(journal,provider,selected)
+            verify(journal,provider,selected,renew=False)
             result.update(approved=True)
         return result
+
+
+def renew_selected(journal,provider,actual):
+    """First use after a supported patch update renews it once, under the same bounded checks as
+    ``runtime-check --apply``. Only the selected runtime renews and a refusal stays a refusal: it is
+    recorded, never retried for the same bytes, and a transient failure waits out a backoff."""
+    if provider not in CONTRACTS or sys.platform!='darwin':return False
+    from .usage.collectors import executable
+    try:
+        selected=fingerprint(executable(provider))
+        if any(selected[k]!=actual[k] for k in ('path','sha256','size')):return False
+        with advisory_lock(journal.root/'locks/auto-renew.lock',timeout=30):
+            document=json.loads((journal.root/'compat/runtime.json').read_text())
+            if document.get('providers',{}).get(provider,{}).get('sha256')==actual['sha256']:return True
+            if document.get('update_checks',{}).get(provider,{}).get('runtime')==actual:return False
+            marker=journal.root/'compat/auto-renew.json'
+            try:attempts=json.loads(marker.read_text())
+            except (OSError,ValueError):attempts={}
+            last=attempts.get(provider,{})
+            if last.get('sha256')==actual['sha256'] and time.time()-last.get('at',0)<RENEW_BACKOFF_SECONDS:return False
+            try:check_runtime(journal,provider,apply=True)
+            except PeerError:
+                atomic_json(marker,dict(attempts,**{provider:dict(sha256=actual['sha256'],at=time.time())}))
+                return False
+            return True
+    except (OSError,TimeoutError,ValueError,KeyError):return False

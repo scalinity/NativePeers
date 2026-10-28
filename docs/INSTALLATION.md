@@ -55,7 +55,7 @@ Usage intelligence and its exact commands, native sources, installation, freshne
 
 ## Claude executable maintenance
 
-Routine supported patches use `npeer runtime-check --provider claude --apply --json`. It checks the signed adapter support envelope without model input and renews only worker/inbox approval. Run without `--apply` for read-only inspection. See [runtime updates](RUNTIME_UPDATES.md) for supported series, races, separate quota checks and diagnostic details.
+Routine supported patches renew automatically on first use after the update; `npeer runtime-check --provider claude --apply --json` runs the same check by hand. It checks the signed adapter support envelope without model input and renews only worker/inbox approval. Run without `--apply` for read-only inspection. See [runtime updates](RUNTIME_UPDATES.md) for supported series, races, separate quota checks and diagnostic details.
 
 The following native qualification is for a changed seam or a release outside that envelope. It requires the explicit input authorization described below; routine renewal never launches it automatically.
 

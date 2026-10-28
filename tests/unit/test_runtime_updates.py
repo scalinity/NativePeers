@@ -3,6 +3,7 @@ import asyncio
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 from unittest.mock import patch
 
@@ -154,7 +155,7 @@ def test_inspect_is_read_only_and_revoked_or_retired_runtime_cannot_be_renewed(r
         result=check_runtime(j,'claude')
         assert result['compatibility_state']=='SUPPORTED_UPDATE' and not result['approved']
         assert receipt.read_bytes()==before
-        with pytest.raises(PeerError):verify(j,'claude',binary)
+        with pytest.raises(PeerError):verify(j,'claude',binary,renew=False)
         check_runtime(j,'claude',apply=True)
         update_verified(j,{'claude':prior})
         for revoked in (False,True):
@@ -293,3 +294,90 @@ def test_quota_readiness_does_not_inherit_worker_operation_details(runtime):
         quota=operation_readiness(j)[0]['operations']['quota']
     assert quota['operation']=='quota-read' and 'operations' not in quota
     assert quota['compatibility_state']=='UPDATE_UNTESTED'
+
+
+def counted(original,calls):
+    base=signed_run(original)
+    def run(argv,**kwargs):
+        calls.append(argv[0]);return base(argv,**kwargs)
+    return run
+
+
+def test_first_use_after_a_supported_patch_renews_once(runtime):
+    j,binary,prior=runtime;calls=[];original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=counted(original,calls)):
+        assert verify(j,'claude',binary)==fingerprint(binary)
+        approval=json.loads((j.root/'compat/runtime.json').read_text())['providers']['claude']
+        assert approval['sha256']==fingerprint(binary)['sha256'] and approval['update_basis']['previous']==prior['sha256']
+        assert approval['native_acceptance']=='NOT_RUN' and approval['operations']==['worker_turns','inbox']
+        seen=len(calls);assert seen
+        assert verify(j,'claude',binary)==fingerprint(binary) and len(calls)==seen
+
+
+def test_a_refused_update_is_recorded_and_not_retried_on_later_use(runtime):
+    j,binary,_=runtime
+    binary.write_text(binary.read_text().replace('--restricted','--removed-restriction'))
+    receipt=j.root/'compat/runtime.json';before=json.loads(receipt.read_text())['providers'];calls=[];original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=counted(original,calls)):
+        with pytest.raises(PeerError) as error:verify(j,'claude',binary)
+        assert error.value.details['compatibility_state']=='INCOMPATIBLE'
+        seen=len(calls);assert seen
+        with pytest.raises(PeerError) as again:verify(j,'claude',binary)
+        assert again.value.details['compatibility_state']=='INCOMPATIBLE' and len(calls)==seen
+    assert json.loads(receipt.read_text())['providers']==before
+
+
+def test_only_the_selected_runtime_renews_and_strict_verification_never_does(runtime,tmp_path):
+    j,binary,_=runtime;calls=[];original=subprocess.run
+    elsewhere=tmp_path/'elsewhere';elsewhere.write_text('another build')
+    with patch('nativepeers.usage.collectors.executable',return_value=elsewhere),patch('subprocess.run',side_effect=counted(original,calls)):
+        with pytest.raises(PeerError) as error:verify(j,'claude',binary)
+    assert error.value.details['compatibility_state']=='UPDATE_UNTESTED' and not calls
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=counted(original,calls)):
+        with pytest.raises(PeerError) as strict:verify(j,'claude',binary,renew=False)
+    assert strict.value.details['compatibility_state']=='UPDATE_UNTESTED' and not calls
+
+
+def test_a_transient_failure_backs_off_then_retries_and_codex_is_left_alone(runtime):
+    from nativepeers.runtime_updates import renew_selected
+    j,binary,_=runtime;calls=[]
+    def timing_out(argv,**kwargs):
+        calls.append(argv[0]);raise subprocess.TimeoutExpired(argv,5)
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=timing_out):
+        for _ in range(2):
+            with pytest.raises(PeerError) as error:verify(j,'claude',binary)
+            assert error.value.details['compatibility_state']=='UPDATE_UNTESTED'
+        assert len(calls)==1
+        with patch('nativepeers.runtime_updates.time.time',return_value=time.time()+120):
+            with pytest.raises(PeerError):verify(j,'claude',binary)
+        assert len(calls)==2
+        assert renew_selected(j,'codex',fingerprint(binary)) is False and len(calls)==2
+
+
+def test_revoked_or_retired_runtime_is_never_renewed_on_use(runtime):
+    from nativepeers.runtime_updates import check_runtime
+    from nativepeers.compatibility import revoke
+    j,binary,prior=runtime;original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        check_runtime(j,'claude',apply=True);update_verified(j,{'claude':prior})
+    for revoked in (False,True):
+        if revoked:revoke(j,'claude',fingerprint(binary)['sha256'])
+        calls=[]
+        with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=counted(original,calls)):
+            with pytest.raises(PeerError) as error:verify(j,'claude',binary)
+        assert error.value.details['compatibility_state']==('REVOKED' if revoked else 'QUALIFICATION_REQUIRED') and not calls
+
+
+def test_a_worker_without_a_pinned_runtime_renews_but_a_pinned_one_stays_strict(runtime):
+    j,binary,prior=runtime;original=subprocess.run;now=fingerprint(binary)
+    def worker(worker_id,lease):
+        j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+                     (worker_id,None,None,'claude',None,'role',None,None,None,'/tmp',None,'RESERVED',1,json.dumps(lease)))
+        j.db.commit()
+    worker('pinned',dict(verified_runtime=now));worker('fresh',{})
+    calls=[]
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=counted(original,calls)):
+        with pytest.raises(PeerError) as error:verify(j,'claude',binary,worker_id='pinned')
+        assert error.value.details['compatibility_state']=='UPDATE_UNTESTED' and not calls
+        assert verify(j,'claude',binary,worker_id='fresh')==now and calls
+
