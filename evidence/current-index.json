@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "22195967ba8d70d87876420215140195b6c73269",
-  "reviewed_commit": "68fc83a98911b7c03b764a29db8b7bb1863ef751",
-  "publication_branch": "fix/runtime-approvals-issue-4",
-  "updated_at": "2026-10-26T19:48:56.255274-04:00",
-  "current_record": "evidence/runtime-approvals-issue-4.json",
+  "code_commit": "25980f39653ad7b0001d4d380f2cfffb8749ce01",
+  "reviewed_commit": "f978f0fb7cf522a18e1a2dab6d2b1bc6e6c846c9",
+  "publication_branch": "fix/auto-renew-native-updates",
+  "updated_at": "2026-10-27T23:21:07.253589-04:00",
+  "current_record": "evidence/runtime-auto-renew.json",
   "file_classes": {
     "product": {
       "files": {
@@ -23,7 +23,7 @@
         "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
         "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
         "nativepeers/cli.py": "03fd23dc15df04081200df4c71237af19e196dabc8fc04a0bf23d5c32c46b775",
-        "nativepeers/compatibility.py": "3dced17990544c81f194a65080c42a2f05945158e4bb74917399a2d4db55ca8f",
+        "nativepeers/compatibility.py": "33dee50c11e571c1b706fac2359bcade975839dde602169007abf9bb4856e6b0",
         "nativepeers/completion_delivery.py": "7617097e4fc4310f5532810121ea1b9dc49e2878379e99b15055b139178b9f78",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
         "nativepeers/core.py": "9bbb0b97bc7100c6c27a66fa46899bf7db798da2fb147111ea6160fa8eff5aa5",
@@ -59,7 +59,7 @@
         "nativepeers/recovery.py": "50025afac127c99e926ead24455d0dd8b6b64d39977546ddd79f061e3465fd9e",
         "nativepeers/registry.py": "0a36a1e1f22911ffe85da38d5fc57004790da9ddf5f530854af7beae4f60acb0",
         "nativepeers/routing.py": "2678f4c1154223e0725d227be87f38bac9a5c180db4c7759e24abd1ffdfccad6",
-        "nativepeers/runtime_updates.py": "5fdcece1d051e8bf37fd6166f109c3885a23ad82ad1e0a25c506ff8360fffd1d",
+        "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
         "nativepeers/supervisor.py": "24c194849ef7b86bb9bef8142a7e8318ee5be68d7a47be6edd3d92a9d6b0a2e1",
         "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
         "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
@@ -94,7 +94,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 84,
-      "sha256": "45b42b75fa23080cd496a0957845fdc2c18229f598b836ad362aca5f60b0d525"
+      "sha256": "07583004bfff3b6abc81cc507c891cbea3687f615661149348c0ac29590864e6"
     },
     "launchers": {
       "files": {
@@ -229,7 +229,7 @@
         "tests/unit/test_review_quota_boundaries.py": "4c9ee5bc0fdff91955e8ecab99af7d678eed0739b59f94f6ffe7962dfd2fd07a",
         "tests/unit/test_routing.py": "9fceb768781f94fe4e2163942774f991c6b235683af6453c3e8ae9bac57e712e",
         "tests/unit/test_runtime_initialization.py": "5d80859721558b9e9a5a81fc91bbd3e019c3d68689d4b88889d7ca9500412e7a",
-        "tests/unit/test_runtime_updates.py": "4bc4f3e9c05ef8c3f291fce38142d078f38b813cd9f0333b04b199a450324576",
+        "tests/unit/test_runtime_updates.py": "8008694ac924dfe5ebac8e211728777e52df889468178c92ff8ab341e9c97046",
         "tests/unit/test_spawn_check.py": "ba7332618fc6e2ed5a9f05d0f7cdd3a5fb68a49957ffbdfc9724a757244c455e",
         "tests/unit/test_usage.py": "a71c89de019e4c8fd603c3de78de2bde36660c8619523370e2378c10c0618b7d",
         "tests/unit/test_usage_batch_layout.py": "c27d5138d25ceb4bcf5f0083c08abfc2330dcc64a27d3813ceea074ed453cd61",
@@ -251,99 +251,18 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 131,
-      "sha256": "af2d4fd0b0a15b8b833be8b607d88a72d87d77f8ffc0e9cb3ea69a9655c74cef"
+      "sha256": "c07c43904769d1e1af99468689dc86c466fb87a2120679b366363f2ae47594a3"
     }
   },
   "operation_checks": [
     {
       "provider": "claude",
-      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
-      "operation": "signed-update-metadata-and-temporary-approval",
+      "runtime_sha256": "6b5ec691195e551b02c41df9f7d723f4ea61eaa03c2df90acefe3736f1aeb620",
+      "operation": "first-use-automatic-renewal",
       "status": "PASS",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "claude",
-      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
-      "operation": "worker-execution",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No native qualification model input authorized",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "claude",
-      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
-      "operation": "native-inbox-ingestion",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No disposable native message qualification authorized",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "claude",
-      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
-      "operation": "bound-mcp",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Effective native inventory not exercised for issue 4",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "claude",
-      "runtime_sha256": "85d8c08707fcfd1e78ffa0204eefbc6ec9e4fe22f375fb2767ef85d957ed3161",
-      "operation": "quota-transport",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Independent quota receipts and freshness qualification unchanged",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "antigravity",
-      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
-      "operation": "signed-update-metadata-and-temporary-approval",
-      "status": "PASS",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Fixed signature/help/version/marker checks and admission in a temporary journal; zero model input, daily receipt unchanged",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "antigravity",
-      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
-      "operation": "worker-execution",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No native qualification model input authorized",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "antigravity",
-      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
-      "operation": "native-inbox-ingestion",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "No disposable native message qualification authorized",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "antigravity",
-      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
-      "operation": "bound-mcp",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Effective native inventory not exercised for issue 4",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
-    },
-    {
-      "provider": "antigravity",
-      "runtime_sha256": "b7a13e53c9f49921692676ef8edc2e60ceb67064c00bc732d9a364ec3ad75b32",
-      "operation": "quota-transport",
-      "status": "NOT_RUN",
-      "parent_context": "temporary journal; no native parent qualification",
-      "scope": "Independent quota receipts and freshness qualification unchanged",
-      "source_head": "68fc83a98911b7c03b764a29db8b7bb1863ef751"
+      "parent_context": "installed state root; npeer whoami through the fixed worktree code; zero model input",
+      "scope": "Fixed signature, version, option and marker checks on one private snapshot, then update_verified; completed in 3.2 seconds; native acceptance NOT_RUN",
+      "source_head": "25980f39653ad7b0001d4d380f2cfffb8749ce01"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

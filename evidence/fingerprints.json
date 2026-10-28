@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-26T19:48:56.255274-04:00",
+  "at": "2026-10-27T23:21:07.253589-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,8 +60,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "22195967ba8d70d87876420215140195b6c73269",
-  "current_verification": "evidence/runtime-approvals-issue-4.json",
+  "code_commit": "25980f39653ad7b0001d4d380f2cfffb8749ce01",
+  "current_verification": "evidence/runtime-auto-renew.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
     "acceptance": "evidence/acceptance.json extensions.models_antigravity_implementation",
@@ -145,7 +145,7 @@
     "nativepeers/claude_stream.py": "13a5e0425037e9846df2da23beff04f244c469b3294d865806f9bc4080987ec2",
     "nativepeers/cleanup.py": "1be9b079b24a29b5f1b4a0690bb41d47ce7f5844ebd4560933e0a6c18b87f2dc",
     "nativepeers/cli.py": "03fd23dc15df04081200df4c71237af19e196dabc8fc04a0bf23d5c32c46b775",
-    "nativepeers/compatibility.py": "3dced17990544c81f194a65080c42a2f05945158e4bb74917399a2d4db55ca8f",
+    "nativepeers/compatibility.py": "33dee50c11e571c1b706fac2359bcade975839dde602169007abf9bb4856e6b0",
     "nativepeers/completion_delivery.py": "7617097e4fc4310f5532810121ea1b9dc49e2878379e99b15055b139178b9f78",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "9bbb0b97bc7100c6c27a66fa46899bf7db798da2fb147111ea6160fa8eff5aa5",
@@ -181,7 +181,7 @@
     "nativepeers/recovery.py": "50025afac127c99e926ead24455d0dd8b6b64d39977546ddd79f061e3465fd9e",
     "nativepeers/registry.py": "0a36a1e1f22911ffe85da38d5fc57004790da9ddf5f530854af7beae4f60acb0",
     "nativepeers/routing.py": "2678f4c1154223e0725d227be87f38bac9a5c180db4c7759e24abd1ffdfccad6",
-    "nativepeers/runtime_updates.py": "5fdcece1d051e8bf37fd6166f109c3885a23ad82ad1e0a25c506ff8360fffd1d",
+    "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
     "nativepeers/supervisor.py": "24c194849ef7b86bb9bef8142a7e8318ee5be68d7a47be6edd3d92a9d6b0a2e1",
     "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
     "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
