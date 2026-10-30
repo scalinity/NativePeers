@@ -13,6 +13,7 @@ from mcp.types import Tool, ListToolsResult, CallToolResult, TextContent
 
 from .errors import PeerError, require
 from .journal import Journal
+from .models import WAIT_MAX_MS
 from .receipts import delivery_error
 from .registry import Registry
 from .caller import bind_caller, read_binding
@@ -37,7 +38,7 @@ TOOLS={
  'worker_resume':('Resume an exact released owned native worker. Reuse the same request ID and identical arguments after a lost response; input is never replayed.',object_schema({'worker_id':STRING,'task':STRING,'completion_mode':{'enum':['push','wait']},'client_request_id':STRING},['worker_id','task','client_request_id'])),
  'task_groups':('List this bound parent\'s retained delegations without claiming notifications.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'cursor':STRING})),
  'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'explain_selection':{'type':'boolean'},'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
- 'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':30000},'on_timeout':{'enum':['push','retain']}},['handle'])),
+ 'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':WAIT_MAX_MS},'on_timeout':{'enum':['push','retain']}},['handle'])),
  'task_result':('Read retained immutable attributed results; optionally include up to 16 authorized artifact pages of 16 KiB.',object_schema({'handle':STRING,'include_artifacts':{'type':'boolean'}},['handle'])),
  'task_cancel':('Cancel only work owned by this caller.',object_schema({'handle':STRING,'reason':STRING},['handle','reason'])),
  'artifact_read':('Read a registered artifact page within the caller grant.',object_schema({'handle':STRING,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':262144}},['handle'])),

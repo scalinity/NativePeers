@@ -50,6 +50,19 @@ Contract: docs/CLAUDE_LINEAGE_MOD.md rev 1.0 (sha256 e9e03790…40b9) · kickoff
 
 ---
 
+# Spawn limits issue 3 — source change for review
+
+- [x] Separate omitted-request defaults (1800 seconds / 8 logical inputs / 128 native rounds) from optional operator ceilings; retain existing policy keys as ceilings.
+- [x] Remove the implicit group cutoff, reject an explicit shorter group ceiling before planning, and preserve requested limits through resume and fallback.
+- [x] Expose effective limits and sources in spawn checks and doctor; identify configured ceiling errors and native-round exhaustion.
+- [x] Document defaults, ceilings and all four providers' counter meanings; retain schema version 1 and validate every spawn example.
+- [x] Pass the unchanged focused baseline: 56 tests / 62 subtests. Pass the candidate focused checks: 127 tests / 174 subtests, including the unchanged 30000 ms wait bound.
+- [x] Reproduce and correct the independent Sol review finding: parent-loss shutdown records a JSON-safe unset deadline. Recheck lifecycle, profile, fallback, selected-home and supervisor behavior: 45 tests / 34 subtests.
+
+The pull request records the final-head complete-suite result and independent-review dispositions. The installed-verification fingerprint checks remain unchanged and detect candidate source drift from the installed snapshot; evidence is not regenerated for this unmerged source change. Installed-runtime acceptance is not run. Main remains the installed runtime and is updated only after pull-request review and merge. Runtime-update approval interruptions are tracked separately in issue 4.
+
+---
+
 # Quiet close-out notifications — implemented, verified and published
 
 - [x] Stable-peer close-out policy: `notifications open|close|status`, MCP `peer_notifications`, durable cutoffs, pre-submission `RETAINED`, and `inbox --retained`.

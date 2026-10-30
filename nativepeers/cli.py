@@ -14,7 +14,7 @@ from .core import Core
 from .errors import PeerError,require
 from .files import canonical
 from .journal import Journal
-from .models import CONTROL_RESPONSE,new_id
+from .models import CONTROL_RESPONSE,WAIT_MAX_MS,new_id
 from .process import matches
 from .receipts import delivery_error
 
@@ -47,7 +47,7 @@ def parser():
         if name=='status':q.add_argument('--explain-selection',action='store_true');q.add_argument('--refresh',action='store_true');q.add_argument('--scan-cursor');q.add_argument('--scan-max-bytes',type=int)
         if name=='result':q.add_argument('--include-artifacts',action='store_true')
         if name=='wait':
-            q.add_argument('--timeout-ms',type=int,default=30000,help='Bounded wait in milliseconds: 1 <= timeout-ms <= 30000 (default: 30000); larger values are rejected')
+            q.add_argument('--timeout-ms',type=int,default=WAIT_MAX_MS,help=f'Bounded wait in milliseconds: 1 <= timeout-ms <= {WAIT_MAX_MS} (default: {WAIT_MAX_MS}); larger values are rejected')
             q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
     q=command('activity');q.add_argument('worker_id');q.add_argument('--after',type=int,default=0);q.add_argument('--wait-ms',type=int,default=0)
@@ -208,12 +208,13 @@ async def dispatch(args,journal):
             except Exception as error:value=dict(value,mod_compatibility=dict(verdict='NOT_RUN',reason=type(error).__name__+': '+str(error)[:300]))
         return value
     if name=='doctor':
+        from .policy import load,spawn_limits
         from .compatibility import diagnose
         from .readiness import readiness,operation_readiness
         from .usage.install import readiness as usage_readiness
         require(not args.live,'BUDGET_EXHAUSTED','Live doctor never submits models automatically; use the explicit approved live harness and durable budget')
         from .bridge_backend import live_bridges
-        return dict(operation_readiness=operation_readiness(journal),compatibility=diagnose(journal),integrations=readiness(journal),usage_collection=usage_readiness(journal),registered_peers=core.registry.list(include_offline=True),
+        return dict(limits=spawn_limits(load(journal)),operation_readiness=operation_readiness(journal),compatibility=diagnose(journal),integrations=readiness(journal),usage_collection=usage_readiness(journal),registered_peers=core.registry.list(include_offline=True),
             bridge=dict(mode='session-scoped',daemon=False,live=live_bridges(journal)),
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED','SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
