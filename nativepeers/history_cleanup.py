@@ -102,7 +102,7 @@ def _released(journal, row):
     require(owner.get('owner') and owned_status(owner['owner']) == 'DEAD', 'OWNERSHIP_CONFLICT', 'Group supervisor is live or its ownership is unknown')
     require(not owner.get('cleanup_unresolved'), 'CLEANUP_UNCERTAIN', 'Group retains unresolved process cleanup')
     routes = journal.all('SELECT state,mode,waiter_id,lease_deadline FROM completion_routes WHERE group_id=?', (row['group_id'],))
-    require(not any(r['state'] in ('WAIT_LEASED', 'PUSH_SUBMITTING', 'HELD') or
+    require(not any(r['state'] in ('WAIT_LEASED', 'PUSH_SUBMITTING', 'HELD', 'MIRROR_PENDING', 'MIRROR_SURFACING') or
                     r['state'] == 'UNCLAIMED' and r['mode'] == 'push' for r in routes),
             'OWNERSHIP_CONFLICT', 'Group has a waiter or unresolved completion ownership')
     return dict(generation=row['generation'], process_closure=closure, task_count=len(tasks), supervisor='DEAD')

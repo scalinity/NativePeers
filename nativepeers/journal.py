@@ -100,6 +100,13 @@ CREATE TABLE IF NOT EXISTS task_usage (task_id TEXT NOT NULL,attempt_index INTEG
  PRIMARY KEY(task_id,attempt_index));
 CREATE TABLE IF NOT EXISTS activity_index (worker_id TEXT NOT NULL,generation INTEGER NOT NULL,task_id TEXT NOT NULL,
  first_seq INTEGER NOT NULL,last_seq INTEGER NOT NULL,terminal_seq INTEGER,PRIMARY KEY(worker_id,generation,task_id));
+CREATE TABLE IF NOT EXISTS task_delivery (task_id TEXT PRIMARY KEY,group_id TEXT NOT NULL,completion_generation INTEGER NOT NULL,
+ owner TEXT NOT NULL,origin TEXT,claude_session TEXT,claude_agent_id TEXT,created_at REAL NOT NULL);
+CREATE INDEX IF NOT EXISTS task_delivery_route ON task_delivery(group_id,completion_generation);
+CREATE TABLE IF NOT EXISTS mirror_leases (worker_id TEXT PRIMARY KEY,claude_session TEXT NOT NULL,claude_agent_id TEXT,
+ parent_key TEXT NOT NULL,display_only INTEGER NOT NULL,attached_at REAL NOT NULL,expires_at REAL NOT NULL);
+CREATE TABLE IF NOT EXISTS bridge_requests (caller_key TEXT NOT NULL,operation TEXT NOT NULL,client_request_id TEXT NOT NULL,
+ payload_sha256 TEXT NOT NULL,request_json TEXT NOT NULL,response_json TEXT,at REAL NOT NULL,PRIMARY KEY(caller_key,operation,client_request_id));
 CREATE TABLE IF NOT EXISTS @POLICY@;
 CREATE INDEX IF NOT EXISTS messages_exchange ON messages(exchange_id);
 PRAGMA user_version=1;

@@ -386,6 +386,24 @@ int main(int argc, char **argv) {
         self.assertFalse(replacement.fallback_pending)
         self.assertEqual(self.j.one('SELECT COUNT(*) n FROM tasks')['n'],1)
 
+    async def test_a_mirror_lease_and_the_bridge_follow_the_task_to_its_replacement(self):
+        from nativepeers import mirror
+        from nativepeers.bridge_backend import NativeBackend
+        worker,task,result=await self.setup_worker();session=new_id();old=worker.row['worker_id']
+        with self.j.transaction() as db:mirror.grant(db,old,session,'agent1',self.caller.key,display_only=False)
+        backend=NativeBackend(self.j,self.registry.get(self.caller.key),session)
+        pending=await self.primary_failure(worker,task)
+        self.assertEqual((await backend.activity(old,0,0,512,None))['continued_by'],dict(state='pending',from_generation=1,task_id=task['task_id']))
+        group=Group(self.j,result['group_id']);rows=[]
+        with patch.object(group,'start_worker',new_callable=AsyncMock,side_effect=lambda row:rows.append(row)),patch.object(group,'send_worker',new_callable=AsyncMock):
+            await group.advance_fallback(pending)
+        replacement=rows[0]['worker_id']
+        self.assertEqual((await backend.activity(old,0,0,512,None))['continued_by'],dict(state='moved',from_generation=1,worker_id=replacement,task_id=task['task_id'],generation=1))
+        self.assertEqual(mirror.live_lease(self.j,replacement)['claude_agent_id'],'agent1');self.assertIsNone(mirror.live_lease(self.j,old))
+        self.assertEqual(mirror.route(self.j,replacement,task_id=task['task_id'])['generation'],1)
+        rows={r['workerId']:r for r in (await backend.lineage(None,0))['workers']}
+        self.assertEqual(rows[old]['continuedBy']['worker_id'],replacement);self.assertIsNone(rows[replacement]['continuedBy'])
+
     async def test_non_git_editing_fallback_keeps_selected_frozen_bytes(self):
         # Keep the fixture's existing identity when removing its only Git config.
         # No host configuration or product commit identity is changed.

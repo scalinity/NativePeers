@@ -57,7 +57,7 @@ class Worker:
         self.queue=asyncio.Queue(maxsize=32);self.owner=identity(os.getpid()).json()
         self.provider=None;self.provider_identity=None;self.provider_descendants={};self.provider_monitor=None;self.provider_cleanup=None;self.client=None;self.native=self.row['native_id'];self.turn=None
         self.stopping=False;self.shutdown_reason=None;self.running_task=None;self.tasks_started=task_slots(self.row)['used'];self.retire_after_task=False
-        self.canceling_task=None;self.turn_task=None
+        self.canceling_task=None;self.turn_task=None;self.interrupting=False;self.partial=''
         self.expected_native=self.native;self.model_observed=self.row['model_observed']
         self.fallback_pending=False;self.input_submitted=False
         self.activity=Recorder(journal,worker_id,self.row['group_id'],self.row['provider'],lease=self.lease,cwd=self.row['cwd'],turn=lambda:self.turn)
@@ -195,7 +195,7 @@ class Worker:
         self.tasks_started+=1
         self.lease.update(logical_tasks_used=min(self.tasks_started,self.spec.get('max_task_turns',8)),logical_tasks_generation=self.row['generation'])
         self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=? AND generation=?',(canonical(self.lease).decode(),self.row['worker_id'],self.row['generation']))
-        self.running_task=task_id;started=time.time();self.turn=None;self.input_submitted=False
+        self.running_task=task_id;started=time.time();self.turn=None;self.input_submitted=False;self.partial=''
         task_row=self.journal.one('SELECT task_json FROM tasks WHERE task_id=?',(task_id,))
         task_spec=json.loads(task_row['task_json']);deadline=task_spec.setdefault('deadline',started+self.spec.get('wall_time_seconds',1800))
         task_spec.setdefault('input_text',text)
@@ -253,7 +253,10 @@ class Worker:
                 result.update(status='interrupted',error={'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':self.shutdown_reason})
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
         scoped_cancel=self.canceling_task==task_id and not self.stopping
-        if (self.stopping or scoped_cancel) and result['status'] in ('failed','canceled'):
+        if scoped_cancel and self.interrupting and result['status'] in ('failed','canceled'):
+            # An explicit interrupt ends only this turn: its own outcome, with whatever the turn produced so far.
+            result.update(status='interrupted',text=result.get('text') or self.partial,error={'code':'USER_INTERRUPTED','native_error':result.get('error')})
+        elif (self.stopping or scoped_cancel) and result['status'] in ('failed','canceled'):
             result['status']='canceled';result['error']={'code':self.shutdown_reason or 'USER_CANCELED','native_error':result.get('error')}
         row=self.journal.one('SELECT peer_key FROM workers WHERE worker_id=?',(self.row['worker_id'],))
         findings,checks,report_limits=extract(result.get('text',''))
@@ -323,7 +326,7 @@ class Worker:
         self.turn_task=None
         if scoped_cancel:
             await self.close_provider()
-            self.canceling_task=None
+            self.canceling_task=None;self.interrupting=False
             if not self.stopping:
                 self.retire_after_task=False
                 if self.row['provider']=='codex':
@@ -334,9 +337,20 @@ class Worker:
         if reservation:budget.settle(reservation,observed_turns=1,native_id=self.native)
         await self.activity.flush()
 
-    async def cancel_task(self,task_id):
+    async def steer(self,event):
+        """Codex turn/steer into the running turn ({threadId, expectedTurnId, input} in the installed schema). An RPC error is a definite refusal."""
+        outcome=dict(steered=False)
+        try:
+            if self.client and self.running_task==event['task_id'] and self.turn and self.canceling_task is None:
+                await self.client.call('turn/steer',{'threadId':self.native,'expectedTurnId':self.turn,'input':[{'type':'text','text':event['text']}]},timeout=5)
+                outcome['steered']=True;self.activity.emit('input.queued',event['input'],event='turn/steer')
+        except ProviderError as error:outcome['error']={'code':'STEER_REFUSED','native_error':error.error}
+        except Exception as error:outcome.update(uncertain=True,error={'code':'DELIVERY_UNKNOWN','message':type(error).__name__})
+        self.emit('steered',request_id=event['request_id'],task_id=event['task_id'],**outcome)
+
+    async def cancel_task(self,task_id,*,interrupt=False):
         if self.running_task!=task_id:return
-        self.canceling_task=task_id
+        self.canceling_task=task_id;self.interrupting=interrupt
         await self.interrupt()
         turn=self.turn_task
         if self.running_task==task_id and turn and not turn.done():
@@ -383,7 +397,7 @@ class Worker:
                 usage=codex_tokens(params)
             if method=='item/completed' and params.get('turnId')==self.turn:
                 item=params['item']
-                if item.get('type')=='agentMessage':items[item['id']]=item
+                if item.get('type')=='agentMessage':items[item['id']]=item;self.partial=item.get('text') or self.partial
             if method=='turn/completed' and params['turn']['id']==self.turn:
                 terminal=params['turn']
                 for item in terminal.get('items',[]):
@@ -439,6 +453,8 @@ class Worker:
                     self.ingested()
                     self.journal.event(self.running_task,'native-task-started',{'native_id':self.native,'turn_id':self.turn,'at':time.time()})
                 if event.get('type')=='assistant':
+                    texts=[b.get('text') for b in event.get('message',{}).get('content') or [] if isinstance(b,dict) and b.get('type')=='text' and b.get('text')]
+                    if texts and not synthetic:self.partial='\n'.join(texts)
                     if not synthetic and event.get('message',{}).get('model'):
                         self.bind(event['session_id'],model=event['message']['model'])
                 if event.get('type')=='result':terminal=event
@@ -738,7 +754,7 @@ class Worker:
 
 async def run(worker_id,lease_fd):
     journal=Journal();worker=Worker(journal,worker_id)
-    main_task=asyncio.current_task()
+    main_task=asyncio.current_task();steering=set()
     async def commands():
         while line:=await asyncio.to_thread(sys.stdin.buffer.readline,65537):
             require(len(line)<=65536,'PAYLOAD_TOO_LARGE','Worker control request too large')
@@ -746,10 +762,14 @@ async def run(worker_id,lease_fd):
             if event['operation']=='cancel':
                 worker.shutdown_reason=event.get('reason','USER_CANCELED');worker.stopping=True;await worker.interrupt()
             elif event['operation']=='cancel-task':await worker.cancel_task(event['task_id'])
+            elif event['operation']=='interrupt-task':await worker.cancel_task(event['task_id'],interrupt=True)
+            elif event['operation']=='steer':steering.add(task:=asyncio.create_task(worker.steer(event)));task.add_done_callback(steering.discard)
             elif event['operation']=='release':
                 worker.shutdown_reason=worker.shutdown_reason or event.get('reason','WORKER_RELEASED')
                 worker.stopping=True;await worker.interrupt();await worker.queue.put(None);return
-            elif event['operation']=='task':await worker.queue.put(event)
+            elif event['operation']=='task':
+                if event.get('input') and worker.running_task:worker.activity.emit('input.queued',event['input'],event='controller/input')
+                await worker.queue.put(event)
         worker.shutdown_reason=worker.shutdown_reason or 'CONTROL_STREAM_CLOSED'
         worker.stopping=True;await worker.interrupt();await worker.queue.put(None)
     async def lease():

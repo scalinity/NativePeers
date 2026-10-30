@@ -35,6 +35,7 @@ HEARTBEAT_LOSS = 60
 OWNER_CHECK = 2
 IDLE = 600
 LEASE_RENEW = 10
+HEARTBEAT_FRESH = 30
 READ_TIMEOUT = 10
 
 
@@ -81,6 +82,7 @@ ROUTES = [
     ('GET', r'/v1/catalog', 'catalog'),
     ('GET', r'/v1/lineage', 'lineage'),
     ('POST', r'/v1/spawn', 'spawn'),
+    ('POST', r'/v1/rebind', 'rebind'),
     ('GET', r'/v1/bindings/(?P<agent>[A-Za-z0-9_-]{1,128})', 'binding'),
     ('GET', r'/v1/mirror/status', 'mirror_status'),
     ('POST', r'/v1/mirror/(?P<op>attach|surfacing|ack|fault|release|fallthrough)', 'mirror'),
@@ -143,7 +145,8 @@ class Bridge:
                 if not await self.backend.owner_alive():self.stop('owner-exited');break
             if now >= renew_due:
                 renew_due = now + self.lease_renew
-                await self.backend.renew_leases()
+                # Leases are renewed only while the mod's heartbeats arrive; otherwise they lapse by TTL.
+                if now - self.last_heartbeat <= HEARTBEAT_FRESH:await self.backend.renew_leases()
             if not self.active and now - self.last_request > self.idle and not self.backend.has_leases():self.stop('idle');break
             await asyncio.sleep(0.5)
 
@@ -213,6 +216,7 @@ class Bridge:
         if name == 'catalog':return await backend.catalog()
         if name == 'lineage':return await backend.lineage((query.get('cursor') or [None])[0], wait_ms(query))
         if name == 'spawn':return await backend.spawn(body)
+        if name == 'rebind':return await backend.rebind(body)
         if name == 'binding':return await backend.binding(path['agent'], wait_ms(query))
         if name == 'mirror_status':return await backend.mirror_status()
         if name == 'mirror':return await backend.mirror(path['op'], body)

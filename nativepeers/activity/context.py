@@ -6,8 +6,11 @@ as `interrupted` (`Worker.codex_turn` maps that native status to canceled). `int
 or its supervisor is lost mid-task (DELIVERY_UNKNOWN_AFTER_OWNER_LOSS), and what the recorder writes for a task it finds
 unfinished after a crash. The provider's own word is kept in `task.terminal.data.native_status` (Codex `turn.status`, Claude
 `result.terminal_reason` or `subtype`). A `canceled` terminal with `native_status: interrupted` and no `error` is a provider-side
-interrupt nobody requested; a cancel request carries `error.code` USER_CANCELED. The explicit interrupt path (M2) will record
-`interrupted` itself.
+interrupt nobody requested; a cancel request carries `error.code` USER_CANCELED. The explicit interrupt operation records
+`interrupted` with `error.code` USER_INTERRUPTED and the turn's partial text.
+
+`generation` is the task generation: the task's 1-based place among its worker's tasks, so every follow-up, in grace or after
+a resume, starts a new one (the worker incarnation stays in workers.generation).
 """
 from __future__ import annotations
 
@@ -38,17 +41,21 @@ def fallback_context(journal, row, task_id, attempt):
 def begin_task(recorder, journal, row, task_id, task_spec, text):
     """Start the task's generation. Journal lookups only enrich it: when one fails the task still starts, with defaults."""
     attempt = task_spec.get('attempt_index', 0) if isinstance(task_spec, dict) else 0
-    origin = task_spec.get('origin') if task_spec.get('origin') in ORIGINS else 'fallback' if attempt else 'parent-model'
-    request = fallback = None
+    origin = {'human-claude-view': 'human'}.get(task_spec.get('origin'), task_spec.get('origin'))
+    origin = origin if origin in ORIGINS else 'fallback' if attempt else 'parent-model'
+    request = fallback = None;generation = row['generation']
     try:
-        request = journal.one('SELECT client_request_id FROM resume_requests WHERE task_id=?', (task_id,))
+        from ..mirror import task_generation
+        generation = task_generation(journal, task_id) or generation
+        request = {'client_request_id': task_spec['client_request_id']} if task_spec.get('client_request_id') else None
+        request = request or journal.one('SELECT client_request_id FROM resume_requests WHERE task_id=?', (task_id,))
         if not request and task_spec.get('initial'):
             request = journal.one('SELECT client_request_id FROM spawn_requests WHERE group_id=? LIMIT 1', (row['group_id'],))
         if attempt:
             fallback = fallback_context(journal, row, task_id, attempt)
     except Exception:
         pass
-    recorder.begin(task_id, row['generation'], origin=origin, client_request_id=request['client_request_id'] if request else None, input_preview=text)
+    recorder.begin(task_id, generation, origin=origin, client_request_id=request['client_request_id'] if request else None, input_preview=text)
     if fallback:
         recorder.emit('fallback.started', fallback, event='controller/fallback', critical=True)
 

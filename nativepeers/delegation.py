@@ -71,6 +71,12 @@ class Delegation:
         require(request.get('completion_mode','push') in ('push','wait'),'PROTOCOL_ERROR','Invalid completion mode')
         require(request.get('failure_policy','collect-all')=='collect-all','PROTOCOL_ERROR','Only collect-all is supported')
         parent=self.registry.verify(caller.key,caller.incarnation)
+        mirrored=[w['mirror'] for w in workers if w.get('mirror')]
+        if mirrored:
+            # A mirrored worker is its own wait-mode group, watched by the Claude session that is this parent (CLAUDE_LINEAGE_MOD §6.4).
+            require(len(workers)==1 and request.get('completion_mode')=='wait','PROTOCOL_ERROR','A mirrored worker must be the only worker of a wait-mode group')
+            require(parent['peer_key']['provider']=='claude' and mirrored[0]['claude_session']==parent['peer_key']['native_session_id'],
+                    'APPROVAL_BLOCKED','The mirror session must be the bound Claude parent')
         limits=request.get('limits',{});depth=caller.grants.get('depth',0)+1
         ceiling=min(caller.grants.get('max_depth',1),local['max_depth'])
         require(depth<=ceiling and 1<=limits.get('max_depth',1)<=ceiling,'CAPACITY_UNAVAILABLE','Delegation depth ceiling reached')
@@ -275,9 +281,12 @@ class Delegation:
                         'CAPACITY_UNAVAILABLE','Configured local quota-pool concurrency ceiling reached',details=demand)
                 db.execute('INSERT INTO spawn_requests VALUES(?,?,?,?)',(caller.key,request_id,digest,group_id))
                 db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group_id,caller.key,canonical(policy).decode(),'RESERVED','{}'))
-                db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'UNCLAIMED',None,None,new_id(),1))
+                from .mirror import grant,record
+                db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'MIRROR_PENDING' if mirrored else 'UNCLAIMED',None,None,new_id(),1))
                 for worker in prepared:
-                    spec=worker['lease']['spec']
+                    spec=worker['lease']['spec'];watch=spec.get('mirror')
+                    record(db,worker['task_id'],group_id,1,'mirror' if watch else 'native',origin='parent-model',session=watch and watch['claude_session'],agent=watch and watch['claude_agent_id'])
+                    if watch:grant(db,worker['worker_id'],watch['claude_session'],watch['claude_agent_id'],caller.key,display_only=False)
                     for ref in spec.get('context_refs',[]):Artifacts(self.journal).grant(ref,caller.key,[worker['worker_id']])
                     native_id=new_id() if spec['provider'] in ('claude','grok') else None
                     db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker['worker_id'],group_id,None,spec['provider'],native_id,spec['title'],spec['model'],None,spec.get('reasoning_effort'),spec['cwd'],None,'RESERVED',1,canonical(worker['lease']).decode()))
