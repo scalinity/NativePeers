@@ -21,6 +21,10 @@ from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
 
 TERMINAL={'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
+# Set by the Claude Code session bridge only. Claude Code stops a mod's process together with every
+# descendant, so a supervisor the bridge starts is handed to launchd through a shell that exits at once,
+# as a supervisor started by the CLI already is; it then ends by its own parent-lifetime policy.
+REPARENT_SUPERVISORS=False
 
 
 def supervisor_environment(journal):
@@ -327,16 +331,20 @@ class Delegation:
                 return
             log=open(directory/'supervisor.log','ab',buffering=0);os.chmod(log.name,0o600)
             try:
+                argv=[str(PYTHON),'-m','nativepeers.supervisor','--group-id',group_id]
                 try:
-                    process=subprocess.Popen([str(PYTHON),'-m','nativepeers.supervisor','--group-id',group_id],
+                    process=subprocess.Popen(['/bin/sh','-c','"$@" &','sh',*argv] if REPARENT_SUPERVISORS else argv,
                         cwd=ROOT,env=supervisor_environment(self.journal),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
                         start_new_session=True,close_fds=True)
+                    if REPARENT_SUPERVISORS:
+                        require(process.wait(5)==0,'SUPERVISOR_LOST','Owned supervisor launch shell failed')
                 except OSError as error:
                     raise SupervisorNotStarted(group_id,error) from error
             finally:log.close()
             deadline=time.monotonic()+8
             while not manifest.exists() and time.monotonic()<deadline:
-                require(process.poll() is None,'SUPERVISOR_LOST','Owned supervisor exited before readiness; inspect its private log')
+                # A reparented supervisor is not this process's child: its readiness alone is awaited.
+                require(REPARENT_SUPERVISORS or process.poll() is None,'SUPERVISOR_LOST','Owned supervisor exited before readiness; inspect its private log')
                 await asyncio.sleep(.03)
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 

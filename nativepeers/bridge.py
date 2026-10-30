@@ -185,6 +185,9 @@ class Bridge:
                 key, value = line.split(':', 1);headers[key.strip().lower()] = value.strip()
         if not hmac.compare_digest(headers.get('authorization', '').encode(), ('Bearer '+self.token).encode()):
             return 401, envelope(error={'code': 'CALLER_UNBOUND', 'message': 'Bridge token required', 'may_have_received': False})
+        # Any authenticated request shows the mod is alive, as a heartbeat does: a module instance that hot-reloaded
+        # keeps its bridge while it finishes a held step's polls.
+        self.last_heartbeat = self.clock()
         length = int(headers.get('content-length') or 0)
         if length > MAX_BODY:
             return 413, envelope(error={'code': 'PAYLOAD_TOO_LARGE', 'message': f'Request body exceeds {MAX_BODY} bytes', 'may_have_received': False})

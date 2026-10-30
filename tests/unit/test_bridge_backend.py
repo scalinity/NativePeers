@@ -421,5 +421,72 @@ class RouteTests(BackendCase):
         self.assertIs(await self.backend.catalog(), catalog)
 
 
+class RuntimeTests(unittest.TestCase):
+    """The bridge lists a provider whose patch update first use will check; it never renews one itself."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory();root = Path(self.tmp.name)
+        self.home = root / 'home';(self.home / '.local/bin').mkdir(parents=True)
+        self.agy = self.home / '.local/bin/agy';self.agy.write_bytes(b'agy 1.4.11');self.agy.chmod(0o755)
+        self.j = Journal(root / 'state');self.receipt = Path(self.j.root) / 'compat/runtime.json';self.receipt.parent.mkdir(parents=True, exist_ok=True)
+
+    def tearDown(self):
+        self.j.close();self.tmp.cleanup()
+
+    def listed(self, sha, **document):
+        atomic_json(self.receipt, dict(schema_version=1, providers={'antigravity': dict(sha256=sha)}, **document))
+        from nativepeers.bridge_backend import runtimes
+        with patch.object(Path, 'home', return_value=self.home), patch('nativepeers.grok.executable', return_value=self.home / 'missing'), \
+                patch('nativepeers.runtime_updates.renew_selected', side_effect=AssertionError('the bridge never renews')):
+            return runtimes(self.j)
+
+    def test_an_approved_runtime_is_listed(self):
+        actual = fingerprint(self.agy)['sha256']
+        self.assertEqual(self.listed(actual), {'antigravity': actual})
+
+    def test_an_unchecked_patch_update_stays_listed_for_its_first_use_to_renew(self):
+        self.assertEqual(self.listed('a' * 64), {'antigravity': fingerprint(self.agy)['sha256']})
+
+    def test_a_checked_incompatible_or_revoked_update_is_not_listed(self):
+        actual = fingerprint(self.agy)
+        self.assertEqual(self.listed('a' * 64, update_checks={'antigravity': dict(runtime=actual, compatibility_state='INCOMPATIBLE', reason='x')}), {})
+        self.assertEqual(self.listed('a' * 64, retained={'antigravity': {actual['sha256']: dict(revoked=True)}}), {})
+
+
+class TakeoverTests(unittest.IsolatedAsyncioTestCase):
+    """A hot-reloaded mod's bridge starts beside its predecessor, and the supervisors either starts outlive both."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory();self.root = Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_a_live_bridge_on_the_session_socket_gets_a_successor_and_a_stale_one_is_reclaimed(self):
+        import socket as sockets
+        from nativepeers.bridge_backend import claim_free
+        path = socket_path('session-1', root=self.root)
+        live = sockets.socket(sockets.AF_UNIX);live.bind(str(path));live.listen()
+        try:self.assertEqual(claim_free(path), path.with_name(path.stem + '.1.sock'))
+        finally:live.close()
+        self.assertTrue(path.exists())  # A closed listener leaves its file behind: stale, so reclaimed.
+        self.assertEqual(claim_free(path), path);self.assertFalse(path.exists())
+
+    async def test_a_bridge_started_supervisor_is_reparented_and_a_cli_one_stays_a_child(self):
+        from nativepeers import delegation
+        fake = self.root / 'python';fake.write_text('#!/bin/sh\nsleep 0.3\nprintf \'{"ppid": %s}\' "$PPID" > "$NPEER_HOME/groups/$4/ppid.json"\n'
+                                                     'printf \'{}\' > "$NPEER_HOME/groups/$4/owner.json"\nsleep 1\n');fake.chmod(0o755)
+        j = Journal(self.root / 'state')
+        try:
+            for reparent, group in ((True, 'g-bridge'), (False, 'g-cli')):
+                private = Path(j.root) / 'groups' / group;private.mkdir(parents=True)
+                with patch.object(delegation, 'PYTHON', fake), patch.object(delegation, 'REPARENT_SUPERVISORS', reparent):
+                    await Delegation(j, Registry(j)).ensure_supervisor(group)
+                ppid = json.loads((private / 'ppid.json').read_text())['ppid']
+                self.assertEqual(ppid == 1, reparent, (group, ppid))
+        finally:
+            j.close()
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -56,14 +56,24 @@ def bind_session(journal, registry, session):
 
 
 def runtimes(journal):
-    """Providers whose installed executable holds a current runtime approval, with its digest. Never renews an approval."""
-    from .compatibility import verify
+    """Providers whose installed executable holds a current runtime approval, with its digest. Never renews an approval.
+
+    A patch update that no check has looked at yet stays listed: its first spawn renews it under the bounded update
+    checks, or refuses, as any first use does. A checked, refused or revoked update is not listed."""
+    from .compatibility import AUTO_RENEW, fingerprint, verify
     from .grok import executable as grok_executable
+    from .runtime_updates import CONTRACTS
     paths = {'claude': '.local/bin/claude', 'codex': '.local/share/codex-mcp-manager/current/bin/codex', 'antigravity': '.local/bin/agy'}
     found = {}
     for provider in PROVIDERS:
-        try:found[provider] = verify(journal, provider, grok_executable() if provider == 'grok' else Path.home() / paths[provider], renew=False)['sha256']
-        except (PeerError, OSError):continue
+        try:
+            executable = grok_executable() if provider == 'grok' else Path.home() / paths[provider]
+            found[provider] = verify(journal, provider, executable, renew=False)['sha256']
+        except PeerError as error:
+            if AUTO_RENEW and provider in CONTRACTS and (error.details or {}).get('compatibility_state') == 'UPDATE_UNTESTED':
+                try:found[provider] = fingerprint(executable)['sha256']
+                except OSError:continue
+        except OSError:continue
     return found
 
 
@@ -626,6 +636,21 @@ def for_cli(journal, core, caller, session=None):
     return NativeBackend(journal, peer, peer['peer_key']['native_session_id'])
 
 
+def claim_free(socket):
+    """The session's socket, or a successor while another bridge for this session still serves it.
+
+    A hot-reloaded mod starts its bridge before the previous module instance has finished its held steps; Claude Code
+    stops that instance's bridge only when the instance unloads. Both bridges serve this session through the journal."""
+    from .bridge import claim_socket
+    for n in range(5):
+        path = socket if n == 0 else socket.with_name(f'{socket.stem}.{n}{socket.suffix}')
+        try:
+            claim_socket(path);return path
+        except PeerError as error:
+            if error.code != 'BRIDGE_RUNNING' or n == 4:raise
+    return socket
+
+
 def manifest_path(journal, socket):
     return private_directory(Path(journal.root) / 'bridges') / (Path(socket).stem + '.json')
 
@@ -643,7 +668,7 @@ def live_bridges(journal):
 
 def run(args):
     """`npeer bridge --claude-session ID --protocol 1 --json`: one bridge for one Claude Code session. Prints one JSON line first."""
-    from .bridge import Bridge, PROTOCOL, claim_socket, socket_path
+    from .bridge import Bridge, PROTOCOL, socket_path
     from .journal import Journal
     from .registry import Registry
     journal = manifest = None
@@ -651,7 +676,9 @@ def run(args):
         require(args.protocol == PROTOCOL, 'PROTOCOL_ERROR', f'Bridge protocol {args.protocol} is not supported; this NativePeers speaks {PROTOCOL}')
         journal = Journal()
         peer = bind_session(journal, Registry(journal), args.claude_session)
-        socket = socket_path(args.claude_session);claim_socket(socket)
+        from . import delegation
+        delegation.REPARENT_SUPERVISORS = True
+        socket = claim_free(socket_path(args.claude_session))
         manifest = manifest_path(journal, socket)
         backend = NativeBackend(journal, peer, args.claude_session, runtimes=runtimes(journal), manifest=manifest)
         backend.record_manifest(socket)
