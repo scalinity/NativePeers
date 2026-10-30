@@ -274,6 +274,49 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.journal.one('SELECT COUNT(*) n FROM peer_instances')['n'],count)
         self.assertEqual(len(self.router.inbox(caller,retained=True,limit=50)),22)
 
+    async def test_registered_codex_owner_still_guards_after_current_selection_changes(self):
+        user=self.root/'updated-user'
+        old=dict(identity(os.getpid()).json(),executable=str(user/'releases/old/bin/codex'))
+        class Owner:
+            def json(owner):return old
+        with patch('nativepeers.registry.matches',return_value=True):
+            recipient=self.registry.register('codex',self.home,self.native,'old registered receiver',old,str(self.root),{'kind':'fake'})
+            caller=Caller('peer',recipient['handle'],recipient['incarnation_id'])
+            late=await self.router.send(self.ca,recipient['handle'],'old native version')
+            await self.policy(caller,'close')
+        before=self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id')
+        def event(prompt,name='UserPromptSubmit'):return {'hook_event_name':name,'session_id':self.native,'prompt':prompt,'cwd':str(self.root)}
+        with patch('nativepeers.hooks.Path.home',return_value=user),patch('nativepeers.hooks.ancestry',return_value=[Owner(),Owner()]),             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','CODEX_HOME':str(self.home)}):
+            self.assertEqual(observe('codex',event(self.frame(late)),self.journal)['decision'],'block')
+            self.assertEqual(observe('codex',event(self.frame(late),'QueuedInput'),self.journal),{'decision':'consume'})
+            self.assertEqual(observe('codex',event('a new human task'),self.journal),{})
+        self.assertEqual(self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id'),before)
+        self.assertEqual(self.router.outcome(late['message_id'])['state'],'ACCEPTED_QUEUED')
+        self.assertEqual(notification_policy.status(self.journal,recipient['handle'])['state'],'OPEN')
+
+    def test_old_executable_cannot_bootstrap_or_borrow_an_enclosing_registered_owner(self):
+        user=self.root/'updated-user'
+        old=dict(identity(os.getpid()).json(),executable=str(user/'releases/old/bin/codex'))
+        current=str((user/'.local/share/codex-mcp-manager/current/bin/codex').resolve())
+        with patch('nativepeers.registry.matches',return_value=True):
+            self.registry.register('codex',self.home,self.native,'registered outer',old,str(self.root),{'kind':'fake'})
+        before=self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id')
+        class Process:
+            def __init__(owner,value):owner.value=value
+            def json(owner):return owner.value
+        event={'hook_event_name':'UserPromptSubmit','session_id':self.native,'prompt':'human words','cwd':str(self.root)}
+        inner=dict(old,pid=old['pid']+1000,start='newer-inner-owner',executable=current)
+        with patch('nativepeers.hooks.Path.home',return_value=user),             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','CODEX_HOME':str(self.home)}):
+            with patch('nativepeers.hooks.ancestry',return_value=[Process(old),Process(inner),Process(old)]):
+                self.assertFalse(observe('codex',event,self.journal)['guarded'])
+            with patch('nativepeers.hooks.ancestry',return_value=[Process(old),Process(old)]):
+                for name in ('UserPromptSubmit','QueuedInput','SessionStart'):
+                    with self.subTest(event=name),self.assertRaises(PeerError) as error:
+                        observe('codex',dict(event,hook_event_name=name,session_id='00000000-0000-4000-8000-0000000000ff'),self.journal)
+                    self.assertEqual(error.exception.code,'CALLER_UNBOUND')
+        self.assertEqual(self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id'),before)
+        self.assertEqual(self.journal.all("SELECT 1 FROM events WHERE kind IN ('notification-policy-opened','notification-suppressed')"),[])
+
     async def test_cold_queue_resume_authenticates_native_history_before_consumption(self):
         recipient=self.registry.register('codex',self.home,self.native,'resume receiver',identity(os.getpid()).json(),str(self.root),{'kind':'fake'})
         self.journal.db.execute("UPDATE peer_instances SET status='live'")

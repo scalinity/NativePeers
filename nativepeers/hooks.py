@@ -8,7 +8,7 @@ import sys
 import time
 
 from .adapters.metadata import claude_name, codex_name
-from .caller import read_binding, verify_owned_binding
+from .caller import native_ancestor, nearest_native, read_binding, verify_owned_binding
 from .errors import require
 from .files import atomic_json
 from .journal import Journal
@@ -26,10 +26,24 @@ def observe(provider, event, journal):
     require(not ('sessionId' in event or 'hookEventName' in event),'CALLER_UNBOUND','A Grok-native hook cannot register as another provider')
     binary=(Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')).resolve()
     ancestors=[p.json() for p in ancestry()[1:]]
+    bootstrap=os.getenv('NPEER_BOOTSTRAP')
+    home=Path(os.getenv('CODEX_HOME' if provider=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if provider=='codex' else '.claude'))).resolve()
+    queued=provider=='codex' and event['hook_event_name']=='QueuedInput'
+    if provider=='codex' and (queued or event['hook_event_name']=='UserPromptSubmit') and not bootstrap:
+        # Selection can change while a registered TUI keeps its immutable binary.
+        # Authenticate that exact existing owner for filtering only; never register
+        # it again or admit an old executable for new work.
+        from .models import home_id
+        peer=journal.one("SELECT * FROM peer_instances WHERE provider='codex' AND home_id=? AND native_id=? AND status='live' AND owner_kind='interactive-standalone' ORDER BY last_seen DESC LIMIT 1",
+                         (home_id(home),event['session_id']))
+        if peer:
+            registered=json.loads(peer['descriptor_json'])['owner']
+            nearest=nearest_native(ancestors,registered['executable'],journal=journal)
+            if nearest and nearest['pid']==peer['pid'] and nearest['start']==peer['process_start'] and native_ancestor(registered,[nearest]):
+                return prompt_guard(provider,event,journal,peer)
     owners=[p for p in ancestors if p['executable']==str(binary)]
     require(owners,"CALLER_UNBOUND","No exact native provider owner in hook ancestry")
     owner=owners[0]
-    bootstrap=os.getenv('NPEER_BOOTSTRAP')
     if bootstrap:
         path=Path(bootstrap)
         lease=read_binding(journal,path,allow_reserved=True)
@@ -39,8 +53,6 @@ def observe(provider, event, journal):
         worker_id=row['worker_id']
         journal.event(worker_id,'native-hook-observed',dict(event=event['hook_event_name'],native_id=event['session_id'],process=owner))
         return {'controller_owned':True,'worker_id':worker_id}
-    home=Path(os.getenv('CODEX_HOME' if provider=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if provider=='codex' else '.claude'))).resolve()
-    queued=provider=='codex' and event['hook_event_name']=='QueuedInput'
     if event['hook_event_name']=='UserPromptSubmit' or queued:
         # The registered-owner guard never rebinds an incarnation. Only the native
         # queue may bootstrap an authenticated cold owner through the path below.
