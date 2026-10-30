@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "312e7fe949e5d5a31eaf8255f19650f6d30563ff",
-  "reviewed_commit": "b16dc7af962f4d17c145bfa1d40e05827b2cea7f",
-  "publication_branch": "evidence/lineage-post-install",
-  "updated_at": "2026-10-30T19:06:52.297970-04:00",
-  "current_record": "evidence/claude-lineage-verification.json",
+  "code_commit": "973ba45fdaa4ffe771996f018c4e687432a16747",
+  "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+  "publication_branch": "fix/issue-7-silent-close",
+  "updated_at": "2026-10-30T19:22:30.362030-04:00",
+  "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
       "files": {
@@ -55,7 +55,7 @@
         "nativepeers/grok_install.py": "caf6a4fb0c2348697586c0174f7a221fc7f197e611c310b0efbcf2d39f75974a",
         "nativepeers/grok_worker.py": "d516aa46e525ef08ebc8da93e7681bd7a44c840ed9efaf5f7d78072ae2576051",
         "nativepeers/history_cleanup.py": "3b59afd9f17060e4ebf4f0d9122fc27c3ee0245e14aaa6389442c84fd891ab32",
-        "nativepeers/hooks.py": "fa2f38c2086814bd10cf3dbc7be28c418b84e5682e8757aa577bbc5f3a323b8a",
+        "nativepeers/hooks.py": "4e944723f5de620a148a6dff79cf4625634fe2d9af9f363e842b546e10d82b68",
         "nativepeers/install.py": "da00ffe46c3c6cb494ade876623c81fb691848d9a14ea9240420f21a8a2fec6c",
         "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
         "nativepeers/journal.py": "44f284c9aad07c416ce6efd4ef5c94134ab9b5b3a21543f61716c9d08bf99be6",
@@ -115,7 +115,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 105,
-      "sha256": "addf891856bff26846dd6d472e205a059caaa132ee69d6678758b2d2babb6141"
+      "sha256": "58597655436c0f9dfc1584d468250b37a15dab89846a4d2e0d1fa3929b3ec331"
     },
     "launchers": {
       "files": {
@@ -286,10 +286,11 @@
         "tests/probes/claude_runtime_verify.py": "02edbd7aa3f5a66bb378e00c3cf59e932fd84d011bae96539c1a3cea13d44b2b",
         "tests/probes/cleanup_owned.py": "e7001d0d5c2e5bf1eaab8a5cf238ad0aa789edcba56249cbdfe487b8d1328e76",
         "tests/probes/launch.py": "55f6a261237b9ac8a5474c0a0a76b8fa2ec06af3f6401868b1a13ca2b44b446e",
+        "tests/probes/legacy_owner_guard.py": "da3215ac9a6a2d6c01e54bebe7c4a0defbd84219c5dcdabf8b1976c2d605aa27",
         "tests/probes/notification_guard.py": "8a6d160ba9af4540adec1d9bbd2818592f0cee9675a54c408ba050fc319fd925",
         "tests/probes/passive_native.py": "eba1da5be14f08aaa6f028bb73d11ca276a2db56d47679408639df1266aef1fe",
         "tests/probes/publish_current.py": "e6b72c8740f8a6bb4c533d5a175ece2e6c1b085222ee582e875be11e7a914e37",
-        "tests/probes/quiet_close_tui.py": "cb857422b3cbc25c2a1c923fd6bf8ce2e4b73e249bfd01e656ee66c3b2e407c1",
+        "tests/probes/quiet_close_tui.py": "1a92bd74c7684596935a44bda71e23aa837ff8ddb1e7c7df7932c6b44da64b07",
         "tests/probes/quiet_close_worker.py": "d4f86814fb47d586fb8086d652d29756a0b0148ddb2ff3b96fc6dcd7eb1c432a",
         "tests/probes/read_performance.py": "418d39a10abd1651de2e02237b59d91b2f071f2ab303512b1c33f31c9504cd9b",
         "tests/probes/seams.py": "287a4f899d2c0bcae219a4948ebf3d7528869e24b6239edd9db876502399b97f",
@@ -339,13 +340,14 @@
         "tests/unit/test_install_home.py": "f7ad753a0f9d0f54693f94813a476b96a205fadfb515431c4a77dc1597ecbdfa",
         "tests/unit/test_interrupt_and_steer.py": "169dae4cfa211839d87fc12e91e486775a922d464b1bc924f319997af32d06e3",
         "tests/unit/test_isolated_copy.py": "317c2d00e9d8299e28d029268b164bfc17acb0fc0c2e792dc8333f027e1edced",
+        "tests/unit/test_legacy_owner_guard_probe.py": "2884dae52f8f14b2c2fe0ae14b8dd9ac689f5b8bee6694f1e67108aac6f6e83d",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "14e256e5149de9068b6f940c617d185e89c4452d51811d5714db3962551564f4",
         "tests/unit/test_native_delivery.py": "1c8fc383fefb1a8f7882cf3c25f56971ce73e151ea1e2e60a20c9668aba2e389",
         "tests/unit/test_native_usage_parsers.py": "30e3f80041d54613b05aa80b67ee91476d7e2b00941c2eeb7354a26753ad02a0",
         "tests/unit/test_nested_caller.py": "23be6293a36883654eb848b34424588db73fb6f4cf2fbec551ec71c55d5eb9c2",
-        "tests/unit/test_notification_guard_hooks.py": "4a7e2dc9b0485480b13f089ec7df6066017bd5a0d744511fe8e7efb9c767767e",
+        "tests/unit/test_notification_guard_hooks.py": "a52922c6cc8094256b3ac4abcf9c8fe16890cf5f18eeaa0eca0e724c22af944b",
         "tests/unit/test_notification_policy.py": "fb70d38e1ffe45617e6725d665cac8d2af5c994e599404c1f274b328eb005b6c",
         "tests/unit/test_notification_upgrade.py": "29c383f4eb3e476dd6c7bd9eca1c194c21a50138a8f34790fd90503317786ec4",
         "tests/unit/test_operation_readiness.py": "7a074b50ee077f0dd093c5be4788d9707541f0b8b4adb363e0eb790a2308790b",
@@ -385,46 +387,21 @@
         "tests/unit/test_worktrees_and_contracts.py": "33f40047f20a47c59ac9aa918e7ef1faabf2f36431721f49d23c3f9371918f22",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 226,
-      "sha256": "55b143ea0fa2120820642a7f472aec3037ec02ee9857a37261ba15606fd27d5d"
+      "file_count": 228,
+      "sha256": "9e234ce176459471ecd9a5e94c179614cc804834a92ebb2e1e64b47d28859448"
     }
   },
   "operation_checks": [
     {
-      "provider": "codex",
-      "operation": "np-mirror-live",
+      "operation": "policy/hook/installer/identity regressions",
+      "parent_context": "offline temporary journals and mocked native ownership",
       "status": "PASS",
-      "parent_context": "isolated rig state root, worktree code via npeer-wt, disposable Claude Code 2.1.314 session",
-      "scope": "live-acceptance-2 and live-recovery-1: mirrored transcripts, follow-ups, reload, interrupt, stop, adoption, bridge death",
-      "source_head": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
-      "runtime_sha256": "0646bf9d788d2943d1e4c9660bd91459066749c07cf14e1bac36086383682c12"
+      "evidence": "evidence/scratch/issue-7/focused-source-final.log"
     },
     {
-      "provider": "claude",
-      "operation": "np-mirror-live",
-      "status": "PASS",
-      "parent_context": "isolated rig state root, worktree code via npeer-wt, disposable Claude Code 2.1.314 session",
-      "scope": "live-acceptance-2: mirrored transcript and a typed follow-up to the completed worker",
-      "source_head": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
-      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed"
-    },
-    {
-      "provider": "antigravity",
-      "operation": "np-mirror-live",
-      "status": "PASS",
-      "parent_context": "installed np plugin and production state root after merge (56b236b), disposable Claude Code 2.1.314 session",
-      "scope": "production-fanout-1: mirrored transcript, native notification, MIRROR_DELIVERED; agy first use renewed 1.4.11",
-      "source_head": "56b236b25bab7a4a2dc3b505545625ede97ff3d2",
-      "runtime_sha256": "09cefed6a1d217e14ba1751dce4442b97c2797e88c297c77fda3690f92ceddcd"
-    },
-    {
-      "provider": "grok",
-      "operation": "np-mirror-live",
-      "status": "PASS",
-      "parent_context": "installed np plugin and production state root after merge (56b236b), disposable Claude Code 2.1.314 session",
-      "scope": "production-fanout-1: mirrored transcript, native notification, MIRROR_DELIVERED",
-      "source_head": "56b236b25bab7a4a2dc3b505545625ede97ff3d2",
-      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
+      "operation": "installed queue silent consumption and visible tail",
+      "parent_context": "fresh owned standalone receiver, candidate not activated",
+      "status": "NOT_RUN"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
