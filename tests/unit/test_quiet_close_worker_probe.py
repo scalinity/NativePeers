@@ -1,5 +1,8 @@
 """Offline provenance, worker selection and fixture routing checks; no native launch."""
 import importlib.util
+import contextlib
+import io
+from types import SimpleNamespace
 import copy
 import json
 import os
@@ -13,15 +16,75 @@ PATH = Path(__file__).resolve().parents[1] / "probes/quiet_close_worker.py"
 SPEC = importlib.util.spec_from_file_location("quiet_close_worker_probe", PATH)
 probe = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(probe)
-canonical = probe.base if hasattr(probe.base, "require_quiet_frame") else None
-REFERENCE = Path("/Users/danny/Documents/Tools/NativePeers/.worktrees/issue-7/tests/probes/quiet_close_tui.py")
-if canonical is None and REFERENCE.is_file():
-    CANONICAL_SPEC = importlib.util.spec_from_file_location("quiet_close_worker_canonical_base", REFERENCE)
-    canonical = importlib.util.module_from_spec(CANONICAL_SPEC)
-    CANONICAL_SPEC.loader.exec_module(canonical)  # Read-only definitions; no native main invocation.
+canonical = probe.base
 
 
 class QuietCloseWorkerProbeTests(unittest.TestCase):
+    def test_activity_before_original_completion_is_allowed_but_later_activity_fails(self):
+        final = "FINAL"
+        completed = probe.datetime.fromisoformat("2026-10-30T12:00:01-04:00").timestamp()
+        frames = [{"at": "2026-10-30T12:00:00-04:00", "lines": [final, "Working… esc to interrupt"]},
+                  {"at": "2026-10-30T12:00:02-04:00", "lines": [final, "prompt"]}]
+        probe.audit_completed_frames(frames, final, "SUPPRESSED", completed)
+        frames.append({"at": "2026-10-30T12:00:03-04:00", "lines": [final, "Working… esc to interrupt"]})
+        with self.assertRaises(RuntimeError):
+            probe.audit_completed_frames(frames, final, "SUPPRESSED", completed)
+
+    def test_cleanup_stops_every_resource_and_leaves_no_phase_running(self):
+        order = []
+        resources = [Mock(), Mock()]
+        for n, resource in enumerate(resources):
+            resource.stop.side_effect = lambda n=n: (order.append(n) or {"confirmed_dead": True, "output_eof": True})
+        report = {"status": "RUNNING"}
+        probe.stop_resources(resources, report)
+        self.assertEqual(order, [1, 0])
+        self.assertEqual(resources, [])
+        probe.stop_resources(resources, report)  # Final cleanup is safe after per-phase cleanup.
+        self.assertNotIn("cleanup_errors", report)
+
+    def test_late_successful_request_during_phase_cleanup_fails_the_entire_probe(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp)
+            (source / "nativepeers").mkdir()
+            run = source / "run"
+            run.mkdir()
+            model = SimpleNamespace(parent_requests=2, records=[], errors=[])
+            def phase(source, directory, binary, approval, name, report, resources):
+                report.update(worker_id="owned-test-worker", parent_requests_after_final=0)
+                self.assertEqual(probe.final_model_history(model, directory, "native", "FINAL", "SUPPRESSED", 2, True), 0)
+                resource = Mock()
+                def late_request():
+                    model.parent_requests += 1  # A successful late request after the first sample.
+                    return {"confirmed_dead": True, "output_eof": True}
+                resource.stop.side_effect = late_request
+                resources.append(resource)
+                return lambda: probe.final_model_history(model, directory, "native", "FINAL", "SUPPRESSED", 2, True)
+            actual = {"path": "/fixture/codex", "sha256": "a" * 64, "size": 1}
+            with patch.object(probe, "PHASES", ("quiet",)), patch.object(probe, "phase_run", side_effect=phase), \
+                    patch.object(probe.base, "prepare_run", return_value=run), \
+                    patch.object(probe.base, "select_codex", return_value=(Path(actual["path"]), {})), \
+                    patch.object(probe, "approved_record", return_value=actual), \
+                    patch("nativepeers.compatibility.fingerprint", return_value=actual), \
+                    patch.object(probe.base, "digest", return_value="b" * 64), \
+                    patch.object(probe.base, "require_native_silence", return_value={}), \
+                    contextlib.redirect_stdout(io.StringIO()):
+                code = probe.main(["--nativepeers-root", str(source), "--run", str(run)])
+            self.assertEqual(code, 1)
+            record = json.loads((run / "qualification.json").read_text())
+            self.assertEqual(record["status"], "FAIL")
+            self.assertIn("later parent model work", record["error"])
+
+    def test_late_model_body_is_scanned_even_if_parent_counter_did_not_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = Path(tmp)
+            model = SimpleNamespace(parent_requests=2, records=[], errors=[])
+            with patch.object(probe.base, "require_native_silence", return_value={}):
+                self.assertEqual(probe.final_model_history(model, run, "native", "FINAL", "SUPPRESSED", 2, True), 0)
+                probe.base.save(run / "model-0001.json", {"input": [{"role": "user", "content": "SUPPRESSED"}]})
+                model.records.append({"number": 1})
+                with self.assertRaises(RuntimeError):
+                    probe.final_model_history(model, run, "native", "FINAL", "SUPPRESSED", 2, True)
+
     def test_help_never_checks_runtime_or_launches_native_or_network(self):
         with patch.object(probe.base, "select_codex", side_effect=AssertionError("runtime")), \
                 patch.object(probe.Model, "__init__", side_effect=AssertionError("network")), \

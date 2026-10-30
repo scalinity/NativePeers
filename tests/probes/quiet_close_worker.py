@@ -124,6 +124,30 @@ def require_silent_frame(frame, final, worker_text):
         raise RuntimeError("Suppressed worker completion body rendered after the final")
 
 
+def audit_completed_frames(frames, final, worker_text, completed_at):
+    for frame in frames:
+        text = "\n".join(frame.get("chat_tail", []) + frame["lines"])
+        if worker_text in text:
+            raise RuntimeError("Suppressed worker body rendered in native frames")
+        # Original-turn activity before native completion is legitimate. The
+        # first completed native boundary cannot move to a repeated final.
+        if datetime.fromisoformat(frame["at"]).timestamp() >= completed_at:
+            require_silent_frame(frame, final, worker_text)
+
+
+def final_model_history(model, run, native_id, final, worker_text, before, quiet):
+    if model.errors:
+        raise RuntimeError("Local model fixture recorded errors")
+    if quiet:
+        if model.parent_requests != before:
+            raise RuntimeError("Silent phase produced later parent model work")
+        base.require_native_silence(run / "codex-home", native_id, final, [worker_text])
+        for record in model.records:
+            if worker_text in base.input_text(json.loads((run / f"model-{record['number']:04}.json").read_text())):
+                raise RuntimeError("Silent completion appeared in a model request")
+    return model.parent_requests - before
+
+
 def require_consumed(before, after, event, identity, completed_at):
     suppression = json.loads(event["payload_json"]) if event else {}
     if (after["state"] != "ACCEPTED_QUEUED" or after["attempt"] != before["attempt"]
@@ -172,6 +196,8 @@ def helper(config_path, phase, done):
 
 
 class Model(base.Model):
+    daemon_threads = False  # server_close joins every owned request handler.
+
     def answer(self, payload):
         latest = base.last_user_text(payload)
         phase, token = self.phase, self.token
@@ -326,11 +352,10 @@ def phase_run(source, run, binary, approval, phase, report, resources):
     if phase in ("quiet", "queued"):
         def audit(frame):
             require_silent_frame(frame, final, worker_text)
-        boundary = False
-        for frame in tui.frames:
-            boundary = boundary or final in "\n".join(frame.get("chat_tail", []) + frame["lines"])
-            if boundary:
-                audit(frame)
+        tail = base.native_tail(run / "codex-home", identity["native_session_id"], final)
+        stamp = json.loads(Path(tail["path"]).read_text().splitlines()[tail["completed_record"]])["timestamp"]
+        completed_at = datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp()
+        audit_completed_frames(tui.frames, final, worker_text, completed_at)
         tui.audit = audit
         audit({"lines": tui.screen.display[:]})
     if phase != "queued":
@@ -401,7 +426,34 @@ def phase_run(source, run, binary, approval, phase, report, resources):
         raise RuntimeError("OPEN controller push did not produce a parent model request")
     report.update(identity=identity, group_id=group, worker_id=workers[0]["worker_id"], task_id=result[0]["task_id"], receipts=receipts,
                   parent_requests_after_final=model.parent_requests - before, result=collected)
+    # Re-evaluate after this phase's native processes AND HTTP handlers stop.
+    # No successful late request can hide behind a previously sampled zero.
+    def after_stop():
+        report["parent_requests_after_final"] = final_model_history(
+            model, run, identity["native_session_id"], final, worker_text, before,
+            phase in ("quiet", "queued"))
+    return after_stop
 
+
+def stop_resources(resources, report):
+    while resources:
+        resource = resources.pop()
+        try:
+            if isinstance(resource, Model):
+                report.setdefault("model_records", []).append({"phase": resource.phase, "records": resource.records, "errors": resource.errors})
+                resource.shutdown()
+                resource.server_close()
+                resource.thread.join(3)
+                if resource.errors or resource.thread.is_alive() or resource.socket.fileno() != -1:
+                    raise RuntimeError("Local Responses fixture errors or unproved cleanup")
+            else:
+                cleanup = resource.stop()
+                report.setdefault("cleanup", []).append(cleanup)
+                if not cleanup["confirmed_dead"] or not cleanup["output_eof"] or cleanup.get("terminal_errors"):
+                    raise RuntimeError("Owned fixture death/output EOF is unproved")
+        except BaseException as error:
+            report.setdefault("cleanup_errors", []).append(repr(error))
+            report["status"] = "FAIL"
 
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
@@ -433,7 +485,12 @@ def main(argv=None):
             directory = run / phase
             directory.mkdir()
             report["phases"][phase] = {}
-            phase_run(source, directory, binary, approval, phase, report["phases"][phase], resources)
+            after_stop = phase_run(source, directory, binary, approval, phase, report["phases"][phase], resources)
+            (directory / "release").touch()
+            stop_resources(resources, report)
+            if report["status"] == "FAIL":
+                raise RuntimeError("Phase cleanup failed before final evidence validation")
+            after_stop()
         if base.digest(installed) != report["installed_approval_sha256"] or fingerprint(binary, fresh=True) != actual:
             raise RuntimeError("Installed approval or selected package changed during acceptance")
         if any(base.digest(source / name) != expected for name, expected in report["source"].items()):
@@ -447,23 +504,7 @@ def main(argv=None):
         for phase in PHASES:
             if (run / phase).exists():
                 (run / phase / "release").touch()
-        for resource in reversed(resources):
-            try:
-                if isinstance(resource, Model):
-                    report.setdefault("model_records", []).append({"phase": resource.phase, "records": resource.records, "errors": resource.errors})
-                    resource.shutdown()
-                    resource.server_close()
-                    resource.thread.join(3)
-                    if resource.errors or resource.thread.is_alive() or resource.socket.fileno() != -1:
-                        raise RuntimeError("Local Responses fixture errors or unproved cleanup")
-                else:
-                    cleanup = resource.stop()
-                    report.setdefault("cleanup", []).append(cleanup)
-                    if not cleanup["confirmed_dead"] or not cleanup["output_eof"] or cleanup.get("terminal_errors"):
-                        raise RuntimeError("Owned fixture death/output EOF is unproved")
-            except BaseException as error:
-                report.setdefault("cleanup_errors", []).append(repr(error))
-                report["status"] = "FAIL"
+        stop_resources(resources, report)
         report["finished_at"] = base.eastern()
         base.save(run / "qualification.json", report)
     print(json.dumps({"status": report["status"], "report": str(run / "qualification.json")}))
