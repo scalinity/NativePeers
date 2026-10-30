@@ -75,7 +75,17 @@ class ReplayBackend:
                     title=w.spec.get('title', w.id), status=w.state if w.state != 'running' else 'running', startedAt=int(w.started*1000),
                     endedAt=int(w.ended*1000) if w.ended else None, agentId=w.agent, mirrorOwner='this' if w.agent else None, nativeId='native-'+w.id)
 
+    def external(self):
+        # A worker started outside the mod (npeer spawn): no agent until attached.
+        spec = self.scenario.get('external')
+        if not spec or getattr(self, 'external_made', False):return
+        self.external_made = True
+        worker_id = f'W{len(self.workers)+1}'
+        w = Worker(worker_id, None, spec['provider'], dict(title=spec.get('title', 'adopted'), model=spec.get('model'), permission_profile='analysis'), spec)
+        self.workers[worker_id] = w;self.touch();self.log('external', worker_id=worker_id)
+
     async def lineage(self, cursor, wait_ms):
+        if self.scenario.get('external'):self.external()
         if cursor == str(self.lineage_version) and wait_ms:
             try:await asyncio.wait_for(self.lineage_changed.wait(), wait_ms/1000)
             except (TimeoutError, asyncio.TimeoutError):return dict(cursor=cursor, changed=False, workers=[self.row(w) for w in self.workers.values()])
@@ -128,6 +138,7 @@ class ReplayBackend:
         if op == 'attach' and not body.get('check_only'):
             w = self.workers.get(body['worker_id']);require(w, 'PROTOCOL_ERROR', 'unknown worker')
             w.agent = body.get('claude_agent_id');self.bindings[w.agent] = w;self.touch()
+            if not w.events:asyncio.get_running_loop().create_task(self.play(w, w.script.get('events', []), origin='controller'))
         return dict(op=op, route='MIRROR_DELIVERED' if op == 'ack' else 'MIRROR_SURFACING' if op == 'surfacing' else None)
 
     async def activity(self, worker_id, after, wait_ms, maximum, item):

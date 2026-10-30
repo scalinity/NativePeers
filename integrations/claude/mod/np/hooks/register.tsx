@@ -204,7 +204,10 @@ export const register: Register = (on, options) => {
     if (!String(e.agent).startsWith('np:')) return next(e)
     return { isOffered: (await getBridge($)).state === 'ready' && !(await getFaults($)).fallthrough }
   }).catch(($, e, next) => String(e.agent).startsWith('np:') ? { isOffered: false } : next(e))
-  on('agent.spawn', async ($, e, next) => String(e.subagentType).startsWith('np:') ? pathA($, e, next, o) : next(e))
+  // Path A is the engine's own Agent call. A spawn this mod raised itself
+  // (adoption, attach) passes through: rewriting it would detach it from the
+  // frame that raised it.
+  on('agent.spawn', async ($, e, next) => String(e.subagentType).startsWith('np:') && (next as any).origin?.plugin !== 'np' ? pathA($, e, next, o) : next(e))
     .catch(($, e, next) => (next as any).called ? next(e) : { deny: 'NativePeers spawn failed; run /np doctor' })
 
   on('prompt.compose', async ($, e, next) => {
