@@ -636,6 +636,19 @@ def for_cli(journal, core, caller, session=None):
     return NativeBackend(journal, peer, peer['peer_key']['native_session_id'])
 
 
+def bind_registered(journal, registry, session, wait=8.0):
+    """bind_session, waiting while the session is not registered yet: the mod starts its bridge at session start, and on
+    --resume NativePeers' own SessionStart hook registers the new incarnation a moment later. Other refusals are final."""
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            return bind_session(journal, registry, session)
+        except PeerError as error:
+            pending = error.code == 'CALLER_UNBOUND' and set((error.details or {}).keys()) == {'claude_session'}
+            if not pending or time.monotonic() >= deadline:raise
+            time.sleep(0.25)
+
+
 def claim_free(socket):
     """The session's socket, or a successor while another bridge for this session still serves it.
 
@@ -675,7 +688,7 @@ def run(args):
     try:
         require(args.protocol == PROTOCOL, 'PROTOCOL_ERROR', f'Bridge protocol {args.protocol} is not supported; this NativePeers speaks {PROTOCOL}')
         journal = Journal()
-        peer = bind_session(journal, Registry(journal), args.claude_session)
+        peer = bind_registered(journal, Registry(journal), args.claude_session)
         from . import delegation
         delegation.REPARENT_SUPERVISORS = True
         socket = claim_free(socket_path(args.claude_session))

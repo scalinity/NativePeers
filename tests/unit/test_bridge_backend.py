@@ -453,6 +453,22 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(self.listed('a' * 64, retained={'antigravity': {actual['sha256']: dict(revoked=True)}}), {})
 
 
+class ResumeBindingTests(unittest.TestCase):
+    """On --resume the bridge starts before NativePeers' SessionStart hook registers the new incarnation."""
+
+    def test_a_pending_registration_is_awaited_and_any_other_refusal_is_final(self):
+        from nativepeers.bridge_backend import bind_registered
+        pending = PeerError('CALLER_UNBOUND', 'No live registered Claude session has this ID', details={'claude_session': 's'})
+        with patch('nativepeers.bridge_backend.bind_session', side_effect=[pending, pending, {'handle': 'p'}]) as bind, patch('time.sleep'):
+            self.assertEqual(bind_registered(None, None, 's'), {'handle': 'p'});self.assertEqual(bind.call_count, 3)
+        outside = PeerError('CALLER_UNBOUND', 'Native owner is outside caller ancestry')
+        with patch('nativepeers.bridge_backend.bind_session', side_effect=[outside, {'handle': 'p'}]) as bind:
+            with self.assertRaises(PeerError):bind_registered(None, None, 's')
+            self.assertEqual(bind.call_count, 1)
+        with patch('nativepeers.bridge_backend.bind_session', side_effect=pending), patch('time.sleep'):
+            with self.assertRaises(PeerError):bind_registered(None, None, 's', wait=0)
+
+
 class TakeoverTests(unittest.IsolatedAsyncioTestCase):
     """A hot-reloaded mod's bridge starts beside its predecessor, and the supervisors either starts outlive both."""
 
