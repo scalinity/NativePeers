@@ -1,0 +1,1 @@
+{ "name": "npcheck", "version": "1.0.0", "description": "NativePeers mod-compatibility probe: proves a Claude Code build still answers shadow steps with no model request", "license": "LicenseRef-Private", "author": { "name": "NativePeers" } }
