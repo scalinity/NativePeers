@@ -418,7 +418,7 @@ class Delegation:
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         if compact:
             from .compact import result_view
-            return result_view(self,result,json.loads(group['policy_json']),handle,results=False)
+            return result_view(self,result,json.loads(group['policy_json']),handle)
         return result
 
     def progress(self,group,*,worker_id=None):

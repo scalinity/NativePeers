@@ -31,12 +31,19 @@ def result_view(service, status, policy, handle, *, results=True):
         worker = next(w for w in status['workers'] if w['worker_id'] == task['worker_id'])
         row = dict(task_id=task['task_id'], phase=phase(policy, task['task_id']), state=task['state'],
                    worker_id=worker['worker_id'], provider=worker['provider'], native_id=worker['native_id'],
-                   model_requested=clip(worker['model_requested'], 128), model_observed=clip(worker['model_observed'], 128) if worker['model_observed'] else None,
+                   model_requested=clip(worker['model_requested'], 128), model_observed=None,
                    result_artifact_id=task['result_artifact_id'])
         if results:
             try:
                 rendered = service._render_result(dict(status, tasks=[task]), policy, task['task_id'])['results']
                 record = rendered[0] if rendered else {}
+                if record:
+                    # Completed attribution belongs to this immutable task, not a
+                    # later resume/fallback observation on its mutable worker row.
+                    identity=record.get('worker') or {}
+                    row.update(provider=identity.get('provider'),native_id=identity.get('native_session_id'),
+                               model_requested=clip(record['model_requested'],128) if record.get('model_requested') else None,
+                               model_observed=clip(record['model_observed'],128) if record.get('model_observed') else None)
                 error = record.get('error') or {}
                 verification = record.get('verification') or {}
                 row.update(summary=clip(record.get('summary', ''), 420),

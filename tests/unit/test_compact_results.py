@@ -31,10 +31,10 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         lease=dict(spec=dict(max_task_turns=200),tasks_started=1)
         self.j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(self.worker,self.group,None,'claude',self.native,'review','sonnet','claude-sonnet-5-5',None,str(self.j.root),None,'IDLE_GRACE',1,json.dumps(lease)))
 
-    def add(self,state='COMPLETED',summary='No findings.',error=None,findings=None):
+    def add(self,state='COMPLETED',summary='No findings.',error=None,findings=None,model_observed='claude-sonnet-5-5',native_id='current'):
         task=new_id();self.ids.append(task)
         record=dict(task_id=task,group_id=self.group,status=state.lower(),summary=summary,error=error,
-                    worker=dict(provider='claude',native_session_id=self.native,title='review'),model_requested='sonnet',model_observed='claude-sonnet-5-5',
+                    worker=dict(provider='claude',native_session_id=self.native if native_id=='current' else native_id,title='review'),model_requested='sonnet',model_observed=model_observed,
                     findings=findings or [],verification=dict(tests_run=[],limitations=['Tests not run: analysis profile.']),changes={})
         artifact=Artifacts(self.j).put(canonical(record),self.caller.key,media_type='application/json') if state!='RUNNING' else None
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,self.worker,None,None,state,artifact,None,1,'{}'))
@@ -81,3 +81,11 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(len(json.dumps(dict(schema_version=1,ok=True,data=value,error=None,request_id=new_id())).encode()),4096)
         self.assertIn('omissions',value);self.assertTrue(value['tasks'][0]['result_artifact_id'])
         self.assertTrue(self.service.result(self.caller,target)['results'][0]['summary_truncated'])
+
+    async def test_historical_unobserved_model_is_not_replaced_by_a_later_worker_observation(self):
+        earlier=self.add('FAILED',model_observed=None,native_id=None)
+        self.j.db.execute('UPDATE workers SET native_id=?,model_observed=? WHERE worker_id=?',('later-native','later-model',self.worker))
+        self.add(model_observed='later-model',native_id='later-native')
+        for view in (self.service.result(self.caller,earlier,compact=True),self.service.status(self.caller,earlier,compact=True)):
+            self.assertIsNone(view['tasks'][0]['model_observed']);self.assertIsNone(view['tasks'][0]['native_id'])
+            self.assertEqual(view['tasks'][0]['state'],'FAILED');self.assertEqual(view['tasks'][0]['model_requested'],'sonnet')
