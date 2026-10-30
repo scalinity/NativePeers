@@ -83,9 +83,7 @@ def expire(journal, *, group_id=None, supervised=None, worker_id=None, handback=
 
 def attach(journal, worker_id, session, agent, parent_key, *, sessions, display_only=True, check_only=False):
     """The worker's exclusive lease for this session. A live lease held by another session refuses with MIRROR_OWNED."""
-    if not check_only:
-        expire(journal)
-        if display_only:expire(journal, worker_id=worker_id, handback=True)
+    if not check_only:expire(journal)
     now = time.time()
     with journal.transaction() as db:
         held = db.execute('SELECT * FROM mirror_leases WHERE worker_id=? AND expires_at>?', (worker_id, now)).fetchone()
@@ -94,6 +92,8 @@ def attach(journal, worker_id, session, agent, parent_key, *, sessions, display_
         if check_only:
             return dict(worker_id=worker_id, mirror_owner='this' if held else None, attached=False)
         expires = grant(db, worker_id, session, agent, parent_key, display_only=display_only)
+    # Only once admitted: an earlier shadow of this worker can no longer surface.
+    if display_only:expire(journal, worker_id=worker_id, handback=True)
     return dict(worker_id=worker_id, mirror_owner='this', attached=True, claude_agent_id=agent, display_only=bool(display_only), expires_at=expires)
 
 
