@@ -13,7 +13,8 @@ const ACTIVE = ['queued', 'starting', 'running', 'waiting']
 
 function counts(workers: readonly NpWorker[]) {
   return { total: workers.length, running: workers.filter(w => ACTIVE.includes(w.status)).length,
-    done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out', 'canceled'].includes(w.status)).length }
+    done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out'].includes(w.status)).length,
+    stopped: workers.filter(w => ['canceled', 'interrupted'].includes(w.status)).length }
 }
 
 function elapsed(w: NpWorker, now: number): string {
@@ -96,7 +97,7 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
     }
   }
   const c = counts(workers.filter(w => !w.parentWorkerId))
-  const head = `⟐ np · ${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.failed ? ` · ${c.failed} failed` : ''}`
+  const head = `⟐ np · ${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.stopped ? ` · ${c.stopped} stopped` : ''}${c.failed ? ` · ${c.failed} failed` : ''}`
   const status = faults.fallthrough ? ' · agent types off (fallthrough; /np doctor)' : bridge.state !== 'ready' ? ` · bridge ${bridge.state}${bridge.reason ? ': ' + bridge.reason.slice(0, 60) : ''}` : ''
   const rows = workers.filter(w => !w.parentWorkerId).slice(-4)
   const offers = workers.filter(w => ACTIVE.includes(w.status) && !w.agentId && w.mirrorOwner !== 'other').slice(0, 2)

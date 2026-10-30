@@ -132,7 +132,8 @@ def route(journal, worker_id, task_id=None, generation=None):
     delivery = journal.one('SELECT * FROM task_delivery WHERE task_id=?', (task['task_id'],)) or {}
     state = journal.one('SELECT state,mode FROM completion_routes WHERE group_id=? AND completion_generation=?', (delivery.get('group_id'), delivery.get('completion_generation'))) if delivery else None
     return dict(worker_id=worker_id, task_id=task['task_id'], generation=actual, owner=delivery.get('owner', 'native'), claude_session=delivery.get('claude_session'),
-                group_id=delivery.get('group_id'), completion_generation=delivery.get('completion_generation'), route=state['state'] if state else None)
+                group_id=delivery.get('group_id'), completion_generation=delivery.get('completion_generation'), route=state['state'] if state else None,
+                mode=state['mode'] if state else None)
 
 
 def transition(journal, current, sessions, allowed, target, *, lease=False, event=None, details=None):

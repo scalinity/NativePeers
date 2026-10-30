@@ -59,6 +59,9 @@ export type NpShadow = {
   inputs: NpInput[]
   briefConsumed: boolean
   surfaced?: { generation: number; taskId?: string }
+  // Generations a follow-up queued while the worker ran folded into this run: the run's one notification carries them.
+  folded?: { generation: number; taskId?: string; text: string }[]
+  surfacedFolded?: { generation: number; taskId?: string }[]
   terminals: number[]
   fallthrough?: boolean
   lastFault?: string

@@ -35,6 +35,7 @@ export type Planned = {
   refs: Record<string, NpPending>
   toolUses: { name: string; input: unknown }[]
   terminal?: Activity
+  folded: Activity[]
   usage: { delta: number; cumulative?: number }
 }
 
@@ -54,7 +55,7 @@ function detailOf(kind: string, input: any): string {
 }
 
 export function planBatch(events: readonly Activity[], open: Open, ctx: Context, lastCumulative?: number): Planned {
-  const out: Planned = { chunks: [], consumed: null, end: null, refs: {}, toolUses: [], usage: { delta: 0 } }
+  const out: Planned = { chunks: [], consumed: null, end: null, refs: {}, toolUses: [], usage: { delta: 0 }, folded: [] }
   const text = (s: string) => {
     if (!s) return
     if (open.textBlock === null) {
@@ -133,7 +134,7 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
         marker(`[activity unavailable${d.from_seq !== undefined ? ` from seq ${d.from_seq}` : ''}: ${d.reason ?? 'unknown'}]`);break
       case 'task.terminal':
         if (ctx.continuesAfter(e.generation)) {
-          flushHeld();marker(`↳ generation ${e.generation} ${d.status ?? 'ended'}; continuing`)
+          flushHeld();marker(`↳ generation ${e.generation} ${d.status ?? 'ended'}; continuing`);out.folded.push(e)
         } else {
           if (open.held !== undefined && open.held.trim() !== String(d.final_text ?? '').trim()) flushHeld()
           open.held = undefined;out.end = 'terminal';out.terminal = e
@@ -194,12 +195,16 @@ export type Summary = {
 // The final answer the parent reads in the notification (spec 7.5.1).
 // `shown`: the step already streamed the worker's final text, so only the footer
 // follows it; the step's whole answer is still what the parent reads.
-export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[], shown = false): string {
+export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[], shown = false,
+                            folded: { generation: number; text: string }[] = [], mode?: string): string {
   const d = terminal.data ?? {}
   const status = String(d.status ?? 'completed')
   const body = headTail(String(d.final_text ?? ''), 12288)
   const lines: string[] = []
-  if (body.text.trim() && !shown) lines.push(body.truncated ? body.text + `\n[… truncated; full text: npeer result ${s.taskId ?? s.workerId} ]` : body.text)
+  // Earlier generations of this run were shown as they ended; the notification carries only this message, so it repeats them.
+  for (const f of folded) lines.push(`[generation ${f.generation}]`, f.text.trim() || '(no final text)', '')
+  if (folded.length) lines.push(`[generation ${terminal.generation}]`)
+  if (body.text.trim() && (!shown || folded.length)) lines.push(body.truncated ? body.text + `\n[… truncated; full text: npeer result ${s.taskId ?? s.workerId} ]` : body.text)
   if (status === 'interrupted') lines.push('(interrupted — partial result above)')
   lines.push('')
   const model = s.modelObserved && s.modelRequested && s.modelObserved !== s.modelRequested
@@ -211,6 +216,7 @@ export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'n
   const changes = s.changes?.files ? `changes: ${s.changes.files} files (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})${s.changes.worktree ? ' in ' + s.changes.worktree : ''}` : ''
   if (refs.length || changes) lines.push([refs.length ? `artifacts: ${refs.join(' · ')} (npeer artifact-read ID)` : '', changes].filter(Boolean).join(' · '))
   if (generations.length > 1) lines.push(`generations: ${generations.join(', ')}`)
-  if (owner === 'native') lines.push('delivered via NativePeers notice')
+  // A wait-mode route is never pushed: its result stays with NativePeers until asked for.
+  if (owner === 'native') lines.push(mode === 'wait' ? `result retained in NativePeers: npeer result ${s.groupId ?? s.workerId}` : 'delivered via NativePeers notice')
   return lines.join('\n')
 }

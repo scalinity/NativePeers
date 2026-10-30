@@ -37,7 +37,7 @@ Rows read like `◯ np:codex  GPT-6.1 Sol high · Codebase review   1m 12s · �
 | To | Do |
 |---|---|
 | Open a worker's transcript | ↓ to reach the tasks list, ↓ to the row, Enter; or press `[Open]` in the band; or `/np open N` |
-| Send a follow-up | Type while viewing it. A running worker gets it after its current turn (or steered, with `followupMode: steer-if-supported`, where the provider supports steering); a finished worker resumes the same native conversation |
+| Send a follow-up | Type while viewing it. A running worker gets it after its current turn (or steered, with `followupMode: steer-if-supported`, where the provider supports steering); a finished worker resumes the same native conversation while it is still listed |
 | Interrupt the current turn only | `[Interrupt]` in the band, or `/np interrupt N` |
 | Stop that worker's task | `x` on its tasks-list row, Esc while viewing it, `[Stop]`, or `/np stop N` |
 | Stop everything this session started | `[Stop all]` or `/np stop all` (descendants too) |
@@ -58,6 +58,7 @@ A mirrored worker spends its own provider's usage only. Shadows never call a Cla
 ## Limits
 
 - Only interactive sessions activate the mod; `claude -p`, SDK runs and NativePeers' own Claude workers leave it inert.
+- Claude Code drops a finished agent from the tasks list about 30 s after it ends, and its view can no longer be opened. To follow up later, ask the parent (it uses `SendMessage`), or use `/np resume-cmd N`; `/np pane` still shows the worker.
 - After `claude --resume`, finished workers stay in the transcript but not in the tasks list; running workers can be re-attached from the band or with `/np reattach`.
 - After `/clear`, workers started before it keep mirroring and still take follow-ups while they run or wait in their grace period, but one that has already been released cannot be resumed from the cleared session; use `/np resume-cmd N` for its exact resume command.
 - A session keeps its workers' mirror leases while it stays open, so another session can view those workers in its pane but cannot mirror them.

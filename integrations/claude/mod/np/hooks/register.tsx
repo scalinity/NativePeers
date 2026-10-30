@@ -128,6 +128,14 @@ async function rebindSession($: EngineInterface): Promise<void> {
 // A shadow for an existing worker (Path B adoption, Path C attach and
 // re-attach). Runs only inside a hook frame: a spawn from a timer or a press
 // closure skips every hook of this plugin (gate G5).
+// A worker whose shadow still runs here keeps it: a second shadow would mirror it twice and hand its delivery back.
+async function mirroredHere($: EngineInterface, w: NpWorker): Promise<boolean> {
+  if (!w.agentId) return false
+  const s = await loadShadow($, w.agentId)
+  if (!s || ['COMPLETED', 'FAULTED', 'DETACHED'].includes(s.phase)) return false
+  return (await $.agent.list()).some(a => a.id === w.agentId && ['pending', 'running', 'waiting'].includes(a.status))
+}
+
 async function attachWorker($: EngineInterface, w: NpWorker, origin: string, backfill: boolean): Promise<string> {
   try { await request($, 'POST', '/v1/mirror/attach', { worker_id: w.workerId, check_only: true }) }
   catch (error) { return `${w.title}: ${error instanceof BridgeError ? error.code : 'BRIDGE_ERROR'}` }
@@ -193,7 +201,7 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
     const active = workers.filter(w => ['queued', 'starting', 'running', 'waiting'].includes(w.status) && w.mirrorOwner !== 'other')
     const chosen = verb === 'reattach' ? active : arg === 'all' ? active.filter(w => !w.agentId) : [pick(arg)].filter(Boolean) as NpWorker[]
     const out: string[] = []
-    for (const w of chosen) out.push(await attachWorker($, w, verb, true))
+    for (const w of chosen) out.push(await mirroredHere($, w) ? `${w.title}: already mirrored` : await attachWorker($, w, verb, true))
     return { text: out.length ? out.join('; ') : 'nothing to attach' }
   }
   return { text: 'unknown subcommand. Try /np, /np pane, /np open N, /np stop N|all, /np interrupt N, /np attach N|all, /np reattach, /np doctor, /np resume-cmd N' }

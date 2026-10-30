@@ -151,6 +151,8 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
   const opened = await $.clock.now()
   let quietSince = opened, lastBeat = opened
   while (true) {
+    // An adopted or re-attached shadow's first page replays history: its age is not display latency.
+    const backfill = s.cursor === 0 && s.deliveryOwner === 'native'
     const batch = await poll($, `/v1/workers/${s.workerId}/activity?after=${s.cursor}&wait_ms=25000&max=256`)
     const events: Activity[] = Array.isArray(batch.events) ? batch.events : []
     moved = batch.continued_by
@@ -166,13 +168,15 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       s.inflight = { from: s.cursor, to: plan.consumed };s.cursor = plan.consumed
       s.pendingRefs = { ...s.pendingRefs, ...plan.refs }
       if (plan.usage.cumulative !== undefined) s.usageCumulative = plan.usage.cumulative
+      for (const f of plan.folded) if (!(s.folded ?? []).some(x => x.generation === f.generation))
+        s.folded = [...(s.folded ?? []), { generation: f.generation, taskId: f.task_id ?? undefined, text: String(f.data?.final_text ?? '').slice(0, 12288) }]
       await saveShadow($, s)
       quietSince = await $.clock.now()
     }
     usage += plan.usage.delta
     for (const chunk of plan.chunks) yield chunk
     const shown = plan.consumed !== null ? events.find(ev => ev.seq === plan.consumed) : undefined
-    if (shown?.at && plan.chunks.length) $.ui.log(`np: display latency ${Math.round((await $.clock.now()) - Date.parse(shown.at))}ms ${s.provider} seq ${shown.seq}`, { to: 'debug' })
+    if (shown?.at && plan.chunks.length && !backfill) $.ui.log(`np: display latency ${Math.round((await $.clock.now()) - Date.parse(shown.at))}ms ${s.provider} seq ${shown.seq}`, { to: 'debug' })
     if (plan.end === 'tool_use') {
       Object.assign(s, { phase: 'TOOL_PENDING', inflight: undefined });await saveShadow($, s)
       yield { kind: 'stop', stopReason: 'tool_use', usage: null }
@@ -181,16 +185,18 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     if (plan.end === 'terminal' && plan.terminal) {
       const t = plan.terminal
       let owner: 'mirror' | 'native' = t.generation === s.nativeGeneration ? 'native' : 'mirror'
+      // A natively owned generation is not changed by surfacing; the answer only reports its route's mode.
+      let surfaced: any
+      try { surfaced = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the route stays pending; the lease decides */ }
       if (owner === 'mirror') {
-        let surfaced: any
-        try { surfaced = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the route stays pending; the lease decides */ }
         // A lapsed lease already handed the route back: NativePeers delivers it,
         // so this answer must not claim the delivery and is not acked.
         if (surfaced && surfaced.owner === 'mirror' && surfaced.route !== 'MIRROR_SURFACING') owner = 'native'
         else s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
       }
+      const folded = await surfaceFolded($, s)
       const final = String(t.data?.final_text ?? '').trim()
-      const text = finalAnswer(t, await summary($, s, t), owner, s.terminals, final.length > 0 && open.answer.trim().endsWith(final))
+      const text = finalAnswer(t, await summary($, s, t), owner, s.terminals, final.length > 0 && open.answer.trim().endsWith(final), folded, surfaced?.mode)
       yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
       Object.assign(s, { phase: 'COMPLETING', inflight: undefined });await saveShadow($, s)
       yield { kind: 'stop', stopReason: 'end_turn', usage: usage > 0 ? { input_tokens: 0, output_tokens: usage, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: shadowModel(s.provider) } : null }
@@ -276,6 +282,22 @@ export async function captureRow($: EngineInterface, agentId: string | undefined
   await saveShadow($, s)
 }
 
+// The mirror-owned generations folded into this run surface with its final answer; a handed-back or
+// natively owned one is NativePeers' to deliver and is left out.
+async function surfaceFolded($: EngineInterface, s: NpShadow): Promise<{ generation: number; text: string }[]> {
+  const out: { generation: number; text: string }[] = []
+  for (const f of s.folded ?? []) {
+    if (f.generation === s.nativeGeneration) continue
+    let r: any
+    try { r = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: f.taskId, generation: f.generation }) } catch { /* pending; the lease decides */ }
+    if (r && (r.owner !== 'mirror' || r.route !== 'MIRROR_SURFACING')) continue
+    s.surfacedFolded = [...(s.surfacedFolded ?? []), { generation: f.generation, taskId: f.taskId }]
+    out.push({ generation: f.generation, text: f.text })
+  }
+  s.folded = []
+  return out
+}
+
 // turn.complete for a shadow: acknowledge a surfaced answer, map a stop to the
 // worker, and detect a fallthrough (a real model request for a shadow).
 export async function completeShadow($: EngineInterface, agentId: string, reason: string | undefined, isAborted: boolean, answer: string, usage: any): Promise<void> {
@@ -297,9 +319,10 @@ export async function completeShadow($: EngineInterface, agentId: string, reason
       try { await request($, 'POST', '/v1/mirror/ack', { worker_id: s.workerId, task_id: s.taskId, generation: s.generation, outcome: 'killed' }) } catch { /* lease fallback applies */ }
     }
     s.phase = 'COMPLETED'
-  } else if (s.surfaced) {
-    try { await request($, 'POST', '/v1/mirror/ack', { worker_id: s.workerId, task_id: s.surfaced.taskId, generation: s.surfaced.generation }) } catch { /* NOTIFICATION_UNKNOWN on lease expiry */ }
-    s.surfaced = undefined;s.phase = 'COMPLETED'
+  } else if (s.surfaced || s.surfacedFolded?.length) {
+    for (const g of [...(s.surfacedFolded ?? []), ...(s.surfaced ? [s.surfaced] : [])])
+      try { await request($, 'POST', '/v1/mirror/ack', { worker_id: s.workerId, task_id: g.taskId, generation: g.generation }) } catch { /* NOTIFICATION_UNKNOWN on lease expiry */ }
+    s.surfaced = undefined;s.surfacedFolded = undefined;s.phase = 'COMPLETED'
   } else if (s.phase === 'COMPLETING') {
     s.phase = 'COMPLETED'
   }

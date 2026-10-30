@@ -54,6 +54,15 @@ test('a terminal followed by a forwarded follow-up continues the same run with a
   const text = p.chunks.map(c => (c as any).text).join('')
   expect(text).toContain('generation 1 completed; continuing')
   expect(text).toContain('generation 2: your follow-up')
+  expect(p.folded.map(e => e.generation)).toEqual([1])
+})
+
+test('generations folded into one run all reach its final answer, which the one notification carries', () => {
+  const terminal = ev(9, 'task.terminal', { status: 'completed', final_text: 'two' }, null, 2)
+  const text = finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1, 2], true, [{ generation: 1, text: 'one' }])
+  expect(text.indexOf('[generation 1]\none')).toBe(0)
+  expect(text).toContain('[generation 2]\ntwo')
+  expect(text).toContain('generations: 1, 2')
 })
 
 test('gaps, fallbacks, plans and inputs are marked, never silent', () => {
@@ -98,5 +107,6 @@ test('the final answer carries NativePeers references and says who delivered it'
   expect(text).toContain('worker W · group G · task T · native N')
   expect(text).toContain('artifacts: result R')
   expect(text).toContain('delivered via NativePeers notice')
+  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'native', [1], false, [], 'wait')).toContain('result retained in NativePeers: npeer result G')
   expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1], true).startsWith('partial')).toBe(false)
 })
