@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "stage": "NativePeers Lineage for Claude Code: np mod, session bridge and activity log, verified on the rig before merge",
+  "stage": "NativePeers Lineage for Claude Code merged and installed; four providers verified on the production install",
   "status": "PASS_WITH_OPEN_ITEMS",
   "reviewed_commit": "b16dc7af962f4d17c145bfa1d40e05827b2cea7f",
-  "scope": "The np mod (integrations/claude/mod/np), the session bridge (nativepeers/bridge.py, bridge_backend.py, mirror.py), the activity log (nativepeers/activity) and npeer install|uninstall --claude-mod, against Claude Code 2.1.314 (CLI). Live PASS covers Codex and Claude workers on an isolated rig state root; Grok and Antigravity live runs belong to the installed checkout (the rig cannot match their installed hooks); desktop (G7/AC9) needs the person.",
+  "scope": "The np mod (integrations/claude/mod/np), the session bridge (nativepeers/bridge.py, bridge_backend.py, mirror.py), the activity log (nativepeers/activity) and npeer install|uninstall --claude-mod, against Claude Code 2.1.314 (CLI). Live PASS covers Codex and Claude workers on an isolated rig state root; Grok and Antigravity passed on the production install after merge; desktop (G7/AC9) needs the person.",
   "documents": {
     "docs/CLAUDE_LINEAGE_MOD.md": "e9e0379 (rev 1.0, unchanged)",
     "docs/CLAUDE_LINEAGE_KICKOFF.md": "af4724f4 (rev 1.0, unchanged)"
@@ -46,8 +46,8 @@
     }
   },
   "acceptance": {
-    "AC1": "PARTIAL: a real parent turn issued four parallel np:* Agent calls (live-acceptance-1); Codex and Claude rows ran concurrently and were mirrored; Grok and Antigravity were refused by rig readiness. Four-provider run: post-install check.",
-    "AC2": "PASS (Codex, Claude): brief, streaming text, exec rows with output, final answer with NativePeers references; Grok and Antigravity normalizers pass fixture tests.",
+    "AC1": "PASS (production-fanout-1): one parent turn produced four labeled np:* rows (Codex, Grok, Antigravity, Claude) running concurrently with distinct native IDs.",
+    "AC2": "PASS: mirrored transcripts for all four providers (production-fanout-1) and the richer Codex and Claude rig runs.",
     "AC3": "PASS: harness runs report duration_api_ms 0, total_cost_usd 0, modelUsage {} and zero tripwire hits; live debug logs show no shadow request other than the engine agent_summary, refused 404 before inference.",
     "AC4": "PASS (live-acceptance-2, live-recovery-1)",
     "AC5": "PASS (live-acceptance-2)",
@@ -56,10 +56,10 @@
     "AC8": "PASS: harness fault injection; live bridge death recovered (live-recovery-1).",
     "AC9": "NOT_RUN: desktop check needs the person (one consolidated checklist).",
     "AC10": "PASS (live-acceptance-2, live-recovery-1)",
-    "AC11": "PARTIAL: after claude --resume the previous workers are listed and completed shadows stay in the transcript; survive_parent re-attach BLOCKED (no grant mechanism for interactive parents).",
+    "AC11": "PARTIAL: after claude --resume the previous workers are listed (a2ee7d8) and completed shadows stay in the transcript; survive_parent re-attach BLOCKED (no grant mechanism for interactive parents).",
     "AC12": "PASS (live-acceptance-2): npeer spawn adopted into a row; initial result delivered by the NativePeers notice. MCP worker_spawn: harness only.",
     "AC13": "PASS (harness): inert inside NativePeers-owned Claude workers.",
-    "AC14": "See tests; installer idempotence and uninstall dry-run covered by tests/unit/test_claude_mod_install.py; no attribution trailers; merge pending."
+    "AC14": "PASS except the desktop-independent items: suites as recorded, plugin validate and tsc clean, installer idempotent with uninstall dry-run, no attribution trailers, PR #17 merged to main (56b236b)."
   },
   "operation_checks": [
     {
@@ -83,19 +83,19 @@
     {
       "provider": "antigravity",
       "operation": "np-mirror-live",
-      "status": "NOT_RUN",
-      "parent_context": "isolated rig state root",
-      "scope": "First use renewed agy 1.4.11 on the rig, then readiness refused: the installed Antigravity hooks and MCP facade name the main checkout",
-      "source_head": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
+      "status": "PASS",
+      "parent_context": "installed np plugin and production state root after merge (56b236b), disposable Claude Code 2.1.314 session",
+      "scope": "production-fanout-1: mirrored transcript, native notification, MIRROR_DELIVERED; agy first use renewed 1.4.11",
+      "source_head": "56b236b25bab7a4a2dc3b505545625ede97ff3d2",
       "runtime_sha256": "09cefed6a1d217e14ba1751dce4442b97c2797e88c297c77fda3690f92ceddcd"
     },
     {
       "provider": "grok",
       "operation": "np-mirror-live",
-      "status": "NOT_RUN",
-      "parent_context": "isolated rig state root",
-      "scope": "Readiness refused: the installed Grok hooks and sandbox profiles name the main checkout and the production state root",
-      "source_head": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
+      "status": "PASS",
+      "parent_context": "installed np plugin and production state root after merge (56b236b), disposable Claude Code 2.1.314 session",
+      "scope": "production-fanout-1: mirrored transcript, native notification, MIRROR_DELIVERED",
+      "source_head": "56b236b25bab7a4a2dc3b505545625ede97ff3d2",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
     }
   ],
@@ -103,9 +103,9 @@
   "limitations": [
     "Claude Code evicts a finished background agent about 30 s after it ends; later follow-ups go through the parent or /np resume-cmd.",
     "A shadow step between mirror calls fails closed after about 15 s without a bridge; /np reattach shows the worker again.",
-    "A worktree rig cannot run Grok or Antigravity workers: their installed hooks name the main checkout.",
     "Desktop behavior (G7/AC9) is unverified until the person runs the checklist.",
-    "Codex steering (followupMode steer-if-supported) is enabled only for the runtime whose app-server schema lists turn/steer (0.164.0, 3998a0e5); on the current 0.166.0 a follow-up queues after the running turn."
+    "Codex steering (followupMode steer-if-supported) is enabled only for the runtime whose app-server schema lists turn/steer (0.164.0, 3998a0e5); on the current 0.166.0 a follow-up queues after the running turn.",
+    "A worktree rig cannot run Grok or Antigravity workers: their installed hooks name the main checkout; those providers are verified on the installed checkout."
   ],
   "code_commit": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
   "source": {

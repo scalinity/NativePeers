@@ -73,6 +73,18 @@
       ],
       "state": "PASS_WITH_FINDINGS"
     },
+    "live-resume-1": {
+      "commit": "a2ee7d8",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run4/resume-output.txt",
+        "evidence/scratch/claude-lineage/live/run4/resume2-output.txt"
+      ],
+      "label": "L",
+      "observation": [
+        "claude --resume of the finished live-recovery-1 session: the first launch found its bridge refused (CALLER_UNBOUND) because NativePeers registered the resumed incarnation after the bridge bound; with a2ee7d8 the bridge waits for that registration, binds the new incarnation of the same peer, and /np and the band list all four previous workers. The resumed transcript keeps the completed shadows' rows (gate G10). survive_parent re-attach: BLOCKED (no grant mechanism for interactive parents)."
+      ],
+      "state": "PASS_WITH_FINDINGS"
+    },
     "m3-live-slice": {
       "commit": "f28e7bf",
       "evidence": [
@@ -94,8 +106,24 @@
         "After the parent exited, no process carrying the isolated NPEER_HOME remained."
       ],
       "state": "PASS"
+    },
+    "production-fanout-1": {
+      "commit": "56b236b",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/prod/driver-output.txt",
+        "evidence/scratch/claude-lineage/live/prod/session"
+      ],
+      "label": "L",
+      "observation": [
+        "Installed with npeer install --claude-mod (marketplace nativepeers-local, np@nativepeers-local at user scope; settings.json, known_marketplaces.json and installed_plugins.json gained only np entries; backups under backups/claude-lineage/20261030T190126; a repeat install performed zero operations; uninstall dry-run lists the two inverse commands).",
+        "/np doctor: Claude Code 2.1.314 (minimum 2.1.309), bridge ready, providers codex, claude, antigravity, grok, activity schema nativepeers.activity.v1.",
+        "One real parent turn issued four parallel Agent calls; the tasks list showed cx GPT-6.1 Sol low, cl Sonnet 5.5, gk Grok 4.7 and ag Gemini 4 Argon high, three running at once; all four completed through native notifications that npguard answered locally.",
+        "Journal: each worker's observed model matches its request (gpt-6.1-sol, claude-sonnet-5-5, grok-4.7, gemini-4-argon-high), native IDs are distinct, every task is mirror-owned and MIRROR_DELIVERED in wait mode. The first np:antigravity use renewed the production agy approval to 1.4.11 (09cefed6).",
+        "Each shadow transcript runs on its np-mirror-<provider> model with every assistant row answeredWithoutRequest, carries the mirrored tool row and ends with its NativePeers footer. The debug log holds no np-mirror request; main-model requests were the one real turn (repl_main_thread x2) plus the engine's prompt suggestions, session title and quota check."
+      ],
+      "state": "PASS"
     }
   },
   "schema": "nativepeers.claude-lineage-live.v1",
-  "updated_at": "2026-10-30T18:47:00-0400"
+  "updated_at": "2026-10-30T19:08:00-0400"
 }
