@@ -124,8 +124,8 @@ def require_silent_frame(frame, final, worker_text):
         raise RuntimeError("Suppressed worker completion body rendered after the final")
 
 
-def audit_completed_frames(frames, final, worker_text, completed_at):
-    for frame in frames:
+def install_silent_audit(tui, final, worker_text, completed_at):
+    for frame in tui.frames:
         text = "\n".join(frame.get("chat_tail", []) + frame["lines"])
         if worker_text in text:
             raise RuntimeError("Suppressed worker body rendered in native frames")
@@ -133,6 +133,9 @@ def audit_completed_frames(frames, final, worker_text, completed_at):
         # first completed native boundary cannot move to a repeated final.
         if datetime.fromisoformat(frame["at"]).timestamp() >= completed_at:
             require_silent_frame(frame, final, worker_text)
+    # The existing screen may still be the last precompletion capture. Only
+    # captured timestamps and subsequent pump callbacks establish new output.
+    tui.audit = lambda frame: require_silent_frame(frame, final, worker_text)
 
 
 def final_model_history(model, run, native_id, final, worker_text, before, quiet):
@@ -350,14 +353,10 @@ def phase_run(source, run, binary, approval, phase, report, resources):
     before = model.parent_requests
     worker_text, answer = f"QCW_WORKER_RESULT_{phase}_{token}", f"QCW_PUSH_RECEIVED_{phase}_{token}"
     if phase in ("quiet", "queued"):
-        def audit(frame):
-            require_silent_frame(frame, final, worker_text)
         tail = base.native_tail(run / "codex-home", identity["native_session_id"], final)
         stamp = json.loads(Path(tail["path"]).read_text().splitlines()[tail["completed_record"]])["timestamp"]
         completed_at = datetime.fromisoformat(stamp.replace("Z", "+00:00")).timestamp()
-        audit_completed_frames(tui.frames, final, worker_text, completed_at)
-        tui.audit = audit
-        audit({"lines": tui.screen.display[:]})
+        install_silent_audit(tui, final, worker_text, completed_at)
     if phase != "queued":
         (run / "release").touch()
     group = json.loads(done.read_text())["result"]["group_id"]

@@ -25,10 +25,15 @@ class QuietCloseWorkerProbeTests(unittest.TestCase):
         completed = probe.datetime.fromisoformat("2026-10-30T12:00:01-04:00").timestamp()
         frames = [{"at": "2026-10-30T12:00:00-04:00", "lines": [final, "Working… esc to interrupt"]},
                   {"at": "2026-10-30T12:00:02-04:00", "lines": [final, "prompt"]}]
-        probe.audit_completed_frames(frames, final, "SUPPRESSED", completed)
+        tui = SimpleNamespace(frames=frames, screen=SimpleNamespace(display=frames[0]["lines"]), audit=None)
+        probe.install_silent_audit(tui, final, "SUPPRESSED", completed)
+        self.assertIsNotNone(tui.audit)
+        self.assertIn("Working", tui.screen.display[-1])  # Stale precompletion screen is allowed.
         frames.append({"at": "2026-10-30T12:00:03-04:00", "lines": [final, "Working… esc to interrupt"]})
         with self.assertRaises(RuntimeError):
-            probe.audit_completed_frames(frames, final, "SUPPRESSED", completed)
+            probe.install_silent_audit(tui, final, "SUPPRESSED", completed)
+        with self.assertRaises(RuntimeError):
+            tui.audit(frames[-1])
 
     def test_cleanup_stops_every_resource_and_leaves_no_phase_running(self):
         order = []
