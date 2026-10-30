@@ -17,7 +17,7 @@ class Registry:
 
     def register(self, provider, home: Path, native_id, native_title, owner, cwd,
                  transport, *, owner_kind="interactive-standalone", policy=None,
-                 incarnation=None, capabilities=None, home_explicit=None):
+                 incarnation=None, capabilities=None, home_explicit=None, queue_resume=False):
         require(matches(owner), "TARGET_GONE", "Native owner is no longer alive")
         key = PeerKey(self.journal.host_id, provider, home_id(home), native_id)
         incarnation = incarnation or new_id()
@@ -33,6 +33,14 @@ class Registry:
                           lifecycle="unknown", policy=policy or {}, capabilities=capabilities or {},
                           home=str(home.resolve()), home_label=label, provider_home_explicit=home_explicit, last_evidence_at=time.time())
         with self.journal.transaction() as db:
+            if queue_resume:
+                # A queue may bootstrap a cold native resume, never revive a
+                # replaced writer or displace an independently live owner.
+                known=db.execute('SELECT 1 FROM peer_instances WHERE peer_key=? AND pid=? AND process_start=?',
+                                 (key.handle,owner['pid'],owner['start'])).fetchone()
+                current=db.execute("SELECT descriptor_json FROM peer_instances WHERE peer_key=? AND status='live' ORDER BY last_seen DESC LIMIT 1",(key.handle,)).fetchone()
+                require(not known and (not current or not matches(json.loads(current[0])['owner'])),
+                        'TARGET_REBOUND','Queue registration cannot replace an existing native writer')
             db.execute("UPDATE peer_instances SET status='replaced' WHERE (peer_key=? OR (pid=? AND process_start=?)) AND status='live'",
                        (key.handle, owner["pid"], owner["start"]))
             db.execute("INSERT INTO peer_instances VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",

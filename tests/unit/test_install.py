@@ -31,7 +31,7 @@ class InstallTests(unittest.IsolatedAsyncioTestCase):
                 evidence=project/'evidence/capabilities.json';atomic_json(evidence,{'providers':providers})
                 with patch('nativepeers.install.ROOT',project),patch('nativepeers.install.Path.home',return_value=home):
                     installer=Installer(journal,home=home,native=False);await installer.install()
-                    trusted={'fixture-start':'start-hash','fixture-end':'end-hash','fixture-prompt':'prompt-hash'}
+                    trusted={'fixture-start':'start-hash','fixture-end':'end-hash','fixture-prompt':'prompt-hash','fixture-queue':'queue-hash'}
                     manifest=json.loads(installer.manifest.read_text());manifest['trusted_hooks']=trusted
                     atomic_json(installer.manifest,manifest)
                     installer.config.write_text(''.join('[hooks.state.'+key+']\ntrusted_hash="'+value+'"\n' for key,value in trusted.items()))

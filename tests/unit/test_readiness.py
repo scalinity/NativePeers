@@ -49,8 +49,8 @@ class ReadinessTests(unittest.TestCase):
             skill=home/'skills/nativepeers/SKILL.md' if provider=='claude' else self.installer.skills[provider]
             skill.parent.mkdir(parents=True,exist_ok=True)
             skill.write_bytes((self.project/'integrations'/provider/'skills/nativepeers/SKILL.md').read_bytes())
-        self.write_json(self.installer.manifest,{'trusted_hooks':{'start':'one','end':'two','prompt':'three'}})
-        (self.codex/'config.toml').write_text('[hooks.state.start]\ntrusted_hash="one"\n[hooks.state.end]\ntrusted_hash="two"\n[hooks.state.prompt]\ntrusted_hash="three"\n')
+        self.write_json(self.installer.manifest,{'trusted_hooks':{'start':'one','end':'two','prompt':'three','queue':'four'}})
+        (self.codex/'config.toml').write_text('[hooks.state.start]\ntrusted_hash="one"\n[hooks.state.end]\ntrusted_hash="two"\n[hooks.state.prompt]\ntrusted_hash="three"\n[hooks.state.queue]\ntrusted_hash="four"\n')
         for path,(kind,key,value) in desired(self.home).items():
             if kind=='file':path.parent.mkdir(parents=True,exist_ok=True);path.write_text(value)
             else:self.write_json(path,{'mcpServers':{key:value}} if kind=='mcp' else {key:value})
@@ -102,7 +102,7 @@ class ReadinessTests(unittest.TestCase):
         data['apiKey']='fixture-secret-must-not-appear';self.write_json(settings,data)
         hooks=self.codex/'hooks.json';data=json.loads(hooks.read_text())
         data['hooks']['SessionStart'][0]['hooks'][0]['timeout']=99;self.write_json(hooks,data)
-        (self.codex/'config.toml').write_text('[hooks.state.start]\ntrusted_hash="one"\nenabled=false\n[hooks.state.end]\ntrusted_hash="two"\n[hooks.state.prompt]\ntrusted_hash="three"\n')
+        (self.codex/'config.toml').write_text('[hooks.state.start]\ntrusted_hash="one"\nenabled=false\n[hooks.state.end]\ntrusted_hash="two"\n[hooks.state.prompt]\ntrusted_hash="three"\n[hooks.state.queue]\ntrusted_hash="four"\n')
         (self.home/'.gemini/config/agents/nativepeers-analysis.md').write_text('modified profile')
         path=self.home/'.gemini/config/mcp_config.json';data=json.loads(path.read_text())
         data['mcpServers']['nativepeers']['disabled']=True;self.write_json(path,data)

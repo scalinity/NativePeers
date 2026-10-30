@@ -50,8 +50,8 @@ class Installer:
 
     def desired_hooks(self,provider):
         groups={}
-        # UserPromptSubmit is the consumption-time close-out guard; it never registers peers.
-        for event in ['SessionStart','SessionEnd','UserPromptSubmit']+(['PreToolUse'] if provider=='claude' else []):
+        # Codex queue guards consume late input before a turn or compaction starts.
+        for event in ['SessionStart','SessionEnd','UserPromptSubmit']+(['PreToolUse'] if provider=='claude' else ['QueuedInput']):
             group={'hooks':[{'type':'command','command':self.command_for(provider),'timeout':3}]}
             if event=='PreToolUse':group['matcher']='Bash'
             groups[event]=group
