@@ -2,12 +2,17 @@
   "workers_per_group": 4,
   "workers_total": 8,
   "max_depth": 1,
-  "task_wall_seconds": 1800,
-  "group_wall_seconds": 3600,
-  "max_task_turns": 8,
+  "task_wall_seconds_default": 1800,
+  "task_wall_seconds": null,
+  "group_wall_seconds": null,
+  "max_task_turns_default": 8,
+  "max_task_turns": null,
+  "native_max_turns_default": 128,
+  "native_max_turns": null,
   "pending_messages": 32,
   "exchange_hops": 8,
   "request_expiry_seconds": 1800,
   "followup_grace_seconds": 600,
-  "home_labels": {}
+  "home_labels": {},
+  "usage": {}
 }

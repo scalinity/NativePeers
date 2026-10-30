@@ -12,6 +12,30 @@ Private captures, verbatim reviews, metadata proofs and all intermediate runs ar
 
 ---
 
+# Spawn-limit source checks (issue 3)
+
+Verification uses temporary journals and fake provider boundaries in an isolated worktree. The unchanged baseline command passed **56 tests / 62 subtests**:
+
+```sh
+python -m pytest -q tests/unit/test_delegation_diagnostics.py tests/unit/test_spawn_check.py tests/unit/test_delegation.py tests/unit/test_grok.py
+```
+
+The candidate focused command passed **127 tests / 174 subtests**:
+
+```sh
+python -m pytest -q tests/unit/test_delegation_diagnostics.py tests/unit/test_spawn_check.py tests/unit/test_delegation.py tests/unit/test_grok.py tests/unit/test_spawn_policy.py tests/unit/test_resume_idempotency.py tests/unit/test_provider_errors.py tests/unit/test_worktrees_and_contracts.py tests/contract/test_grok_stream.py tests/contract/test_mcp_ack_groups.py
+```
+
+Behavior changes were exercised red before green: long explicit requests, configured-ceiling diagnostics, group/task mismatch, check/doctor discovery, separate native-round arguments and exhaustion, resume limits and old-lease native defaults. Compatibility checks cover existing policy keys and every spawn example; the policy example lists all built-in keys. The final-head complete-suite command is `python -m pytest -q`; the pull request records its actual outcome and read-only reviewer dispositions.
+
+The independent Sol review found a parent-loss shutdown path that serialized an internal infinite deadline. A new lifecycle regression reproduces that exception and verifies a JSON `null` event deadline for an unset group ceiling. The corrected lifecycle, Grok profile, fallback, selected-home and supervisor files pass **45 tests / 34 subtests**. Contract helper launches require the worktree's ignored `.venv` link to the existing environment; imports still resolve to worktree source.
+
+The two installed-verification fingerprint assertions in `tests/unit/test_evidence_checkpoint.py` compare source bytes against the installed snapshot and therefore detect this branch's source drift. Those checks and all files under `evidence/` remain unchanged. A separate read-only hash comparison confirms that the snapshot still matches main. Source behavior checks do not establish installed/native acceptance or refresh that snapshot.
+
+No installed-runtime qualification, real provider acceptance batch, test under `tests/live`, installation or runtime-approval update is part of these source checks. Review workers are separate authorized read-only reviews, not live acceptance tests. Historical verification records below retain their original source/runtime scope.
+
+---
+
 # Quiet close-out notifications verification (2026-10-26)
 
 Interactive close-out windows, sender retention, receiving guards and retained inbox reads are integrated and installed. The final repaired worktree suite passed **764 tests / 742 subtests**, with four Linux-only skips, in **250.98 seconds**. The final main suite passed **764 tests / 742 subtests**, with four Linux-only skips, in **272.25 seconds**. [Current record](../evidence/quiet-notifications-20261026.json) · [Design and scope](NOTIFICATIONS.md).

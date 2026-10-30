@@ -120,6 +120,14 @@ class LifecycleShutdownTests(unittest.IsolatedAsyncioTestCase):
         self.assert_settled('PARENT_LOST')
         self.assertEqual(self.j.one('SELECT state FROM tasks WHERE task_id=?',(self.first,))['state'],'CANCELED')
 
+    async def test_parent_loss_without_a_group_ceiling_records_a_json_safe_deadline(self):
+        await self.start()
+        self.group.policy.update(group_wall_seconds=None,parent_owner=dict(self.policy['parent_owner'],pid=99999999,pgid=99999999))
+        await asyncio.wait_for(self.group.monitor(),5)
+        event=self.j.one("SELECT payload_json FROM events WHERE kind='lifetime-ended' AND subject_id=?",(self.id,))
+        self.assertEqual(json.loads(event['payload_json']),{'parent_gone':True,'deadline':None})
+        self.assert_settled('PARENT_LOST')
+
     async def test_group_deadline_settles_buffered_successor_with_cause(self):
         await self.start()
         self.group.policy.update(created_at=time.time()-2,group_wall_seconds=1)

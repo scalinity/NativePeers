@@ -116,8 +116,11 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
         local=load(journal)
         lease=json.loads(row['lease_json']);lease['provider_home']=str(recorded_home(journal,row))
         require(lease['grants'].get('depth',1)<=local['max_depth'],'CAPACITY_UNAVAILABLE','Current local depth ceiling is lower than this worker grant')
-        lease['spec']['max_task_turns']=min(lease['spec']['max_task_turns'],local['max_task_turns'])
-        lease['spec']['wall_time_seconds']=min(lease['spec']['wall_time_seconds'],local['task_wall_seconds'])
+        lease['spec'].setdefault('native_max_turns',local['native_max_turns_default'])
+        for field,key in (('max_task_turns','max_task_turns'),('wall_time_seconds','task_wall_seconds'),
+                          ('wall_time_seconds','group_wall_seconds'),('native_max_turns','native_max_turns')):
+            if local[key] is not None:
+                lease['spec'][field]=min(lease['spec'].get(field,local.get(key+'_default',local[key])),local[key])
         profile=lease['spec']['permission_profile']
         lease['spec']['model']=model_selection(row)
         require(profile in parent.get('policy',{}).get('profiles',['analysis']),'PERMISSION_CAPABILITY_UNKNOWN','Current parent does not retain the original permission ceiling')
@@ -143,7 +146,8 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
             policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(group['group_id'],)).fetchone()[0])
             phases=policy.get('phases',{'1':policy['initial_tasks']});phase=max(int(n) for n in phases)+1
             phases[str(phase)]=[task_id]
-            policy.update(phases=phases,controller_generation=controller_generation,parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'],created_at=time.time())
+            policy.update(phases=phases,controller_generation=controller_generation,parent_owner=parent['owner'],parent_incarnation=parent['incarnation_id'],created_at=time.time(),
+                          wall_time_seconds=lease['spec']['wall_time_seconds'],group_wall_seconds=local['group_wall_seconds'])
             response={'worker_id':worker_id,'task_id':task_id,'group_id':group['group_id'],'native_id':row['native_id'],
                       'completion_generation':phase,'state':'QUEUED','client_request_id':request_id}
             active=db.execute("SELECT COUNT(*) FROM workers WHERE state NOT IN ('RELEASED_RESUMABLE','FAILED','EXITED')").fetchone()[0]
