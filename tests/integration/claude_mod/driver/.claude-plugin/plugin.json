@@ -1,0 +1,1 @@
+{ "name": "npdriver", "version": "0.1.0", "description": "Harness-only: answers main-loop model steps from a JSON script so runs need no model input", "license": "UNLICENSED" }

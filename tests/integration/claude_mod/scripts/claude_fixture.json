@@ -1,0 +1,9 @@
+{"steps": [
+ {"text": "Inspecting the workspace.", "tools": [{"name": "Bash", "input": {"command": "printf 'hello from bash\\n'", "description": "Print a greeting"}}]},
+ {"tools": [{"name": "Write", "input": {"file_path": "${DIR}/notes.txt", "content": "one\ntwo\n"}}]},
+ {"tools": [{"name": "Edit", "input": {"file_path": "${DIR}/notes.txt", "old_string": "two", "new_string": "three"}}]},
+ {"text": "Reading it back.", "tools": [{"name": "Read", "input": {"file_path": "${DIR}/notes.txt"}}]},
+ {"tools": [{"name": "TodoWrite", "input": {"todos": [{"content": "Check notes", "status": "completed", "activeForm": "Checking notes"}]}}]},
+ {"tools": [{"name": "Bash", "input": {"command": "echo boom >&2; exit 3", "description": "A failing command"}}, {"name": "Read", "input": {"file_path": "${DIR}/missing.txt"}}]},
+ {"text": "Done: notes.txt now reads one/three."}
+]}

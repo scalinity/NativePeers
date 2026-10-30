@@ -28,6 +28,7 @@ from .receipts import delivery_error
 CONTROL_WRITE_SECONDS=1
 CONTROL_REPLY_SECONDS=1
 CONTROL_CLOSE_SECONDS=1
+STEER_SECONDS=10
 
 
 def _abort_reply(writer):
@@ -45,7 +46,7 @@ class Group:
         self.endpoint=runtime_root()/('g-'+group_id[:24]+'.sock')
         self.children={};self.changed=asyncio.Event();self.closing=False;self.finished_at=None;self.shutdown_reason=None
         self.handoffs=set()
-        self.connections={}
+        self.connections={};self.steering={}
         self.controller=Caller('controller','controller:'+group_id+':'+str(self.generation),grants={'group_id':group_id,'generation':self.generation,'parent_key':self.row['parent_key']})
         self.parent=Caller('peer',self.row['parent_key'],self.policy['parent_incarnation'])
 
@@ -132,6 +133,8 @@ class Group:
                     if not child['ready'].done():child['ready'].set_exception(PeerError('WORKER_CRASHED',str(event['error'])))
                     self.fail_worker(worker_id,event['error'],child['row']['generation'])
                 if event['event']=='task_terminal':self.changed.set()
+                if event['event']=='steered' and event.get('request_id') in self.steering and not self.steering[event['request_id']].done():
+                    self.steering[event['request_id']].set_result(event)
             if not self.closing and any(t['worker_id']==worker_id and t['state'] not in TERMINAL|{'FALLBACK_PENDING'} for t in self.tasks()):self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':'Owned worker closed its control stream'},child['row']['generation'])
         except Exception as error:
             self.fail_worker(worker_id,{'code':'WORKER_CRASHED','message':str(error)[:1000]},child['row']['generation'])
@@ -213,6 +216,8 @@ class Group:
             db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker_id,self.id,None,candidate['provider'],None,old['role_title'],candidate['model'],None,None,old['cwd'],None,'RESERVED',1,canonical(new_lease).decode()))
             task_spec['attempt_index']=latest['attempt_index']+1
             db.execute("UPDATE tasks SET worker_id=?,generation=1,state='QUEUED',native_turn_id=NULL,result_artifact_id=NULL,terminal_reason=NULL,task_json=? WHERE task_id=?",(worker_id,canonical(task_spec).decode(),task['task_id']))
+            # A mirror follows its task to the replacement worker, so the generation keeps the lease its delivery owner needs.
+            db.execute('UPDATE mirror_leases SET worker_id=? WHERE worker_id=?',(worker_id,old['worker_id']))
             policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0]);policy['workers'].append(worker_id)
             db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
         self.policy=policy
@@ -362,8 +367,10 @@ class Group:
             request=json.loads(raw)
             require(secrets.compare_digest(request.get('token',''),self.token),'CALLER_UNBOUND','Invalid group capability')
             op=request.get('operation');payload=request.get('payload',{})
-            require(op in ('hello','status','enqueue','wait','cancel','result','release-idle','resume'),'PROTOCOL_ERROR','Unknown scoped group operation')
+            require(op in ('hello','status','enqueue','wait','cancel','interrupt','steer','result','release-idle','resume'),'PROTOCOL_ERROR','Unknown scoped group operation')
             if op=='enqueue':value=await self.enqueue(payload)
+            elif op=='interrupt':value=await self.interrupt(payload)
+            elif op=='steer':value=await self.steer(payload)
             elif op=='wait':value=await self.wait(payload,reader);uncertain=value.get('notification_output_uncertain',False)
             elif op=='cancel':
                 value=await self.cancel(payload)
@@ -381,7 +388,7 @@ class Group:
                         if changed:
                             db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=? AND state='RESERVED'",(row['worker_id'],row['generation']))
                             for phase,tasks in self.policy['phases'].items():
-                                if tasks==[payload['task_id']]:db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state='UNCLAIMED'",(self.id,int(phase)))
+                                if tasks==[payload['task_id']]:db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state IN ('UNCLAIMED','MIRROR_PENDING')",(self.id,int(phase)))
                     self.changed.set()
                     raise
                 await self.send_worker(row['worker_id'],{'operation':'task','task_id':payload['task_id'],'text':payload['text']})
@@ -420,6 +427,33 @@ class Group:
             if child is not None:asyncio.create_task(self.cancel_and_release(worker,expected=child))
         return {'state':'CANCEL_REQUESTED','workers':list(targets)}
 
+    async def interrupt(self,payload):
+        # Only the running turn stops; the task ends INTERRUPTED with its partial result and the worker stays resumable.
+        require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Interrupt requires the owning parent')
+        task=next((t for t in self.tasks() if t['task_id']==payload['handle']),None)
+        require(task,'PROTOCOL_ERROR','Unknown task handle')
+        if task['state']!='RUNNING' or task['worker_id'] not in self.children:return {'state':task['state'],'task_id':task['task_id'],'workers':[]}
+        await self.send_worker(task['worker_id'],{'operation':'interrupt-task','task_id':task['task_id']})
+        return {'state':'INTERRUPT_REQUESTED','task_id':task['task_id'],'workers':[task['worker_id']]}
+
+    async def steer(self,payload):
+        # Input into the running turn where the provider supports it (Codex turn/steer). A refused steer is definitely not applied.
+        require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Steering requires the owning parent')
+        task=next((t for t in self.tasks() if t['task_id']==payload['handle']),None)
+        require(task,'PROTOCOL_ERROR','Unknown task handle')
+        if task['state']!='RUNNING' or task['worker_id'] not in self.children:return {'steered':False,'state':task['state']}
+        request=new_id();self.steering[request]=asyncio.get_running_loop().create_future()
+        try:
+            await self.send_worker(task['worker_id'],{'operation':'steer','task_id':task['task_id'],'request_id':request,'text':payload['text'],
+                'input':{'client_request_id':payload['client_request_id'],'origin':payload['origin'],'mode':'steer','preview':payload['text'][:200]}})
+            outcome=await asyncio.wait_for(asyncio.shield(self.steering[request]),STEER_SECONDS)
+        except (asyncio.TimeoutError,TimeoutError):
+            raise PeerError('DELIVERY_UNKNOWN','The steer was sent but its outcome was not observed',may_have_received=True,details={'task_id':task['task_id']}) from None
+        finally:self.steering.pop(request,None)
+        require(not outcome.get('uncertain'),'DELIVERY_UNKNOWN','The provider did not confirm the steer',may_have_received=True,details=outcome.get('error'))
+        if outcome.get('steered'):self.journal.event(task['task_id'],'input-steered',{'client_request_id':payload['client_request_id'],'origin':payload['origin']})
+        return {'steered':bool(outcome.get('steered')),'state':'RUNNING','task_id':task['task_id'],'error':outcome.get('error')}
+
     async def cancel_and_release(self,worker_id,*,expected):
         generation=expected['row']['generation']
         deadline=time.monotonic()+15
@@ -441,25 +475,33 @@ class Group:
         require(row['state'] in ('READY','RUNNING','IDLE_GRACE'),'TARGET_OFFLINE','Worker controller has released ownership')
         task_id=new_id()
         from .presentation import render
+        from .mirror import owner_for,record,route_state
         input_text=render(message)
+        # A follow-up the Claude Code mod forwarded carries its provenance and requested delivery owner (CLAUDE_LINEAGE_MOD §6.5).
+        meta=self.journal.one("SELECT b.request_json FROM bridge_requests b JOIN send_requests s ON s.caller_key=b.caller_key AND s.client_request_id=b.client_request_id WHERE b.operation='input' AND s.message_id=?",(message['message_id'],))
+        meta=json.loads(meta['request_json']) if meta else {}
         with self.journal.transaction() as db:
+            owner=owner_for(self.journal,worker_id,meta.get('claude_session'),meta.get('delivery_owner'))
             count=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND state='QUEUED'",(worker_id,)).fetchone()[0]
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')
             from .usage.service import Usage
             lease=json.loads(row['lease_json'])
             Usage(self.journal).admit_local_demand(lease,worker_id=worker_id)
             db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(lease).decode(),worker_id))
-            db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],canonical({'text':input_text,'initial':False}).decode()))
+            db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],
+                canonical({'text':input_text,'initial':False,**{k:meta[k] for k in ('origin','client_request_id') if k in meta}}).decode()))
             db.execute('UPDATE messages SET task_id=? WHERE message_id=?',(task_id,message['message_id']))
             policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0])
             phases=policy.get('phases',{'1':policy['initial_tasks']})
             generation=max(int(n) for n in phases)+1
             policy['phases']=dict(phases,**{str(generation):[task_id]})
             db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
-            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait','UNCLAIMED',None,None,new_id(),self.generation))
+            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait',route_state(owner),None,None,new_id(),self.generation))
+            record(db,task_id,self.id,generation,owner,origin=meta.get('origin'),session=meta.get('claude_session'),agent=meta.get('claude_agent_id'))
         self.policy=policy
         try:
-            await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':input_text})
+            notice={'input':{'client_request_id':meta['client_request_id'],'origin':meta['origin'],'mode':'queue','preview':message['body']['text'][:200]}} if meta else {}
+            await self.send_worker(worker_id,{'operation':'task','task_id':task_id,'text':input_text,**notice})
         except Exception as error:
             raise PeerError('DELIVERY_UNKNOWN','Follow-up was committed but its controller handoff was not confirmed',
                 may_have_received=True,details={'task_id':task_id,'message_id':message['message_id'],
@@ -558,7 +600,9 @@ class Group:
         return self.policy['created_at']+self.policy.get('group_wall_seconds',self.policy['wall_time_seconds'])
 
     async def monitor(self):
+        from .mirror import expire
         while True:
+            expire(self.journal,group_id=self.id,supervised=True)
             expired=time.time()>=self.lifetime_deadline()
             tasks=self.tasks();active=any(t['state'] not in TERMINAL for t in tasks)
             if self.initial_done():

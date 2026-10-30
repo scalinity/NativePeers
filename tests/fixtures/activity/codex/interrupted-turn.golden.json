@@ -1,0 +1,33 @@
+{
+ "native_status": "interrupted",
+ "terminal_event": "turn/completed",
+ "emissions": [
+  {
+   "kind": "tool.started",
+   "item": "cmd_4",
+   "event": "item/started",
+   "data": {
+    "kind": "exec",
+    "title": "sleep 600",
+    "input": {
+     "command": "sleep 600",
+     "cwd": "/work/repo"
+    }
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "fc_2",
+   "event": "item/started",
+   "data": {
+    "kind": "edit",
+    "title": "Edit src/pipeline.py",
+    "input": {
+     "paths": [
+      "src/pipeline.py"
+     ]
+    }
+   }
+  }
+ ]
+}

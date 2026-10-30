@@ -1,0 +1,126 @@
+{
+  "ceilings": {
+    "active_live_minutes": 75,
+    "concurrent_owned_workers": 6,
+    "parent_model_turns": 12,
+    "worker_task_inputs": 32
+  },
+  "consumed": {
+    "active_live_seconds": 2344,
+    "parent_model_turns": 4,
+    "worker_task_inputs": 19
+  },
+  "fallthrough_detected": false,
+  "harness_runs": {
+    "counted_against_budget_until_G0": false,
+    "g0_passed": true,
+    "runs": 15,
+    "tripwire_hits_total": 48
+  },
+  "ledger": [
+    {
+      "amount": 1,
+      "at": "2026-10-30T14:40:49-0400",
+      "billed_inference": 0,
+      "counts_as": "parent_model_turns",
+      "id": "g0-fault-1",
+      "note": "Pre-G0 harness run; the fallthrough failed client-side (no credential under the temporary HOME).",
+      "tripwire_hits": 0
+    },
+    {
+      "amount": 1,
+      "at": "2026-10-30T14:40:49-0400",
+      "billed_inference": 0,
+      "counts_as": "parent_model_turns",
+      "id": "g0-dummy-key",
+      "note": "Pre-G0 proving run; 6 refused requests reached the tripwire.",
+      "tripwire_hits": 6
+    },
+    {
+      "amount": 0,
+      "at": "2026-10-30T14:40:49-0400",
+      "billed_inference": 0,
+      "counts_as": null,
+      "id": "g0",
+      "note": "Post-G0 canonical record of the deliberate fault; expected hits.",
+      "tripwire_hits": 6
+    },
+    {
+      "amount": 0,
+      "at": "2026-10-30T14:54:10-0400",
+      "billed_inference": 0,
+      "counts_as": null,
+      "id": "x-reproductions",
+      "note": "12 post-G0 harness runs; hits only in deliberate fallthrough cases (overrun, catch_noreturn, three model probes) and g0.",
+      "tripwire_hits": 36
+    },
+    {
+      "active_live_seconds": 439,
+      "at": "2026-10-30T17:38:57-0400",
+      "id": "live-slice-1",
+      "note": "First launch attempt exited at the folder-trust dialog before any prompt: no input submitted.",
+      "notification_turns_guarded": 1,
+      "parent_model_turns": 1,
+      "parent_side_requests": "repl_main_thread x2 (sonnet), generate_session_title (haiku), prompt_suggestion x3 (sonnet), quota_check",
+      "providers": [
+        "codex gpt-6.1-sol low"
+      ],
+      "shadow_requests": 0,
+      "worker_task_inputs": 1
+    },
+    {
+      "active_live_seconds": 960,
+      "agent_summary_requests_refused": 3,
+      "at": "2026-10-30T18:01:12-0400",
+      "id": "live-acceptance-1",
+      "note": "Fan-out real turn; np:grok refused (rig cannot match the installed Grok hooks), np:antigravity unregistered (agy 1.4.11 approval pending). Stopped early after the hot reload left the session with no bridge; adoption and fault steps produced no worker. Every np-mirror request was the engine agent_summary, refused 404 before inference.",
+      "notification_turns_guarded": 3,
+      "parent_model_turns": 1,
+      "providers": [
+        "codex gpt-6.1-sol xhigh (header not parsed)",
+        "claude sonnet",
+        "codex gpt-6.1-sol low x2"
+      ],
+      "shadow_requests": 0,
+      "worker_task_inputs": 4
+    },
+    {
+      "active_live_seconds": 540,
+      "agent_summary_requests_refused": 4,
+      "at": "2026-10-30T18:28:57-0400",
+      "id": "live-acceptance-2",
+      "note": "np:antigravity renewed agy 1.4.11 on first use, then was refused by the rig (installed Antigravity hooks and MCP facade name the main checkout). The bridge kill found no bridge (marker detection), so AC7/AC8 moved to live-recovery-1.",
+      "parent_model_turns": 0,
+      "parent_side_requests": "prompt_suggestion x14 (sonnet), generate_session_title (haiku), quota_check",
+      "providers": [
+        "claude sonnet x2 (generation 2 by a typed follow-up)",
+        "codex gpt-6.1-sol low x7 (one generation 2 by a typed follow-up)"
+      ],
+      "shadow_requests": 0,
+      "worker_task_inputs": 9
+    },
+    {
+      "active_live_seconds": 405,
+      "agent_summary_requests_refused": 5,
+      "at": "2026-10-30T18:44:00-0400",
+      "id": "live-recovery-1",
+      "note": "Every main turn scripted or answered by npguard.",
+      "parent_model_turns": 0,
+      "parent_side_requests": "prompt_suggestion x8 (sonnet), generate_session_title (haiku), quota_check",
+      "providers": [
+        "codex gpt-6.1-sol low x5 (one generation 2 by a typed follow-up)"
+      ],
+      "shadow_requests": 0,
+      "worker_task_inputs": 5
+    }
+  ],
+  "planning_allocation": {
+    "diagnostics": 8,
+    "fanout_and_followups": 12,
+    "interrupt_stop_adoption_reattach": 8,
+    "thin_slice_m3": 4
+  },
+  "reserved": [],
+  "schema": "nativepeers.claude-lineage-live-budget.v1",
+  "updated_at": "2026-10-30T18:47:00-0400"
+}

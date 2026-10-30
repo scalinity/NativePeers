@@ -1,0 +1,235 @@
+{
+ "native_status": "completed",
+ "terminal_event": "result",
+ "emissions": [
+  {
+   "kind": "message.completed",
+   "item": "msg_hook_d0e3dad6-99e1-4064-8164-083abad9c709",
+   "event": "assistant/text",
+   "data": {
+    "text": "Inspecting the workspace.",
+    "is_final_candidate": false
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857921400001ulcy1y",
+   "event": "assistant/tool_use:Bash",
+   "data": {
+    "kind": "exec",
+    "title": "Print a greeting",
+    "input": {
+     "command": "printf 'hello from bash\\n'",
+     "description": "Print a greeting"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857921400001ulcy1y",
+   "event": "user/tool_result:Bash",
+   "data": {
+    "status": "ok",
+    "output": "hello from bash",
+    "exit_code": 0,
+    "duration_ms": 29
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857921740000jnxcye",
+   "event": "assistant/tool_use:Write",
+   "data": {
+    "kind": "edit",
+    "title": "notes.txt",
+    "input": {
+     "file_path": "/var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n/notes.txt",
+     "content": "one\ntwo\n"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857921740000jnxcye",
+   "event": "user/tool_result:Write",
+   "data": {
+    "status": "ok",
+    "output": "File created successfully at: /var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n/notes.txt (file state is current in your context — no need to Read it back)",
+    "duration_ms": 10
+   }
+  },
+  {
+   "kind": "files.changed",
+   "item": "toolu_01drv857921740000jnxcye",
+   "event": "user/tool_result:Write",
+   "data": {
+    "paths": [
+     "notes.txt"
+    ],
+    "stats": {
+     "added": 2,
+     "removed": 0
+    },
+    "diff": {
+     "text": "@@ -0,0 +1,2 @@\n+one\n+two"
+    }
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857921900000kzlum6",
+   "event": "assistant/tool_use:Edit",
+   "data": {
+    "kind": "edit",
+    "title": "notes.txt",
+    "input": {
+     "replace_all": false,
+     "file_path": "/var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n/notes.txt",
+     "old_string": "two",
+     "new_string": "three"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857921900000kzlum6",
+   "event": "user/tool_result:Edit",
+   "data": {
+    "status": "ok",
+    "output": "The file /var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n/notes.txt has been updated successfully. (file state is current in your context — no need to Read it back)",
+    "duration_ms": 6
+   }
+  },
+  {
+   "kind": "files.changed",
+   "item": "toolu_01drv857921900000kzlum6",
+   "event": "user/tool_result:Edit",
+   "data": {
+    "paths": [
+     "notes.txt"
+    ],
+    "stats": {
+     "added": 1,
+     "removed": 1
+    },
+    "diff": {
+     "text": "@@ -1,2 +1,2 @@\n one\n-two\n+three"
+    }
+   }
+  },
+  {
+   "kind": "message.completed",
+   "item": "msg_hook_539c2b4f-8913-479c-a5fd-5e5cb2dd8f7a",
+   "event": "assistant/text",
+   "data": {
+    "text": "Reading it back.",
+    "is_final_candidate": false
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857922010001tk6etg",
+   "event": "assistant/tool_use:Read",
+   "data": {
+    "kind": "read",
+    "title": "notes.txt",
+    "input": {
+     "file_path": "/var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n/notes.txt"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857922010001tk6etg",
+   "event": "user/tool_result:Read",
+   "data": {
+    "status": "ok",
+    "output": "1\tone\n2\tthree\n3\t",
+    "duration_ms": 6
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857922120000dcpbqd",
+   "event": "assistant/tool_use:TodoWrite",
+   "data": {
+    "kind": "plan",
+    "title": "Update todo list",
+    "input": {
+     "todos": [
+      {
+       "content": "Check notes",
+       "status": "completed",
+       "activeForm": "Checking notes"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857922120000dcpbqd",
+   "event": "user/tool_result:TodoWrite",
+   "data": {
+    "status": "error",
+    "output": "<tool_use_error>Error: No such tool available: TodoWrite. TodoWrite is disabled for this session, in subagents as well as here.</tool_use_error>",
+    "duration_ms": 1
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857922160000wtq6ik",
+   "event": "assistant/tool_use:Bash",
+   "data": {
+    "kind": "exec",
+    "title": "A failing command",
+    "input": {
+     "command": "echo boom >&2; exit 3",
+     "description": "A failing command"
+    }
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "toolu_01drv857922160001wzuxee",
+   "event": "assistant/tool_use:Read",
+   "data": {
+    "kind": "read",
+    "title": "missing.txt",
+    "input": {
+     "file_path": "/var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n/missing.txt"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857922160000wtq6ik",
+   "event": "user/tool_result:Bash",
+   "data": {
+    "status": "error",
+    "output": "Exit code 3\nboom",
+    "exit_code": 3,
+    "duration_ms": 10
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "toolu_01drv857922160001wzuxee",
+   "event": "user/tool_result:Read",
+   "data": {
+    "status": "error",
+    "output": "File does not exist. Note: your current working directory is /private/var/folders/_q/nsgwvvj51zlcw71s_yzz0s100000gn/T/npfix-y0wwwj4n.",
+    "duration_ms": 15
+   }
+  },
+  {
+   "kind": "message.completed",
+   "item": "msg_hook_f38e058b-e472-45f9-9684-09270e23eb27",
+   "event": "assistant/text",
+   "data": {
+    "text": "Done: notes.txt now reads one/three.",
+    "is_final_candidate": true
+   }
+  }
+ ]
+}

@@ -1,0 +1,1 @@
+{"notifications": "ack", "on": {"message the first": [{"text": "main: SendMessage", "tools": [{"name": "SendMessage", "input": {"to": "${agent1:npi:mirror}", "message": "parent follow-up via SendMessage"}}]}, {"text": "main: sent"}]}, "steps": [{"text": "main: idle"}]}

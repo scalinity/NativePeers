@@ -1,0 +1,8 @@
+{"steps": [
+ {"text": "main: two Path A shadows", "tools": [
+   {"name": "Agent", "input": {"description": "probe · A1", "prompt": "BRIEF A1", "subagent_type": "npi:mirror"}},
+   {"name": "Agent", "input": {"description": "probe · A2", "prompt": "BRIEF A2", "subagent_type": "npi:mirror"}}]},
+ {"text": "main: delegated"},
+ {"text": "main: ack 1"}, {"text": "main: ack 2"}, {"text": "main: ack 3"}, {"text": "main: ack 4"}, {"text": "main: ack 5"},
+ {"text": "main: ack 6"}, {"text": "main: ack 7"}, {"text": "main: ack 8"}, {"text": "main: ack 9"}, {"text": "main: ack 10"}
+]}

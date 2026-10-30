@@ -21,6 +21,10 @@ from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
 
 TERMINAL={'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
+# Set by the Claude Code session bridge only. Claude Code stops a mod's process together with every
+# descendant, so a supervisor the bridge starts is handed to launchd through a shell that exits at once,
+# as a supervisor started by the CLI already is; it then ends by its own parent-lifetime policy.
+REPARENT_SUPERVISORS=False
 
 
 def supervisor_environment(journal):
@@ -71,6 +75,12 @@ class Delegation:
         require(request.get('completion_mode','push') in ('push','wait'),'PROTOCOL_ERROR','Invalid completion mode')
         require(request.get('failure_policy','collect-all')=='collect-all','PROTOCOL_ERROR','Only collect-all is supported')
         parent=self.registry.verify(caller.key,caller.incarnation)
+        mirrored=[w['mirror'] for w in workers if w.get('mirror')]
+        if mirrored:
+            # A mirrored worker is its own wait-mode group, watched by the Claude session that is this parent (CLAUDE_LINEAGE_MOD §6.4).
+            require(len(workers)==1 and request.get('completion_mode')=='wait','PROTOCOL_ERROR','A mirrored worker must be the only worker of a wait-mode group')
+            require(parent['peer_key']['provider']=='claude' and mirrored[0]['claude_session']==parent['peer_key']['native_session_id'],
+                    'APPROVAL_BLOCKED','The mirror session must be the bound Claude parent')
         limits=request.get('limits',{});depth=caller.grants.get('depth',0)+1
         ceiling=min(caller.grants.get('max_depth',1),local['max_depth'])
         require(depth<=ceiling and 1<=limits.get('max_depth',1)<=ceiling,'CAPACITY_UNAVAILABLE','Delegation depth ceiling reached')
@@ -275,9 +285,12 @@ class Delegation:
                         'CAPACITY_UNAVAILABLE','Configured local quota-pool concurrency ceiling reached',details=demand)
                 db.execute('INSERT INTO spawn_requests VALUES(?,?,?,?)',(caller.key,request_id,digest,group_id))
                 db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',(group_id,caller.key,canonical(policy).decode(),'RESERVED','{}'))
-                db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'UNCLAIMED',None,None,new_id(),1))
+                from .mirror import grant,record
+                db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group_id,1,caller.key,policy['completion_mode'],'MIRROR_PENDING' if mirrored else 'UNCLAIMED',None,None,new_id(),1))
                 for worker in prepared:
-                    spec=worker['lease']['spec']
+                    spec=worker['lease']['spec'];watch=spec.get('mirror')
+                    record(db,worker['task_id'],group_id,1,'mirror' if watch else 'native',origin='parent-model',session=watch and watch['claude_session'],agent=watch and watch['claude_agent_id'])
+                    if watch:grant(db,worker['worker_id'],watch['claude_session'],watch['claude_agent_id'],caller.key,display_only=False)
                     for ref in spec.get('context_refs',[]):Artifacts(self.journal).grant(ref,caller.key,[worker['worker_id']])
                     native_id=new_id() if spec['provider'] in ('claude','grok') else None
                     db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(worker['worker_id'],group_id,None,spec['provider'],native_id,spec['title'],spec['model'],None,spec.get('reasoning_effort'),spec['cwd'],None,'RESERVED',1,canonical(worker['lease']).decode()))
@@ -318,16 +331,20 @@ class Delegation:
                 return
             log=open(directory/'supervisor.log','ab',buffering=0);os.chmod(log.name,0o600)
             try:
+                argv=[str(PYTHON),'-m','nativepeers.supervisor','--group-id',group_id]
                 try:
-                    process=subprocess.Popen([str(PYTHON),'-m','nativepeers.supervisor','--group-id',group_id],
+                    process=subprocess.Popen(['/bin/sh','-c','"$@" &','sh',*argv] if REPARENT_SUPERVISORS else argv,
                         cwd=ROOT,env=supervisor_environment(self.journal),stdin=subprocess.DEVNULL,stdout=log,stderr=log,
                         start_new_session=True,close_fds=True)
+                    if REPARENT_SUPERVISORS:
+                        require(process.wait(5)==0,'SUPERVISOR_LOST','Owned supervisor launch shell failed')
                 except OSError as error:
                     raise SupervisorNotStarted(group_id,error) from error
             finally:log.close()
             deadline=time.monotonic()+8
             while not manifest.exists() and time.monotonic()<deadline:
-                require(process.poll() is None,'SUPERVISOR_LOST','Owned supervisor exited before readiness; inspect its private log')
+                # A reparented supervisor is not this process's child: its readiness alone is awaited.
+                require(REPARENT_SUPERVISORS or process.poll() is None,'SUPERVISOR_LOST','Owned supervisor exited before readiness; inspect its private log')
                 await asyncio.sleep(.03)
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 

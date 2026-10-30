@@ -1,0 +1,277 @@
+{
+ "native_status": "completed",
+ "terminal_event": "turn/completed",
+ "emissions": [
+  {
+   "kind": "reasoning.delta",
+   "item": "rs_1",
+   "event": "item/reasoning/summaryTextDelta",
+   "data": {
+    "text": "Looking at the test "
+   }
+  },
+  {
+   "kind": "reasoning.delta",
+   "item": "rs_1",
+   "event": "item/reasoning/summaryTextDelta",
+   "data": {
+    "text": "layout."
+   }
+  },
+  {
+   "kind": "reasoning.delta",
+   "item": "rs_1",
+   "event": "item/reasoning/summaryTextDelta",
+   "data": {
+    "text": "\n\nPlanning the fix."
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "cmd_1",
+   "event": "item/started",
+   "data": {
+    "kind": "exec",
+    "title": "pytest -q",
+    "input": {
+     "command": "pytest -q",
+     "cwd": "/work/repo"
+    }
+   }
+  },
+  {
+   "kind": "tool.progress",
+   "item": "cmd_1",
+   "event": "item/commandExecution/outputDelta",
+   "data": {
+    "text": "..... [ 50%]\n"
+   }
+  },
+  {
+   "kind": "tool.progress",
+   "item": "cmd_1",
+   "event": "item/commandExecution/outputDelta",
+   "data": {
+    "text": "..... [100%]\n"
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "cmd_1",
+   "event": "item/completed",
+   "data": {
+    "status": "ok",
+    "exit_code": 0,
+    "output": "..... [ 50%]\n..... [100%]\n42 passed in 1.5s\n",
+    "duration_ms": 1520
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "fc_1",
+   "event": "item/started",
+   "data": {
+    "kind": "edit",
+    "title": "Edit src/pipeline.py, tests/test_new.py",
+    "input": {
+     "paths": [
+      "src/pipeline.py",
+      "tests/test_new.py"
+     ]
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "fc_1",
+   "event": "item/completed",
+   "data": {
+    "status": "ok",
+    "output": "update src/pipeline.py\nadd tests/test_new.py",
+    "duration_ms": 500
+   }
+  },
+  {
+   "kind": "files.changed",
+   "item": "fc_1",
+   "event": "item/completed",
+   "data": {
+    "paths": [
+     "src/pipeline.py",
+     "tests/test_new.py"
+    ],
+    "stats": {
+     "added": 7,
+     "removed": 1
+    },
+    "diff": {
+     "text": "--- src/pipeline.py\n@@ -10,3 +10,4 @@\n context\n-old line\n+new line one\n+new line two\n context\n\n--- tests/test_new.py\nimport pytest\n\n\ndef test_it():\n    assert True\n"
+    }
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "mcp_1",
+   "event": "item/started",
+   "data": {
+    "kind": "mcp",
+    "title": "docs.search",
+    "input": {
+     "server": "docs",
+     "tool": "search",
+     "arguments": {
+      "query": "pandas groupby"
+     }
+    }
+   }
+  },
+  {
+   "kind": "tool.progress",
+   "item": "mcp_1",
+   "event": "item/mcpToolCall/progress",
+   "data": {
+    "text": "searching index"
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "mcp_1",
+   "event": "item/completed",
+   "data": {
+    "status": "ok",
+    "output": "3 results",
+    "duration_ms": 240
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "ws_1",
+   "event": "item/started",
+   "data": {
+    "kind": "web",
+    "title": "pandas groupby docs",
+    "input": {
+     "query": "pandas groupby docs",
+     "action": {
+      "type": "search",
+      "query": "pandas groupby docs",
+      "queries": null
+     }
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "ws_1",
+   "event": "item/completed",
+   "data": {
+    "status": "ok",
+    "output": "",
+    "duration_ms": 250
+   }
+  },
+  {
+   "kind": "plan.updated",
+   "item": null,
+   "event": "turn/plan/updated",
+   "data": {
+    "items": [
+     {
+      "text": "Reproduce",
+      "status": "completed"
+     },
+     {
+      "text": "Patch",
+      "status": "in_progress"
+     },
+     {
+      "text": "Verify",
+      "status": "pending"
+     }
+    ]
+   }
+  },
+  {
+   "kind": "message.delta",
+   "item": "msg_1",
+   "event": "item/agentMessage/delta",
+   "data": {
+    "text": "Checking the "
+   }
+  },
+  {
+   "kind": "message.delta",
+   "item": "msg_1",
+   "event": "item/agentMessage/delta",
+   "data": {
+    "text": "results now."
+   }
+  },
+  {
+   "kind": "message.completed",
+   "item": "msg_1",
+   "event": "item/completed",
+   "data": {
+    "text": "Checking the results now.",
+    "is_final_candidate": false
+   }
+  },
+  {
+   "kind": "message.delta",
+   "item": "msg_2",
+   "event": "item/agentMessage/delta",
+   "data": {
+    "text": "Three easy "
+   }
+  },
+  {
+   "kind": "message.delta",
+   "item": "msg_2",
+   "event": "item/agentMessage/delta",
+   "data": {
+    "text": "wins: split the loader, "
+   }
+  },
+  {
+   "kind": "message.delta",
+   "item": "msg_2",
+   "event": "item/agentMessage/delta",
+   "data": {
+    "text": "cache the parse."
+   }
+  },
+  {
+   "kind": "message.completed",
+   "item": "msg_2",
+   "event": "item/completed",
+   "data": {
+    "text": "Three easy wins: split the loader, cache the parse.",
+    "is_final_candidate": true
+   }
+  },
+  {
+   "kind": "usage",
+   "item": null,
+   "event": "thread/tokenUsage/updated",
+   "data": {
+    "input_tokens": 1000,
+    "output_tokens": 50,
+    "cached_input_tokens": 400,
+    "reasoning_tokens": 20,
+    "cumulative": true
+   }
+  },
+  {
+   "kind": "usage",
+   "item": null,
+   "event": "thread/tokenUsage/updated",
+   "data": {
+    "input_tokens": 2600,
+    "output_tokens": 180,
+    "cached_input_tokens": 1800,
+    "reasoning_tokens": 60,
+    "cumulative": true
+   }
+  }
+ ]
+}

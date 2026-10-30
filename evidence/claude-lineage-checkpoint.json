@@ -1,0 +1,128 @@
+{
+  "acceptance_harness": {
+    "AC10": "needs real backend",
+    "AC12_adoption": "harness pass (replay)",
+    "AC13_worker_mode": "harness pass",
+    "AC8_bridge_death": "harness pass",
+    "AC8_malformed": "harness pass"
+  },
+  "active_owned_processes": [],
+  "blockers": [],
+  "claude_code": {
+    "launcher": "/Users/danny/.local/bin/claude",
+    "resolved": "/Users/danny/.local/share/claude/versions/2.1.314",
+    "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+    "types_sha256": "a053c5ca3d00baeeffaef7a5a0d15b172047e04c6fdd7ad840fb0a29f0fd3ce3",
+    "version": "2.1.314"
+  },
+  "compat_check": {
+    "2.1.309": "PASS",
+    "2.1.314": "PASS",
+    "module": "nativepeers/claude_mod_check.py",
+    "probe": "integrations/claude/mod-check"
+  },
+  "documents": {
+    "docs/CLAUDE_LINEAGE_KICKOFF.md": {
+      "revision": "1.0",
+      "sha256": "af4724f4bbd08b8a682b1fa321a73b0066f113522f58a87f363cbbb83153b769"
+    },
+    "docs/CLAUDE_LINEAGE_MOD.md": {
+      "revision": "1.0",
+      "sha256": "e9e0379079e36b7759a5b007a3425cd6de8ca31c239e3a58baa58147ec8340b9"
+    }
+  },
+  "gates": {
+    "G0": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G1": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G10": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G11": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G12": {
+      "state": "NOT_RUN"
+    },
+    "G13": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G2": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G3": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G4": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G5": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G6": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G7": {
+      "state": "NOT_RUN"
+    },
+    "G8": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G9": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    }
+  },
+  "milestones": {
+    "M0": "GATES_RECORDED (G7 desktop interaction and G12-on-mod pending person/install)",
+    "M1": "COMMITTED ad496f8 (89 tests); evidence digests regenerate at publication",
+    "M2": "COMMITTED 5ce8f0e",
+    "M3": "PASS (live slice, evidence/claude-lineage-live.json)",
+    "M4": "NOT_STARTED",
+    "M5": "NORMALIZERS (grok, antigravity) AND BACKFILL (claude, codex) COMMITTED; grok/antigravity feed lines pending M2; Path B harness pass",
+    "M6": "INSTALLER, COMPAT CHECK, DOCS, SKILL TEXT COMMITTED; CLI wiring pending M2; desktop checklist drafted"
+  },
+  "mod": {
+    "harness": [
+      "pathA zero-API pass",
+      "parent follow-up pass",
+      "refusals pass",
+      "bridge death fail-closed pass"
+    ],
+    "path": "integrations/claude/mod/np",
+    "plugin_test": "20 pass",
+    "pty": "band, tasks row, agent view verified over replay backend",
+    "tsc": "pass (engine-laid tsconfig)",
+    "validate": "pass"
+  },
+  "next_action": "Live acceptance batch: AC1/AC2 four-provider fan-out, AC4/AC5 follow-ups, AC6 interrupt/stop/stop-all, AC12 adoption, AC10 hot reload, AC11 resume, AC7 fallback after bridge kill; then publication record, PR, merge, install, desktop checklist.",
+  "repository": {
+    "base": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+    "branch": "feat/claude-lineage-mod",
+    "concurrent_worktrees_not_owned": [
+      ".worktrees/8fc7e149-7eaa-4dad-8f04-8b60ef327819",
+      ".worktrees/issue-7"
+    ],
+    "first_commit": "051d625",
+    "head": "f28e7bf",
+    "origin_main_at_start": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+    "path": "/Users/danny/Documents/Tools/NativePeers",
+    "worktree": ".worktrees/claude-lineage-mod"
+  },
+  "schema": "nativepeers.claude-lineage-checkpoint.v1",
+  "updated_at": "2026-10-30T17:39:20-0400"
+}

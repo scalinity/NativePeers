@@ -50,6 +50,16 @@ def parser():
             q.add_argument('--timeout-ms',type=int,default=30000,help='Bounded wait in milliseconds: 1 <= timeout-ms <= 30000 (default: 30000); larger values are rejected')
             q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
+    q=command('activity');q.add_argument('worker_id');q.add_argument('--after',type=int,default=0);q.add_argument('--wait-ms',type=int,default=0)
+    q.add_argument('--item');q.add_argument('--max',type=int,default=512)
+    q=command('bridge');q.add_argument('--claude-session',required=True);q.add_argument('--protocol',type=int,required=True)
+    q=command('input');q.add_argument('worker_id');source=q.add_mutually_exclusive_group(required=True);source.add_argument('--message');source.add_argument('--message-file',type=Path)
+    q.add_argument('--origin',choices=['human-claude-view','parent-model'],required=True);q.add_argument('--mode',choices=['queue','steer'],default='queue')
+    q.add_argument('--delivery-owner',choices=['mirror','native'],default='native');q.add_argument('--client-request-id',required=True);q.add_argument('--claude-session')
+    q=command('interrupt');q.add_argument('worker_id');q.add_argument('--client-request-id',required=True);q.add_argument('--claude-session')
+    q=command('mirror');q.add_argument('action',choices=['attach','surfacing','ack','release','status']);q.add_argument('--worker-id');q.add_argument('--claude-agent-id')
+    q.add_argument('--task-id');q.add_argument('--generation',type=int);q.add_argument('--outcome',choices=['killed']);q.add_argument('--check-only',action='store_true')
+    q.add_argument('--client-request-id');q.add_argument('--claude-session')
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
@@ -69,6 +79,7 @@ def parser():
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
         q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true');q.add_argument('--grok',action='store_true');q.add_argument('--usage',action='store_true')
+        q.add_argument('--claude-mod',action='store_true')
     return p
 
 
@@ -82,7 +93,7 @@ async def dispatch(args,journal):
     core=Core(journal)
     try:caller=bind_caller(journal,core.registry)
     except PeerError:
-        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','runtime-check','usage','usage-import','history-cleanup'):raise
+        if args.command not in ('list','resolve','doctor','install','uninstall','runtime-revoke','runtime-check','usage','usage-import','history-cleanup')+(('input','interrupt','mirror') if getattr(args,'claude_session',None) else ()):raise
         caller=Caller('external-local','external-local')
     name=args.command
     if name=='whoami':
@@ -116,6 +127,21 @@ async def dispatch(args,journal):
     if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)
+    if name=='activity':
+        from .activity.command import activity
+        return await activity(core,caller,args)
+    if name in ('input','interrupt','mirror'):
+        # The bridge's own handlers and JSON; --claude-session binds exactly as `npeer bridge` does, for the mod's process runs.
+        from .bridge_backend import for_cli
+        backend=for_cli(journal,core,caller,args.claude_session)
+        if name=='input':
+            return await backend.input(args.worker_id,dict(client_request_id=args.client_request_id,text=args.message if args.message is not None else read_file(args.message_file),
+                                                           origin=args.origin,mode=args.mode,delivery_owner=args.delivery_owner))
+        if name=='interrupt':return await backend.interrupt(args.worker_id,dict(client_request_id=args.client_request_id))
+        if args.action=='status':return await backend.mirror_status()
+        body=dict(worker_id=args.worker_id,claude_agent_id=args.claude_agent_id,task_id=args.task_id,generation=args.generation,outcome=args.outcome,
+                  client_request_id=args.client_request_id,check_only=args.check_only or None)
+        return await backend.mirror(args.action,{k:v for k,v in body.items() if v is not None})
     if name=='artifact-add':
         from .artifacts import Artifacts
         return Artifacts(journal).add_file(args.file,caller,max_bytes=args.max_bytes)
@@ -174,17 +200,29 @@ async def dispatch(args,journal):
     if name=='runtime-check':
         from .runtime_updates import check_runtime
         require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Owned workers cannot renew runtime approvals')
-        return check_runtime(journal,args.provider,apply=args.apply)
+        value=check_runtime(journal,args.provider,apply=args.apply)
+        if args.provider=='claude':
+            # A separate verdict: the np mod's zero-API contract on this build. It never changes the runtime approval.
+            from .claude_mod_check import check as mod_check
+            try:value=dict(value,mod_compatibility=mod_check(Path.home()/'.local/bin/claude'))
+            except Exception as error:value=dict(value,mod_compatibility=dict(verdict='NOT_RUN',reason=type(error).__name__+': '+str(error)[:300]))
+        return value
     if name=='doctor':
         from .compatibility import diagnose
         from .readiness import readiness,operation_readiness
         from .usage.install import readiness as usage_readiness
         require(not args.live,'BUDGET_EXHAUSTED','Live doctor never submits models automatically; use the explicit approved live harness and durable budget')
+        from .bridge_backend import live_bridges
         return dict(operation_readiness=operation_readiness(journal),compatibility=diagnose(journal),integrations=readiness(journal),usage_collection=usage_readiness(journal),registered_peers=core.registry.list(include_offline=True),
+            bridge=dict(mode='session-scoped',daemon=False,live=live_bridges(journal)),
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED','SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):
-        require(sum(bool(getattr(args,option,False)) for option in ('usage','antigravity','grok'))<=1,'PROTOCOL_ERROR','Choose one of --usage, --antigravity or --grok')
+        require(sum(bool(getattr(args,option,False)) for option in ('usage','antigravity','grok','claude_mod'))<=1,'PROTOCOL_ERROR','Choose one of --usage, --antigravity, --grok or --claude-mod')
+        if getattr(args,'claude_mod',False):
+            require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Workers cannot install the Claude Code mod')
+            from .claude_mod_install import apply as claude_mod
+            return claude_mod(journal,dry_run=args.dry_run,remove=name=='uninstall')
         if getattr(args,'usage',False):
             require(not args.antigravity,'PROTOCOL_ERROR','Choose --usage or --antigravity')
             require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot install usage collection')
@@ -214,6 +252,10 @@ def error_exit(error):
 
 def main():
     args=parser().parse_args();journal=None;request_id=new_id();exit_code=0
+    if args.command=='bridge':
+        # A long-lived session process: its own ready line replaces the CLI envelope (CLAUDE_LINEAGE_MOD §6.3).
+        from .bridge_backend import run
+        raise SystemExit(0 if run(args) else 4)
     try:
         journal=Journal(read_only=True) if args.command=='artifact-read' else Journal()
         value=asyncio.run(dispatch(args,journal))

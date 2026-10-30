@@ -1,0 +1,12 @@
+{"steps": [
+ {"text": "main: spawning a shadow from a tool.call hook", "tools": [{"name": "mcp__npx__spawn_shadow", "input": {}}]},
+ {"tools": [{"name": "mcp__npx__wait_shadow", "input": {}}]},
+ {"tools": [{"name": "mcp__npx__send_shadow", "input": {}}]},
+ {"tools": [{"name": "mcp__npx__wait_shadow", "input": {}}]},
+ {"text": "main: Path A", "tools": [{"name": "Agent", "input": {"description": "path a probe", "prompt": "BRIEF path A: echo hello", "subagent_type": "npx:mirror"}}]},
+ {"text": "main: waiting for notifications"},
+ {"text": "main: notification turn A"},
+ {"text": "main: notification turn B"},
+ {"text": "main: notification turn C"},
+ {"text": "main: notification turn D"}
+]}

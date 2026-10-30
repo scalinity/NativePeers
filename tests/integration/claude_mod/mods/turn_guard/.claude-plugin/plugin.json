@@ -1,0 +1,1 @@
+{ "name": "npguard", "version": "0.1.0", "description": "Live-test only: lets the first N main turns reach the model, answers later ones locally and logs them", "license": "UNLICENSED" }
