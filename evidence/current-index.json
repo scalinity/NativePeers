@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
+  "code_commit": "312e7fe949e5d5a31eaf8255f19650f6d30563ff",
   "reviewed_commit": "b16dc7af962f4d17c145bfa1d40e05827b2cea7f",
-  "publication_branch": "feat/claude-lineage-mod",
-  "updated_at": "2026-10-30T18:59:05.569168-04:00",
+  "publication_branch": "evidence/lineage-post-install",
+  "updated_at": "2026-10-30T19:06:52.297970-04:00",
   "current_record": "evidence/claude-lineage-verification.json",
   "file_classes": {
     "product": {
@@ -411,19 +411,19 @@
     {
       "provider": "antigravity",
       "operation": "np-mirror-live",
-      "status": "NOT_RUN",
-      "parent_context": "isolated rig state root",
-      "scope": "First use renewed agy 1.4.11 on the rig, then readiness refused: the installed Antigravity hooks and MCP facade name the main checkout",
-      "source_head": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
+      "status": "PASS",
+      "parent_context": "installed np plugin and production state root after merge (56b236b), disposable Claude Code 2.1.314 session",
+      "scope": "production-fanout-1: mirrored transcript, native notification, MIRROR_DELIVERED; agy first use renewed 1.4.11",
+      "source_head": "56b236b25bab7a4a2dc3b505545625ede97ff3d2",
       "runtime_sha256": "09cefed6a1d217e14ba1751dce4442b97c2797e88c297c77fda3690f92ceddcd"
     },
     {
       "provider": "grok",
       "operation": "np-mirror-live",
-      "status": "NOT_RUN",
-      "parent_context": "isolated rig state root",
-      "scope": "Readiness refused: the installed Grok hooks and sandbox profiles name the main checkout and the production state root",
-      "source_head": "a2ee7d8ae8a19024c5d19c7ffd92c4e3dff11086",
+      "status": "PASS",
+      "parent_context": "installed np plugin and production state root after merge (56b236b), disposable Claude Code 2.1.314 session",
+      "scope": "production-fanout-1: mirrored transcript, native notification, MIRROR_DELIVERED",
+      "source_head": "56b236b25bab7a4a2dc3b505545625ede97ff3d2",
       "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec"
     }
   ],

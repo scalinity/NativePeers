@@ -6,9 +6,9 @@
     "worker_task_inputs": 32
   },
   "consumed": {
-    "active_live_seconds": 2344,
-    "parent_model_turns": 4,
-    "worker_task_inputs": 19
+    "active_live_seconds": 2454,
+    "parent_model_turns": 5,
+    "worker_task_inputs": 23
   },
   "fallthrough_detected": false,
   "harness_runs": {
@@ -112,6 +112,30 @@
       ],
       "shadow_requests": 0,
       "worker_task_inputs": 5
+    },
+    {
+      "active_live_seconds": 30,
+      "at": "2026-10-30T18:58:00-0400",
+      "id": "resume-check-1",
+      "note": "Two claude --resume launches of the finished live-recovery-1 session with /np commands only; no model input.",
+      "parent_model_turns": 0,
+      "worker_task_inputs": 0
+    },
+    {
+      "active_live_seconds": 80,
+      "at": "2026-10-30T19:05:00-0400",
+      "id": "production-fanout-1",
+      "note": "Installed np plugin, production state root; npguard answered the four notification turns.",
+      "parent_model_turns": 1,
+      "parent_side_requests": "repl_main_thread x2 (the one real turn), prompt_suggestion x5, generate_session_title, quota_check",
+      "providers": [
+        "codex gpt-6.1-sol low",
+        "grok grok-4.7",
+        "antigravity gemini-4-argon-high",
+        "claude sonnet"
+      ],
+      "shadow_requests": 0,
+      "worker_task_inputs": 4
     }
   ],
   "planning_allocation": {
@@ -122,5 +146,5 @@
   },
   "reserved": [],
   "schema": "nativepeers.claude-lineage-live-budget.v1",
-  "updated_at": "2026-10-30T18:47:00-0400"
+  "updated_at": "2026-10-30T19:08:00-0400"
 }
