@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "cdcbd66afe1cf759feae4afc9057fef70901d16e",
+  "code_commit": "91dfaeeff2a6b009b430d88ca018244e4e4baa18",
   "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
   "publication_branch": "fix/issue-7-silent-close",
-  "updated_at": "2026-10-30T15:28:51.790352-04:00",
+  "updated_at": "2026-10-30T16:46:49.762940-04:00",
   "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
@@ -171,6 +171,7 @@
         "tests/probes/passive_native.py": "eba1da5be14f08aaa6f028bb73d11ca276a2db56d47679408639df1266aef1fe",
         "tests/probes/publish_current.py": "e6b72c8740f8a6bb4c533d5a175ece2e6c1b085222ee582e875be11e7a914e37",
         "tests/probes/quiet_close_tui.py": "cb857422b3cbc25c2a1c923fd6bf8ce2e4b73e249bfd01e656ee66c3b2e407c1",
+        "tests/probes/quiet_close_worker.py": "d4f86814fb47d586fb8086d652d29756a0b0148ddb2ff3b96fc6dcd7eb1c432a",
         "tests/probes/read_performance.py": "418d39a10abd1651de2e02237b59d91b2f071f2ab303512b1c33f31c9504cd9b",
         "tests/probes/seams.py": "287a4f899d2c0bcae219a4948ebf3d7528869e24b6239edd9db876502399b97f",
         "tests/probes/settle_queues.py": "b8778eafb679e107f1c6eee3af892b3485e1102b1d184d303d29467ff82e1049",
@@ -221,6 +222,7 @@
         "tests/unit/test_process.py": "0ff58a74a48d49f263a2d02d599f66104d90c8d70e5c55a7e49bba086d1d30f2",
         "tests/unit/test_provider_errors.py": "a6ee18fd8629094123aaeceb808e60beb5cd5f1b5d05c8286fbc1199e3086f25",
         "tests/unit/test_quiet_close_tui_probe.py": "8d2c937548ac71c8c2aa8919d6c08cc3bfa9397a2860258f7e4fb8bf16d27ca5",
+        "tests/unit/test_quiet_close_worker_probe.py": "21cf66937b1bfdeec0735187fdb4f62191ed8026b1c03a1aa8887c2a25f7c25c",
         "tests/unit/test_readiness.py": "6dbbd6f87cb653e89b641e071a0eb06ec2a6ac2d8bc590990d1f5f275cb9b2f0",
         "tests/unit/test_readonly_artifacts.py": "ad5ad979d5b9ad208595319b2340049f528ef47e96dc0c0d4c1a86d92eb2f3aa",
         "tests/unit/test_receipts.py": "03e7392d650c1bea2c2b018de4ac1a93304e48984e9a28b55f45ff1fe5611c0b",
@@ -252,8 +254,8 @@
         "tests/unit/test_worktrees_and_contracts.py": "33f40047f20a47c59ac9aa918e7ef1faabf2f36431721f49d23c3f9371918f22",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 133,
-      "sha256": "a31f0580178bf28ec0ced7db67b0e2949a07b333c7bca0d0b86ea7eda8d879fe"
+      "file_count": 135,
+      "sha256": "8effe45a82e16ebae9baa59a56db762d2fedaa96709b0b88ace2e72c10bcb90f"
     }
   },
   "operation_checks": [

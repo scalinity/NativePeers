@@ -15,11 +15,11 @@
     "full": {
       "status": "PASS",
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
-      "tests": 827,
+      "tests": 845,
       "skipped": 4,
-      "subtests": 771,
+      "subtests": 795,
       "exit_code": 0,
-      "private_artifact": "evidence/scratch/issue-7/full-source-reviewed-fixes.log"
+      "private_artifact": "evidence/scratch/issue-7/full-source-final-probe.log"
     },
     "installed_native": {
       "status": "NOT_RUN"
@@ -33,6 +33,12 @@
       "subtests": 29,
       "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
       "scope": "45 focused guard/probe tests, including24 standalone probe tests;29 subtests in the combined run"
+    },
+    "genuine_worker_probe_offline": {
+      "status": "PASS",
+      "tests": 42,
+      "subtests": 53,
+      "private_artifact": "evidence/scratch/issue-7/genuine-probe-stale-screen-fix.log"
     }
   },
   "operation_checks": [
@@ -76,6 +82,15 @@
       "status": "PASS",
       "scope": "Independent read-only review confirmed exact-owner bootstrap and both probe defects fixed; no remaining concrete findings. Package and actual TUI not certified.",
       "private_artifact": "evidence/scratch/issue-7/review-recheck-result.json"
+    },
+    {
+      "worker_id": "0b3f9afc-c5bf-4294-ad71-19f72c641021",
+      "task_id": "53f7e538-e063-4f1b-b5b1-2f4c7511e2b7",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "status": "PASS",
+      "scope": "Independent review confirms the real-controller probe timing findings fixed; runtime acceptance remains pending.",
+      "private_artifact": "evidence/scratch/issue-7/probe-last-recheck-result.json"
     }
   ],
   "private_artifacts": "evidence/scratch/issue-7/",
@@ -84,7 +99,7 @@
     "Protocol and package changes live in the separate CodexForge issue lane; no root/selection/approval change has occurred.",
     "Initial probe and source failures remain retained separately."
   ],
-  "code_commit": "cdcbd66afe1cf759feae4afc9057fef70901d16e",
+  "code_commit": "91dfaeeff2a6b009b430d88ca018244e4e4baa18",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -172,7 +187,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "f3d8d47ceedb04469765727dbbf2db1e9c30bc7637eac61f66218604acbe0a26",
-  "updated_at": "2026-10-30T15:28:51.790352-04:00",
+  "updated_at": "2026-10-30T16:46:49.762940-04:00",
   "failed_experiments": [
     {
       "status": "FAIL",
@@ -183,6 +198,11 @@
       "status": "FAIL",
       "private_artifact": "evidence/scratch/issue-7/baseline-red-03/qualification.json",
       "reason": "Old0.164 runtime reproduced visible blocked-hook entries after22 real admissions. Suppressed bodies did not enter model input. Cleanup audit also failed; supplementary fresh liveness inspection is separate."
+    },
+    {
+      "status": "FAIL",
+      "private_artifact": "evidence/scratch/issue-7/full-source-worker-review-fixes.log",
+      "detail": "One unchanged fake Antigravity catalog stderr-descendant subtest reported CLEANUP_UNCERTAIN instead of TimeoutError. Original focused test passed both streams; final full suite passed with no provider/source modification. Cause was not reproduced."
     }
   ],
   "companion": {
@@ -192,17 +212,22 @@
     "native_checks": {
       "status": "PASS",
       "hook_tests": 195,
-      "queue_tests": 19,
-      "private_artifact": "artifacts/quiet-close-issue-7/native-check-03.json"
+      "queue_tests": 20,
+      "private_artifact": "artifacts/quiet-close-issue-7/native-check-04.json"
     },
     "patch_reapply": {
       "status": "PASS",
-      "files_compared": 134,
-      "private_artifact": "artifacts/quiet-close-issue-7/reapply-final-03.json"
+      "files_compared": 135,
+      "private_artifact": "artifacts/quiet-close-issue-7/reapply-final-05.json"
     },
     "package": {
       "status": "NOT_RUN",
-      "detail": "Normal candidate build still running; no installed-current proof"
-    }
+      "detail": "Candidate04 normal package gates are running; installed-current qualification has not completed."
+    },
+    "fixing_commits": [
+      "215ce96fce6912b23e87ae637b931b20d5a4393f",
+      "e4fccbf",
+      "9c78a2e"
+    ]
   }
 }
