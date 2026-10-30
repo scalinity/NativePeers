@@ -49,12 +49,15 @@ def seed_home(home: Path, cwd: Path, settings=None):
 
 
 class Session:
-    def __init__(self, plugin_dirs, *, env=None, args=(), cols=140, rows=45, label='pty', keep=None, settings=None, cwd=None, reuse=None):
+    def __init__(self, plugin_dirs, *, env=None, args=(), cols=140, rows=45, label='pty', keep=None, settings=None, cwd=None, reuse=None, live=False):
         self.scratch = Path(tempfile.mkdtemp(prefix='nppty-'))
-        self.home = Path(reuse.home) if reuse else self.scratch/'home'
+        # live: the person's real HOME and credentials, no tripwire. Only a
+        # disposable session in a fixture repository, under the live budget.
+        self.live = live
+        self.home = Path.home() if live else Path(reuse.home) if reuse else self.scratch/'home'
         self.cwd = Path(reuse.cwd) if reuse else Path(cwd) if cwd else self.scratch/'work'
         self.cwd.mkdir(parents=True, exist_ok=True)
-        if not reuse:seed_home(self.home, self.cwd.resolve(), settings)
+        if not reuse and not live:seed_home(self.home, self.cwd.resolve(), settings)
         self.keep = Path(keep) if keep else None
         if self.keep:self.keep.mkdir(parents=True, exist_ok=True)
         self.label, self.cols, self.rows = label, cols, rows
@@ -63,7 +66,15 @@ class Session:
         self.lock = threading.Lock()
         self.raw = bytearray()
         self.wire = Tripwire(self.scratch/'tripwire.ndjson').__enter__()
-        environment = {'HOME': str(self.home), 'PATH': f'{CLAUDE.parent}:/usr/bin:/bin:/usr/sbin:/sbin',
+        if live:
+            # A clean environment: nothing of the calling session (its CLAUDE_*,
+            # NPEER_* or messaging socket) reaches the disposable session.
+            base = {k: v for k, v in os.environ.items() if k in ('USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'LANG') or k.startswith('LC_')}
+            self.marker = 'NP_LIVE_SESSION=' + os.urandom(8).hex()
+            environment = dict(base, HOME=str(self.home), PATH=f'{CLAUDE.parent}:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin', TERM='xterm-256color', COLORTERM='truecolor',
+                               NP_LIVE_SESSION=self.marker.split('=', 1)[1])
+            environment.update(env or {})
+        environment = environment if live else {'HOME': str(self.home), 'PATH': f'{CLAUDE.parent}:/usr/bin:/bin:/usr/sbin:/sbin',
                        'ANTHROPIC_BASE_URL': self.wire.url, 'ANTHROPIC_API_KEY': DUMMY_KEY, 'TERM': 'xterm-256color',
                        'COLORTERM': 'truecolor', 'LANG': 'en_US.UTF-8', 'TMPDIR': str(self.scratch/'tmp'),
                        'DISABLE_AUTOUPDATER': '1', 'CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC': '1'}
@@ -142,7 +153,8 @@ class Session:
         no unrelated process can carry.
         """
         out = subprocess.run(['ps', '-axeww', '-o', 'pid=,command='], capture_output=True, text=True).stdout
-        mark = f'HOME={self.home}'
+        # Live sessions share the real HOME: only their own marker identifies them.
+        mark = self.marker if self.live else f'HOME={self.home}'
         return [int(line.split(None, 1)[0]) for line in out.splitlines() if f' {mark} ' in f' {line} ' and int(line.split(None, 1)[0]) != os.getpid()]
 
     def sweep(self, grace=3):
