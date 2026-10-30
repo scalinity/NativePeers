@@ -555,7 +555,8 @@ class Group:
         summary_limit,title_limit=2000,512
         while True:
             from .presentation import completion
-            text=completion(self.id,generation,phase_results,summary_limit,title_limit)
+            from .compact import lifecycle
+            text=completion(self.id,generation,phase_results,summary_limit,title_limit,context=lifecycle(result,self.policy))
             if len(text.encode('utf-8'))<=INLINE_BODY:break
             if summary_limit:summary_limit//=2
             else:

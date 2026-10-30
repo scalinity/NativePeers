@@ -10,7 +10,7 @@ from .errors import PeerError, require
 from .models import ARTIFACT_MAX, RESULT_PAGE, new_id
 
 
-def _selected_file_bytes(path, max_bytes):
+def _selected_file_bytes(path, max_bytes, *, metadata=False):
     # Walk with directory descriptors so replacing any component with a symlink
     # cannot redirect the import after validation. Nonblocking opens reject FIFOs.
     directory = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -34,7 +34,7 @@ def _selected_file_bytes(path, max_bytes):
         require((before.st_size, before.st_mtime_ns, before.st_ctime_ns) ==
                 (after.st_size, after.st_mtime_ns, after.st_ctime_ns) and len(raw) == after.st_size,
                 'PROTOCOL_ERROR', 'Selected artifact changed during import')
-        return raw
+        return (raw, stat.S_IMODE(after.st_mode)) if metadata else raw
     finally:
         os.close(directory)
 
@@ -99,7 +99,7 @@ class Artifacts:
         allowed=set(json.loads(row['allowed_readers_json']));allowed.update(readers)
         self.journal.db.execute('UPDATE artifacts SET allowed_readers_json=? WHERE artifact_id=?',(json.dumps(sorted(allowed)),handle))
 
-    def read(self, handle, caller, offset=0, limit=RESULT_PAGE):
+    def read(self, handle, caller, offset=0, limit=RESULT_PAGE, *, text=False):
         require(isinstance(offset, int) and offset >= 0 and isinstance(limit, int) and 0 < limit <= RESULT_PAGE,
                 "PROTOCOL_ERROR", "Invalid artifact page")
         row = self.journal.one("SELECT * FROM artifacts WHERE artifact_id=?", (handle,))
@@ -112,10 +112,21 @@ class Artifacts:
         with os.fdopen(fd, "rb") as f:
             require(hashlib.file_digest(f, "sha256").hexdigest() == row["sha256"], "PROTOCOL_ERROR", "Artifact content changed")
             f.seek(offset); raw = f.read(limit)
-        return dict(artifact_id=handle, sha256=row["sha256"], media_type=row["media_type"],
+        if text:
+            try:decoded=raw.decode('utf-8')
+            except UnicodeDecodeError as error:
+                require(error.reason=='unexpected end of data' and error.end==len(raw) and error.start>0 and offset+len(raw)<row['byte_size'],
+                        'PROTOCOL_ERROR','Text page is not complete UTF-8; use the previous next_offset and a larger limit, or an exact base64 read')
+                raw=raw[:error.start];decoded=raw.decode('utf-8')
+        result=dict(artifact_id=handle, sha256=row["sha256"], media_type=row["media_type"],
                     byte_size=row["byte_size"], offset=offset, bytes_read=len(raw),
                     data_base64=base64.b64encode(raw).decode(),
                     next_offset=offset+len(raw) if offset+len(raw)<row["byte_size"] else None)
+        if text:
+            result.pop('data_base64')
+            result['text']=decoded;result['text_decode_lossy']=False
+            result['encoding']='utf-8; next_offset preserves complete characters; base64 reads preserve arbitrary bytes'
+        return result
 
     def export(self,handle,path,caller):
         """Write one granted immutable artifact to a new local file, atomically."""

@@ -29,19 +29,21 @@ REQUIREMENTS_SCHEMA=json.loads((Path(__file__).resolve().parent.parent/'schemas/
 TOOLS={
  'usage_status':('Read native quota pools, freshness and local task consumption; optionally refresh metadata or request explained recommendations. No inference, account mutation or model substitution.',object_schema({'provider':{'enum':['claude','codex','antigravity','grok']},'model':STRING,'home_label':STRING,'refresh':{'type':'boolean'},'requirements':REQUIREMENTS_SCHEMA,'preference':{'enum':['quality-first','balanced','quota-preserving','fast','exact-model-only']}})),
  'peer_list':('Discover exact registered native titles.',object_schema({'provider':STRING})),
- 'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['target','text','client_request_id'])),
- 'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING},['message_id','text','client_request_id'])),
+ 'peer_send':('Send a peer notice or correlated request from this bound caller.',object_schema({'target':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING,'artifact_refs':{'type':'array','maxItems':16,'items':STRING}},['target','text','client_request_id'])),
+ 'peer_reply':('Reply to the immediate author of a received message.',object_schema({'message_id':STRING,'text':STRING,'expect_reply':{'type':'boolean'},'client_request_id':STRING,'artifact_refs':{'type':'array','maxItems':16,'items':STRING}},['message_id','text','client_request_id'])),
  'peer_inbox':('Read a bounded inbox without starting a model turn; retained:true reads only notices this session\'s close-out policy kept unsubmitted.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'unread':{'type':'boolean'},'paged':{'type':'boolean'},'cursor':STRING,'retained':{'type':'boolean'}})),
  'peer_notifications':('Open, close or read this verified session\'s close-out notification policy. close retains late informational notices without native submission; open keeps closed exchanges quiet.',object_schema({'action':{'enum':['open','close','status']}},['action'])),
  'peer_ack':('Record this recipient\'s model-reported processing acknowledgment; this is not native ingestion evidence.',object_schema({'message_id':STRING},['message_id'])),
- 'worker_spawn':('Check or launch independent native workers with exact selections and optional explicit Claude-to-Gemini fallbacks. check:true plans without reserving or launching workers; catalog helpers are reported. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA,'check':{'type':'boolean'}},['spec'])),
+ 'worker_spawn':('Check or launch independent native workers with exact selections and optional explicit Claude-to-Gemini fallbacks. check:true plans without reserving or launching workers; catalog helpers are reported. These are not vendor-native subagents.',object_schema({'spec':SPAWN_SCHEMA,'check':{'type':'boolean'},'compact':{'type':'boolean'}},['spec'])),
  'worker_resume':('Resume an exact released owned native worker. Reuse the same request ID and identical arguments after a lost response; input is never replayed.',object_schema({'worker_id':STRING,'task':STRING,'completion_mode':{'enum':['push','wait']},'client_request_id':STRING},['worker_id','task','client_request_id'])),
  'task_groups':('List this bound parent\'s retained delegations without claiming notifications.',object_schema({'limit':{'type':'integer','minimum':1,'maximum':100},'cursor':STRING})),
- 'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'explain_selection':{'type':'boolean'},'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
+ 'task_status':('Read task/group or exact-message status; refresh observes a bounded native history window without replay, with optional older-window continuation.',object_schema({'handle':STRING,'explain_selection':{'type':'boolean'},'compact':{'type':'boolean'},'refresh':{'type':'boolean'},'scan_cursor':STRING,'scan_max_bytes':{'type':'integer','minimum':1,'maximum':4194304}})),
  'task_wait':('Wait at most 30 seconds through the current tool call.',object_schema({'handle':STRING,'timeout_ms':{'type':'integer','minimum':1,'maximum':WAIT_MAX_MS},'on_timeout':{'enum':['push','retain']}},['handle'])),
- 'task_result':('Read retained immutable attributed results; optionally include up to 16 authorized artifact pages of 16 KiB.',object_schema({'handle':STRING,'include_artifacts':{'type':'boolean'}},['handle'])),
+ 'task_result':('Read retained immutable attributed results; optionally include up to 16 authorized artifact pages of 16 KiB.',object_schema({'handle':STRING,'include_artifacts':{'type':'boolean'},'compact':{'type':'boolean'}},['handle'])),
  'task_cancel':('Cancel only work owned by this caller.',object_schema({'handle':STRING,'reason':STRING},['handle','reason'])),
- 'artifact_read':('Read a registered artifact page within the caller grant.',object_schema({'handle':STRING,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':262144}},['handle'])),
+ 'context_check':('Compare a granted frozen handoff with current selected source/runtime facts; no mutations.',object_schema({'handle':STRING,'project':STRING},['handle'])),
+ 'context_prepare':('Prepare immutable selected Git diff/source/runtime context; no model input or runtime changes.',object_schema({'paths':{'type':'array','minItems':1,'maxItems':64,'items':STRING},'project':STRING,'base':STRING,'untracked':{'type':'array','items':STRING},'runtimes':{'type':'array','maxItems':4,'items':{'enum':['claude','codex','antigravity','grok']}},'max_bytes':{'type':'integer','minimum':1,'maximum':10485760}},['paths'])),
+ 'artifact_read':('Read a registered artifact page within the caller grant.',object_schema({'handle':STRING,'offset':{'type':'integer','minimum':0},'limit':{'type':'integer','minimum':1,'maximum':262144},'text':{'type':'boolean'}},['handle'])),
 }
 
 
@@ -79,7 +81,7 @@ class Facade:
         granted=state.get('grants',{})
         names=['peer_list','peer_send','peer_reply','peer_inbox','peer_ack','task_groups','task_status','task_wait','task_result','artifact_read','usage_status']
         # Owned workers cannot change close-out policy, so it is not advertised to them.
-        if not granted.get('worker_id'):names.insert(5,'peer_notifications')
+        if not granted.get('worker_id'):names[5:5]=['peer_notifications','context_prepare','context_check']
         if granted.get('can_spawn'):names += ['worker_spawn','worker_resume','task_cancel']
         return names
 

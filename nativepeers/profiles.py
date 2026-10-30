@@ -13,7 +13,7 @@ PYTHON=ROOT/'.venv/bin/python'
 
 
 def facade_config(journal,binding):
-    return dict(command=str(PYTHON),args=['-m','nativepeers.mcp_server','--binding',str(binding)],
+    return dict(command=str(PYTHON),args=['-P','-m','nativepeers.mcp_server','--binding',str(binding)],
                 cwd=str(ROOT),env={'NPEER_HOME':str(journal.root),'PYTHONPATH':str(ROOT)},enabled=True)
 
 

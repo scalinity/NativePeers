@@ -40,7 +40,7 @@ class Core:
         self.router.adapters['owned-worker']=owned
         self.delegation=Delegation(journal,self.registry)
 
-    async def status(self,caller,handle,*,refresh=False,scan_cursor=None,scan_max_bytes=None,explain_selection=False):
+    async def status(self,caller,handle,*,refresh=False,scan_cursor=None,scan_max_bytes=None,explain_selection=False,compact=False):
         require(refresh or (scan_cursor is None and scan_max_bytes is None),'PROTOCOL_ERROR','Receipt scan options require refresh')
         message=self.journal.one('SELECT * FROM messages WHERE message_id=?',(handle,))
         if message:
@@ -51,7 +51,7 @@ class Core:
                 return await observe(self.journal,self.registry,self.router,handle,cursor=scan_cursor,max_bytes=1048576 if scan_max_bytes is None else scan_max_bytes)
             return dict(self.router.outcome(handle),message=self.router.visible_message(caller,json.loads(message['payload_json'])))
         require(not refresh,'PROTOCOL_ERROR','Receipt refresh requires an exact message ID')
-        return self.delegation.status(caller,handle,explain_selection=explain_selection)
+        return self.delegation.status(caller,handle,explain_selection=explain_selection,compact=compact)
 
     async def tool(self,caller,name,args):
         if name=='usage_status':
@@ -60,20 +60,26 @@ class Core:
             from .usage.service import Usage
             return await Usage(self.journal).status(caller,**args)
         if name=='peer_list':return self.registry.list(args.get('provider'))
-        if name=='peer_send':return await self.router.send(caller,args['target'],args['text'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
-        if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'])
+        if name=='peer_send':return await self.router.send(caller,args['target'],args['text'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'],artifact_refs=args.get('artifact_refs',()))
+        if name=='peer_reply':return await self.router.send(caller,'reply-author',args['text'],in_reply_to=args['message_id'],expect_reply=args.get('expect_reply',False),client_request_id=args['client_request_id'],artifact_refs=args.get('artifact_refs',()))
         if name=='peer_inbox':return self.router.inbox(caller,args.get('limit',20),args.get('unread',False),cursor=args.get('cursor'),paged=args.get('paged',False),retained=args.get('retained',False))
         if name=='peer_notifications':
             from .notification_policy import apply
             return await apply(self.journal,self.registry,caller,args['action'])
         if name=='peer_ack':return self.router.ack(caller,args['message_id'])
-        if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'],check=args.get('check',False))
+        if name=='worker_spawn':return await self.delegation.spawn(caller,args['spec'],check=args.get('check',False),compact=args.get('compact',False))
         if name=='worker_resume':
             from .recovery import resume_worker
             return await resume_worker(self.journal,caller,args['worker_id'],args['task'],args.get('completion_mode'),args['client_request_id'])
         if name=='task_groups':return self.delegation.groups(caller,args.get('limit',20),args.get('cursor'))
-        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False),scan_cursor=args.get('scan_cursor'),scan_max_bytes=args.get('scan_max_bytes'),explain_selection=args.get('explain_selection',False))
-        if name=='task_result':return self.delegation.result(caller,args['handle'],include_artifacts=args.get('include_artifacts',False))
+        if name=='task_status':return await self.status(caller,args['handle'],refresh=args.get('refresh',False),scan_cursor=args.get('scan_cursor'),scan_max_bytes=args.get('scan_max_bytes'),explain_selection=args.get('explain_selection',False),compact=args.get('compact',False))
+        if name=='task_result':return self.delegation.result(caller,args['handle'],include_artifacts=args.get('include_artifacts',False),compact=args.get('compact',False))
+        if name=='context_check':
+            from .selected_context import compare
+            return compare(self.journal,caller,**args)
+        if name=='context_prepare':
+            from .selected_context import prepare
+            return prepare(self.journal,caller,**args)
         if name=='task_wait':
             group=self.delegation.group(caller,args['handle'])
             require(not caller.grants.get('worker_id') or group['parent_key']==caller.key,'CAPACITY_UNAVAILABLE','A worker cannot wait for its own containing group to finish')
@@ -81,8 +87,8 @@ class Core:
         if name=='task_cancel':return await self.delegation.cancel(caller,args['handle'],args['reason'])
         if name=='artifact_read':
             service=Artifacts(self.journal)
-            try:return service.read(args['handle'],caller.key,args.get('offset',0),args.get('limit',262144))
+            try:return service.read(args['handle'],caller.key,args.get('offset',0),args.get('limit',262144),text=args.get('text',False))
             except PeerError as error:
                 if error.code!='APPROVAL_BLOCKED' or not caller.grants.get('worker_id'):raise
-                return service.read(args['handle'],caller.grants['worker_id'],args.get('offset',0),args.get('limit',262144))
+                return service.read(args['handle'],caller.grants['worker_id'],args.get('offset',0),args.get('limit',262144),text=args.get('text',False))
         require(False,'PROTOCOL_ERROR','Unknown NativePeers operation')

@@ -30,7 +30,7 @@ class Evidence:
         error=diagnostic({'api_errors':self.synthetic,'terminal':terminal,'exit_code':exit_code},submitted=True,code=code)
         if terminal.get('subtype')=='error_max_turns':
             error.update(message=f'Claude reached limits.max_native_turns_per_task ({native_max_turns}); native --max-turns ended this input.',
-                         limit=dict(field='limits.max_native_turns_per_task',value=native_max_turns,native_flag='--max-turns'))
+                         limit=dict(field='limits.max_native_turns_per_task',value=native_max_turns,native_flag='--max-turns',observed=terminal.get('num_turns')))
         usages=[e.get('message',{}).get('usage',{}) for e in self.synthetic]
         terminal_usage=terminal.get('usage')
         if terminal_usage is not None:usages.append(terminal_usage)
