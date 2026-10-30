@@ -81,9 +81,9 @@ The parent ran a live Claude check on a genuinely SessionStart-registered intera
 - The run used normal startup and authentication, with per-launch `dontAsk` and cross-session inbound acceptance disclosed, and no global configuration change.
 - Claude model request counts were not instrumented.
 
-## Installation
+## Prior installation qualification
 
-Installed: the namespaced Claude and Codex `UserPromptSubmit` guards, native Codex trust for the third owned hook, owned skill updates for Claude, Codex and Antigravity, and the exact shared instruction block. Repeat installs (default and Antigravity) perform zero operations, the Grok install plan is empty, and an uninstall dry-run names only owned entries. `runtime.json` bytes are unchanged (sha256 `e05c92e9457f32dc2847db24d4b3fa4653748800c201a935b2b51a7093ccbb86`). Non-owned settings and trust are semantically unchanged, `daemon_auto_start=false` is kept, and all Grok files are unchanged. Bytes outside the shared block are exact (sha256 `e9aea8e67b5e81201a9e79e88a5643704a5e8de0a3e95a054fcb09baf4163c83`), and the protected `fix/review-2885497` branch is unchanged. An installed guard is a passive definition, not proof that an already running process has loaded it; a normal resume may be needed.
+The October26 installation qualified: the namespaced Claude and Codex `UserPromptSubmit` guards, native Codex trust for the third owned hook, owned skill updates for Claude, Codex and Antigravity, and the exact shared instruction block. Repeat installs (default and Antigravity) perform zero operations, the Grok install plan is empty, and an uninstall dry-run names only owned entries. `runtime.json` bytes are unchanged (sha256 `e05c92e9457f32dc2847db24d4b3fa4653748800c201a935b2b51a7093ccbb86`). Non-owned settings and trust are semantically unchanged, `daemon_auto_start=false` is kept, and all Grok files are unchanged. Bytes outside the shared block are exact (sha256 `e9aea8e67b5e81201a9e79e88a5643704a5e8de0a3e95a054fcb09baf4163c83`), and the protected `fix/review-2885497` branch is unchanged. An installed guard is a passive definition, not proof that an already running process has loaded it; a normal resume may be needed.
 
 ## Review dispositions
 
