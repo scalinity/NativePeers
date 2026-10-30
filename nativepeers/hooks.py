@@ -8,7 +8,7 @@ import sys
 import time
 
 from .adapters.metadata import claude_name, codex_name
-from .caller import native_ancestor, nearest_native, read_binding, verify_owned_binding
+from .caller import native_ancestor, read_binding, verify_owned_binding
 from .errors import require
 from .files import atomic_json
 from .journal import Journal
@@ -36,11 +36,15 @@ def observe(provider, event, journal):
         from .models import home_id
         peer=journal.one("SELECT * FROM peer_instances WHERE provider='codex' AND home_id=? AND native_id=? AND status='live' AND owner_kind='interactive-standalone' ORDER BY last_seen DESC LIMIT 1",
                          (home_id(home),event['session_id']))
-        if peer:
+        # The hook runs directly below its command shell. An unknown process
+        # between it and the recorded owner is a boundary, never a wrapper to skip.
+        shells={str(Path(p).resolve()) for p in ('/bin/sh','/bin/bash','/bin/zsh','/usr/bin/sh','/usr/bin/bash','/usr/bin/zsh')}
+        boundary=next((p for p in ancestors if p['executable'] not in shells),None)
+        if peer and boundary:
             registered=json.loads(peer['descriptor_json'])['owner']
-            nearest=nearest_native(ancestors,registered['executable'],journal=journal)
-            if nearest and nearest['pid']==peer['pid'] and nearest['start']==peer['process_start'] and native_ancestor(registered,[nearest]):
+            if boundary['pid']==peer['pid'] and boundary['start']==peer['process_start'] and native_ancestor(registered,[boundary]):
                 return prompt_guard(provider,event,journal,peer)
+        require(boundary and boundary['executable']==str(binary),'CALLER_UNBOUND','No direct native provider owner in hook ancestry')
     owners=[p for p in ancestors if p['executable']==str(binary)]
     require(owners,"CALLER_UNBOUND","No exact native provider owner in hook ancestry")
     owner=owners[0]

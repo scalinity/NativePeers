@@ -309,6 +309,12 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
         with patch('nativepeers.hooks.Path.home',return_value=user),             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','CODEX_HOME':str(self.home)}):
             with patch('nativepeers.hooks.ancestry',return_value=[Process(old),Process(inner),Process(old)]):
                 self.assertFalse(observe('codex',event,self.journal)['guarded'])
+            third=dict(inner,executable=str(user/'releases/another-old/bin/codex'))
+            with patch('nativepeers.hooks.ancestry',return_value=[Process(old),Process(third),Process(old)]):
+                for name in ('UserPromptSubmit','QueuedInput'):
+                    with self.subTest(nested=name),self.assertRaises(PeerError) as raised:
+                        observe('codex',dict(event,hook_event_name=name),self.journal)
+                    self.assertEqual(raised.exception.code,'CALLER_UNBOUND')
             with patch('nativepeers.hooks.ancestry',return_value=[Process(old),Process(old)]):
                 for name in ('UserPromptSubmit','QueuedInput','SessionStart'):
                     with self.subTest(event=name),self.assertRaises(PeerError) as error:
