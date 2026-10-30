@@ -100,7 +100,7 @@ def _resume_request(journal,caller,request_id,digest):
         return dict(json.loads(prior['response_json']),state=prior['state'])
 
 
-async def resume_worker(journal,caller,worker_id,text,completion_mode=None,client_request_id=None):
+async def resume_worker(journal,caller,worker_id,text,completion_mode=None,client_request_id=None,*,origin=None,delivery=None):
     require(completion_mode in (None,'push','wait'),'PROTOCOL_ERROR','Invalid resume completion mode')
     require(client_request_id is None or isinstance(client_request_id,str) and bool(client_request_id),
             'PROTOCOL_ERROR','Resume request ID must be a nonempty string')
@@ -151,9 +151,14 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
             from .usage.service import Usage
             Usage(journal).admit_local_demand(lease,worker_id=worker_id)
             db.execute("UPDATE workers SET state='RESERVED',generation=generation+1,lease_json=? WHERE worker_id=? AND state='RELEASED_RESUMABLE'",(canonical(lease).decode(),worker_id))
-            db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,None,None,'QUEUED',None,None,row['generation']+1,canonical({'text':text,'initial':False}).decode()))
+            from .mirror import owner_for,record,route_state
+            owner=owner_for(journal,worker_id,(delivery or {}).get('claude_session'),(delivery or {}).get('owner'))
+            db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,None,None,'QUEUED',None,None,row['generation']+1,
+                canonical(dict(text=text,initial=False,**({'origin':origin,'client_request_id':request_id} if origin else {}))).decode()))
             db.execute('UPDATE groups SET state=?,policy_json=? WHERE group_id=?',('RESERVED',canonical(policy).decode(),group['group_id']))
-            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group['group_id'],phase,caller.key,completion_mode or policy['completion_mode'],'UNCLAIMED',None,None,new_id(),controller_generation))
+            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(group['group_id'],phase,caller.key,completion_mode or policy['completion_mode'],route_state(owner),None,None,new_id(),controller_generation))
+            record(db,task_id,group['group_id'],phase,owner,origin=origin,session=(delivery or {}).get('claude_session'),agent=(delivery or {}).get('claude_agent_id'))
+            if delivery:response['delivery_owner']=owner
             db.execute('INSERT INTO resume_requests VALUES(?,?,?,?,?)',(caller.key,request_id,digest,task_id,canonical(response).decode()))
         if supervisor_alive:
             await group_call(journal,group['group_id'],'resume',{'caller_key':caller.key,'worker_id':worker_id,'task_id':task_id,'text':text},timeout=35)
@@ -168,7 +173,7 @@ async def resume_worker(journal,caller,worker_id,text,completion_mode=None,clien
                     changed=db.execute("UPDATE tasks SET state='FAILED',terminal_reason='SUPERVISOR_LAUNCH_FAILED_BEFORE_START' WHERE task_id=? AND generation=? AND state='QUEUED' AND native_turn_id IS NULL",(task_id,row['generation']+1)).rowcount
                     if changed:
                         db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=? AND state='RESERVED'",(worker_id,row['generation']+1))
-                        db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state='UNCLAIMED'",(group['group_id'],phase))
+                        db.execute("UPDATE completion_routes SET state='RETAINED' WHERE group_id=? AND completion_generation=? AND state IN ('UNCLAIMED','MIRROR_PENDING')",(group['group_id'],phase))
                         db.execute("UPDATE groups SET state='FAILED' WHERE group_id=?",(group['group_id'],))
                 journal.event(worker_id,'controller-not-created',dict(worker_id=worker_id,generation=row['generation']+1,native_id=row['native_id'],cwd=row['cwd'],controller_created=False,supervisor_created=False))
                 journal.event(task_id,'resume-not-launched',error.json())

@@ -1,0 +1,6 @@
+{"notifications": [[{"text": "main: following up", "tools": [{"name": "SendMessage", "input": {"to": "${agent1:np:codex}", "message": "Also check the tests directory."}}]}, {"text": "main: sent"}]],
+ "on": {"go": [
+   {"text": "main: delegating", "tools": [{"name": "Agent", "input": {"description": "Codebase review", "subagent_type": "np:codex",
+      "prompt": "```np\n{\"model\":\"gpt-6.1-sol\",\"effort\":\"high\"}\n```\nReview the codebase."}}]},
+   {"text": "main: delegated"}]},
+ "steps": [{"text": "main: idle"}]}

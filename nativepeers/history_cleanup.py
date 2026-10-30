@@ -102,7 +102,7 @@ def _released(journal, row):
     require(owner.get('owner') and owned_status(owner['owner']) == 'DEAD', 'OWNERSHIP_CONFLICT', 'Group supervisor is live or its ownership is unknown')
     require(not owner.get('cleanup_unresolved'), 'CLEANUP_UNCERTAIN', 'Group retains unresolved process cleanup')
     routes = journal.all('SELECT state,mode,waiter_id,lease_deadline FROM completion_routes WHERE group_id=?', (row['group_id'],))
-    require(not any(r['state'] in ('WAIT_LEASED', 'PUSH_SUBMITTING', 'HELD') or
+    require(not any(r['state'] in ('WAIT_LEASED', 'PUSH_SUBMITTING', 'HELD', 'MIRROR_PENDING', 'MIRROR_SURFACING') or
                     r['state'] == 'UNCLAIMED' and r['mode'] == 'push' for r in routes),
             'OWNERSHIP_CONFLICT', 'Group has a waiter or unresolved completion ownership')
     return dict(generation=row['generation'], process_closure=closure, task_count=len(tasks), supervisor='DEAD')
@@ -224,8 +224,12 @@ def preview(journal, *, worker_ids=None, automation_manifests=(), limit=100):
             candidates.append(_automation(journal, selected))
         except (PeerError, OSError, ValueError, sqlite3.Error) as error:
             candidates.append(dict(automation_manifest=str(selected), eligible=False, operation=None, reason_code=error.code if isinstance(error, PeerError) else 'OWNERSHIP_UNKNOWN', reason=str(error)))
+    from .activity import listing
+    for candidate in candidates:
+        if candidate.get('worker_id') and journal.one('SELECT 1 FROM workers WHERE worker_id=?', (candidate['worker_id'],)):
+            candidate['activity_logs'] = listing(journal, candidate['worker_id'])
     return dict(schema_version=1, kind='nativepeers-history-cleanup', operation_id=new_id(), journal_root=str(journal.root),
-                created_at=time.time(), candidates=candidates, applied=False, histories_deleted=False,
+                created_at=time.time(), candidates=candidates, applied=False, histories_deleted=False, activity_logs_deleted=False,
                 recheck_required=True, desktop_verified=False)
 
 
@@ -352,6 +356,6 @@ async def apply(journal, manifest, *, reverse=False, client_factory=AppServer):
                         helper_unresolved = True
                         outcome['helper_cleanup'] = dict(state='uncertain', reason_code=error.code if isinstance(error, PeerError) else type(error).__name__, reason=str(error))
             outcomes.append(outcome)
-    return dict(operation_id=manifest['operation_id'], reverse=reverse, outcomes=outcomes, histories_deleted=False,
+    return dict(operation_id=manifest['operation_id'], reverse=reverse, outcomes=outcomes, histories_deleted=False, activity_logs_deleted=False,
                 desktop_verified=False, counts={state:sum(o['status']==state for o in outcomes) for state in ('archived', 'already-archived', 'unarchived', 'already-unarchived', 'skipped', 'failed')},
                 reversal='npeer history-cleanup --unarchive --manifest '+shlex.quote(str(manifest.get('manifest_path', '<exact-preview-manifest>')))+' --json')

@@ -1,0 +1,96 @@
+{
+ "native_status": "failed",
+ "terminal_event": "turn/completed",
+ "emissions": [
+  {
+   "kind": "task.state",
+   "item": null,
+   "event": "thread/status/changed",
+   "data": {
+    "state": "APPROVAL_BLOCKED",
+    "reason": "waitingOnApproval"
+   }
+  },
+  {
+   "kind": "task.state",
+   "item": null,
+   "event": "thread/status/changed",
+   "data": {
+    "state": "RUNNING"
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "cmd_2",
+   "event": "item/started",
+   "data": {
+    "kind": "exec",
+    "title": "make build",
+    "input": {
+     "command": "make build",
+     "cwd": "/work/repo"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "cmd_2",
+   "event": "item/completed",
+   "data": {
+    "status": "error",
+    "exit_code": 2,
+    "output": "make: *** [build] Error 2\n",
+    "duration_ms": 310
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "cmd_3",
+   "event": "item/started",
+   "data": {
+    "kind": "exec",
+    "title": "rm -rf build",
+    "input": {
+     "command": "rm -rf build",
+     "cwd": "/work/repo"
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "cmd_3",
+   "event": "item/completed",
+   "data": {
+    "status": "declined",
+    "output": "",
+    "duration_ms": 250
+   }
+  },
+  {
+   "kind": "tool.started",
+   "item": "mcp_2",
+   "event": "item/started",
+   "data": {
+    "kind": "mcp",
+    "title": "docs.fetch",
+    "input": {
+     "server": "docs",
+     "tool": "fetch",
+     "arguments": {
+      "url": "https://example.invalid/"
+     }
+    }
+   }
+  },
+  {
+   "kind": "tool.completed",
+   "item": "mcp_2",
+   "event": "item/completed",
+   "data": {
+    "status": "error",
+    "output": "connection refused",
+    "duration_ms": 250
+   }
+  }
+ ]
+}

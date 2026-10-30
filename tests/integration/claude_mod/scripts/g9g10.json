@@ -1,0 +1,5 @@
+{"notifications": "ack",
+ "on": {
+  "go": [{"text": "main: Path A", "tools": [{"name": "Agent", "input": {"description": "probe · R1", "prompt": "BRIEF R1", "subagent_type": "npi:mirror"}}]}, {"text": "main: delegated"}],
+  "message the first": [{"text": "main: SendMessage", "tools": [{"name": "SendMessage", "input": {"to": "${agent1:npi:mirror}", "message": "follow-up after resume"}}]}, {"text": "main: sent"}]
+ }, "steps": [{"text": "main: idle"}]}

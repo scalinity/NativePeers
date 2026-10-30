@@ -1,0 +1,10 @@
+{"steps": [
+ {"text": "main: six Path A shadows", "tools": [
+  {"name": "Agent", "input": {"description": "c1", "prompt": "brief 1", "subagent_type": "npx:mirror"}},
+  {"name": "Agent", "input": {"description": "c2", "prompt": "brief 2", "subagent_type": "npx:mirror"}},
+  {"name": "Agent", "input": {"description": "c3", "prompt": "brief 3", "subagent_type": "npx:mirror"}},
+  {"name": "Agent", "input": {"description": "c4", "prompt": "brief 4", "subagent_type": "npx:mirror"}},
+  {"name": "Agent", "input": {"description": "c5", "prompt": "brief 5", "subagent_type": "npx:mirror"}},
+  {"name": "Agent", "input": {"description": "c6", "prompt": "brief 6", "subagent_type": "npx:mirror"}}]},
+ {"text": "main: waiting"}, {"text": "n1"}, {"text": "n2"}, {"text": "n3"}, {"text": "n4"}, {"text": "n5"}, {"text": "n6"}, {"text": "n7"}
+]}

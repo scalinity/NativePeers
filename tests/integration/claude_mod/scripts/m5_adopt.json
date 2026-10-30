@@ -1,0 +1,1 @@
+{"notifications": "ack", "on": {"go": [{"text": "main: spawning with npeer", "tools": [{"name": "Bash", "input": {"command": "echo npeer spawn --spec /tmp/np-spec.json --json", "description": "Spawn a worker"}}]}, {"text": "main: spawned"}]}, "steps": [{"text": "main: idle"}]}

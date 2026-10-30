@@ -1,0 +1,6 @@
+{"steps": [
+ {"text": "main: Path A shadow", "tools": [{"name": "Agent", "input": {"description": "GPT-6.1 Sol high · codebase review", "prompt": "BRIEF: review the codebase", "subagent_type": "npx:mirror"}}]},
+ {"text": "main: delegated; ending turn"},
+ {"text": "main: got a notification"},
+ {"text": "main: notification 2"}, {"text": "main: notification 3"}
+]}

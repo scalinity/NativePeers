@@ -189,6 +189,32 @@
               "warn"
             ],
             "description": "Fresh known exhaustion stops submission by default. warn explicitly attempts the exact choice anyway; it never changes the model or permissions."
+          },
+          "mirror": {
+            "type": "object",
+            "description": "The Claude Code session that mirrors this worker as a shadow agent. Requires a one-worker wait-mode group spawned by that same session; its initial task is mirror-delivered under a lease.",
+            "required": [
+              "owner",
+              "claude_session",
+              "claude_agent_id"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "owner": {
+                "const": "claude-mod"
+              },
+              "claude_session": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "claude_agent_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[A-Za-z0-9_-]{1,128}$"
+              }
+            }
           }
         },
         "additionalProperties": false
