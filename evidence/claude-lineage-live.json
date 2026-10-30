@@ -7,6 +7,72 @@
     "script": "tests/integration/claude_mod/setup_live.py"
   },
   "runs": {
+    "live-acceptance-1": {
+      "commit": "216d561",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run2/driver-output.txt",
+        "evidence/scratch/claude-lineage/live/run2/session",
+        "evidence/scratch/claude-lineage/live/run2/npeer-home"
+      ],
+      "fixes": [
+        "09460f4 reparented bridge supervisors, successor socket, request liveness, unchecked updates listed",
+        "bf2317b one-line header, registration on bridge restart, exit guard by socket, ready:false code, /np open honesty"
+      ],
+      "label": "L",
+      "observation": [
+        "The real parent turn issued four parallel Agent calls (np:codex, np:grok, np:antigravity, np:claude), each prompt starting with an np header the model wrote on one line (```np {...}\\n```).",
+        "np:codex and np:claude started real workers, were mirrored, and completed through native notifications that npguard answered locally; both routes went MIRROR_PENDING -> MIRROR_DELIVERED with no NativePeers push.",
+        "np:grok was refused before any worker started: PERMISSION_CAPABILITY_UNKNOWN, because the installed ~/.grok hooks and sandbox profiles name the main checkout and the production state root, which a worktree rig cannot match without editing the production Grok home.",
+        "np:antigravity was never registered: agy auto-updated from 1.4.7 to 1.4.11 at 11:26 AM EDT and the bridge listed only providers with a current approval.",
+        "The one-line header did not parse, so both workers received the header as brief text and ran the provider defaults (Codex xhigh instead of the requested high).",
+        "Claude Code evicts a finished background agent ~31 s after it completes (debug: evictTerminalTask); /np open then answered ui.view \"no agent under that id\" while reporting \"viewing\".",
+        "The AC4 follow-up went to the main conversation: the driver looked the worker up before the band had registered it.",
+        "After the AC10 reload the new module instance could not start a bridge: the previous instance kept its bridge until its held steps settled (49 s), the new bridge was refused, launch() hid the refusal as \"no ready line\", no np types were re-registered, and when the old instance unloaded the engine stopped its bridge together with every descendant: both sleeper supervisors and Codex workers died with no journal record (tasks left RUNNING, routes MIRROR_PENDING).",
+        "Every np-mirror-codex request in the debug log was the engine agent_summary for a running sleeper (3 attempts), refused 404 model-not-found before inference; no shadow step fell through."
+      ],
+      "probes": [
+        "zero-API: a detached grandchild (own session) of a mod-spawned process is killed when the session exits; a grandchild reparented to launchd survives (scratchpad treeprobe)."
+      ],
+      "state": "FAILED_FINDINGS_FIXED"
+    },
+    "live-acceptance-2": {
+      "commit": "bf2317b",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run3/driver-output.txt",
+        "evidence/scratch/claude-lineage/live/run3/session",
+        "evidence/scratch/claude-lineage/live/run3/npeer-home"
+      ],
+      "label": "L",
+      "observation": [
+        "Scripted fan-out (no parent model turn): np:claude and np:codex mirrored; np:antigravity was listed (agy 1.4.11 pending), its first use renewed the rig approval to 1.4.11, then the rig refused it: the installed ~/.gemini hooks and MCP facade name the main checkout (main-checkout code reads them PRESENT).",
+        "AC5: the Claude worker finished (8 s); a follow-up typed in its still-listed view was queued into its follow-up grace, generation 2 streamed into the same view, the parent received a second native notification, and both footers carry native 1d196813-c942-414c-9ee9-8bc52ec6b77b. Routes for both generations: MIRROR_DELIVERED.",
+        "AC4: a follow-up typed during the Codex worker's sleep showed \"1 queued\", then \"generation 1 completed; continuing\" and generation 2 in the same view; one journal input with origin human-claude-view. Generation 1's route stayed MIRROR_PENDING because the folded run surfaced only its last generation (fixed: folded generations surface with the final answer).",
+        "AC10: the mod reloaded with two running sleepers; the new instance's bridge took the successor socket b-e8cf10416189.1.sock, the band stayed ready and both workers kept running.",
+        "AC6: /np interrupt through the reloaded module ended Sleeper A's turn (INTERRUPTED, native notification); Esc in Sleeper B's view canceled its task; /np stop all canceled Sleeper C. Every route MIRROR_DELIVERED.",
+        "AC12: npeer spawn through Bash was adopted into a row; its first result arrived through the NativePeers push notice (route push, NOTIFICATION_UNKNOWN after submission).",
+        "AC7/AC8 were not exercised: the driver found no bridge to kill (engine-spawned processes do not carry the session marker). /np reattach then attached a second shadow to a worker whose shadow was alive and handed its delivery back (fixed: a live shadow is left alone), and that shadow's footer claimed a NativePeers notice for a wait-mode route (fixed: it names the retained result).",
+        "Requests: no repl_main_thread; prompt_suggestion x14 (sonnet, main session), generate_session_title, quota_check; 4 agent_summary requests for np-mirror models, each refused 404 before inference.",
+        "Performance (debug lines): display latency n=41 p50 37 ms, p95 215 ms; one 13.7 s value was the duplicate re-attach shadow replaying history from seq 0 (now excluded from the measure). Hook own-time n=17 p50 4 ms, p95 8 ms, max 16 ms. Path A check request 0.44-1.5 s, one 5.8 s while the agy renewal ran beside it."
+      ],
+      "state": "PASS_WITH_FINDINGS"
+    },
+    "live-recovery-1": {
+      "commit": "151effe",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run4/driver-output.txt",
+        "evidence/scratch/claude-lineage/live/run4/session",
+        "evidence/scratch/claude-lineage/live/run4/npeer-home"
+      ],
+      "label": "L",
+      "observation": [
+        "AC4/AC7: a follow-up typed during the Codex worker's sleep folded into its run; the one final answer carried [generation 1] and [generation 2], the parent got one native notification, and both generations' routes went MIRROR_DELIVERED.",
+        "AC10: the mod reloaded beside a running worker. Bridges (from the rig manifests): [34237] before, [38924, 34237] just after (the successor socket beside the previous instance's bridge), [38924] once the previous instance unloaded. The worker was mirrored to completion and delivered (MIRROR_DELIVERED).",
+        "AC7: the bridge 38924 was SIGKILLed while a mirror-owned worker slept; /np reattach 4 s later restarted the bridge (43604) and answered \"already mirrored\"; the same shadow carried on, and the route went MIRROR_DELIVERED.",
+        "AC8: the bridge 43604 was SIGKILLed and left down 30 s; the band showed \"bridge down: bridge exited SIGKILL\", the worker kept running, and the shadow, holding a mirror call, did not fault. /np reattach restarted the bridge (50044). The lease had lapsed by then, so the route fell back to UNCLAIMED (wait mode, retained), the shadow completed with the result in its notification, and lineage dropped the shadow links of every lapsed lease (no Open buttons; an Attach offer for the running worker). Fixed: lineage keeps this session's shadow links unless another session mirrors the worker, and Attach is offered only for a worker without a live shadow.",
+        "Requests: no repl_main_thread; prompt_suggestion x8, generate_session_title, quota_check; 5 agent_summary requests for np-mirror models, refused 404 before inference."
+      ],
+      "state": "PASS_WITH_FINDINGS"
+    },
     "m3-live-slice": {
       "commit": "f28e7bf",
       "evidence": [
@@ -31,5 +97,5 @@
     }
   },
   "schema": "nativepeers.claude-lineage-live.v1",
-  "updated_at": "2026-10-30T17:39:20-0400"
+  "updated_at": "2026-10-30T18:47:00-0400"
 }

@@ -4,6 +4,39 @@
     "version": "2.1.314"
   },
   "design_refinements": {
+    "descendant_stop": {
+      "decision": "The bridge hands each supervisor it starts to launchd through a shell that exits at once (delegation.REPARENT_SUPERVISORS, set only in the bridge process), as a CLI-started supervisor already is; the supervisor ends by its own parent-lifetime policy (PARENT_LOST cancellation, retained results).",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run2",
+        "scratchpad treeprobe (zero-API, tripwire 0 hits)"
+      ],
+      "label": "L",
+      "observation": "Claude Code stops a mod-spawned process together with its descendants, including one in its own session (setsid); a grandchild already reparented to launchd survives."
+    },
+    "finished_agent_eviction": {
+      "decision": "A person follows up a finished worker from its view while it is listed; later, through the parent (SendMessage) or /np resume-cmd. /np open reports the refusal.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run2"
+      ],
+      "label": "L",
+      "observation": "The engine evicts a finished background agent's task ~31 s after it ends (debug evictTerminalTask); ui.view then answers \"no agent under that id\"."
+    },
+    "one_line_header": {
+      "decision": "The header grammar accepts the JSON on the fence lines or between them; a prompt that opens ```np without a closing fence is refused.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run2"
+      ],
+      "label": "L",
+      "observation": "Following the compose section's one-line example, the parent model wrote ```np {...} on the fence line."
+    },
+    "reload_overlap": {
+      "decision": "A bridge started while another bridge for the same session still serves takes a successor socket; both serve the session through the journal (bindings, leases and routes are journal compare-and-sets) until the engine stops the old one. Any authenticated request counts as mod liveness, so a held step keeps its own bridge. Only a bridge's own exit marks the shared bridge state down.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run2"
+      ],
+      "label": "L",
+      "observation": "On a hot reload the new module instance ran session.start at once, while the previous instance kept its bridge until its held shadow steps settled (49 s with two silent sleepers); the engine stopped that bridge only when the instance unloaded."
+    },
     "unserved_shadow_model": {
       "decision": "np:* agent types and the Path A next() name a model id no API serves, so any fallthrough is refused by the API before inference; the placeholder prompt remains as a second layer. The fallthrough detector also treats a shadow turn.complete with reason 'error' as a fallthrough.",
       "evidence": [
@@ -234,7 +267,7 @@
     "tripwire": "tests/integration/claude_mod/tripwire.py"
   },
   "schema": "nativepeers.claude-lineage-m0.v1",
-  "updated_at": "2026-10-30T15:32:11-0400",
+  "updated_at": "2026-10-30T18:38:00-0400",
   "x_reproductions": {
     "X1": {
       "delta": "$.agent.list() entries carried id, description, type and status only: no spawnedBy field was present.",
