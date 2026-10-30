@@ -25,6 +25,12 @@ export async function openView($: EngineInterface, agentId: string): Promise<voi
   if (r?.deny) $.ui.toast('np: ' + r.deny)
 }
 
+// Esc in a worker's view stops that worker (gate G4), so the band offers a way back.
+export async function mainView($: EngineInterface): Promise<void> {
+  const r: any = await $.ui.view({})
+  if (r?.deny) $.ui.toast('np: ' + r.deny)
+}
+
 export async function openPane($: EngineInterface): Promise<void> {
   await $.ui.open({ id: PANE_ID, title: 'NativePeers lineage', focus: true })
   await setUi($, { paneOpen: true })
@@ -82,6 +88,7 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
           {s.workerId ? <Button key="stop" label="Stop" onPress={() => stopWorker($, s)} /> : null}
           {s.workerId ? <Button key="resume" label="Resume cmd" onPress={(p: { surface: string }) => copyResume($, s, p.surface)} /> : null}
           <Button key="pane" label="Pane" onPress={() => openPane($)} />
+          <Button key="main" label="Main" hotkey="m" onPress={() => mainView($)} />
         </Box>
       )
     }

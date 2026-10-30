@@ -3,7 +3,7 @@
 import type { EngineInterface, Register, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpProvider, NpWorker } from '../types'
 import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
-import { BridgeError, followLineage, heartbeat, launch, request, shutdown, sleep } from './bridge'
+import { BridgeError, connected, followLineage, heartbeat, launch, request, shutdown, sleep } from './bridge'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
 import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state'
@@ -26,6 +26,7 @@ type Options = { followupMode?: string; showReasoning?: string; mirrorOutputByte
 let activated = false
 let inert = false
 let rebind = false
+let place: { cwd: string; npeer: string } | undefined
 
 function atLeast(version: string, minimum: number[]): boolean {
   const parts = version.split(/[.+-]/).map(Number)
@@ -46,7 +47,8 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
     await setBridge($, { state: 'degraded', reason: `Claude Code ${version} is outside the verified range (minimum 2.1.309)`, since: 0 })
     return
   }
-  const launched = await launch($, await $.session.id(), cwd, o.npeerPath || '/Users/danny/.local/bin/npeer')
+  place = { cwd, npeer: o.npeerPath || '/Users/danny/.local/bin/npeer' }
+  const launched = await launch($, await $.session.id(), cwd, place.npeer)
   if ('reason' in launched) { $.ui.toast(`np: NativePeers bridge unavailable — ${launched.reason}; /np doctor`);return }
   const usable: string[] = Array.isArray(launched.hello.providers) ? launched.hello.providers : [...PROVIDERS]
   for (const provider of PROVIDERS) if (usable.includes(provider)) await $.agent.register(agentSpec(provider))
@@ -95,6 +97,16 @@ async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>,
     await saveShadow($, s)
   }
   return r
+}
+
+// Starts the bridge again after it exited; leases it held stay valid for their
+// TTL, so a restarted bridge for the same session picks them up.
+async function ensureBridge($: EngineInterface): Promise<string> {
+  if (connected() || !place) return ''
+  const launched = await launch($, await $.session.id(), place.cwd, place.npeer)
+  if ('reason' in launched) return `bridge restart failed: ${launched.reason}`
+  void followLineage($)
+  return 'bridge restarted'
 }
 
 async function rebindSession($: EngineInterface): Promise<void> {
@@ -147,7 +159,7 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
   const pick = (n: string) => workers[Number(n) - 1]
   if (!verb) return { text: await statusText($) }
   if (verb === 'pane') { await openPane($);return { text: 'np: lineage pane opened' } }
-  if (verb === 'doctor') return { text: await doctor($, o) }
+  if (verb === 'doctor') { const restarted = await ensureBridge($);return { text: (restarted ? 'np: ' + restarted + '\n' : '') + await doctor($, o) } }
   if (verb === 'open') { const w = pick(arg);if (!w?.agentId) return { text: 'np: no mirrored worker ' + arg };await openView($, w.agentId);return { text: `np: viewing ${w.title}` } }
   if (verb === 'stop' && arg === 'all') return { text: `np: stopping ${await stopAll($)} group(s)` }
   if (verb === 'stop' || verb === 'interrupt' || verb === 'resume-cmd') {
@@ -158,6 +170,8 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
     return { text: `np: ${verb} ${w.title}` }
   }
   if (verb === 'attach' || verb === 'reattach') {
+    const restarted = await ensureBridge($)
+    if (restarted.startsWith('bridge restart failed')) return { text: 'np: ' + restarted }
     const active = workers.filter(w => ['queued', 'starting', 'running', 'waiting'].includes(w.status) && w.mirrorOwner !== 'other')
     const chosen = verb === 'reattach' ? active : arg === 'all' ? active.filter(w => !w.agentId) : [pick(arg)].filter(Boolean) as NpWorker[]
     const out: string[] = []

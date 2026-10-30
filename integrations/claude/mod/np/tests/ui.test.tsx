@@ -46,7 +46,7 @@ test('viewing a shadow shows its worker header with Interrupt, Stop and Resume c
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...band({ agentId: 'a1' }), surface } as any)
     expect(await ui.find({ type: 'Text', text: /↳ Subagent of main · codex · gpt-6.1-sol · high · analysis/ })).toBeTruthy()
-    for (const key of ['interrupt', 'stop', 'resume', 'pane']) expect(await ui.find({ type: 'Button', key })).toBeTruthy()
+    for (const key of ['interrupt', 'stop', 'resume', 'pane', 'main']) expect(await ui.find({ type: 'Button', key })).toBeTruthy()
     await ui.unmount()
   }
 })
