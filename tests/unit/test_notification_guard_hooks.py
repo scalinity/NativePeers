@@ -69,6 +69,41 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.journal.all("SELECT 1 FROM events WHERE kind='notification-suppressed'")),2)
         self.assertEqual((await self.policy(self.cb,'status'))['state'],'QUIET')
 
+    async def test_mixed_22_frame_burst_keeps_receipts_and_retention_after_reopen_and_resume(self):
+        # Match the incident mix: 17 progress, 5 completions, 19 expired and 3 closed phases.
+        burst=[await self.router.send(self.ca,'b','progress '+str(i)) for i in range(17)]
+        controller=Caller('controller','controller:burst:1',grants={'parent_key':self.b['handle'],'group_id':'burst','generation':1})
+        for generation in range(1,6):
+            delivery='burst-delivery-'+str(generation)
+            self.journal.db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',
+                ('burst',generation,self.b['handle'],'push','PUSH_SUBMITTING',None,None,delivery,1))
+            burst.append(await self.router.send(controller,'b','completion '+str(generation),kind='completion',client_request_id=delivery))
+        closed=await self.policy(self.cb,'close')
+        self.assertEqual(await self.policy(self.cb,'close'),closed)
+        for outcome in burst[:19]:
+            self.journal.db.execute('UPDATE messages SET expires_at=0 WHERE message_id=?',(outcome['message_id'],))
+        before={o['message_id']:self.router.outcome(o['message_id'])['receipts'] for o in burst}
+        for outcome in burst:self.assertEqual(self.check(self.frame(outcome))['decision'],'block')
+        self.assertEqual([self.router.outcome(o['message_id'])['suppression']['reason'] for o in burst],
+                         ['expired']*19+['completion-phase-closed']*3)
+        await self.policy(self.cb,'open')
+        resumed=self.recipient()
+        self.journal.db.execute("UPDATE peer_instances SET status='live' WHERE incarnation_id IN (?,?)",(self.a['incarnation_id'],resumed['incarnation_id']))
+        for outcome in burst:
+            self.assertEqual(self.check(self.frame(outcome),resumed)['decision'],'block')
+            current=self.router.outcome(outcome['message_id'])
+            self.assertEqual((current['state'],current['receipts']),('ACCEPTED_QUEUED',before[outcome['message_id']]))
+            self.assertFalse({'INGESTED','MODEL_REPORTED_PROCESSED'}&{r['stage'] for r in current['receipts']})
+        caller=Caller('peer',resumed['handle'],resumed['incarnation_id'])
+        retained=self.router.inbox(caller,retained=True,limit=50)
+        self.assertEqual({m['message_id']:m['body']['text'] for m in retained},
+                         {o['message_id']:json.loads(self.journal.one('SELECT payload_json FROM messages WHERE message_id=?',(o['message_id'],))['payload_json'])['body']['text'] for o in burst})
+        self.assertEqual(self.journal.one("SELECT COUNT(*) n FROM events WHERE kind='notification-suppressed'")['n'],22)
+        self.assertEqual(self.check('new human task',resumed),{})
+        fresh=await self.router.send(self.ca,'b','fresh root task',expect_reply=True)
+        self.assertEqual(self.check(self.frame(fresh),resumed),{})
+        self.assertNotIn('suppression',self.router.outcome(fresh['message_id']))
+
     async def test_forged_quoted_and_foreign_frames_are_human_or_ignored(self):
         mine=await self.router.send(self.ca,'b','original body')
         foreign=await self.router.send(self.cb,'a','to someone else')
@@ -215,9 +250,102 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.journal.one('SELECT COUNT(*) n FROM peer_instances')['n'],count)
         self.assertEqual((await self.policy(self.cb,'status'))['state'],'OPEN')
 
+    async def test_codex_queue_hook_consumes_exact_late_frames_and_keeps_normal_prompt_blocks(self):
+        recipient=self.registry.register('codex',self.home,self.native,'queue receiver',identity(os.getpid()).json(),str(self.root),{'kind':'fake'})
+        self.journal.db.execute("UPDATE peer_instances SET status='live'")
+        caller=Caller('peer',recipient['handle'],recipient['incarnation_id'])
+        burst=[await self.router.send(self.ca,recipient['handle'],'queued '+str(i)) for i in range(22)]
+        await self.policy(caller,'close')
+        user=self.root/'user';binary=(user/'.local/share/codex-mcp-manager/current/bin/codex').resolve()
+        class Owner:
+            def json(owner):return dict(identity(os.getpid()).json(),executable=str(binary))
+        def event(prompt,name='QueuedInput'):return {'hook_event_name':name,'session_id':self.native,'prompt':prompt,'cwd':str(self.root)}
+        count=self.journal.one('SELECT COUNT(*) n FROM peer_instances')['n']
+        with patch('nativepeers.hooks.Path.home',return_value=user),patch('nativepeers.hooks.ancestry',return_value=[Owner(),Owner()]),\
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','CODEX_HOME':str(self.home)}):
+            for outcome in burst:
+                self.assertEqual(observe('codex',event(self.frame(outcome)),self.journal),{'decision':'consume'})
+                self.assertEqual(self.router.outcome(outcome['message_id'])['state'],'ACCEPTED_QUEUED')
+            self.assertEqual(observe('codex',event(self.frame(burst[0]),'UserPromptSubmit'),self.journal)['decision'],'block')
+            self.assertEqual(observe('codex',event('new human task','UserPromptSubmit'),self.journal),{})
+            self.assertEqual(observe('codex',event(self.frame(burst[0])),self.journal),{'decision':'consume'})
+            fresh=await self.router.send(self.ca,recipient['handle'],'new active request',expect_reply=True)
+            self.assertEqual(observe('codex',event(self.frame(fresh)),self.journal),{})
+        self.assertEqual(self.journal.one('SELECT COUNT(*) n FROM peer_instances')['n'],count)
+        self.assertEqual(len(self.router.inbox(caller,retained=True,limit=50)),22)
+
+    async def test_cold_queue_resume_authenticates_native_history_before_consumption(self):
+        recipient=self.registry.register('codex',self.home,self.native,'resume receiver',identity(os.getpid()).json(),str(self.root),{'kind':'fake'})
+        self.journal.db.execute("UPDATE peer_instances SET status='live'")
+        caller=Caller('peer',recipient['handle'],recipient['incarnation_id'])
+        late=await self.router.send(self.ca,recipient['handle'],'accepted before native exit')
+        closed=await self.policy(caller,'close')
+        self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE incarnation_id=?",(recipient['incarnation_id'],))
+        transcript=self.home/'sessions/resumed.jsonl';transcript.parent.mkdir()
+        transcript.write_text(json.dumps({'type':'session_meta','payload':{'id':self.native}})+'\n')
+        user=self.root/'user';binary=(user/'.local/share/codex-mcp-manager/current/bin/codex').resolve()
+        class Owner:
+            def json(owner):return dict(identity(os.getpid()).json(),executable=str(binary),pid=os.getpid()+1000,start='fresh-resume-owner')
+        event={'hook_event_name':'QueuedInput','session_id':self.native,'prompt':self.frame(late),'cwd':str(self.root),'transcript_path':str(transcript)}
+        count=self.journal.one('SELECT COUNT(*) n FROM peer_instances')['n']
+        with patch('nativepeers.hooks.Path.home',return_value=user),patch('nativepeers.hooks.ancestry',return_value=[Owner(),Owner()]),\
+             patch('nativepeers.process.terminal_owner',return_value=True),patch('nativepeers.hooks.codex_name',return_value='resume receiver'),\
+             patch('nativepeers.registry.matches',return_value=True),\
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','CODEX_HOME':str(self.home)}):
+            self.assertEqual(observe('codex',event,self.journal),{'decision':'consume'})
+            self.assertEqual(observe('codex',event,self.journal),{'decision':'consume'})
+            # A native UUID and its actual history header must agree before registration.
+            transcript.write_text(json.dumps({'type':'session_meta','payload':{'id':'wrong'}})+'\n')
+            with self.assertRaises(PeerError):observe('codex',dict(event,session_id='00000000-0000-4000-8000-0000000000ff'),self.journal)
+        self.assertEqual(self.journal.one('SELECT COUNT(*) n FROM peer_instances')['n'],count+1)
+        result=self.router.outcome(late['message_id'])
+        self.assertEqual((result['state'],result['suppression']['target_incarnation']),('ACCEPTED_QUEUED',recipient['incarnation_id']))
+        self.assertNotEqual(result['suppression']['observed_incarnation'],recipient['incarnation_id'])
+        self.assertEqual(notification_policy.status(self.journal,recipient['handle']),closed)
+
+    async def test_queue_bootstrap_never_revives_a_superseded_writer_or_replaces_a_live_owner(self):
+        recipient=self.registry.register('codex',self.home,self.native,'old writer',identity(os.getpid()).json(),str(self.root),{'kind':'fake'})
+        self.journal.db.execute("UPDATE peer_instances SET status='live'")
+        caller=Caller('peer',recipient['handle'],recipient['incarnation_id'])
+        closed=await self.policy(caller,'close')
+        transcript=self.home/'sessions/resumed.jsonl';transcript.parent.mkdir()
+        transcript.write_text(json.dumps({'type':'session_meta','payload':{'id':self.native}})+'\n')
+        user=self.root/'user';binary=(user/'.local/share/codex-mcp-manager/current/bin/codex').resolve()
+        old_owner=dict(identity(os.getpid()).json(),executable=str(binary))
+        newer_owner=dict(old_owner,pid=os.getpid()+1001,start='newer-native-owner')
+        current=[old_owner]
+        class Owner:
+            def json(owner):return current[0]
+        with patch('nativepeers.registry.matches',return_value=True):
+            self.registry.register('codex',self.home,self.native,'newer writer',newer_owner,str(self.root),{'kind':'fake'})
+        before=self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id')
+        event={'hook_event_name':'QueuedInput','session_id':self.native,'prompt':'ordinary words','cwd':str(self.root),'transcript_path':str(transcript)}
+        with patch('nativepeers.hooks.Path.home',return_value=user),patch('nativepeers.hooks.ancestry',return_value=[Owner(),Owner()]),\
+             patch('nativepeers.process.terminal_owner',return_value=True),patch('nativepeers.registry.matches',return_value=True),\
+             patch('nativepeers.hooks.codex_name',return_value='queue owner'),\
+             patch.dict(os.environ,{'NPEER_BOOTSTRAP':'','CODEX_HOME':str(self.home)}):
+            for owner in (old_owner,dict(old_owner,pid=os.getpid()+1002,start='unseen-native-owner')):
+                current[0]=owner
+                with self.assertRaises(PeerError) as error:observe('codex',event,self.journal)
+                self.assertEqual(error.exception.code,'TARGET_REBOUND')
+        self.assertEqual(self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id'),before)
+        self.assertEqual(notification_policy.status(self.journal,recipient['handle']),closed)
+        self.assertEqual(self.journal.all("SELECT 1 FROM events WHERE kind IN ('notification-policy-opened','notification-suppressed')"),[])
+
+    def test_queue_bootstrap_cannot_switch_the_conversation_of_an_existing_process(self):
+        owner=identity(os.getpid()).json()
+        first=self.registry.register('codex',self.home,self.native,'foreground',owner,str(self.root),{'kind':'fake'})
+        before=self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id')
+        with self.assertRaises(PeerError) as raised:
+            self.registry.register('codex',self.home,'00000000-0000-4000-8000-0000000000ff','background',
+                                   owner,str(self.root),{'kind':'fake'},queue_resume=True)
+        self.assertEqual(raised.exception.code,'TARGET_REBOUND')
+        self.assertEqual(self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id'),before)
+        self.assertEqual(self.registry.get(first['handle'])['incarnation_id'],first['incarnation_id'])
+
     def test_main_prints_only_guard_blocks_and_never_blocks_on_errors(self):
-        def run(result):
-            raw=json.dumps({'hook_event_name':'UserPromptSubmit','session_id':self.native,'prompt':'x'}).encode();output=io.StringIO()
+        def run(result,event='UserPromptSubmit'):
+            raw=json.dumps({'hook_event_name':event,'session_id':self.native,'prompt':'x'}).encode();output=io.StringIO()
             observed=MagicMock(side_effect=result) if isinstance(result,Exception) else MagicMock(return_value=result)
             with patch('sys.argv',['npeer-hook','--provider','codex']),patch('sys.stdin',SimpleNamespace(buffer=io.BytesIO(raw))),\
                  patch('nativepeers.hooks.Journal',MagicMock()),patch('nativepeers.hooks.observe',observed),\
@@ -225,6 +353,7 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
             return output.getvalue()
         block={'decision':'block','reason':'late'}
         self.assertEqual(json.loads(run(block)),block)
+        self.assertEqual(json.loads(run({'decision':'consume'},'QueuedInput')),{'decision':'consume'})
         self.assertEqual([run({}),run(RuntimeError('broken'))],['',''])
 
 
@@ -249,12 +378,12 @@ class GuardInstallTests(unittest.IsolatedAsyncioTestCase):
     async def test_owned_user_prompt_hooks_install_idempotently_and_uninstall_only_owned_entries(self):
         first=await self.installer.install()
         codex,claude=(json.loads(self.installer.targets[p].read_text()) for p in ('codex','claude'))
-        self.assertEqual(list(codex['hooks']),['UserPromptSubmit','SessionStart','SessionEnd'])
+        self.assertEqual(list(codex['hooks']),['UserPromptSubmit','SessionStart','SessionEnd','QueuedInput'])
         self.assertEqual(codex['hooks']['UserPromptSubmit'],[{'hooks':[self.unrelated]},self.installer.desired_hooks('codex')['UserPromptSubmit']])
         self.assertEqual(set(claude['hooks']),{'Stop','SessionStart','SessionEnd','UserPromptSubmit','PreToolUse'})
         self.assertEqual(claude['permissions'],{'allow':['Bash(ls)']})
         snapshot=json.loads((Path(first['backup'])/'codex-owned-blocks.json').read_text())
-        self.assertEqual((snapshot['changed_events'],snapshot['before_hooks']),(['SessionStart','SessionEnd','UserPromptSubmit'],{'UserPromptSubmit':[{'hooks':[self.unrelated]}]}))
+        self.assertEqual((snapshot['changed_events'],snapshot['before_hooks']),(['SessionStart','SessionEnd','UserPromptSubmit','QueuedInput'],{'UserPromptSubmit':[{'hooks':[self.unrelated]}]}))
         guard_checks=[c for c in _hooks(self.installer,'codex',self.installer.targets['codex']) if c.get('event')=='UserPromptSubmit']
         self.assertEqual([(c['state'],c['guard'],c['live_verified']) for c in guard_checks],[('PRESENT','passive-configuration-only',False)])
         installed=self.contents()
@@ -286,7 +415,7 @@ class GuardInstallTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual((written['unrelated'],written['owned-UserPromptSubmit']),({'enabled':False},{'enabled':False,'trusted_hash':'hash-owned-UserPromptSubmit'}))
             hooks=listing(owned[:2])
             with self.assertRaises(PeerError) as error:await installer.trust()
-        self.assertEqual((len(owned),error.exception.code),(3,'CAPABILITY_MISMATCH'))
+        self.assertEqual((len(owned),error.exception.code),(4,'CAPABILITY_MISMATCH'))
 
 
 if __name__=='__main__':unittest.main()
