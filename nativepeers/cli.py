@@ -79,6 +79,7 @@ def parser():
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
         q=command(name);q.add_argument('--dry-run',action='store_true');q.add_argument('--antigravity',action='store_true');q.add_argument('--grok',action='store_true');q.add_argument('--usage',action='store_true')
+        q.add_argument('--claude-mod',action='store_true')
     return p
 
 
@@ -199,7 +200,13 @@ async def dispatch(args,journal):
     if name=='runtime-check':
         from .runtime_updates import check_runtime
         require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Owned workers cannot renew runtime approvals')
-        return check_runtime(journal,args.provider,apply=args.apply)
+        value=check_runtime(journal,args.provider,apply=args.apply)
+        if args.provider=='claude':
+            # A separate verdict: the np mod's zero-API contract on this build. It never changes the runtime approval.
+            from .claude_mod_check import check as mod_check
+            try:value=dict(value,mod_compatibility=mod_check(Path.home()/'.local/bin/claude'))
+            except Exception as error:value=dict(value,mod_compatibility=dict(verdict='NOT_RUN',reason=type(error).__name__+': '+str(error)[:300]))
+        return value
     if name=='doctor':
         from .compatibility import diagnose
         from .readiness import readiness,operation_readiness
@@ -211,7 +218,11 @@ async def dispatch(args,journal):
             stale_workers=[r for r in journal.all('SELECT worker_id,state FROM workers') if r['state'] not in ('RELEASED_RESUMABLE','FAILED') and not (journal.root/'workers'/(r['worker_id']+'.json')).exists()],
             permanent_service_installed=False,unresolved_messages=journal.all("SELECT message_id,state FROM attempts WHERE state IN ('OUTBOX_COMMITTED','ADMISSION_DEFERRED','SUBMITTING','DELIVERY_UNKNOWN','HELD','SUBMITTED_UNCONFIRMED')"))
     if name in ('install','uninstall'):
-        require(sum(bool(getattr(args,option,False)) for option in ('usage','antigravity','grok'))<=1,'PROTOCOL_ERROR','Choose one of --usage, --antigravity or --grok')
+        require(sum(bool(getattr(args,option,False)) for option in ('usage','antigravity','grok','claude_mod'))<=1,'PROTOCOL_ERROR','Choose one of --usage, --antigravity, --grok or --claude-mod')
+        if getattr(args,'claude_mod',False):
+            require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Workers cannot install the Claude Code mod')
+            from .claude_mod_install import apply as claude_mod
+            return claude_mod(journal,dry_run=args.dry_run,remove=name=='uninstall')
         if getattr(args,'usage',False):
             require(not args.antigravity,'PROTOCOL_ERROR','Choose --usage or --antigravity')
             require(not caller.grants.get('worker_id'),'APPROVAL_BLOCKED','Workers cannot install usage collection')

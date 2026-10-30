@@ -550,7 +550,7 @@ class Worker:
         drain=asyncio.create_task(stderr());stream=Stream(self.expected_native,self.spec['permission_profile'])
         try:
             while line:=await self.provider.stdout.readline():
-                kind=stream.observe(json.loads(line))
+                event=json.loads(line);kind=stream.observe(event);self.activity.feed(event)
                 if kind!='error' and not self.turn:
                     proof_deadline=time.monotonic()+min(2,self.spec.get('wall_time_seconds',1800))
                     while True:
@@ -618,7 +618,7 @@ class Worker:
         drain=asyncio.create_task(stderr());terminal=None
         try:
             while line:=await self.provider.stdout.readline():
-                event=json.loads(line);body=event.get('result',event.get('step_update',{}))
+                event=json.loads(line);self.activity.feed(event);body=event.get('result',event.get('step_update',{}))
                 native=event.get('conversation_id') or body.get('conversation_id')
                 if native:
                     require(self.expected_native is None or native==self.expected_native,'OWNERSHIP_CONFLICT','Antigravity emitted a different owned native ID')
