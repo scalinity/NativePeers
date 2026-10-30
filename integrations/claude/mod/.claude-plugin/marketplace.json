@@ -1,0 +1,5 @@
+{
+  "name": "nativepeers-local",
+  "owner": { "name": "NativePeers" },
+  "plugins": [{ "name": "np", "source": "./np", "description": "NativePeers Lineage: NativePeers workers as native Claude Code subagents" }]
+}
