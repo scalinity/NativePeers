@@ -105,7 +105,8 @@ async function summary($: EngineInterface, s: NpShadow, terminal: Activity): Pro
     groupId: s.groupId, taskId: terminal.task_id ?? s.taskId, elapsedMs: (await $.clock.now()) - s.startedAt, resultArtifact: terminal.data?.result_artifact_id }
   try {
     const r = await request($, 'GET', `/v1/workers/${s.workerId}/result`)
-    return { ...base, modelObserved: r.model_observed, nativeId: r.native_id, elapsedMs: r.elapsed_ms ?? base.elapsedMs,
+    // A fallback's replacement reports its own provider and requested model.
+    return { ...base, provider: r.provider ?? base.provider, modelRequested: r.model_requested ?? base.modelRequested, modelObserved: r.model_observed, nativeId: r.native_id, elapsedMs: r.elapsed_ms ?? base.elapsedMs,
       resultArtifact: r.result_artifact_id ?? base.resultArtifact, patchArtifact: r.patch_artifact, changes: r.changes }
   } catch {
     return base
@@ -141,13 +142,18 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     const note = await forward($, s, input, o.followupMode === 'steer-if-supported' && o.steer ? 'steer' : 'queue')
     if (note) yield say(note)
   }
+  // A provider fallback moves the task to another worker: while the bridge says
+  // so (continued_by), a terminal of the moved generation is not the end.
+  let moved: any
   const ctx = { workerId: s.workerId!, showReasoning: o.showReasoning, newId: toolId,
-    continuesAfter: (g: number) => s.inputs.some(i => i.forwarded && i.generation !== undefined && i.generation > g && !s.terminals.includes(i.generation)) }
+    continuesAfter: (g: number) => (moved && moved.from_generation === g) ||
+      s.inputs.some(i => i.forwarded && i.generation !== undefined && i.generation > g && !s.terminals.includes(i.generation)) }
   const opened = await $.clock.now()
   let quietSince = opened, lastBeat = opened
   while (true) {
     const batch = await poll($, `/v1/workers/${s.workerId}/activity?after=${s.cursor}&wait_ms=25000&max=256`)
     const events: Activity[] = Array.isArray(batch.events) ? batch.events : []
+    moved = batch.continued_by
     const plan = planBatch(events, open, ctx, s.usageCumulative)
     if (plan.consumed !== null) {
       for (const ev of events) {
@@ -185,6 +191,14 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       Object.assign(s, { phase: 'COMPLETING', inflight: undefined });await saveShadow($, s)
       yield { kind: 'stop', stopReason: 'end_turn', usage: usage > 0 ? { input_tokens: 0, output_tokens: usage, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: shadowModel(s.provider) } : null }
       return result(e, open.answer, 'end_turn', [], usage, s.provider)
+    }
+    if (moved?.state === 'moved' && moved.worker_id && moved.worker_id !== s.workerId && (plan.consumed ?? s.cursor) >= Number(batch.last_seq ?? 0)) {
+      if (s.nativeGeneration === moved.from_generation) s.nativeGeneration = moved.generation
+      Object.assign(s, { workerId: moved.worker_id, taskId: moved.task_id, generation: moved.generation, cursor: 0, terminals: [], pendingRefs: {}, usageCumulative: undefined })
+      ctx.workerId = moved.worker_id;moved = undefined
+      await saveShadow($, s)
+      yield say(`↳ continuing in replacement worker ${s.workerId}\n`)
+      continue
     }
     const now = await $.clock.now()
     // A single step is aborted by the engine after 600 s (gate G8): past eight

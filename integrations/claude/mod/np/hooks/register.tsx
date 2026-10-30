@@ -75,7 +75,8 @@ async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>,
   const parsed = parseHeader(String(e.prompt ?? ''))
   if ('error' in parsed) return { deny: `${parsed.error}; ${CATALOG} lists providers, models and efforts` }
   const title = titleFrom(parsed.header, e.description, parsed.brief)
-  const worker = workerSpec(provider, parsed.header, parsed.brief, title, e.cwd ?? (await $.session.cwd()))
+  // A worker runs in the session's directory; a cwd travels only when the Agent call named one.
+  const worker = workerSpec(provider, parsed.header, parsed.brief, title, e.cwd)
   if (rebind) await rebindSession($)
   let check: any
   try { check = await request($, 'POST', '/v1/spawn', { check_only: true, worker }) }

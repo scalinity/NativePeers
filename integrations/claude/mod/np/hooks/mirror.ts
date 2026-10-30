@@ -121,7 +121,7 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
       case 'input.accepted':
         marker('↳ follow-up accepted');break
       case 'task.started':
-        if (e.generation > 1) marker(`↳ generation ${e.generation}: ${d.origin === 'human-claude-view' ? 'your follow-up' : d.origin === 'parent-model' ? 'follow-up from main' : 'follow-up'}`)
+        if (e.generation > 1) marker(`↳ generation ${e.generation}: ${d.origin === 'human-claude-view' || d.origin === 'human' ? 'your follow-up' : d.origin === 'parent-model' ? 'follow-up from main' : 'follow-up'}`)
         break
       case 'task.state':
         if (d.state === 'APPROVAL_BLOCKED' || d.state === 'WAITING') marker(`↳ worker ${String(d.state).toLowerCase().replace('_', ' ')}${d.reason ? ': ' + d.reason : ''}`)
@@ -133,7 +133,7 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
         marker(`[activity unavailable${d.from_seq !== undefined ? ` from seq ${d.from_seq}` : ''}: ${d.reason ?? 'unknown'}]`);break
       case 'task.terminal':
         if (ctx.continuesAfter(e.generation)) {
-          flushHeld();marker(`↳ generation ${e.generation} ${d.status ?? 'ended'}; continuing with the follow-up`)
+          flushHeld();marker(`↳ generation ${e.generation} ${d.status ?? 'ended'}; continuing`)
         } else {
           if (open.held !== undefined && open.held.trim() !== String(d.final_text ?? '').trim()) flushHeld()
           open.held = undefined;out.end = 'terminal';out.terminal = e

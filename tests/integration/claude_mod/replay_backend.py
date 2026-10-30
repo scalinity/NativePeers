@@ -27,7 +27,7 @@ class Worker:
     def __init__(self, worker_id, agent_id, provider, spec, script):
         self.id, self.agent, self.provider, self.spec, self.script = worker_id, agent_id, provider, spec, script
         self.group = 'G-' + worker_id;self.events = [];self.generation = 1;self.state = 'running'
-        self.started = time.time();self.ended = None;self.task = f'T-{worker_id}-1';self.changed = asyncio.Event();self.planned = 1
+        self.started = time.time();self.ended = None;self.task = f'T-{worker_id}-1';self.changed = asyncio.Event();self.planned = 1;self.continued = None
 
     def append(self, kind, data, *, item=None, generation=None):
         event = dict(schema=SCHEMA, seq=len(self.events)+1, at=time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime()) + '.%03dZ' % (int(time.time() * 1000) % 1000), worker_id=self.id,
@@ -120,6 +120,16 @@ class ReplayBackend:
             if self.scenario.get('die_after_events') and self.emitted >= self.scenario['die_after_events']:
                 self.log('die');self.die.set();return
         self.touch()
+        target = w.script.get('fallback_to')
+        if target and not w.continued:
+            # A provider fallback: the task moves to a replacement worker.
+            w.continued = dict(state='pending', from_generation=w.generation);w.changed.set();w.changed = asyncio.Event()
+            await asyncio.sleep(1)
+            replacement = Worker(f'W{len(self.workers)+1}', None, target['provider'], dict(title=w.spec.get('title'), model=target.get('model')), target)
+            self.workers[replacement.id] = replacement
+            w.continued = dict(state='moved', from_generation=w.generation, worker_id=replacement.id, task_id=replacement.task, generation=1)
+            self.log('fallback', from_worker=w.id, to_worker=replacement.id);w.changed.set();w.changed = asyncio.Event();self.touch()
+            await self.play(replacement, target.get('events', []), origin='fallback')
 
     async def binding(self, agent, wait_ms):
         end = time.time() + wait_ms/1000
@@ -152,7 +162,7 @@ class ReplayBackend:
             except (TimeoutError, asyncio.TimeoutError):pass
             found = select()
         self.log('activity', worker_id=worker_id, after=after, item=item, returned=len(found))
-        return dict(events=found, last_seq=len(w.events))
+        return dict(events=found, last_seq=len(w.events), **({'continued_by': w.continued} if w.continued else {}))
 
     async def input(self, worker_id, body):
         key = body['client_request_id']
@@ -189,7 +199,7 @@ class ReplayBackend:
 
     async def result(self, worker_id):
         w = self.workers[worker_id]
-        return dict(model_observed=w.script.get('model'), native_id='native-'+w.id, elapsed_ms=int(((w.ended or time.time())-w.started)*1000),
+        return dict(provider=w.provider, model_requested=w.spec.get('model'), model_observed=w.script.get('model'), native_id='native-'+w.id, elapsed_ms=int(((w.ended or time.time())-w.started)*1000),
                     result_artifact_id='A-'+w.task, changes=w.script.get('changes'))
 
     async def resume_command(self, worker_id):
