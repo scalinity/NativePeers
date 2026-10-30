@@ -1,0 +1,23 @@
+{
+  "below_minimum": "band-only degraded mode; no agent types are registered",
+  "major_api_change": "any engine major other than 2: band-only degraded mode until a new harness run records it here",
+  "minimum_engine": "2.1.309",
+  "schema": "nativepeers.claude-mod-compat.v1",
+  "verified": {
+    "2.1.309": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "scope": [
+        "headless zero-API harness (desktop-bundled engine)"
+      ],
+      "sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31"
+    },
+    "2.1.314": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "scope": [
+        "headless zero-API harness",
+        "interactive TUI gates G1-G6, G8-G11, G13"
+      ],
+      "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed"
+    }
+  }
+}

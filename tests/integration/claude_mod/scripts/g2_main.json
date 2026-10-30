@@ -1,0 +1,6 @@
+{"steps": [
+ {"text": "main: Path A", "tools": [{"name": "Agent", "input": {"description": "probe · path A", "prompt": "BRIEF path A", "subagent_type": "npi:mirror"}}]},
+ {"text": "main: delegated"},
+ {"text": "main: ack 1"}, {"text": "main: ack 2"}, {"text": "main: ack 3"}, {"text": "main: ack 4"}, {"text": "main: ack 5"},
+ {"text": "main: ack 6"}, {"text": "main: ack 7"}, {"text": "main: ack 8"}, {"text": "main: ack 9"}, {"text": "main: ack 10"}
+]}

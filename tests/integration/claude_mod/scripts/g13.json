@@ -1,0 +1,9 @@
+{"notifications": "ack",
+ "on": {
+  "go": [{"text": "main: two Path A shadows", "tools": [
+     {"name": "Agent", "input": {"description": "probe · B1", "prompt": "BRIEF B1", "subagent_type": "npi:mirror"}},
+     {"name": "Agent", "input": {"description": "probe · B2", "prompt": "BRIEF B2", "subagent_type": "npi:mirror"}}]},
+     {"text": "main: delegated"}],
+  "stop the newest": [{"text": "main: TaskStop", "tools": [{"name": "TaskStop", "input": {"task_id": "${agent:npi:mirror}"}}]}, {"text": "main: stopped"}],
+  "message the first": [{"text": "main: SendMessage", "tools": [{"name": "SendMessage", "input": {"to": "FIRSTID", "message": "parent follow-up via SendMessage"}}]}, {"text": "main: sent"}]
+ }}

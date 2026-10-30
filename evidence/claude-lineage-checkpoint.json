@@ -1,0 +1,107 @@
+{
+  "active_owned_processes": [
+    {
+      "kind": "agent",
+      "name": "m1-activity",
+      "scope": "M1 implementation in this worktree, uncommitted"
+    }
+  ],
+  "blockers": [],
+  "claude_code": {
+    "launcher": "/Users/danny/.local/bin/claude",
+    "resolved": "/Users/danny/.local/share/claude/versions/2.1.314",
+    "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+    "types_sha256": "a053c5ca3d00baeeffaef7a5a0d15b172047e04c6fdd7ad840fb0a29f0fd3ce3",
+    "version": "2.1.314"
+  },
+  "documents": {
+    "docs/CLAUDE_LINEAGE_KICKOFF.md": {
+      "revision": "1.0",
+      "sha256": "af4724f4bbd08b8a682b1fa321a73b0066f113522f58a87f363cbbb83153b769"
+    },
+    "docs/CLAUDE_LINEAGE_MOD.md": {
+      "revision": "1.0",
+      "sha256": "e9e0379079e36b7759a5b007a3425cd6de8ca31c239e3a58baa58147ec8340b9"
+    }
+  },
+  "gates": {
+    "G0": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G1": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G10": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G11": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G12": {
+      "state": "NOT_RUN"
+    },
+    "G13": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G2": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G3": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G4": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G5": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G6": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    },
+    "G7": {
+      "state": "NOT_RUN"
+    },
+    "G8": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G9": {
+      "evidence": "evidence/claude-lineage-m0.json",
+      "state": "PASS"
+    }
+  },
+  "milestones": {
+    "M0": "IN_PROGRESS",
+    "M1": "NOT_STARTED",
+    "M2": "NOT_STARTED",
+    "M3": "NOT_STARTED",
+    "M4": "NOT_STARTED",
+    "M5": "NOT_STARTED",
+    "M6": "NOT_STARTED"
+  },
+  "next_action": "G7 (desktop) evidence via one consolidated request once the mod installs; G12 on the production mod. Build the np mod (M3) against the spec bridge API with a fake bridge; review M1 when the agent reports.",
+  "repository": {
+    "base": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+    "branch": "feat/claude-lineage-mod",
+    "concurrent_worktrees_not_owned": [
+      ".worktrees/8fc7e149-7eaa-4dad-8f04-8b60ef327819",
+      ".worktrees/issue-7"
+    ],
+    "first_commit": "051d625",
+    "origin_main_at_start": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+    "path": "/Users/danny/Documents/Tools/NativePeers",
+    "worktree": ".worktrees/claude-lineage-mod"
+  },
+  "schema": "nativepeers.claude-lineage-checkpoint.v1",
+  "updated_at": "2026-10-30T15:30:08-0400"
+}

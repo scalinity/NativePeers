@@ -1,0 +1,337 @@
+{
+  "claude_code": {
+    "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+    "version": "2.1.314"
+  },
+  "design_refinements": {
+    "unserved_shadow_model": {
+      "decision": "np:* agent types and the Path A next() name a model id no API serves, so any fallthrough is refused by the API before inference; the placeholder prompt remains as a second layer. The fallthrough detector also treats a shadow turn.complete with reason 'error' as a fallthrough.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/x-model-claude-np-shadow-unserved",
+        "evidence/scratch/claude-lineage/x-model-np-unserved"
+      ],
+      "label": "L",
+      "observation": "$.agent.register accepted model ids no API serves ('claude-np-shadow-unserved', 'np-unserved'); spawn resolved to them and a forced fallthrough sent them verbatim (tripwire log model field)."
+    }
+  },
+  "findings_beyond_x": {
+    "agent_summary": {
+      "decision": "Shadows must run on a model id no API serves; that is the only supported mechanism found that keeps agent summaries from billing a shadow. This is a hard requirement of the mod, checked by the harness (tripwire model field) in interactive runs.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g1-summary-haiku",
+        "evidence/scratch/claude-lineage/g1-summary-unserved",
+        "evidence/scratch/claude-lineage/g1-summary-answer"
+      ],
+      "label": "L",
+      "observation": "In interactive sessions the engine's [AgentSummary] timer forks each running background agent about 20 s after it starts and requests a summary (debug 'source=agent_summary', cc_is_subagent=true): 6 refused requests per timer at the tripwire. The fork does not pass through turn.step (a turn.step hook answering unlisted agent ids saw none). The request names the agent's own model: with model 'np-unserved' all summary requests named 'np-unserved'. The engine skips the failed summary silently ('Skipping API error message')."
+    },
+    "auto_mode_default": {
+      "decision": "Shadow types set permissionMode explicitly (G6) so mirror calls never reach the auto-mode classifier.",
+      "evidence": "evidence/scratch/claude-lineage/pty-smoke",
+      "label": "L",
+      "observation": "Interactive sessions start in auto mode in this build; the auto-mode check of a tool call is a model request (a Path A Agent call was 'Not run \u00b7 auto mode's check had no usable answer' with 2 tripwire requests)."
+    }
+  },
+  "gates": {
+    "G0": {
+      "decision": "Harness runs are free only with HOME=<tmp>, the dummy key and ANTHROPIC_BASE_URL at the tripwire, and only when the tripwire count is zero. The harness enforces all three. A real-HOME OAuth probe was not run: harness runs never see Keychain credentials (shown above), and the probe would write the real ~/.claude.json and could bill.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g0-fault/record.json",
+        "evidence/scratch/claude-lineage/g0-dummy-key/record.json",
+        "evidence/scratch/claude-lineage/g0/record.json"
+      ],
+      "label": "L",
+      "observation": [
+        "Mod tests/integration/claude_mod/mods/g0_fault throws in the main loop's turn.step after yielding text, with no .catch. Debug log: 'turn.step; left mid-stream; what it yielded stands, the rest came from beneath it', then 'dispatching to firstParty model=claude-opus-5-5' (a real fallthrough, X10).",
+        "Under env -i HOME=<tmp> with no API key, no credential source resolved ('Could not resolve authentication method'): Keychain OAuth is not found under a temporary HOME on this Mac, contrary to the spec's assumption. The fallthrough failed client-side; tripwire hits 0.",
+        "With a dummy ANTHROPIC_API_KEY, all 6 fallthrough requests reached the tripwire at /v1/messages (HTTP 400). Result record: duration_api_ms 0, total_cost_usd 0, modelUsage {}. Reproduced twice (labels g0-dummy-key, g0).",
+        "duration_api_ms was 0 on a run whose 6 refused requests reached the stub, so duration_api_ms alone does not prove the absence of a model request; the tripwire count is authoritative."
+      ],
+      "state": "PASS"
+    },
+    "G1": {
+      "decision": "Native tasks list is the primary list. The description carries '<Model label> <effort> \u00b7 <title>'. Shadow-type model ids are self-describing because the agent view header shows them. Background sessions (\u2190) are outside the verified design and are recorded as a lifecycle risk for G10.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g1-default",
+        "evidence/scratch/claude-lineage/g1-nav",
+        "evidence/scratch/claude-lineage/g1-summary-haiku"
+      ],
+      "label": "L",
+      "observation": [
+        "Path A shadow row in the native tasks list below the prompt: '\u25ef npx:mirror  GPT-6.1 Sol high \u00b7 codebase review   5s \u00b7 \u2193 28 tokens' under '\u23fa main' (type name, the spawn description, elapsed, reported tokens). The transcript row reads 'Backgrounded agent (\u2193 to manage \u00b7 ctrl+o to expand)'.",
+        "Navigation: \u2193 enters the list with the cursor on main; a second \u2193 selects the shadow; Enter opens its transcript in the main view. The view shows the brief as the first row, assistant text, the mirror tool as an MCP row ('npx - mirror_exec (MCP)(command: \"echo hello\")  \u23bf Running\u2026'), a spinner with elapsed and tokens, the description on the composer's border and the composer placeholder 'Message @npx:mirror\u2026'. Esc returns to main.",
+        "The agent view header shows the agent's model id verbatim (Haiku 5.5, or 'np-unserved').",
+        "No separate activity text is shown on the row; the row's text is the spawn description.",
+        "The \u2190 key does not open the agent list in this build: it moves the conversation into a Claude daemon-hosted background session ('bg-leftarrow'), spawning 'daemon run --origin transient' with spare bg-pty-host processes that outlive the terminal. The harness swept them by their temporary HOME."
+      ],
+      "state": "PASS"
+    },
+    "G10": {
+      "decision": "The shadow registry is mirrored to $.store keyed by agent id (bounded, pruned) and consulted in agent.spawn (resume fires before any step) and for any unknown turn.step id; this survives /clear and --resume. After resume, completed shadows remain in the transcript but not in the tasks list; running survive_parent workers are offered for re-attach.",
+      "evidence": "evidence/scratch/claude-lineage/g9-g10-b",
+      "label": "L",
+      "observation": [
+        "/clear: session.end reason 'clear'; $.agent.list() still lists the completed shadow, but $.state reads empty (it is per session id).",
+        "claude --resume <id>: the transcript (including the shadow's rows) is restored; $.agent.list() and $.state are empty; SendMessage to the old shadow id resumed it from its saved transcript (agent.spawn resume), and a mod with no record of it passed its step through."
+      ],
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G11": {
+      "decision": "Report output tokens on stop chunks; session.compact {skip} for shadows remains as a guard.",
+      "evidence": "evidence/scratch/claude-lineage/g9-g10-g11",
+      "label": "L",
+      "observation": [
+        "Tasks-list rows show engine token estimates ('\u2193 12 tokens'); stop-chunk usage surfaces in turn.complete (X7) and is not billed.",
+        "/cost after shadows: 'Total cost: $0.0000 \u2026 Usage: 0 input, 0 output, 0 cache read, 0 cache write'.",
+        "No session.compact was raised for any shadow, including the 601-step run."
+      ],
+      "state": "PASS"
+    },
+    "G12": {
+      "decision": "The production mod must validate and type-check clean (tsc -p integrations/claude/mod/np/.claude-plugin/types) on every change.",
+      "label": "L",
+      "observation": [
+        "claude --version 2.1.314 (CLI) and 2.1.309 (desktop); the types header reads 'Written by Claude Code 2.1.314.'; claude plugin validate passes for every harness mod on both builds.",
+        "tsc 5.9.3 (scratch dev tool) type-checks a mod with the engine-laid .claude-plugin/types/tsconfig.json; the strict config caught real API misuse in throwaway probes."
+      ],
+      "state": "PASS_PENDING_MOD"
+    },
+    "G13": {
+      "decision": "Delivery owner 'mirror' for Path A generations and for every generation created by a forwarded follow-up (typed or SendMessage), including on adopted shadows; 'native' for Path B/C initial generations.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/x-normal",
+        "evidence/scratch/claude-lineage/g3b",
+        "evidence/scratch/claude-lineage/g6-default-bypassPermissions",
+        "evidence/scratch/claude-lineage/g13"
+      ],
+      "label": "L",
+      "observation": [
+        "Agent-tool (Path A) first run: notifies the parent.",
+        "$.agent.spawn first run (any origin): does not ('already-notified').",
+        "Resume through model SendMessage / $.session.send: notifies.",
+        "Resume by the person typing: notifies.",
+        "Person follow-up typed while running: folded into the run; the run's single completion notifies.",
+        "Killed shadows notify with status killed."
+      ],
+      "state": "PASS"
+    },
+    "G2": {
+      "decision": "Native view switching is primary; the pane viewer with its own Input is kept only for degraded mode.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g2-g3-g5-g13",
+        "evidence/scratch/claude-lineage/g3b"
+      ],
+      "label": "L",
+      "observation": [
+        "$.ui.view({agentId}) from a command.run hook and from a band Button press both returned {} and switched the main view to the shadow (band read e.props.view.agentId = the shadow). $.ui.view({}) from a press returned to main.",
+        "While viewing a shadow the composer reads 'Message @<type>\u2026' and the next Enter goes to that shadow."
+      ],
+      "state": "PASS"
+    },
+    "G3": {
+      "decision": "Capture from session.append only (the G3 fallback is the primary path): doors 'prompt' and 'delivery', origins 'composer' (-> human-claude-view) and 'coordinator' (-> parent-model), never door 'queue'. Strip the versioned framings (prefix and suffix, with and without <system-reminder>). The first coordinator row of a run started by a spawn is the brief and is consumed, never forwarded.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g3b",
+        "evidence/scratch/claude-lineage/g6-default-bypassPermissions",
+        "evidence/scratch/claude-lineage/g2-g3-g5-g13"
+      ],
+      "label": "L",
+      "observation": [
+        "Person-typed to a running shadow: the row shows '\u00b7 1 queued'; the text is folded into the running run as a session.append row door 'delivery', origin {kind:'composer'}, type 'attachment', text '<system-reminder>\\nThe user sent a new message while you were working:\\n<text>\\n\\nThis is how Claude Code surfaces messages the user sends mid-turn \u2014 within the running turn, often alongside the next tool result, rather than as a separate conversation turn. Address the message above as you continue this turn.\\n</system-reminder>'. The next turn.step of the same run sees it.",
+        "Person-typed to a completed (or failed) shadow: agent.spawn resume:{agentId}, a session.append row door 'prompt', origin {kind:'composer'}, type 'user', the same framing without <system-reminder>; a new run starts (turn.step index 0).",
+        "Parent SendMessage (tool) raises session.send {to, text, origin:{kind:'model'}} -> {isDelivered:true}; to a completed shadow: agent.spawn resume, row door 'prompt', origin {kind:'coordinator'}, text 'The coordinator sent a message while you were working:\\n<text>\\n\\nAddress this before completing your current task.'",
+        "The brief of every new shadow is a row door 'prompt', origin {kind:'coordinator'}, unframed.",
+        "No session.receive event and no prompt.submit with agentId were raised for any input to a shadow."
+      ],
+      "state": "PASS"
+    },
+    "G4": {
+      "decision": "Fallback: Esc is not mapped to an interrupt. A killed shadow (Esc, x, TaskStop) stops its worker's current task; the [Interrupt] button and /np interrupt are the interrupt path; [Stop all] cancels groups. A held step aborts with the dispatch (next.signal); the mirror hook ends its waits on it.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g3-g4",
+        "evidence/scratch/claude-lineage/g13"
+      ],
+      "label": "L",
+      "observation": [
+        "Esc in a running shadow's view and 'x' on its tasks-list row ('Enter to view \u00b7 x to stop') produced the same events: the held tool call aborted ('[Request interrupted by user for tool use]' note row), turn.complete reason 'aborted', isAborted true, $.agent.list status 'killed', and a parent task-notification with status killed ('was stopped by user').",
+        "Model TaskStop {task_id} on a running shadow produced the same pattern; the notification reads 'was stopped by Claude'.",
+        "Esc in a shadow view therefore stops the agent; it is not a turn interrupt, and nothing in the events distinguishes it from 'x'."
+      ],
+      "state": "PASS"
+    },
+    "G5": {
+      "decision": "Shadows are spawned only inside an awaited hook frame: agent.spawn (Path A), tool.call observers (Path B), command.run and on('ui.press', {element}) hooks (Path C). Never from timers, detached loops, onPress closures or continuations after a hook returns.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g2-g3-g5-g13",
+        "evidence/scratch/claude-lineage/g3b",
+        "evidence/scratch/claude-lineage/g13"
+      ],
+      "label": "L",
+      "observation": [
+        "turn.step saw shadows spawned from session.start, command.run, an on('ui.press') hook, tool.call (X1) and the engine's Agent call (Path A).",
+        "It did not see shadows spawned from a $.clock.after timer or from a Button onPress closure: debug 'turn.step skipped: re-entry (the plugin's own code raised it; origin npi)' \u2014 a spawn outside any hook frame carries the plugin-level origin, which skips every hook of the plugin; the shadow fell through."
+      ],
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G6": {
+      "decision": "AgentSpec.permissionMode 'dontAsk', never inherited; tool.check allows only the mirror for shadows. No permissions.allow rule is installed. The auto-mode completion review is parent usage, documented.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g6-auto-inherit",
+        "evidence/scratch/claude-lineage/g6-default-inherit"
+      ],
+      "label": "L",
+      "observation": [
+        "Parent modes default, acceptEdits, plan and auto x shadow permissionMode inherit, bypassPermissions, dontAsk: every mirror tool call ran with no prompt; none was classified.",
+        "In auto mode only, after a shadow completed, the parent's auto-mode classifier reviewed the result entering the parent ('[auto-mode] new action being classified: tool=unknown_tool', Sonnet 5 then Opus fallback, source side_query), independent of the shadow's permissionMode. It is the parent's own safety check on content entering its context."
+      ],
+      "state": "PASS"
+    },
+    "G7": {
+      "evidence": [
+        "evidence/scratch/claude-lineage/desk309-normal",
+        "evidence/scratch/claude-lineage/desk309-throw",
+        "evidence/scratch/claude-lineage/desk309-catch_noreturn",
+        "evidence/scratch/claude-lineage/desk309-stall"
+      ],
+      "label": "L",
+      "observation": [
+        "Desktop engine: /Users/danny/Library/Application Support/Claude/claude-code/2.1.309/5af865b9901c/claude.app/Contents/MacOS/claude, Claude Code 2.1.309, sha256 40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31, codesign Identifier com.anthropic.claude-code, TeamIdentifier Q6L2SF6YDW.",
+        "Headless contract on that binary (zero-API harness): claude plugin validate passes; shadow stepping, $.session.send resume and .catch containment of throw and stall reproduce; a .catch that returns nothing falls through to the tripwire naming the unserved model."
+      ],
+      "pending": "Desktop rendering of shadows, band and pane; $.process and $.http(socketPath) inside the desktop host; CLAUDE_CODE_MESSAGING_SOCKET presence; messaging a shadow; $.ui.copy and $.ui.notify. These need a person at the desktop app with the mod installed (one consolidated request).",
+      "state": "PARTIAL"
+    },
+    "G8": {
+      "decision": "A mirror step never stays open longer than 8 minutes without yielding: past that it ends with a mirror 'waiting' tool call, which holds until the next event (proven to 20 min, looped in 25 s long-polls). maxTurns is left at the engine default.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/g8-tool-20min",
+        "evidence/scratch/claude-lineage/g8-silent-30min",
+        "evidence/scratch/claude-lineage/g8-steps600-default",
+        "evidence/scratch/claude-lineage/g8-concurrent6"
+      ],
+      "label": "L",
+      "observation": [
+        "A mirror tool call held 20 min completed (1200043 ms), not aborted.",
+        "A single silent turn.step was aborted at exactly 600 s (turn.complete reason 'aborted').",
+        "601 steps in one shadow completed with the default maxTurns.",
+        "6 concurrent Path A shadows held 60 s each all completed; peak RSS of the claude process 339 MB (601-step run 587 MB)."
+      ],
+      "state": "PASS_WITH_FALLBACK"
+    },
+    "G9": {
+      "decision": "Cursor and pending state live in $.state; module memory is a cache rebuilt from $.state.",
+      "evidence": "evidence/scratch/claude-lineage/g9-g10-b",
+      "label": "L",
+      "observation": [
+        "Editing the mod during a held mirror tool call: 'npi: reloaded (16 hooks\u2026)'; the old module instance finished the held call (20007 ms) and the new instance re-ran session.start with $.state intact and answered the next step from $.state. The shadow completed normally."
+      ],
+      "state": "PASS"
+    }
+  },
+  "harness": {
+    "environment": "env -i with HOME, PATH, TMPDIR, LANG, ANTHROPIC_BASE_URL=tripwire, ANTHROPIC_API_KEY=dummy, NP_MOD_HEADLESS=1, DISABLE_AUTOUPDATER=1, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
+    "path": "tests/integration/claude_mod/harness.py",
+    "tripwire": "tests/integration/claude_mod/tripwire.py"
+  },
+  "schema": "nativepeers.claude-lineage-m0.v1",
+  "updated_at": "2026-10-30T15:32:11-0400",
+  "x_reproductions": {
+    "X1": {
+      "delta": "$.agent.list() entries carried id, description, type and status only: no spawnedBy field was present.",
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "$.agent.register returned {agent:'npx:mirror'}; $.agent.spawn from a tool.call hook returned {model:'claude-haiku-5-5', agentId}; stream task_started has task_type local_agent, subagent_type, description, is_backgrounded true.",
+      "state": "REPRODUCED"
+    },
+    "X10": {
+      "delta": "A synchronous CPU-bound spin is NOT contained by .catch: the shared hooks worker missed its heartbeat for 5000 ms, the engine unloaded the plugin ('npx was unloaded: it crashed the hooks worker'), skipped the in-flight turn.step and ran what was below it: 6 real requests (tripwire). Bounded per-step CPU is a fail-closed requirement, not only a performance budget.",
+      "evidence": [
+        "evidence/scratch/claude-lineage/x-throw-500",
+        "evidence/scratch/claude-lineage/x-stall-500",
+        "evidence/scratch/claude-lineage/x-catch_noreturn-500",
+        "evidence/scratch/claude-lineage/x-overrun-500"
+      ],
+      "label": "L",
+      "observation": "A shadow step that throws, with .catch returning a complete TurnStepResult: contained (catch kind 'throw'), tripwire 0. An awaited plain promise past the budget: contained (kind 'timeout'), tripwire 0. A .catch that yields but returns nothing: turn.complete reason 'error' and 6 tripwire hits (fallthrough).",
+      "state": "REPRODUCED"
+    },
+    "X11": {
+      "evidence": [
+        "evidence/scratch/claude-lineage/x-stall-500",
+        "evidence/scratch/claude-lineage/x-hold130-500"
+      ],
+      "label": "L",
+      "observation": "Awaiting a 12 s plain promise in a shadow step consumed the own-time budget (catch kind 'timeout'); 90 s and 130 s $ waits did not.",
+      "state": "REPRODUCED"
+    },
+    "X12": {
+      "evidence": "scratchpad x12 variants (validator output recorded here)",
+      "label": "L",
+      "observation": "claude plugin validate refused $ passed to a closure and to a top-level const alias of a function; accepted a top-level function declaration, a top-level const arrow and a function imported from the mod's own file.",
+      "state": "REPRODUCED"
+    },
+    "X13": {
+      "delta": "Under HOME=<tmp> no credential source resolved on this Mac, so without the dummy key a fallthrough failed client-side.",
+      "evidence": "evidence/scratch/claude-lineage/g0",
+      "label": "L",
+      "observation": "See G0: with the dummy key every fallthrough request (6) reached the tripwire; total_cost_usd 0, modelUsage {}.",
+      "state": "REPRODUCED"
+    },
+    "X14": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "A main-loop step yielding a native Agent call (subagent_type npx:mirror) raised agent.spawn with origin engine/core; the shadow was answered by the mod; its first completion reached the parent (queue record, prompt.submit origin task-notification, door 'prompt' row).",
+      "state": "REPRODUCED"
+    },
+    "X2": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "The turn.step hook saw every shadow step (agentId set) and answered alone; engine message ids msg_hook_*; result duration_api_ms 0, total_cost_usd 0, tripwire hits 0.",
+      "state": "REPRODUCED"
+    },
+    "X3": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "A yielded mcp__npx__mirror_exec tool call ran the mod's tool.call hook; its {result} was stored as a native tool_use/tool_result pair with parent_tool_use_id linking to the spawn; no permission prompt in -p.",
+      "state": "REPRODUCED"
+    },
+    "X4": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal-90000",
+      "label": "L",
+      "observation": "Plugin tools are served by the engine's local HTTP MCP server ('served at 127.0.0.1:<port>/<secret>/npx'); a mirror call held 90008 ms completed normally.",
+      "state": "REPRODUCED"
+    },
+    "X5": {
+      "delta": "CLAUDE_ENABLE_STREAM_WATCHDOG was not set in this run.",
+      "evidence": "evidence/scratch/claude-lineage/x-hold130-500",
+      "label": "L",
+      "observation": "A shadow step held 130 s on $.process.run(['sleep','130'],{timeoutMs:180000}) completed with next.signal.aborted false (twice in one run).",
+      "state": "REPRODUCED"
+    },
+    "X6": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "A yielded thinking chunk produced no stored row; session.append for the shadow recorded only text and tool_use blocks.",
+      "state": "REPRODUCED"
+    },
+    "X7": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "Stop-chunk usage {output_tokens:42, model:'spike-observed-model'} surfaced in turn.complete.usage with model replaced by the agent's resolved model; modelUsage stayed {}.",
+      "state": "REPRODUCED"
+    },
+    "X8": {
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "Every completion emitted task_notification (summary = final text, output_file). The first completion of the $.agent.spawn shadow did not reach the parent: debug '[enqueueAgentNotification] skipped taskId=... status=completed ... reason=already-notified'; no prompt.submit for that run.",
+      "state": "REPRODUCED"
+    },
+    "X9": {
+      "delta": "The framing is a prefix and a suffix: 'The coordinator sent a message while you were working:\\n' + text + '\\n\\nAddress this before completing your current task.'. The brief of a new shadow uses the same door and origin (prompt/coordinator).",
+      "evidence": "evidence/scratch/claude-lineage/x-normal",
+      "label": "L",
+      "observation": "$.session.send({to:{agentId}}) to the completed shadow returned {isDelivered:true}, raised agent.spawn with resume:{agentId}, appended a user row door 'prompt' origin 'coordinator', and started a new run (turn.step index 0). That run's completion reached the parent: queue record, prompt.submit origin task-notification with turnId set (folded into the running main turn) and a door 'delivery' row.",
+      "state": "REPRODUCED"
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{"steps": [
+ {"tools": [{"name": "mcp__npx__spawn_shadow", "input": {}}]},
+ {"tools": [{"name": "mcp__npx__wait_shadow", "input": {}}]},
+ {"text": "main: done"}
+]}

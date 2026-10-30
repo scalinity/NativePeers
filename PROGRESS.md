@@ -1,3 +1,24 @@
+# NativePeers Lineage for Claude Code (in progress, 2026-10-30)
+
+Contract: docs/CLAUDE_LINEAGE_MOD.md rev 1.0 (sha256 e9e03790…40b9) · kickoff docs/CLAUDE_LINEAGE_KICKOFF.md rev 1.0 (sha256 af4724f4…b769). Branch `feat/claude-lineage-mod` in `.worktrees/claude-lineage-mod`, base `0ee014f`. Claude Code 2.1.314 (sha256 21d6e7b9…32ed).
+
+- [ ] M0: tripwire, X1–X14 and gates G0–G13 (`evidence/claude-lineage-m0.json`); minimum engine 2.1.309 in `compat/claude-mod.json`.
+  - [x] G0 tripwire PASS: a deliberate fallthrough sent 6 refused requests to the stub, cost 0. Under a temporary HOME no credential resolves on this Mac, so harness runs use a dummy key; the tripwire count, not `duration_api_ms`, is authoritative.
+  - [x] X1–X14 reproduced locally (L), with deltas: a CPU-bound hook spin unloads the plugin and falls through despite `.catch`; `$.agent.list()` has no `spawnedBy`; follow-up framing has a suffix.
+  - [x] G1–G6, G8–G11, G13 decided. Shadows run on a model id no API serves, the only supported way found to keep the engine's agent summaries from billing them; Esc and `x` both kill a shadow; spawns only from hook frames; silent steps abort at 600 s; registry mirrored to `$.store` for `/clear` and `--resume`.
+  - [ ] G7 desktop: engine 2.1.309 recorded and headless-verified; rendering and interaction need a person at the desktop app.
+  - [ ] G12 for the production mod (validate and `tsc -p`).
+- [ ] M1: activity recorder, Codex/Claude normalizers, `activity_index`, `npeer activity`.
+- [ ] M2: `npeer bridge`, delivery ownership, mirror leases, input/interrupt/cancel.
+- [ ] M3: `np` mod core and the live thin slice.
+- [ ] M4: input forwarding, stop mapping, UI.
+- [ ] M5: Grok/Antigravity normalizers, adoption, attach, backfill, pane.
+- [ ] M6: desktop, installer, docs, performance, acceptance AC1–AC14, merge.
+
+[Checkpoint](evidence/claude-lineage-checkpoint.json) · [Live budget](evidence/claude-lineage-live-budget.json)
+
+---
+
 # Native CLI updates renew on first use (2026-10-27)
 
 - [x] Cause: renewal of a supported vendor patch needed an explicit `runtime-check --apply`, and every admission check refused a changed hash, so each native CLI update failed the first `npeer` call until someone ran it (Claude 2.1.312 passed every bounded check and sat unrenewed after the updater switched the launcher).

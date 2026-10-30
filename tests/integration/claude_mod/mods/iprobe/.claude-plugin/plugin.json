@@ -1,0 +1,1 @@
+{ "name": "npi", "version": "0.1.0", "description": "Harness-only interactive gate probes (G2-G6, G9-G13)", "license": "UNLICENSED", "types": "./types/index.d.ts" }
