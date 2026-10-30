@@ -40,6 +40,22 @@ class Task:
         self.faults = set()
 
 
+def shape(kind, data, limits):
+    """Redact and bound `data`: tool output and diffs are head-and-tail blocks, everything else is scrubbed."""
+    tool_bytes, event_bytes = limits['tool_output_bytes'], limits['event_data_bytes']
+    special = {}
+    if kind == 'tool.completed':
+        output = data.get('output')
+        special['output'] = output_block(output.get('text', '') if isinstance(output, dict) else output, tool_bytes)
+    elif kind == 'files.changed' and isinstance(data.get('diff'), dict):
+        block = output_block(data['diff'].get('text', ''), tool_bytes)
+        block.pop('bytes')
+        special['diff'] = block
+    shaped = scrub({k: v for k, v in data.items() if k not in special}, event_bytes if kind in TEXT_KINDS else tool_bytes)
+    shaped.update(special)
+    return bound_data(shaped, event_bytes)
+
+
 class Recorder:
     def __init__(self, journal, worker_id, group_id, provider, *, lease=None, cwd=None, turn=None,
                  queue_events=4096, queue_bytes=16 << 20, fsync_interval=2.0):
@@ -133,19 +149,7 @@ class Recorder:
             self.counters['errors'] += 1
 
     def shape(self, kind, data):
-        """Redact and bound `data`: tool output and diffs are head-and-tail blocks, everything else is scrubbed."""
-        tool_bytes, event_bytes = self.limits['tool_output_bytes'], self.limits['event_data_bytes']
-        special = {}
-        if kind == 'tool.completed':
-            output = data.get('output')
-            special['output'] = output_block(output.get('text', '') if isinstance(output, dict) else output, tool_bytes)
-        elif kind == 'files.changed' and isinstance(data.get('diff'), dict):
-            block = output_block(data['diff'].get('text', ''), tool_bytes)
-            block.pop('bytes')
-            special['diff'] = block
-        shaped = scrub({k: v for k, v in data.items() if k not in special}, event_bytes if kind in TEXT_KINDS else tool_bytes)
-        shaped.update(special)
-        return bound_data(shaped, event_bytes)
+        return shape(kind, data, self.limits)
 
     def envelope(self, kind, data, item, event, task):
         source = dict(provider=self.provider)
