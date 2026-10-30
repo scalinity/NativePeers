@@ -10,6 +10,19 @@ from .errors import PeerError, require
 from .models import ARTIFACT_MAX, RESULT_PAGE, new_id
 
 
+def private_artifact_path(path):
+    """The same name/content boundary for direct imports and selected Git context."""
+    from .worktrees import sensitive
+    path=Path(str(path).lower())
+    names={'.ssh','.aws','.azure','.codex','.claude','.gemini','gcloud',
+           '.netrc','.npmrc','.pypirc','.git-credentials','.pgpass',
+           'credentials','credentials.json','token.json','tokens.json','transcripts',
+           'id_dsa','id_ecdsa','.secrets','secrets.json','secrets.yaml','secrets.yml'}
+    return (sensitive(str(path)) or any(part in names for part in path.parts)
+            or path.suffix in ('.pem','.key','.p12','.pfx','.kdbx')
+            or (path.suffix=='.jsonl' and (path.stem in ('transcript','transcripts') or path.name.startswith('rollout-'))))
+
+
 def _selected_file_bytes(path, max_bytes, *, metadata=False):
     # Walk with directory descriptors so replacing any component with a symlink
     # cannot redirect the import after validation. Nonblocking opens reject FIFOs.
@@ -45,7 +58,6 @@ class Artifacts:
 
     def add_file(self, path, caller, *, max_bytes=ARTIFACT_MAX):
         from .registry import Registry
-        from .worktrees import sensitive
 
         require(caller.kind == 'peer' and caller.incarnation, 'CALLER_UNBOUND',
                 'Artifact import requires a verified native caller')
@@ -62,14 +74,7 @@ class Artifacts:
             "SELECT DISTINCT json_extract(descriptor_json,'$.home') AS home FROM peer_instances"))
         private_roots.extend(Path(os.environ[name]).expanduser().resolve()
                              for name in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR') if os.environ.get(name))
-        private_names = {'.ssh', '.aws', '.azure', '.codex', '.claude', '.gemini', 'gcloud',
-                         '.netrc', '.npmrc', '.pypirc', '.git-credentials', '.pgpass',
-                         'credentials', 'credentials.json', 'token.json', 'tokens.json', 'transcripts',
-                         'id_dsa', 'id_ecdsa', '.secrets', 'secrets.json', 'secrets.yaml', 'secrets.yml'}
-        require(not sensitive(str(path).lower()) and not any(part.lower() in private_names for part in path.parts)
-                and path.suffix.lower() not in ('.pem', '.key', '.p12', '.pfx', '.kdbx')
-                and not (path.suffix.lower() == '.jsonl' and
-                         (path.stem.lower() in ('transcript', 'transcripts') or path.name.lower().startswith('rollout-')))
+        require(not private_artifact_path(path)
                 and not any(path.is_relative_to(root) for root in private_roots),
                 'APPROVAL_BLOCKED', 'Credentials, private native state and transcripts cannot be imported')
         try:

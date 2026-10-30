@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .artifacts import Artifacts, _selected_file_bytes
+from .artifacts import Artifacts, _selected_file_bytes, private_artifact_path
 from .change_preview import _safe_paths
 from .errors import PeerError, require
 from .files import canonical
@@ -39,7 +39,7 @@ def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), 
         try:root = Path(project or peer['cwd']).expanduser().resolve(strict=True)
         except OSError as error:raise PeerError('PROTOCOL_ERROR','Selected source is unavailable; pass --project with an existing repository path') from error
         root = Path(read_git(root, 'rev-parse', '--show-toplevel').stdout.decode().strip())
-        require(not any(root.is_relative_to(p) for p in _private_roots(journal)),
+        require(not private_artifact_path(root) and not any(root.is_relative_to(p) for p in _private_roots(journal)),
                 'APPROVAL_BLOCKED', 'Private native state cannot supply selected context')
         def git(*args):return read_git(root, '--literal-pathspecs', *args).stdout
         base_oid = git('rev-parse', '--verify', '--end-of-options', base+'^{commit}').decode().strip()
@@ -52,7 +52,7 @@ def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), 
         files = []
         for name in paths:
             path = root/name
-            require(not any(path.is_relative_to(p) for p in _private_roots(journal)), 'APPROVAL_BLOCKED', 'Selected path overlaps private native state')
+            require(not private_artifact_path(path) and not any(path.is_relative_to(p) for p in _private_roots(journal)), 'APPROVAL_BLOCKED', 'Selected path overlaps private native state')
             # ls-tree distinguishes a tracked deletion from an explicitly selected new file.
             entry = git('ls-tree', base_oid, '--', name).decode().strip()
             require(not entry or entry.split()[0] in ('100644', '100755'), 'PROTOCOL_ERROR', 'Select regular files, not symlinks, submodules or directories')
@@ -118,13 +118,14 @@ def compare(journal, caller, handle, *, project=None):
     frozen = json.loads(raw)
     try:root = Path(project or frozen['source']['root']).expanduser().resolve(strict=True)
     except OSError as error:raise PeerError('PROTOCOL_ERROR','Frozen source is unavailable; pass --project with the current repository path') from error
-    require(not any(root.is_relative_to(p) for p in _private_roots(journal)), 'APPROVAL_BLOCKED', 'Private native state is excluded')
+    with preparation():root=Path(read_git(root,'rev-parse','--show-toplevel').stdout.decode().strip())
+    require(not private_artifact_path(root) and not any(root.is_relative_to(p) for p in _private_roots(journal)), 'APPROVAL_BLOCKED', 'Private native state is excluded')
     rows = []
     with preparation():
         head = read_git(root, 'rev-parse', 'HEAD').stdout.decode().strip()
         for item in frozen['files']:
             name = _safe_paths([item['path']])[0];path = root/name
-            require(not any(path.is_relative_to(p) for p in _private_roots(journal)), 'APPROVAL_BLOCKED', 'Selected path overlaps private native state')
+            require(not private_artifact_path(path) and not any(path.is_relative_to(p) for p in _private_roots(journal)), 'APPROVAL_BLOCKED', 'Selected path overlaps private native state')
             try:
                 current, mode = _selected_file_bytes(path, ARTIFACT_MAX, metadata=True) if path.exists() or path.is_symlink() else (None, None)
                 digest = hashlib.sha256(current).hexdigest() if current is not None else None
@@ -138,7 +139,10 @@ def compare(journal, caller, handle, *, project=None):
         current = {r['provider']:r for r in diagnose(journal)}
         for old in frozen['runtimes']:
             now = current.get(old['provider'])
-            runtime_rows.append(dict(provider=old['provider'], matches=bool(now) and old['current'] == now['current'] and old['expected'] == now['expected'],
+            selected_matches=bool(now) and old['current']==now['current']
+            approval_matches=bool(now) and old['expected']==now['expected'] and all(old.get(k)==now.get(k) for k in ('state','compatibility_state','native_acceptance'))
+            runtime_rows.append(dict(provider=old['provider'], matches=selected_matches and approval_matches,
+                                     selected_matches=selected_matches,approval_matches=approval_matches,
                                      frozen=old, current=now))
     return dict(artifact_id=handle, frozen_observed_at=frozen['observed_at'],
                 checked_at=datetime.now(ZoneInfo('America/New_York')).isoformat(),

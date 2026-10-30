@@ -154,3 +154,33 @@ class SelectedContextTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(_selected_file_bytes(path,1024),b'value=1\n')
         with self.assertRaises(PeerError) as error:self.packet(project=self.root/'missing')
         self.assertIn('--project',error.exception.message)
+
+    def test_private_absolute_repository_components_match_direct_artifact_import_rules(self):
+        info=self.packet();private=self.root/'.aws';private.mkdir();moved=private/'source';self.repo.rename(moved)
+        for operation in (lambda:prepare(self.j,self.caller,['a.py'],project=moved),
+                          lambda:compare(self.j,self.caller,info['artifact_id'],project=moved),
+                          lambda:Artifacts(self.j).add_file(moved/'a.py',self.caller)):
+            with self.assertRaises(PeerError) as error:operation()
+            self.assertEqual(error.exception.code,'APPROVAL_BLOCKED')
+
+    def test_comparison_normalizes_the_same_subdirectory_argument_as_preparation(self):
+        folder=self.repo/'src';folder.mkdir();(folder/'a.py').write_text('nested=1\n')
+        git(self.repo,'add','src/a.py');git(self.repo,'commit','-qm','Create nested selected input')
+        info=prepare(self.j,self.caller,['src/a.py'],project=folder)
+        value=compare(self.j,self.caller,info['artifact_id'],project=folder)
+        self.assertEqual(value['changed_paths'],[]);self.assertTrue(value['source']['head_matches'])
+
+    def test_runtime_revocation_changes_approval_even_when_executable_bytes_match(self):
+        from nativepeers.compatibility import diagnose,fingerprint,revoke
+        from nativepeers.files import atomic_json
+        binary=self.root/'codex-fixture';binary.write_text('non-executed runtime fixture')
+        runtime=fingerprint(binary);digest=runtime['sha256']
+        atomic_json(self.j.root/'compat/runtime.json',dict(providers=dict(codex=runtime),retained=dict(codex={digest:dict(runtime,revoked=False)})))
+        original=diagnose
+        with patch('nativepeers.compatibility.diagnose',side_effect=lambda journal:original(journal,executables={'codex':binary})):
+            info=self.packet(runtimes=['codex'])
+            self.assertTrue(compare(self.j,self.caller,info['artifact_id'])['runtimes'][0]['matches'])
+            revoke(self.j,'codex',digest)
+            changed=compare(self.j,self.caller,info['artifact_id'])['runtimes'][0]
+        self.assertFalse(changed['matches']);self.assertTrue(changed['selected_matches']);self.assertFalse(changed['approval_matches'])
+        self.assertEqual(changed['current']['compatibility_state'],'REVOKED')
