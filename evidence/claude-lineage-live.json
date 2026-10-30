@@ -1,0 +1,35 @@
+{
+  "rig": {
+    "code": "branch worktree via npeer-wt launcher",
+    "guard": "npguard: first main turn real, later notification turns answered locally",
+    "npeer_home": "isolated (evidence/scratch/claude-lineage/live/run1/npeer-home), production runtime approvals copied read-only",
+    "parent": "disposable interactive claude 2.1.314, --model sonnet, --permission-mode default, fixture repo, real HOME and credentials",
+    "script": "tests/integration/claude_mod/setup_live.py"
+  },
+  "runs": {
+    "m3-live-slice": {
+      "commit": "f28e7bf",
+      "evidence": [
+        "evidence/scratch/claude-lineage/live/run1/session",
+        "evidence/scratch/claude-lineage/live/run1/npeer-home"
+      ],
+      "label": "L",
+      "notes": [
+        "A first launch exited at the folder-trust dialog (default 'No, exit') before any prompt; no input was submitted. Claude Code's own startup removed one orphaned ~/.claude/teams directory.",
+        "The engine generates a prompt suggestion after a guarded turn too: main-session usage, not a parent-model turn."
+      ],
+      "observation": [
+        "The real parent issued Agent(subagent_type np:codex) with the np header; the native tasks row read '\u25ef np:codex  GPT-6.1 Sol low \u00b7 Live slice'.",
+        "One real Codex worker (gpt-6.1-sol low, native 01a18eb8-1cd9-7f03-8f4a-86767f7ec687) ran 10 s; its activity log holds 69 events (deltas, one exec start/completion, usage, one task.terminal).",
+        "The shadow transcript (subagents/agent-a4cfafd6a5d582a7b.jsonl) holds the brief with the header stripped, the worker's text, the exec as an mcp__np__mirror tool_use/tool_result pair with the real output, the worker's final answer once, and the NativePeers footer. Every assistant row is model np-mirror-codex with answeredWithoutRequest true.",
+        "The native completion notification reached the parent ('Agent \"GPT-6.1 Sol low \u00b7 Live slice\" finished \u00b7 10s'); npguard answered that turn locally.",
+        "Journal (isolated home): wait-mode group; task_delivery owner mirror, origin parent-model; completion route MIRROR_PENDING -> MIRROR_SURFACING -> MIRROR_DELIVERED by two compare-and-set events; zero NativePeers push attempts.",
+        "/cost: claude-sonnet-5-5 (the parent turn and the engine's prompt suggestions) and claude-haiku-5-5 1.3k in / 22 out (the engine's session title); no np-mirror model. Debug log request sources: quota_check, generate_session_title, repl_main_thread x2, prompt_suggestion x3; none for a shadow. The agent summary timer stopped before firing (the worker ended inside 20 s).",
+        "After the parent exited, no process carrying the isolated NPEER_HOME remained."
+      ],
+      "state": "PASS"
+    }
+  },
+  "schema": "nativepeers.claude-lineage-live.v1",
+  "updated_at": "2026-10-30T17:39:20-0400"
+}

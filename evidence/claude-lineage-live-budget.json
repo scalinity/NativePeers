@@ -6,9 +6,9 @@
     "worker_task_inputs": 32
   },
   "consumed": {
-    "active_live_seconds": 0,
-    "parent_model_turns": 2,
-    "worker_task_inputs": 0
+    "active_live_seconds": 439,
+    "parent_model_turns": 3,
+    "worker_task_inputs": 1
   },
   "fallthrough_detected": false,
   "harness_runs": {
@@ -53,6 +53,20 @@
       "id": "x-reproductions",
       "note": "12 post-G0 harness runs; hits only in deliberate fallthrough cases (overrun, catch_noreturn, three model probes) and g0.",
       "tripwire_hits": 36
+    },
+    {
+      "active_live_seconds": 439,
+      "at": "2026-10-30T17:38:57-0400",
+      "id": "live-slice-1",
+      "note": "First launch attempt exited at the folder-trust dialog before any prompt: no input submitted.",
+      "notification_turns_guarded": 1,
+      "parent_model_turns": 1,
+      "parent_side_requests": "repl_main_thread x2 (sonnet), generate_session_title (haiku), prompt_suggestion x3 (sonnet), quota_check",
+      "providers": [
+        "codex gpt-6.1-sol low"
+      ],
+      "shadow_requests": 0,
+      "worker_task_inputs": 1
     }
   ],
   "planning_allocation": {
@@ -63,5 +77,5 @@
   },
   "reserved": [],
   "schema": "nativepeers.claude-lineage-live-budget.v1",
-  "updated_at": "2026-10-30T14:40:49-0400"
+  "updated_at": "2026-10-30T17:38:57-0400"
 }

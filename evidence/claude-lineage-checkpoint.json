@@ -6,13 +6,7 @@
     "AC8_bridge_death": "harness pass",
     "AC8_malformed": "harness pass"
   },
-  "active_owned_processes": [
-    {
-      "kind": "agent",
-      "name": "m2-bridge",
-      "scope": "M2 in this worktree, uncommitted"
-    }
-  ],
+  "active_owned_processes": [],
   "blockers": [],
   "claude_code": {
     "launcher": "/Users/danny/.local/bin/claude",
@@ -96,8 +90,8 @@
   "milestones": {
     "M0": "GATES_RECORDED (G7 desktop interaction and G12-on-mod pending person/install)",
     "M1": "COMMITTED ad496f8 (89 tests); evidence digests regenerate at publication",
-    "M2": "IN_PROGRESS (agent m2-bridge, Opus, uncommitted)",
-    "M3": "MOD_AND_HARNESS_PASS (live slice pending M2)",
+    "M2": "COMMITTED 5ce8f0e",
+    "M3": "PASS (live slice, evidence/claude-lineage-live.json)",
     "M4": "NOT_STARTED",
     "M5": "NORMALIZERS (grok, antigravity) AND BACKFILL (claude, codex) COMMITTED; grok/antigravity feed lines pending M2; Path B harness pass",
     "M6": "INSTALLER, COMPAT CHECK, DOCS, SKILL TEXT COMMITTED; CLI wiring pending M2; desktop checklist drafted"
@@ -115,7 +109,7 @@
     "tsc": "pass (engine-laid tsconfig)",
     "validate": "pass"
   },
-  "next_action": "On m2-bridge report: review, focused + full suite, commit; add grok/antigravity feed lines and wire install --claude-mod and the runtime-check mod verdict in cli.py; run setup_live.py and the live thin slice (budget: reserve first).",
+  "next_action": "Live acceptance batch: AC1/AC2 four-provider fan-out, AC4/AC5 follow-ups, AC6 interrupt/stop/stop-all, AC12 adoption, AC10 hot reload, AC11 resume, AC7 fallback after bridge kill; then publication record, PR, merge, install, desktop checklist.",
   "repository": {
     "base": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "branch": "feat/claude-lineage-mod",
@@ -124,11 +118,11 @@
       ".worktrees/issue-7"
     ],
     "first_commit": "051d625",
-    "head": "eaeb95c",
+    "head": "f28e7bf",
     "origin_main_at_start": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "path": "/Users/danny/Documents/Tools/NativePeers",
     "worktree": ".worktrees/claude-lineage-mod"
   },
   "schema": "nativepeers.claude-lineage-checkpoint.v1",
-  "updated_at": "2026-10-30T16:25:28-0400"
+  "updated_at": "2026-10-30T17:39:20-0400"
 }
