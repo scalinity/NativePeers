@@ -180,10 +180,14 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     }
     if (plan.end === 'terminal' && plan.terminal) {
       const t = plan.terminal
-      const owner = t.generation === s.nativeGeneration ? 'native' : 'mirror'
+      let owner: 'mirror' | 'native' = t.generation === s.nativeGeneration ? 'native' : 'mirror'
       if (owner === 'mirror') {
-        try { await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the route stays pending; the lease decides */ }
-        s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
+        let surfaced: any
+        try { surfaced = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the route stays pending; the lease decides */ }
+        // A lapsed lease already handed the route back: NativePeers delivers it,
+        // so this answer must not claim the delivery and is not acked.
+        if (surfaced && surfaced.owner === 'mirror' && surfaced.route !== 'MIRROR_SURFACING') owner = 'native'
+        else s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
       }
       const final = String(t.data?.final_text ?? '').trim()
       const text = finalAnswer(t, await summary($, s, t), owner, s.terminals, final.length > 0 && open.answer.trim().endsWith(final))
