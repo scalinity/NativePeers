@@ -30,7 +30,7 @@ class Worker:
         self.started = time.time();self.ended = None;self.task = f'T-{worker_id}-1';self.changed = asyncio.Event();self.planned = 1
 
     def append(self, kind, data, *, item=None, generation=None):
-        event = dict(schema=SCHEMA, seq=len(self.events)+1, at=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()), worker_id=self.id,
+        event = dict(schema=SCHEMA, seq=len(self.events)+1, at=time.strftime('%Y-%m-%dT%H:%M:%S', time.gmtime()) + '.%03dZ' % (int(time.time() * 1000) % 1000), worker_id=self.id,
                      group_id=self.group, task_id=self.task, generation=generation or self.generation, native_turn=None, item=item,
                      kind=kind, data=data, source=dict(provider=self.provider, event='replay'))
         self.events.append(event);self.changed.set();self.changed = asyncio.Event()

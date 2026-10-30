@@ -165,6 +165,8 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     }
     usage += plan.usage.delta
     for (const chunk of plan.chunks) yield chunk
+    const shown = plan.consumed !== null ? events.find(ev => ev.seq === plan.consumed) : undefined
+    if (shown?.at && plan.chunks.length) $.ui.log(`np: display latency ${Math.round((await $.clock.now()) - Date.parse(shown.at))}ms ${s.provider} seq ${shown.seq}`, { to: 'debug' })
     if (plan.end === 'tool_use') {
       Object.assign(s, { phase: 'TOOL_PENDING', inflight: undefined });await saveShadow($, s)
       yield { kind: 'stop', stopReason: 'tool_use', usage: null }

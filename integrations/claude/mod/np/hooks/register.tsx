@@ -229,7 +229,10 @@ export const register: Register = (on, options) => {
       return { turnId: e.turnId, index: e.index, answer: text, toolUses: [], stopReason: 'end_turn', usage: null }
     }
     const steer = Boolean((await getBridge($)).steer?.[s.provider as NpProvider])
-    return yield* stepShadow($, e, s, { showReasoning: o.showReasoning !== 'off', followupMode: o.followupMode === 'steer-if-supported' ? 'steer-if-supported' : 'queue', steer })
+    const r = yield* stepShadow($, e, s, { showReasoning: o.showReasoning !== 'off', followupMode: o.followupMode === 'steer-if-supported' ? 'steer-if-supported' : 'queue', steer })
+    // Own time for the performance budget (spec 11): waits on $ calls do not count.
+    $.ui.log(`np: step own-time ${Math.round(next.budget.ms - next.budget.remainingMs)}ms ${s.provider} ${e.agentId} step ${e.index}`, { to: 'debug' })
+    return r
   }).catch(async function* npStepFault($, e: TurnStepInput, next): AsyncGenerator<any, TurnStepResult> {
     // Fail closed for shadows: answer with the fault, never call next. Other
     // loops replay what was beneath them.
