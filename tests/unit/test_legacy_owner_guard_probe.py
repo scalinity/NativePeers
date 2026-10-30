@@ -285,3 +285,23 @@ def test_target_source_map_rejects_drift_and_escape(tmp_path):
     product.write_bytes(b'unknown drift');assert not probe.source_matches(base,tmp_path,mapping)
     record.write_text(json.dumps({'source':{'nativepeers/hooks.py':digest,'../escape':digest}}))
     with pytest.raises(probe.Blocked,match='Invalid target'):probe.target_source(record,tmp_path)
+
+
+@pytest.mark.parametrize('signum',[probe.signal.SIGTERM,probe.signal.SIGHUP])
+def test_termination_runs_cleanup_and_repeated_signal_cannot_interrupt_it(tmp_path,monkeypatch,signum):
+    handlers={};old={sig:probe.signal.getsignal(sig) for sig in (probe.signal.SIGTERM,probe.signal.SIGHUP,probe.signal.SIGINT)}
+    monkeypatch.setattr(probe.signal,'signal',lambda sig,handler:handlers.__setitem__(sig,handler))
+    base=SimpleNamespace(Blocked=type('CanonicalBlocked',(RuntimeError,),{}),prepare_run=lambda *_:tmp_path,
+                         eastern=lambda:'offline Eastern time',digest=lambda _:'offline',
+                         save=lambda p,x:Path(p).write_text(json.dumps(x)))
+    def stop():
+        handlers[probe.signal.SIGHUP](probe.signal.SIGHUP,None)
+        return {'confirmed_dead':True,'output_eof':True}
+    resource=SimpleNamespace(stop=Mock(side_effect=stop))
+    def interrupted(args,canonical,source,run,report,resources):
+        resources.append(('tui',resource,'frozen-owned-receiver'))
+        handlers[signum](signum,None)
+    monkeypatch.setattr(probe,'load_base',lambda _:base);monkeypatch.setattr(probe,'run_probe',interrupted)
+    assert probe.main(['--nativepeers-root',str(tmp_path),'--run',str(tmp_path/'unused'),'--target-sha256','a'*64])==1
+    resource.stop.assert_called_once();assert handlers==old
+    report=json.loads((tmp_path/'qualification.json').read_text());assert report['status']=='FAIL';assert 'interrupted by signal' in report['error']

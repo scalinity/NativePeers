@@ -497,8 +497,10 @@ class Metadata(Family):
         raise TimeoutError(method)
 
     def stop(self):
-        self.process.stdin.close()
+        # Keep the owner alive until Family captures its children. Closing stdin
+        # first can orphan startup helpers before their births are recorded.
         result = super().stop()
+        self.process.stdin.close()
         self.reader.join(3)
         result["stdout_eof"] = self.eof
         result["output_eof"] = self.eof

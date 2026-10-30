@@ -38,6 +38,7 @@ External network traffic is not instrumented. Exit: 0 PASS, 1 FAIL, 2 BLOCKED.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import asyncio
 import hashlib
 import importlib.util
@@ -596,6 +597,23 @@ def parser():
     return result
 
 
+@contextmanager
+def termination_scope():
+    cleaning = False
+    def begin_cleanup():
+        nonlocal cleaning
+        cleaning = True
+    def interrupted(signum, frame):
+        if not cleaning:
+            raise KeyboardInterrupt("Owned probe interrupted by signal " + str(signum))
+    previous = {sig: signal.getsignal(sig) for sig in (signal.SIGTERM, signal.SIGHUP, signal.SIGINT)}
+    try:
+        for sig in previous: signal.signal(sig, interrupted)
+        yield begin_cleanup
+    finally:
+        for sig, handler in previous.items(): signal.signal(sig, handler)
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv and argv[0] == "_helper":
@@ -627,38 +645,40 @@ def main(argv=None):
                               "External network traffic is not instrumented; only configured localhost model requests are counted."]}
     resources = []
     code = 1
-    try:
-        run_probe(args, base, source, run, report, resources)
-        report["status"], code = "PASS", 0
-    except BaseException as error:
-        blocked = isinstance(error, (Blocked, base.Blocked))
-        report.update(status="BLOCKED" if blocked else "FAIL", error=repr(error), traceback=traceback.format_exc())
-        code = 2 if blocked else 1
-    finally:
-        for kind, resource, role in reversed(resources):
-            try:
-                if kind == "model":
-                    report.setdefault("models", {})[role] = {"records": resource.records, "errors": resource.errors,
-                                                             "url": f"http://127.0.0.1:{resource.server_port}/v1"}
-                    resource.shutdown()
-                    resource.server_close()
-                    resource.thread.join(3)
-                    if resource.thread.is_alive() or resource.socket.fileno() != -1:
-                        raise RuntimeError("Localhost model server cleanup unconfirmed")
-                else:
-                    cleanup = resource.stop()
-                    report.setdefault("cleanup", []).append({"role": role, **cleanup})
-                    if not cleanup["confirmed_dead"] or not cleanup.get("output_eof") or cleanup.get("terminal_errors"):
-                        raise RuntimeError("Owned process death/output EOF unconfirmed")
-            except BaseException as error:
-                report.setdefault("cleanup_errors", []).append({"role": role, "error": repr(error)})
-        constructors = sorted(run.glob("*.constructor-failure.json"))
-        if constructors:
-            report["constructor_failures"] = [json.loads(p.read_text()) for p in constructors]
-        if report.get("cleanup_errors") or constructors:
-            report["status"], code = "FAIL", 1
-        report["finished_at"] = base.eastern()
-        base.save(run / "qualification.json", report)
+    with termination_scope() as begin_cleanup:
+        try:
+            run_probe(args, base, source, run, report, resources)
+            report["status"], code = "PASS", 0
+        except BaseException as error:
+            blocked = isinstance(error, (Blocked, base.Blocked))
+            report.update(status="BLOCKED" if blocked else "FAIL", error=repr(error), traceback=traceback.format_exc())
+            code = 2 if blocked else 1
+        finally:
+            begin_cleanup()
+            for kind, resource, role in reversed(resources):
+                try:
+                    if kind == "model":
+                        report.setdefault("models", {})[role] = {"records": resource.records, "errors": resource.errors,
+                                                                 "url": f"http://127.0.0.1:{resource.server_port}/v1"}
+                        resource.shutdown()
+                        resource.server_close()
+                        resource.thread.join(3)
+                        if resource.thread.is_alive() or resource.socket.fileno() != -1:
+                            raise RuntimeError("Localhost model server cleanup unconfirmed")
+                    else:
+                        cleanup = resource.stop()
+                        report.setdefault("cleanup", []).append({"role": role, **cleanup})
+                        if not cleanup["confirmed_dead"] or not cleanup.get("output_eof") or cleanup.get("terminal_errors"):
+                            raise RuntimeError("Owned process death/output EOF unconfirmed")
+                except BaseException as error:
+                    report.setdefault("cleanup_errors", []).append({"role": role, "error": repr(error)})
+            constructors = sorted(run.glob("*.constructor-failure.json"))
+            if constructors:
+                report["constructor_failures"] = [json.loads(p.read_text()) for p in constructors]
+            if report.get("cleanup_errors") or constructors:
+                report["status"], code = "FAIL", 1
+            report["finished_at"] = base.eastern()
+            base.save(run / "qualification.json", report)
     print(json.dumps({"status": report["status"], "report": str(run / "qualification.json"), "error": report.get("error")}))
     return code
 
