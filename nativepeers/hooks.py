@@ -40,19 +40,17 @@ def observe(provider, event, journal):
         journal.event(worker_id,'native-hook-observed',dict(event=event['hook_event_name'],native_id=event['session_id'],process=owner))
         return {'controller_owned':True,'worker_id':worker_id}
     home=Path(os.getenv('CODEX_HOME' if provider=='codex' else 'CLAUDE_CONFIG_DIR',Path.home()/('.codex' if provider=='codex' else '.claude'))).resolve()
-    if event['hook_event_name']=='UserPromptSubmit':
-        # Consumption-time close-out guard: the exact registered owner is the authority. It never
-        # registers, rebinds or creates an incarnation, and unknown input passes unchanged.
+    queued=provider=='codex' and event['hook_event_name']=='QueuedInput'
+    if event['hook_event_name']=='UserPromptSubmit' or queued:
+        # The registered-owner guard never rebinds an incarnation. Only the native
+        # queue may bootstrap an authenticated cold owner through the path below.
         from .models import home_id
-        from .notification_policy import guard
         peer=journal.one("SELECT * FROM peer_instances WHERE provider=? AND home_id=? AND native_id=? AND pid=? AND process_start=? AND status='live' AND owner_kind='interactive-standalone'",
                          (provider,home_id(home),event['session_id'],owner['pid'],owner['start']))
-        if not peer:return {'guarded':False,'reason':'no-exact-registered-peer'}
-        result=guard(journal,peer,event.get('prompt'))
-        if provider=='claude' and result.get('decision')=='block':
-            # Claude-documented field: keeps the blocked body out of the visible block notice (not an erase guarantee).
-            result['hookSpecificOutput']={'hookEventName':'UserPromptSubmit','suppressOriginalPrompt':True}
-        return result
+        if peer:return prompt_guard(provider,event,journal,peer)
+        if not queued:return {'guarded':False,'reason':'no-exact-registered-peer'}
+        # A native queue can drain immediately on exact-session resume, before the
+        # first turn's SessionStart. Authenticate its real owner/history below.
     if provider=='codex':
         from .process import terminal_owner
         require(terminal_owner(owner),'UNSUPPORTED_TRANSPORT','Unowned private app-server has no verified standalone TUI ingress')
@@ -97,7 +95,7 @@ def observe(provider, event, journal):
     from .policy import load
     local=load(journal)
     policy={'profiles':profiles,'max_depth':local['max_depth'],'max_concurrent_workers':local['workers_per_group'],'permission_mode_observed':mode}
-    peer=registry.register(provider,home,event['session_id'],native_title,owner,event['cwd'],transport,policy=policy)
+    peer=registry.register(provider,home,event['session_id'],native_title,owner,event['cwd'],transport,policy=policy,queue_resume=queued)
     transcript=event.get('transcript_path')
     if transcript:
         path=Path(transcript).resolve()
@@ -110,7 +108,21 @@ def observe(provider, event, journal):
     if provider=='claude' and os.getenv('CLAUDE_ENV_FILE'):
         with open(os.environ['CLAUDE_ENV_FILE'],'a') as stream:
             stream.write("\nexport NPEER_HOME="+__import__('shlex').quote(str(journal.root))+"\nexport NPEER_BINDING="+__import__('shlex').quote(str(binding))+"\n")
+    if queued:
+        return prompt_guard(provider,event,journal,journal.one('SELECT * FROM peer_instances WHERE incarnation_id=?',(peer['incarnation_id'],)))
     return {'registered':peer['handle'],'incarnation_id':peer['incarnation_id']}
+
+
+def prompt_guard(provider,event,journal,peer):
+    from .notification_policy import guard
+    result=guard(journal,peer,event.get('prompt'))
+    if provider=='codex' and event['hook_event_name']=='QueuedInput':
+        # Only the native queue understands consume. No turn, hook row, footer or
+        # prompt history is created; the journal retains the independent reason.
+        return {'decision':'consume'} if result.get('decision')=='block' else {}
+    if provider=='claude' and result.get('decision')=='block':
+        result['hookSpecificOutput']={'hookEventName':'UserPromptSubmit','suppressOriginalPrompt':True}
+    return result
 
 
 def main():
@@ -123,8 +135,8 @@ def main():
         if args.provider=='grok':
             print(json.dumps(result))
             if result.get('decision')=='deny' and os.getenv('NPEER_BOOTSTRAP'):raise SystemExit(2)
-        elif event.get('hook_event_name')=='UserPromptSubmit' and isinstance(result,dict) and result.get('decision')=='block':
-            # Claude/Codex read UserPromptSubmit JSON from stdout; only a guard block is ever printed.
+        elif event.get('hook_event_name') in ('UserPromptSubmit','QueuedInput') and isinstance(result,dict) and result.get('decision') in ('block','consume'):
+            # Print only an authenticated guard decision, never lifecycle bookkeeping.
             print(json.dumps(result))
     except Exception as error:
         print('NativePeers registration unavailable: '+type(error).__name__,file=sys.stderr)
