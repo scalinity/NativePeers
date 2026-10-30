@@ -11,6 +11,10 @@ Contract: docs/CLAUDE_LINEAGE_MOD.md rev 1.0 (sha256 e9e03790…40b9) · kickoff
 - [ ] M1: activity recorder, Codex/Claude normalizers, `activity_index`, `npeer activity`.
 - [ ] M2: `npeer bridge`, delivery ownership, mirror leases, input/interrupt/cancel.
 - [ ] M3: `np` mod core and the live thin slice.
+  - [x] Mod at `integrations/claude/mod/np`: validates, `tsc -p` clean, 20 `claude plugin test` tests (planner, grammar, capture, renderers on terminal and desktop).
+  - [x] `nativepeers/bridge.py` server (token, routes, owner/heartbeat/idle exit) and a replay backend: zero-API harness passes Path A, a parent follow-up (one forward, generation 2, second notification), refusals and bridge death (fail-closed).
+  - [x] PTY run over the replay backend: native tasks row `np:codex  GPT-6.1 Sol high · Codebase review`, band, agent view with replayed tool rows; only refused `np-mirror-*` summary requests at the tripwire.
+  - [ ] Live slice with a real Codex worker (needs the M2 native backend).
 - [ ] M4: input forwarding, stop mapping, UI.
 - [ ] M5: Grok/Antigravity normalizers, adoption, attach, backfill, pane.
 - [ ] M6: desktop, installer, docs, performance, acceptance AC1–AC14, merge.

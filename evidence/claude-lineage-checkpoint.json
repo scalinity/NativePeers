@@ -81,15 +81,28 @@
     }
   },
   "milestones": {
-    "M0": "IN_PROGRESS",
-    "M1": "NOT_STARTED",
+    "M0": "GATES_RECORDED (G7 desktop interaction and G12-on-mod pending person/install)",
+    "M1": "IN_PROGRESS (agent m1-activity, uncommitted)",
     "M2": "NOT_STARTED",
-    "M3": "NOT_STARTED",
+    "M3": "MOD_AND_HARNESS_PASS (live slice pending M2)",
     "M4": "NOT_STARTED",
     "M5": "NOT_STARTED",
     "M6": "NOT_STARTED"
   },
-  "next_action": "G7 (desktop) evidence via one consolidated request once the mod installs; G12 on the production mod. Build the np mod (M3) against the spec bridge API with a fake bridge; review M1 when the agent reports.",
+  "mod": {
+    "harness": [
+      "pathA zero-API pass",
+      "parent follow-up pass",
+      "refusals pass",
+      "bridge death fail-closed pass"
+    ],
+    "path": "integrations/claude/mod/np",
+    "plugin_test": "20 pass",
+    "pty": "band, tasks row, agent view verified over replay backend",
+    "tsc": "pass (engine-laid tsconfig)",
+    "validate": "pass"
+  },
+  "next_action": "Review and commit M1 when m1-activity reports; then spawn an Opus M2 agent for the bridge NativeBackend, delivery ownership, leases and input/interrupt (brief at hand); meanwhile Path B/C harness, M6 installer and docs.",
   "repository": {
     "base": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "branch": "feat/claude-lineage-mod",
@@ -98,10 +111,11 @@
       ".worktrees/issue-7"
     ],
     "first_commit": "051d625",
+    "head": "7ac96c2",
     "origin_main_at_start": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "path": "/Users/danny/Documents/Tools/NativePeers",
     "worktree": ".worktrees/claude-lineage-mod"
   },
   "schema": "nativepeers.claude-lineage-checkpoint.v1",
-  "updated_at": "2026-10-30T15:30:08-0400"
+  "updated_at": "2026-10-30T16:00:31-0400"
 }
