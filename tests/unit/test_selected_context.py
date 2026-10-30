@@ -143,3 +143,14 @@ class SelectedContextTests(unittest.IsolatedAsyncioTestCase):
                                env=dict(os.environ,**config['env']),capture_output=True,text=True,timeout=10)
         self.assertEqual(process.returncode,0,process.stderr)
         self.assertEqual(Path(process.stdout.strip()).resolve(),ROOT/'nativepeers/__init__.py')
+
+    def test_mode_only_changes_and_missing_preparation_root(self):
+        info=self.packet();path=self.repo/'a.py';old=path.stat().st_mode & 0o777
+        path.chmod(old ^ 0o111)
+        changed=compare(self.j,self.caller,info['artifact_id']);self.assertEqual(changed['changed_paths'],['a.py'])
+        self.assertEqual(changed['files'][0]['current_sha256'],changed['files'][0]['frozen_sha256'])
+        self.assertEqual(self.read(self.packet())['files'][0]['current_mode'],old ^ 0o111)
+        from nativepeers.artifacts import _selected_file_bytes
+        self.assertEqual(_selected_file_bytes(path,1024),b'value=1\n')
+        with self.assertRaises(PeerError) as error:self.packet(project=self.root/'missing')
+        self.assertIn('--project',error.exception.message)

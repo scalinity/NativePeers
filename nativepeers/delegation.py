@@ -192,7 +192,7 @@ class Delegation:
             if not check and spec['provider']=='claude' and profile=='analysis' and 'git_diff' in spec.get('requirements',{}).get('required_tools',[]):
                 from .selected_context import packets
                 require(packets(self.journal,caller,refs),'REVIEW_CONTEXT_REQUIRED','Analysis diff review requires a context-prepare artifact in context_refs; no input was submitted')
-            if refs:spec['task']+='\nApproved context artifacts (read through artifact_read with text:true; follow next_offset until complete): '+', '.join(refs)
+            if refs:spec['task']+='\nApproved context artifacts (read through artifact_read with text:true and limit:16000; follow next_offset until complete): '+', '.join(refs)
             worker_id,task_id=new_id(),new_id();binding=self.journal.root/'bindings'/new_id()
             grants=dict(worker_id=worker_id,group_id=group_id,depth=depth,max_depth=ceiling,profiles=[profile],
                 can_spawn=depth<limits.get('max_depth',1),max_concurrent_workers=limits.get('max_concurrent_workers',4),

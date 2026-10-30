@@ -36,7 +36,8 @@ def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), 
     require(len(runtimes) <= 4 and all(p in ('claude', 'codex', 'antigravity', 'grok') for p in runtimes),
             'PROTOCOL_ERROR', 'Unknown selected runtime')
     with preparation():
-        root = Path(project or peer['cwd']).expanduser().resolve(strict=True)
+        try:root = Path(project or peer['cwd']).expanduser().resolve(strict=True)
+        except OSError as error:raise PeerError('PROTOCOL_ERROR','Selected source is unavailable; pass --project with an existing repository path') from error
         root = Path(read_git(root, 'rev-parse', '--show-toplevel').stdout.decode().strip())
         require(not any(root.is_relative_to(p) for p in _private_roots(journal)),
                 'APPROVAL_BLOCKED', 'Private native state cannot supply selected context')

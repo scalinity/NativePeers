@@ -21,7 +21,7 @@ npeer context-prepare --project /absolute/repo --base BASE_COMMIT --path src/fil
 
 Add `--untracked new_file.py --path new_file.py` for explicit new inputs. The immutable packet includes base/current selected source, real diff, dirty/staged identity and omissions. Large selections fail with their measured size: narrow the paths or explicitly choose `--max-bytes`. Binary content is tagged base64. No diff, textconv, pager or custom filter runs.
 
-Tailor `/Users/danny/Documents/Tools/NativePeers/examples/bounded-review.json`: use a fresh request ID, the exact authorized provider/model and returned `context_refs`. Keep `analysis` / `inherit-read-only`; its Claude tools are Read/Glob/Grep and the scoped facade, without Bash. The packet is readable with `artifact_read` and `text:true`.
+Tailor `/Users/danny/Documents/Tools/NativePeers/examples/bounded-review.json`: use a fresh request ID, the exact authorized provider/model and returned `context_refs`. Keep `analysis` / `inherit-read-only`; its Claude tools are Read/Glob/Grep and the scoped facade, without Bash. The packet is readable with `artifact_read`, `text:true` and `limit:16000`; follow `next_offset` to fit native tool-output limits.
 
 ```sh
 npeer spawn --check --compact --spec /absolute/review.json --json

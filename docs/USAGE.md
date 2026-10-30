@@ -261,7 +261,7 @@ tools are labeled separately from native effective tools observed after launch.
 A Claude analysis request for `requirements.required_tools:["git_diff"]` needs a
 prepared packet; no Bash or workspace escalation is granted. Dispatch with the
 same specification after resolving blockers. Read-only workers can call
-`artifact_read` with `text:true` (CLI `artifact-read HANDLE --text`) and follow
+`artifact_read` with `text:true, limit:16000` to fit native tool-output limits (CLI `artifact-read HANDLE --text`) and follow
 `next_offset`; default base64 pages remain available for exact binary/byte reads.
 UTF-8 text pages end on complete characters; follow their byte `next_offset`. Invalid UTF-8 or a misaligned arbitrary offset requires exact base64 mode.
 

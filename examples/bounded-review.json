@@ -12,7 +12,7 @@
     "provider": "claude",
     "model": "sonnet",
     "title": "Bounded selected-change review",
-    "task": "Review the attached exact diff and selected source. Use artifact_read with text:true and follow next_offset. Report concrete bugs with file/line and reasoning, or no findings with explicit coverage limits. Run no shell commands. Checks not run remain not_run. Return findings and checks in the optional nativepeers-result block during this task.",
+    "task": "Review the attached exact diff and selected source. Use artifact_read with text:true and limit:16000; follow next_offset. Report concrete bugs with file/line and reasoning, or no findings with explicit coverage limits. Run no shell commands. Checks not run remain not_run. Return findings and checks in the optional nativepeers-result block during this task.",
     "permission_profile": "analysis",
     "workspace": {"mode": "inherit-read-only"},
     "requirements": {"task_type": "review", "required_tools": ["git_diff"]},
