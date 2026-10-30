@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
-import { agentSpec, describe, modelLabel, parseHeader, shadowModel, titleFrom, workerSpec } from '../hooks/agents.ts'
-import { followUp, provenance, stripFraming } from '../hooks/inputs.ts'
+import { agentSpec, describe, modelLabel, parseHeader, shadowModel, titleFrom, workerSpec } from '../hooks/agents'
+import { followUp, provenance, stripFraming } from '../hooks/inputs'
 
 test('a shadow type has only the mirror tool, an unserved model and an explicit permission mode', () => {
   const spec = agentSpec('codex')

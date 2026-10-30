@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror.ts'
-import type { Activity } from '../hooks/mirror.ts'
+import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
+import type { Activity } from '../hooks/mirror'
 
 let n = 0
 const ctx = (continues = false) => ({ workerId: 'W', showReasoning: true, newId: () => 'toolu_' + (++n), continuesAfter: () => continues })

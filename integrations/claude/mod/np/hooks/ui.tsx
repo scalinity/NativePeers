@@ -2,11 +2,11 @@
 // only Box, Text, Button, Code and Markdown, so they draw on every surface.
 import type { EngineInterface } from 'claude-code'
 import type { NpShadow, NpWorker } from '../types'
-import { TAGS, modelLabel } from './agents.ts'
-import { request } from './bridge.ts'
-import { duration } from './mirror.ts'
-import { loadShadow, shadows } from './shadow.ts'
-import { getBridge, getFaults, getIndex, getLineage, getUi, setUi } from './state.ts'
+import { TAGS, modelLabel } from './agents'
+import { request } from './bridge'
+import { duration } from './mirror'
+import { loadShadow, shadows } from './shadow'
+import { getBridge, getFaults, getIndex, getLineage, getUi, setUi } from './state'
 
 export const PANE_ID = 'np-lineage'
 const ACTIVE = ['queued', 'starting', 'running', 'waiting']
@@ -184,7 +184,7 @@ export async function renderSpinner($: EngineInterface, e: any, next: (e: any) =
 export async function statusLine($: EngineInterface): Promise<void> {
   const workers = await getLineage($)
   const c = counts(workers.filter(w => !w.parentWorkerId))
-  $.ui.status(c.running ? `np ◉${c.running} ✓${c.done} ✗${c.failed}` : undefined)
+  $.ui.status(c.running ? `◉${c.running} running · ✓${c.done} · ✗${c.failed}` : undefined)
 }
 
 export async function statusText($: EngineInterface): Promise<string> {

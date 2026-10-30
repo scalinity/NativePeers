@@ -4,7 +4,7 @@
 // own 10 s budget (gate X11).
 import type { EngineInterface } from 'claude-code'
 import type { NpWorker } from '../types'
-import { setBridge, setLineage } from './state.ts'
+import { setBridge, setLineage } from './state'
 
 export class BridgeError extends Error {
   code: string

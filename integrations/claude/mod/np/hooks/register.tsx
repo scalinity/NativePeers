@@ -2,12 +2,12 @@
 // mod's own files, the only places $ may be passed (the validator, X12).
 import type { EngineInterface, Register, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpProvider, NpWorker } from '../types'
-import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents.ts'
-import { BridgeError, followLineage, heartbeat, launch, request, shutdown, sleep } from './bridge.ts'
-import { MIRROR_TOOL } from './mirror.ts'
-import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow.ts'
-import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state.ts'
-import { PANE_ID, copyResume, interruptWorker, openPane, openView, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui.tsx'
+import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
+import { BridgeError, followLineage, heartbeat, launch, request, shutdown, sleep } from './bridge'
+import { MIRROR_TOOL } from './mirror'
+import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
+import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state'
+import { PANE_ID, copyResume, interruptWorker, openPane, openView, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'

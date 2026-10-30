@@ -3,12 +3,12 @@
 // declaration (the validator refuses $ handed to a closure, X12).
 import type { EngineInterface, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpInput, NpProvider, NpShadow } from '../types'
-import { BridgeError, request, sleep } from './bridge.ts'
-import { SENTINEL, shadowModel, TAGS } from './agents.ts'
-import { followUp, isBrief, requestId, unforwarded } from './inputs.ts'
-import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from './mirror.ts'
-import { NONE, getIndex, getMember, setFaults, setMember } from './state.ts'
-import type { Activity, Summary } from './mirror.ts'
+import { BridgeError, request, sleep } from './bridge'
+import { SENTINEL, shadowModel, TAGS } from './agents'
+import { followUp, isBrief, requestId, unforwarded } from './inputs'
+import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from './mirror'
+import { NONE, getIndex, getMember, setFaults, setMember } from './state'
+import type { Activity, Summary } from './mirror'
 
 const STEP_CAP_MS = 8 * 60 * 1000
 const QUIET_MS = 60 * 1000
