@@ -1,10 +1,11 @@
 """Install the Claude Code `np` mod at user scope through Claude Code's own plugin commands.
 
-The marketplace is this checkout's `integrations/claude/mod` folder, read in
-place: an edit there reaches sessions on `/reload-plugins` with no reinstall.
-Nothing edits Claude settings directly; the native commands make every change,
-and each install records what it did in an uninstall manifest. A repeat install
-performs zero operations.
+The marketplace is this checkout's `integrations/claude/mod` folder. Claude Code
+copies a plugin at install, and `claude plugin update` keys on the version alone,
+so an install whose copy differs from the checkout is refreshed by uninstalling
+and installing again. Nothing edits Claude settings directly; the native commands
+make every change, and each install records what it did in an uninstall manifest.
+A repeat install with an unchanged checkout performs zero operations.
 """
 from __future__ import annotations
 
@@ -47,6 +48,16 @@ def inspect(executable=None, source=SOURCE):
                 marketplace_matches=bool(market) and Path(market.get('path') or market.get('installLocation') or '').resolve() == Path(source).resolve())
 
 
+def stale(plugin, source):
+    """The installed copy differs from the checkout's plugin folder; the engine's own type files are not compared."""
+    if not plugin.get('installPath') or not Path(plugin['installPath']).is_dir():
+        return False
+    installed = Path(plugin['installPath'])
+    def tree(root):
+        return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('*') if p.is_file() and p.relative_to(root).parts[:2] != ('.claude-plugin', 'types')}
+    return tree(installed) != tree(Path(source)/PLUGIN)
+
+
 def plan(executable=None, source=SOURCE, remove=False):
     state = inspect(executable, source)
     market, plugin = state['marketplace'], state['plugin']
@@ -59,7 +70,9 @@ def plan(executable=None, source=SOURCE, remove=False):
         raise PeerError('OWNERSHIP_CONFLICT', f'Marketplace {MARKETPLACE} already points elsewhere',
                         details={'configured': market.get('path') or market.get('installLocation'), 'expected': str(source)})
     if not market:operations.append(['plugin', 'marketplace', 'add', str(source)])
-    if not plugin:operations.append(['plugin', 'install', f'{PLUGIN}@{MARKETPLACE}', '--scope', 'user'])
+    if plugin and stale(plugin, source):
+        operations += [['plugin', 'uninstall', f'{PLUGIN}@{MARKETPLACE}', '--scope', 'user'], ['plugin', 'install', f'{PLUGIN}@{MARKETPLACE}', '--scope', 'user']]
+    elif not plugin:operations.append(['plugin', 'install', f'{PLUGIN}@{MARKETPLACE}', '--scope', 'user'])
     elif not plugin.get('enabled'):operations.append(['plugin', 'enable', f'{PLUGIN}@{MARKETPLACE}', '--scope', 'user'])
     return state, operations
 
