@@ -45,11 +45,12 @@ export const HEADER_KEYS = ['model', 'effort', 'profile', 'workspace', 'title', 
 export type Header = { model?: string; effort?: string; profile?: 'analysis' | 'workspace'; workspace?: string | Record<string, unknown>;
   title?: string; fallbacks?: { provider: string; model?: string; reasoning_effort?: string }[]; quota_policy?: string; requirements?: Record<string, unknown> }
 
-const HEADER = /^\s*```np[ \t]*\r?\n([\s\S]*?)\r?\n```[ \t]*(?:\r?\n|$)/
+// The JSON may sit on the fence lines (```np {...}```), as the compose section shows it, or between them.
+const HEADER = /^\s*```np[ \t]*(?:\r?\n)?([\s\S]*?)(?:\r?\n)?[ \t]*```[ \t]*(?:\r?\n|$)/
 
 export function parseHeader(prompt: string): { header: Header; brief: string } | { error: string } {
   const found = HEADER.exec(prompt)
-  if (!found) return { header: {}, brief: prompt.trim() }
+  if (!found) return /^\s*```np\b/.test(prompt) ? { error: 'np header is not closed with ```' } : { header: {}, brief: prompt.trim() }
   const body = found[1] ?? ''
   if (body.length > 4096) return { error: 'np header exceeds 4 KiB' }
   let value: unknown

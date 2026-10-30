@@ -20,9 +20,11 @@ function elapsed(w: NpWorker, now: number): string {
   return w.startedAt ? duration((w.endedAt ?? now) - w.startedAt) : ''
 }
 
-export async function openView($: EngineInterface, agentId: string): Promise<void> {
+// Claude Code drops a finished agent's task about 30 s after it ends; its view is refused from then on.
+export async function openView($: EngineInterface, agentId: string, quiet = false): Promise<string | undefined> {
   const r: any = await $.ui.view({ agentId })
-  if (r?.deny) $.ui.toast('np: ' + r.deny)
+  if (r?.deny && !quiet) $.ui.toast('np: ' + r.deny)
+  return r?.deny
 }
 
 // Esc in a worker's view stops that worker (gate G4), so the band offers a way back.

@@ -16,6 +16,9 @@ export const NONE: NpShadow = { agentId: '', generation: 0, provider: 'codex', t
 
 export async function getBridge($: EngineInterface): Promise<NpBridge> { return read($, bridgeAtom) }
 export async function setBridge($: EngineInterface, value: NpBridge): Promise<void> { await update($, bridgeAtom, () => value) }
+export async function bridgeExited($: EngineInterface, socket: string, value: NpBridge): Promise<void> {
+  await update($, bridgeAtom, current => current.socket === socket ? value : current)
+}
 
 export async function getLineage($: EngineInterface): Promise<NpWorker[]> { return read($, lineageAtom) }
 export async function setLineage($: EngineInterface, value: NpWorker[]): Promise<void> { await update($, lineageAtom, () => value) }

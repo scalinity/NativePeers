@@ -27,6 +27,8 @@ let activated = false
 let inert = false
 let rebind = false
 let place: { cwd: string; npeer: string } | undefined
+let timers = false
+const offered = new Set<string>()
 
 function atLeast(version: string, minimum: number[]): boolean {
   const parts = version.split(/[.+-]/).map(Number)
@@ -50,16 +52,25 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
   place = { cwd, npeer: o.npeerPath || '/Users/danny/.local/bin/npeer' }
   const launched = await launch($, await $.session.id(), cwd, place.npeer)
   if ('reason' in launched) { $.ui.toast(`np: NativePeers bridge unavailable — ${launched.reason}; /np doctor`);return }
-  const usable: string[] = Array.isArray(launched.hello.providers) ? launched.hello.providers : [...PROVIDERS]
-  for (const provider of PROVIDERS) if (usable.includes(provider)) await $.agent.register(agentSpec(provider))
+  await ready($, launched.hello)
+  void followLineage($)
+  await pruneStore($)
+}
+
+// Runs on every bridge start: the first registers the tools and timers, and each
+// registers the agent types its bridge newly lists, so a bridge that was down when
+// the session began, or one that now lists a renewed provider, offers them.
+async function ready($: EngineInterface, hello: any): Promise<void> {
+  const usable: string[] = Array.isArray(hello.providers) ? hello.providers : [...PROVIDERS]
+  for (const provider of PROVIDERS) if (usable.includes(provider) && !offered.has(provider)) { await $.agent.register(agentSpec(provider));offered.add(provider) }
+  if (timers) return
+  timers = true
   await $.tool.register({ name: 'mirror', description: 'Internal: renders a NativePeers worker\'s activity. Calls outside a NativePeers shadow are refused.', isDeferred: true,
     inputSchema: { type: 'object', properties: { kind: { type: 'string' }, title: { type: 'string' }, detail: { type: 'string' }, ref: { type: 'string' } }, required: ['kind', 'title', 'ref'] } })
   await $.tool.register({ name: 'catalog', description: 'Read-only NativePeers catalog: providers, exact model ids with their efforts, the permission profiles this session may use, and a quota summary. Call once before choosing np:* models.', isDeferred: true,
     inputSchema: { type: 'object', properties: { provider: { type: 'string', enum: [...PROVIDERS] } } } })
   $.clock.every(15000, () => heartbeat($))
   $.clock.every(5000, () => statusLine($))
-  void followLineage($)
-  await pruneStore($)
 }
 
 async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>, o: Options): Promise<any> {
@@ -105,6 +116,7 @@ async function ensureBridge($: EngineInterface): Promise<string> {
   if (connected() || !place) return ''
   const launched = await launch($, await $.session.id(), place.cwd, place.npeer)
   if ('reason' in launched) return `bridge restart failed: ${launched.reason}`
+  await ready($, launched.hello)
   void followLineage($)
   return 'bridge restarted'
 }
@@ -158,27 +170,33 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
   const workers = await getLineage($)
   const pick = (n: string) => workers[Number(n) - 1]
   if (!verb) return { text: await statusText($) }
-  if (verb === 'pane') { await openPane($);return { text: 'np: lineage pane opened' } }
-  if (verb === 'doctor') { const restarted = await ensureBridge($);return { text: (restarted ? 'np: ' + restarted + '\n' : '') + await doctor($, o) } }
-  if (verb === 'open') { const w = pick(arg);if (!w?.agentId) return { text: 'np: no mirrored worker ' + arg };await openView($, w.agentId);return { text: `np: viewing ${w.title}` } }
-  if (verb === 'stop' && arg === 'all') return { text: `np: stopping ${await stopAll($)} group(s)` }
+  // Claude Code prefixes a command's text with the plugin's name.
+  if (verb === 'pane') { await openPane($);return { text: 'lineage pane opened' } }
+  if (verb === 'doctor') { const restarted = await ensureBridge($);return { text: (restarted ? restarted + '\n' : '') + await doctor($, o) } }
+  if (verb === 'open') {
+    const w = pick(arg);if (!w?.agentId) return { text: 'no mirrored worker ' + arg }
+    const denied = await openView($, w.agentId, true)
+    return { text: !denied ? `viewing ${w.title}` : `${w.title} cannot be opened: ${denied}` +
+      (['completed', 'failed', 'canceled', 'interrupted', 'timed_out'].includes(w.status) ? `. Claude Code drops a finished agent about 30 s after it ends; /np pane shows it, and the parent can still follow up with SendMessage` : '') }
+  }
+  if (verb === 'stop' && arg === 'all') return { text: `stopping ${await stopAll($)} group(s)` }
   if (verb === 'stop' || verb === 'interrupt' || verb === 'resume-cmd') {
     const w = pick(arg), s = w?.agentId ? await loadShadow($, w.agentId) : undefined
-    if (!w) return { text: 'np: no worker ' + arg }
+    if (!w) return { text: 'no worker ' + arg }
     const target = s ?? newShadow('', w.provider, w.title, '', 0, { workerId: w.workerId, generation: w.generation })
     if (verb === 'stop') await stopWorker($, target);else if (verb === 'interrupt') await interruptWorker($, target);else await copyResume($, target, surface)
-    return { text: `np: ${verb} ${w.title}` }
+    return { text: `${verb} ${w.title}` }
   }
   if (verb === 'attach' || verb === 'reattach') {
     const restarted = await ensureBridge($)
-    if (restarted.startsWith('bridge restart failed')) return { text: 'np: ' + restarted }
+    if (restarted.startsWith('bridge restart failed')) return { text: restarted }
     const active = workers.filter(w => ['queued', 'starting', 'running', 'waiting'].includes(w.status) && w.mirrorOwner !== 'other')
     const chosen = verb === 'reattach' ? active : arg === 'all' ? active.filter(w => !w.agentId) : [pick(arg)].filter(Boolean) as NpWorker[]
     const out: string[] = []
     for (const w of chosen) out.push(await attachWorker($, w, verb, true))
-    return { text: out.length ? 'np: ' + out.join('; ') : 'np: nothing to attach' }
+    return { text: out.length ? out.join('; ') : 'nothing to attach' }
   }
-  return { text: 'np: unknown subcommand. Try /np, /np pane, /np open N, /np stop N|all, /np interrupt N, /np attach N|all, /np reattach, /np doctor, /np resume-cmd N' }
+  return { text: 'unknown subcommand. Try /np, /np pane, /np open N, /np stop N|all, /np interrupt N, /np attach N|all, /np reattach, /np doctor, /np resume-cmd N' }
 }
 
 async function doctor($: EngineInterface, o: Options): Promise<string> {
@@ -265,8 +283,8 @@ export const register: Register = (on, options) => {
   on('tool.call', { tool: CATALOG }, async ($, e) => ({ result: JSON.stringify(await request($, 'GET', '/v1/catalog' + ((e as any).provider ? '?provider=' + (e as any).provider : ''))) }))
     .catch(() => ({ deny: 'NativePeers catalog unavailable — run /np doctor' }))
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => observeSpawn($, e, next, o)).catch(($, e, next) => next(e))
-  on('tool.call', { tool: 'mcp__nativepeers__worker_spawn' }, async ($, e, next) => observeSpawn($, e, next, o)).catch(($, e, next) => next(e))
-  on('tool.call', { tool: 'mcp__nativepeers__worker_resume' }, async ($, e, next) => observeSpawn($, e, next, o)).catch(($, e, next) => next(e))
+  // A pattern, not names: the nativepeers MCP server may be absent from the session the types were written in.
+  on('tool.call', { tool: /^mcp__nativepeers__worker_(spawn|resume)$/ }, async ($, e, next) => observeSpawn($, e, next, o)).catch(($, e, next) => next(e))
 
   on('tool.check', async ($, e, next) => {
     const s = e.agentId ? await loadShadow($, e.agentId) : undefined

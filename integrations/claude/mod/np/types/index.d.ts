@@ -8,6 +8,7 @@ export type NpBridge = {
   reason?: string
   since: number
   steer?: Partial<Record<NpProvider, boolean>>
+  socket?: string
 }
 
 export type NpWorker = {

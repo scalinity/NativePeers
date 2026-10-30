@@ -4,7 +4,7 @@
 // own 10 s budget (gate X11).
 import type { EngineInterface } from 'claude-code'
 import type { NpWorker } from '../types'
-import { setBridge, setLineage } from './state'
+import { bridgeExited, setBridge, setLineage } from './state'
 
 export class BridgeError extends Error {
   code: string
@@ -40,7 +40,7 @@ export async function sleep($: EngineInterface, ms: number): Promise<void> {
   await $.process.run(['/bin/sleep', String(ms / 1000)], { timeoutMs: ms + 10000 })
 }
 
-async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; text: string }, unknown>, generation: number): Promise<void> {
+async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; text: string }, unknown>, generation: number, socket: string): Promise<void> {
   let ended: unknown
   try {
     while (true) { const piece = await child.next();if (piece.done) { ended = piece.value;break } }
@@ -49,7 +49,8 @@ async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; 
   }
   if (connection?.generation !== generation) return
   connection = undefined
-  await setBridge($, { state: 'down', reason: 'bridge exited ' + JSON.stringify(ended ?? null).slice(0, 120), since: await $.clock.now() })
+  // After a hot reload the previous instance's bridge exits beside this one's: only its own bridge's exit marks the state down.
+  await bridgeExited($, socket, { state: 'down', reason: 'bridge exited ' + JSON.stringify(ended ?? null).slice(0, 120), since: await $.clock.now() })
 }
 
 // Starts `npeer bridge` for this session and reads its one ready line. The
@@ -78,14 +79,15 @@ export async function launch($: EngineInterface, session: string, cwd: string, n
   }
   if (!ready || ready.ready !== true || ready.protocol !== 1 || typeof ready.socket !== 'string' || typeof ready.token !== 'string') {
     void child.return(undefined as never)
-    const reason = (err.trim().split('\n').pop() || 'no ready line').slice(0, 300)
+    // A refusal arrives as {"ready":false,"error":{...}} on stdout; stderr holds anything else.
+    const reason = (ready?.error?.code ? `${ready.error.code}: ${ready.error.message ?? ''}` : err.trim().split('\n').pop() || 'no ready line').slice(0, 300)
     await setBridge($, { state: 'down', reason, since: await $.clock.now() })
     return { reason }
   }
   connection = { socket: ready.socket, token: ready.token, generation }
-  void pump($, child, generation)
   const { token: _token, ...hello } = ready
-  await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, since: await $.clock.now() })
+  await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: ready.socket, since: await $.clock.now() })
+  void pump($, child, generation, ready.socket)
   return { hello }
 }
 

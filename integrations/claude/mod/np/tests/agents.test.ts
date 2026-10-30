@@ -16,6 +16,10 @@ test('the np header is strict JSON with known keys and is stripped from the brie
   const ok = parseHeader('```np\n{"model":"gpt-6.1-sol","effort":"high","title":"Review"}\n```\nDo the review.')
   expect(ok).toEqual({ header: { model: 'gpt-6.1-sol', effort: 'high', title: 'Review' }, brief: 'Do the review.' })
   expect(parseHeader('Just a brief.')).toEqual({ header: {}, brief: 'Just a brief.' })
+  // The forms a model writes from the compose section's one-line example.
+  expect(parseHeader('```np {"model":"gpt-6.1-sol","effort":"high"}\n```\nDo it.')).toEqual({ header: { model: 'gpt-6.1-sol', effort: 'high' }, brief: 'Do it.' })
+  expect(parseHeader('```np {"effort":"low"}```\nDo it.')).toEqual({ header: { effort: 'low' }, brief: 'Do it.' })
+  expect((parseHeader('```np {"effort":"low"}\nDo it.') as any).error).toContain('not closed')
   expect((parseHeader('```np\n{"colour":"red"}\n```\nx') as any).error).toContain('unknown np header key "colour"')
   expect((parseHeader('```np\n{model: x}\n```\nx') as any).error).toContain('not strict JSON')
   expect((parseHeader('```np\n{"profile":"trusted"}\n```\nx') as any).error).toContain('analysis or workspace')
