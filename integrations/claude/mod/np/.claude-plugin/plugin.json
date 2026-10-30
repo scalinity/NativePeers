@@ -1,0 +1,18 @@
+{
+  "name": "np",
+  "version": "1.0.0",
+  "description": "NativePeers Lineage: NativePeers workers of every provider as native Claude Code subagents, with their live transcripts.",
+  "license": "LicenseRef-Private",
+  "author": { "name": "NativePeers" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "followupMode": { "type": "string", "title": "Follow-up mode", "description": "How a message typed to a running worker is delivered: queued after its current turn, or steered into it where the provider supports steering.", "default": "queue", "options": ["queue", "steer-if-supported"] },
+    "showReasoning": { "type": "string", "title": "Live reasoning", "description": "Show provider reasoning summaries while a worker runs (never recorded).", "default": "live", "options": ["live", "off"] },
+    "mirrorOutputBytes": { "type": "number", "title": "Mirrored tool output", "description": "Characters of each tool's output shown inline (head and tail).", "default": 8192 },
+    "band": { "type": "string", "title": "Lineage band", "description": "Show the band above the prompt.", "default": "auto", "options": ["auto", "always", "off"] },
+    "adoption": { "type": "string", "title": "Adopt npeer spawns", "description": "Mirror workers started with npeer spawn or worker_spawn.", "default": "auto", "options": ["auto", "ask", "off"] },
+    "npeerPath": { "type": "string", "title": "npeer path", "description": "The npeer executable that runs the session bridge.", "default": "/Users/danny/.local/bin/npeer" },
+    "allowFromClaudeSubagents": { "type": "boolean", "title": "Allow from Claude subagents", "description": "Let Claude subagents start np workers.", "default": false },
+    "notifyOnCompletion": { "type": "string", "title": "Completion notifications", "description": "Send a desktop notification when a worker that ran two minutes or more finishes.", "default": "off", "options": ["off", "long-only"] }
+  }
+}

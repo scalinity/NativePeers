@@ -1,0 +1,8 @@
+{"notifications": "ack",
+ "on": {"go": [
+   {"text": "main: three bad spawns", "tools": [
+     {"name": "Agent", "input": {"description": "refused", "subagent_type": "np:claude", "prompt": "Summarize the README."}},
+     {"name": "Agent", "input": {"description": "bad header", "subagent_type": "np:codex", "prompt": "```np\n{\"model\":\"x\",\"colour\":\"red\"}\n```\nDo it."}},
+     {"name": "Agent", "input": {"description": "not json", "subagent_type": "np:grok", "prompt": "```np\n{model: x}\n```\nDo it."}}]},
+   {"text": "main: done"}]},
+ "steps": [{"text": "main: idle"}]}

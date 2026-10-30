@@ -5,13 +5,14 @@ import type { Register, EngineInterface, TurnStepInput, TurnStepResult } from 'c
 //   { "steps": [Step, ...],            consumed in order by turns no rule picks
 //     "on": { "<prompt substring>": [Step, ...] },  a turn whose prompt holds the
 //                                                    substring runs that plan
-//     "notifications": "ack" }          a task-notification turn ends at once
+//     "notifications": "ack" | [[Step, ...], ...] }  a task-notification turn
+//                                       ends at once, or runs the next listed plan
 // Step = { "text"?, "tools"?: [{ "name", "input" }], "sleep_ms"? }. A step with
 // tools stops for tool_use; one without ends the turn. "${DIR}" in any string
 // becomes NP_FIXTURE_DIR, "${agent:TYPE}" the newest agent id of that type and
 // "${agent1:TYPE}" the oldest.
 type Step = { text?: string; tools?: { name: string; input: unknown }[]; sleep_ms?: number }
-type Script = { steps?: Step[]; on?: Record<string, Step[]>; notifications?: 'ack' }
+type Script = { steps?: Step[]; on?: Record<string, Step[]>; notifications?: 'ack' | Step[][] }
 
 let script: Script | undefined
 let cursor = 0
@@ -52,7 +53,11 @@ async function planStep($: EngineInterface, e: TurnStepInput): Promise<Step> {
     plan = undefined
     const messages = await $.session.messages()
     const prompt = String(messages.filter((m: any) => m.role === 'user').slice(-1)[0]?.text ?? '')
-    if (s.notifications === 'ack' && prompt.includes('<task-notification>')) { acks += 1; plan = [{ text: `main: ack ${acks}` }] }
+    if (s.notifications && prompt.includes('<task-notification>')) {
+      acks += 1
+      const scripted = Array.isArray(s.notifications) ? s.notifications[acks - 1] : undefined
+      plan = scripted ? [...scripted] : [{ text: `main: ack ${acks}` }]
+    }
     for (const [key, steps] of Object.entries(s.on ?? {})) if (!plan && prompt.includes(key)) plan = [...steps]
   }
   let step: Step | undefined
