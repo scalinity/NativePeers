@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS task_usage (task_id TEXT NOT NULL,attempt_index INTEG
  worker_id TEXT NOT NULL,provider TEXT NOT NULL,home TEXT NOT NULL,model TEXT NOT NULL,
  effort TEXT,started_at REAL NOT NULL,completed_at REAL NOT NULL,payload_json TEXT NOT NULL,
  PRIMARY KEY(task_id,attempt_index));
+CREATE TABLE IF NOT EXISTS activity_index (worker_id TEXT NOT NULL,generation INTEGER NOT NULL,task_id TEXT NOT NULL,
+ first_seq INTEGER NOT NULL,last_seq INTEGER NOT NULL,terminal_seq INTEGER,PRIMARY KEY(worker_id,generation,task_id));
 CREATE TABLE IF NOT EXISTS @POLICY@;
 CREATE INDEX IF NOT EXISTS messages_exchange ON messages(exchange_id);
 PRAGMA user_version=1;

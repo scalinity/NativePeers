@@ -10,6 +10,7 @@ import signal
 import sys
 import time
 
+from .activity import Recorder
 from .adapters.codex_app_server import AppServer,ProviderError
 from .artifacts import Artifacts
 from .errors import PeerError,require
@@ -59,6 +60,7 @@ class Worker:
         self.canceling_task=None;self.turn_task=None
         self.expected_native=self.native;self.model_observed=self.row['model_observed']
         self.fallback_pending=False;self.input_submitted=False
+        self.activity=Recorder(journal,worker_id,self.row['group_id'],self.row['provider'],lease=self.lease,cwd=self.row['cwd'],turn=lambda:self.turn)
 
     def emit(self,event,**payload):
         print(canonical(dict(event=event,worker_id=self.row['worker_id'],generation=self.row['generation'],**payload)).decode(),flush=True)
@@ -198,6 +200,8 @@ class Worker:
         task_spec=json.loads(task_row['task_json']);deadline=task_spec.setdefault('deadline',started+self.spec.get('wall_time_seconds',1800))
         task_spec.setdefault('input_text',text)
         self.journal.db.execute('UPDATE tasks SET task_json=? WHERE task_id=?',(canonical(task_spec).decode(),task_id))
+        from .activity.context import begin_task
+        begin_task(self.activity,self.journal,self.row,task_id,task_spec,text)
         text='NativePeers assigned worker title: '+self.row['role_title']+'. Provider: '+self.row['provider']+'.\n'+text+PROMPT
         self.journal.db.execute("UPDATE workers SET state='RUNNING' WHERE worker_id=?",(self.row['worker_id'],))
         reservation=None
@@ -312,6 +316,8 @@ class Worker:
                 ('FALLBACK_PENDING' if pending else result['status'].upper(),None if pending else artifact,self.turn,json.dumps(result.get('error')),task_id,self.row['generation']))
             if pending:self.retire_after_task=True;self.fallback_pending=True
             db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if self.retire_after_task else 'IDLE_GRACE',self.row['worker_id']))
+        from .activity.context import finish_task
+        finish_task(self.activity,self.row['provider'],result,None if pending else artifact)
         self.journal.event(task_id,'native-task-terminal',record)
         self.running_task=None;self.emit('fallback_pending' if pending else 'task_terminal',task_id=task_id,artifact_id=artifact,status=result['status'])
         self.turn_task=None
@@ -326,6 +332,7 @@ class Worker:
                 self.journal.db.execute("UPDATE workers SET state='IDLE_GRACE' WHERE worker_id=?",(self.row['worker_id'],))
         elif self.retire_after_task:await self.close()
         if reservation:budget.settle(reservation,observed_turns=1,native_id=self.native)
+        await self.activity.flush()
 
     async def cancel_task(self,task_id):
         if self.running_task!=task_id:return
@@ -370,6 +377,7 @@ class Worker:
                 except Exception:pass
                 continue
             if params.get('threadId')!=self.native:continue
+            self.activity.feed(event)
             if method=='thread/tokenUsage/updated' and params.get('turnId')==self.turn:
                 from .usage.events import codex_tokens
                 usage=codex_tokens(params)
@@ -417,6 +425,7 @@ class Worker:
             while line:=await self.provider.stdout.readline():
                 event=json.loads(line)
                 synthetic=evidence.observe(event)
+                if not synthetic:self.activity.feed(event)
                 emitted=event.get('session_id')
                 if emitted:require(emitted==self.expected_native,'OWNERSHIP_CONFLICT','Claude emitted another native ID')
                 if event.get('type')=='system' and event.get('subtype')=='init':
@@ -720,6 +729,9 @@ class Worker:
                 # peer follow-ups pinned to the old native identity.
                 db.execute("UPDATE tasks SET state='CANCELED',terminal_reason='WORKER_REPLACED_BEFORE_START' WHERE worker_id=? AND generation=? AND state='QUEUED'",(self.row['worker_id'],self.row['generation']))
             db.execute("UPDATE workers SET state='RELEASED_RESUMABLE' WHERE worker_id=? AND generation=?",(self.row['worker_id'],self.row['generation']))
+        # A task the controller never finished still gets exactly one terminal, matching the interrupted state settled above.
+        self.activity.terminal('interrupted',error=dict(code=self.shutdown_reason or 'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS',message='The controller stopped before the task ended'))
+        await self.activity.close()
         self.journal.db.execute("UPDATE peer_instances SET status='offline' WHERE pid=? AND process_start=?",(self.owner['pid'],self.owner['start']))
         self.emit('released',native_id=self.native)
 

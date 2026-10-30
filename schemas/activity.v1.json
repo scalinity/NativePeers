@@ -1,0 +1,984 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:nativepeers:activity:v1",
+  "title": "NativePeers activity v1",
+  "description": "One event line of $NPEER_HOME/activity/<worker_id>.ndjson. $defs.page is the data of `npeer activity`.",
+  "type": "object",
+  "required": [
+    "schema",
+    "seq",
+    "at",
+    "worker_id",
+    "group_id",
+    "task_id",
+    "generation",
+    "native_turn",
+    "item",
+    "kind",
+    "data",
+    "source"
+  ],
+  "properties": {
+    "schema": {
+      "const": "nativepeers.activity.v1"
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "at": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z$"
+    },
+    "worker_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "group_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "task_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "generation": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "native_turn": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "item": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "task.started",
+        "message.delta",
+        "message.completed",
+        "reasoning.delta",
+        "tool.started",
+        "tool.progress",
+        "tool.completed",
+        "files.changed",
+        "plan.updated",
+        "usage",
+        "input.queued",
+        "input.accepted",
+        "task.state",
+        "fallback.started",
+        "task.terminal",
+        "gap"
+      ]
+    },
+    "data": {
+      "type": "object"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "provider",
+        "event"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "codex",
+            "claude",
+            "antigravity",
+            "grok"
+          ]
+        },
+        "runtime_sha256": {
+          "type": "string"
+        },
+        "event": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "task.started"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/task.started"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "message.delta"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/message.delta"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "message.completed"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/message.completed"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "reasoning.delta"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/reasoning.delta"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "tool.started"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/tool.started"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "tool.progress"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/tool.progress"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "tool.completed"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/tool.completed"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "files.changed"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/files.changed"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "plan.updated"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/plan.updated"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "usage"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/usage"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "input.queued"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/input.queued"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "input.accepted"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/input.accepted"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "task.state"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/task.state"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "fallback.started"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/fallback.started"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "task.terminal"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/task.terminal"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "gap"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "$ref": "#/$defs/data/gap"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "data": {
+      "task.started": {
+        "type": "object",
+        "required": [
+          "origin",
+          "client_request_id",
+          "input_preview"
+        ],
+        "properties": {
+          "origin": {
+            "enum": [
+              "parent-model",
+              "human",
+              "controller",
+              "fallback"
+            ]
+          },
+          "client_request_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "input_preview": {
+            "type": "string"
+          }
+        }
+      },
+      "message.delta": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "message.completed": {
+        "type": "object",
+        "required": [
+          "text",
+          "is_final_candidate"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "is_final_candidate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "reasoning.delta": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "tool.started": {
+        "type": "object",
+        "required": [
+          "kind",
+          "title",
+          "input"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "exec",
+              "edit",
+              "read",
+              "search",
+              "web",
+              "mcp",
+              "plan",
+              "agent",
+              "other"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object"
+          }
+        }
+      },
+      "tool.progress": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "tool.completed": {
+        "type": "object",
+        "required": [
+          "status",
+          "output"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "error",
+              "declined",
+              "interrupted"
+            ]
+          },
+          "exit_code": {
+            "type": "integer"
+          },
+          "duration_ms": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output": {
+            "type": "object",
+            "required": [
+              "text",
+              "truncated"
+            ],
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "artifact_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "files.changed": {
+        "type": "object",
+        "required": [
+          "paths",
+          "stats",
+          "diff"
+        ],
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "stats": {
+            "type": "object",
+            "required": [
+              "added",
+              "removed"
+            ],
+            "properties": {
+              "added": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "removed": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "diff": {
+            "type": "object",
+            "required": [
+              "text",
+              "truncated"
+            ],
+            "properties": {
+              "text": {
+                "type": "string"
+              },
+              "truncated": {
+                "type": "boolean"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "artifact_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "plan.updated": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "text",
+                "status"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "status": {
+                  "enum": [
+                    "pending",
+                    "in_progress",
+                    "completed"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "usage": {
+        "type": "object",
+        "required": [
+          "cumulative"
+        ],
+        "properties": {
+          "input_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cached_input_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reasoning_tokens": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cumulative": {
+            "type": "boolean"
+          }
+        }
+      },
+      "input.queued": {
+        "type": "object",
+        "required": [
+          "client_request_id",
+          "origin",
+          "mode",
+          "preview"
+        ],
+        "properties": {
+          "client_request_id": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "queue",
+              "steer",
+              "resume"
+            ]
+          },
+          "preview": {
+            "type": "string"
+          }
+        }
+      },
+      "input.accepted": {
+        "type": "object",
+        "required": [
+          "client_request_id",
+          "native_turn"
+        ],
+        "properties": {
+          "client_request_id": {
+            "type": "string"
+          },
+          "native_turn": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "task.state": {
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "pattern": "^[A-Z_]+$"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "fallback.started": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "reason"
+        ],
+        "properties": {
+          "from": {
+            "type": "object",
+            "required": [
+              "provider",
+              "model"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "to": {
+            "type": "object",
+            "required": [
+              "provider",
+              "model"
+            ],
+            "properties": {
+              "provider": {
+                "type": "string"
+              },
+              "model": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "task.terminal": {
+        "type": "object",
+        "required": [
+          "status",
+          "final_text"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "completed",
+              "interrupted",
+              "failed",
+              "canceled",
+              "timed_out"
+            ]
+          },
+          "final_text": {
+            "type": "string"
+          },
+          "result_artifact_id": {
+            "type": "string"
+          },
+          "native_status": {
+            "type": "string"
+          },
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "gap": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "from_seq": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "dropped": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "event": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "page": {
+      "type": "object",
+      "required": [
+        "worker_id",
+        "events",
+        "next_seq",
+        "last_seq",
+        "more",
+        "gap"
+      ],
+      "properties": {
+        "worker_id": {
+          "type": "string"
+        },
+        "group_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "after": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "events": {
+          "type": "array",
+          "maxItems": 512,
+          "items": {
+            "$ref": "#"
+          }
+        },
+        "next_seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last_seq": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "timed_out": {
+          "type": "boolean"
+        },
+        "gap": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "from_seq",
+            "to_seq",
+            "reason"
+          ],
+          "properties": {
+            "from_seq": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "to_seq": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "generation",
+              "task_id",
+              "first_seq",
+              "last_seq",
+              "terminal_seq"
+            ],
+            "properties": {
+              "generation": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "first_seq": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "last_seq": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "terminal_seq": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -160,6 +160,8 @@ def plan(journal,caller,worker_ids,*,timeout=5,max_entries=10000,max_bytes=ARTIF
         value={'worker_id':row['worker_id'],'title':row['role_title'],'provider':row['provider'],'generation':row['generation'],'safe_candidate':False,
                'status':'refused','size_bytes':None,'size_complete':False,'procedure':None}
         candidates.append(value)
+        from .activity import listing
+        value['activity_logs']=listing(journal,row['worker_id'])
         try:
             manifest=_released(journal,row)
             source,work,baseline,mode=_workspace(journal,row,lease)

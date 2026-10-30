@@ -50,6 +50,8 @@ def parser():
             q.add_argument('--timeout-ms',type=int,default=30000,help='Bounded wait in milliseconds: 1 <= timeout-ms <= 30000 (default: 30000); larger values are rejected')
             q.add_argument('--on-timeout',choices=['push','retain'])
         if name=='cancel':q.add_argument('--reason',required=True)
+    q=command('activity');q.add_argument('worker_id');q.add_argument('--after',type=int,default=0);q.add_argument('--wait-ms',type=int,default=0)
+    q.add_argument('--item');q.add_argument('--max',type=int,default=512)
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
@@ -116,6 +118,9 @@ async def dispatch(args,journal):
     if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)
+    if name=='activity':
+        from .activity.command import activity
+        return await activity(core,caller,args)
     if name=='artifact-add':
         from .artifacts import Artifacts
         return Artifacts(journal).add_file(args.file,caller,max_bytes=args.max_bytes)
