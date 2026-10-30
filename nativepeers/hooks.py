@@ -45,7 +45,14 @@ def observe(provider, event, journal):
             if boundary['pid']==peer['pid'] and boundary['start']==peer['process_start'] and native_ancestor(registered,[boundary]):
                 return prompt_guard(provider,event,journal,peer)
         require(boundary and boundary['executable']==str(binary),'CALLER_UNBOUND','No direct native provider owner in hook ancestry')
-    owners=[p for p in ancestors if p['executable']==str(binary)]
+    desktop=set()
+    if provider=='claude':
+        # The desktop app's own engine copies are Claude owners once approved by path and SHA-256 (§6.7).
+        from .caller import native_binaries
+        from .desktop_host import approve_nearest, paths
+        if event['hook_event_name']=='SessionStart':approve_nearest(journal,ancestors,{str(p) for p in native_binaries(journal)})
+        desktop=paths(journal)
+    owners=[p for p in ancestors if p['executable']==str(binary) or p['executable'] in desktop]
     require(owners,"CALLER_UNBOUND","No exact native provider owner in hook ancestry")
     owner=owners[0]
     if bootstrap:
@@ -97,13 +104,17 @@ def observe(provider, event, journal):
         require(header.get('type')=='session_meta' and header.get('payload',{}).get('id')==event['session_id'],
                 'OWNERSHIP_CONFLICT','Native history header differs from the hook UUID')
     native_title=codex_name(home,event['session_id']) if provider=='codex' else claude_name(home,event['session_id'],owner['pid'])
-    transport={'kind':'codex-native-queue'}
+    transport={'kind':'codex-native-queue'};capabilities=None
     if provider=='claude':
         endpoint=os.getenv('CLAUDE_CODE_MESSAGING_SOCKET')
-        require(endpoint,'UNSUPPORTED_TRANSPORT','This native session has no inbox')
-        path=Path(endpoint.removeprefix('uds:'));info=path.lstat()
-        require(stat.S_ISSOCK(info.st_mode) and info.st_uid==os.getuid(),'TARGET_GONE','Unexpected inbox endpoint')
-        transport={'kind':'claude-inbox','endpoint':endpoint,'endpoint_identity':[info.st_dev,info.st_ino]}
+        if not endpoint and owner['executable'] in desktop:
+            # A desktop session without an inbox is a mirror-only parent: it may spawn, and its completions are retained.
+            transport={'kind':'none'};capabilities={'mirror':True}
+        else:
+            require(endpoint,'UNSUPPORTED_TRANSPORT','This native session has no inbox')
+            path=Path(endpoint.removeprefix('uds:'));info=path.lstat()
+            require(stat.S_ISSOCK(info.st_mode) and info.st_uid==os.getuid(),'TARGET_GONE','Unexpected inbox endpoint')
+            transport={'kind':'claude-inbox','endpoint':endpoint,'endpoint_identity':[info.st_dev,info.st_ino]}
     mode=event.get('permission_mode')
     # Analysis is the only inferred worker grant. Workspace is granted only when native mode is known.
     profiles=['analysis']
@@ -111,7 +122,7 @@ def observe(provider, event, journal):
     from .policy import load
     local=load(journal)
     policy={'profiles':profiles,'max_depth':local['max_depth'],'max_concurrent_workers':local['workers_per_group'],'permission_mode_observed':mode}
-    peer=registry.register(provider,home,event['session_id'],native_title,owner,event['cwd'],transport,policy=policy,queue_resume=queued)
+    peer=registry.register(provider,home,event['session_id'],native_title,owner,event['cwd'],transport,policy=policy,capabilities=capabilities,queue_resume=queued)
     transcript=event.get('transcript_path')
     if transcript:
         path=Path(transcript).resolve()
