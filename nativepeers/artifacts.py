@@ -10,7 +10,20 @@ from .errors import PeerError, require
 from .models import ARTIFACT_MAX, RESULT_PAGE, new_id
 
 
-def _selected_file_bytes(path, max_bytes):
+def private_artifact_path(path):
+    """The same name/content boundary for direct imports and selected Git context."""
+    from .worktrees import sensitive
+    path=Path(str(path).lower())
+    names={'.ssh','.aws','.azure','.codex','.claude','.gemini','gcloud',
+           '.netrc','.npmrc','.pypirc','.git-credentials','.pgpass',
+           'credentials','credentials.json','token.json','tokens.json','transcripts',
+           'id_dsa','id_ecdsa','.secrets','secrets.json','secrets.yaml','secrets.yml'}
+    return (sensitive(str(path)) or any(part in names for part in path.parts)
+            or path.suffix in ('.pem','.key','.p12','.pfx','.kdbx')
+            or (path.suffix=='.jsonl' and (path.stem in ('transcript','transcripts') or path.name.startswith('rollout-'))))
+
+
+def _selected_file_bytes(path, max_bytes, *, metadata=False):
     # Walk with directory descriptors so replacing any component with a symlink
     # cannot redirect the import after validation. Nonblocking opens reject FIFOs.
     directory = os.open(path.anchor, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -34,7 +47,7 @@ def _selected_file_bytes(path, max_bytes):
         require((before.st_size, before.st_mtime_ns, before.st_ctime_ns) ==
                 (after.st_size, after.st_mtime_ns, after.st_ctime_ns) and len(raw) == after.st_size,
                 'PROTOCOL_ERROR', 'Selected artifact changed during import')
-        return raw
+        return (raw, stat.S_IMODE(after.st_mode)) if metadata else raw
     finally:
         os.close(directory)
 
@@ -45,7 +58,6 @@ class Artifacts:
 
     def add_file(self, path, caller, *, max_bytes=ARTIFACT_MAX):
         from .registry import Registry
-        from .worktrees import sensitive
 
         require(caller.kind == 'peer' and caller.incarnation, 'CALLER_UNBOUND',
                 'Artifact import requires a verified native caller')
@@ -62,14 +74,7 @@ class Artifacts:
             "SELECT DISTINCT json_extract(descriptor_json,'$.home') AS home FROM peer_instances"))
         private_roots.extend(Path(os.environ[name]).expanduser().resolve()
                              for name in ('CODEX_HOME', 'CLAUDE_CONFIG_DIR') if os.environ.get(name))
-        private_names = {'.ssh', '.aws', '.azure', '.codex', '.claude', '.gemini', 'gcloud',
-                         '.netrc', '.npmrc', '.pypirc', '.git-credentials', '.pgpass',
-                         'credentials', 'credentials.json', 'token.json', 'tokens.json', 'transcripts',
-                         'id_dsa', 'id_ecdsa', '.secrets', 'secrets.json', 'secrets.yaml', 'secrets.yml'}
-        require(not sensitive(str(path).lower()) and not any(part.lower() in private_names for part in path.parts)
-                and path.suffix.lower() not in ('.pem', '.key', '.p12', '.pfx', '.kdbx')
-                and not (path.suffix.lower() == '.jsonl' and
-                         (path.stem.lower() in ('transcript', 'transcripts') or path.name.lower().startswith('rollout-')))
+        require(not private_artifact_path(path)
                 and not any(path.is_relative_to(root) for root in private_roots),
                 'APPROVAL_BLOCKED', 'Credentials, private native state and transcripts cannot be imported')
         try:
@@ -99,7 +104,7 @@ class Artifacts:
         allowed=set(json.loads(row['allowed_readers_json']));allowed.update(readers)
         self.journal.db.execute('UPDATE artifacts SET allowed_readers_json=? WHERE artifact_id=?',(json.dumps(sorted(allowed)),handle))
 
-    def read(self, handle, caller, offset=0, limit=RESULT_PAGE):
+    def read(self, handle, caller, offset=0, limit=RESULT_PAGE, *, text=False):
         require(isinstance(offset, int) and offset >= 0 and isinstance(limit, int) and 0 < limit <= RESULT_PAGE,
                 "PROTOCOL_ERROR", "Invalid artifact page")
         row = self.journal.one("SELECT * FROM artifacts WHERE artifact_id=?", (handle,))
@@ -112,10 +117,21 @@ class Artifacts:
         with os.fdopen(fd, "rb") as f:
             require(hashlib.file_digest(f, "sha256").hexdigest() == row["sha256"], "PROTOCOL_ERROR", "Artifact content changed")
             f.seek(offset); raw = f.read(limit)
-        return dict(artifact_id=handle, sha256=row["sha256"], media_type=row["media_type"],
+        if text:
+            try:decoded=raw.decode('utf-8')
+            except UnicodeDecodeError as error:
+                require(error.reason=='unexpected end of data' and error.end==len(raw) and error.start>0 and offset+len(raw)<row['byte_size'],
+                        'PROTOCOL_ERROR','Text page is not complete UTF-8; use the previous next_offset and a larger limit, or an exact base64 read')
+                raw=raw[:error.start];decoded=raw.decode('utf-8')
+        result=dict(artifact_id=handle, sha256=row["sha256"], media_type=row["media_type"],
                     byte_size=row["byte_size"], offset=offset, bytes_read=len(raw),
                     data_base64=base64.b64encode(raw).decode(),
                     next_offset=offset+len(raw) if offset+len(raw)<row["byte_size"] else None)
+        if text:
+            result.pop('data_base64')
+            result['text']=decoded;result['text_decode_lossy']=False
+            result['encoding']='utf-8; next_offset preserves complete characters; base64 reads preserve arbitrary bytes'
+        return result
 
     def export(self,handle,path,caller):
         """Write one granted immutable artifact to a new local file, atomically."""

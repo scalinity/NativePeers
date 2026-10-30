@@ -81,7 +81,7 @@ class GrokStreamTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(error['code'],'BUDGET_EXHAUSTED')
                 self.assertIn('max_native_turns_per_task',error['message'])
                 self.assertIn('200',error['message'])
-                self.assertEqual(error['limit'],{'field':'limits.max_native_turns_per_task','value':200,'native_flag':'--max-turns'})
+                self.assertEqual(error['limit'],{'field':'limits.max_native_turns_per_task','value':200,'native_flag':'--max-turns','observed':200})
                 self.assertEqual(error['native_diagnostic']['stopReason'],reason)
 
     def test_terminal_reason_and_engine_attribution(self):

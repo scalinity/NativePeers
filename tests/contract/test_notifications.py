@@ -170,7 +170,7 @@ class NotificationTests(unittest.IsolatedAsyncioTestCase):
                 bounded_text(text);bodies.append(text);return {'state':'ACCEPTED_QUEUED','message_id':new_id()}
         class FakeCore:
             def __init__(s,j):s.router=FakeRouter()
-        with patch('nativepeers.core.Core',FakeCore),patch('nativepeers.delegation.Delegation.result',return_value={'results':results}):await self.group.notify()
+        with patch('nativepeers.core.Core',FakeCore),patch('nativepeers.delegation.Delegation.result',return_value={'results':results,'tasks':self.group.tasks(),'progress':{'active_tasks':0,'queued_tasks':0}}):await self.group.notify()
         self.assertEqual(self.route()['state'],'PUSH_ACCEPTED');self.assertLessEqual(len(bodies[0].encode()),INLINE_BODY)
         self.assertEqual(bodies[0].count(' · COMPLETED'),4)
         for expected in results:

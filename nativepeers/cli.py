@@ -38,12 +38,15 @@ def parser():
         else:q.add_argument('message_id')
         source=q.add_mutually_exclusive_group(required=True);source.add_argument('--message');source.add_argument('--message-file',type=Path)
         q.add_argument('--request-reply',action='store_true');q.add_argument('--client-request-id')
+        q.add_argument('--artifact',action='append',default=[])
     q=command('inbox');q.add_argument('--unread',action='store_true');q.add_argument('--limit',type=int,default=20);q.add_argument('--page',action='store_true');q.add_argument('--cursor');q.add_argument('--retained',action='store_true')
     q=command('notifications');q.add_argument('action',choices=['open','close','status'])
     q=command('ack');q.add_argument('message_id')
     q=command('spawn');q.add_argument('--spec',type=Path,required=True);q.add_argument('--check',action='store_true')
+    q.add_argument('--compact',action='store_true')
     for name in ['status','result','wait','cancel']:
         q=command(name);q.add_argument('handle')
+        if name in ('status','result'):q.add_argument('--compact',action='store_true')
         if name=='status':q.add_argument('--explain-selection',action='store_true');q.add_argument('--refresh',action='store_true');q.add_argument('--scan-cursor');q.add_argument('--scan-max-bytes',type=int)
         if name=='result':q.add_argument('--include-artifacts',action='store_true')
         if name=='wait':
@@ -61,6 +64,10 @@ def parser():
     q.add_argument('--task-id');q.add_argument('--generation',type=int);q.add_argument('--outcome',choices=['killed']);q.add_argument('--check-only',action='store_true')
     q.add_argument('--client-request-id');q.add_argument('--claude-session')
     q=command('artifact-add');q.add_argument('--file',type=Path,required=True);q.add_argument('--max-bytes',type=int,default=10485760)
+    q=command('context-prepare');q.add_argument('--project',type=Path);q.add_argument('--path',action='append',required=True,dest='paths')
+    q.add_argument('--base',default='HEAD');q.add_argument('--untracked',action='append',default=[])
+    q.add_argument('--runtime',action='append',default=[],choices=['claude','codex','antigravity','grok']);q.add_argument('--max-bytes',type=int,default=262144)
+    q=command('context-check');q.add_argument('handle');q.add_argument('--project',type=Path)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
     q=command('cleanup');action=q.add_mutually_exclusive_group(required=True)
@@ -70,7 +77,7 @@ def parser():
     action.add_argument('--plan',action='store_true');action.add_argument('--apply',action='store_true');action.add_argument('--unarchive',action='store_true')
     q.add_argument('--worker-id',action='append',default=[]);q.add_argument('--limit',type=int,default=100);q.add_argument('--manifest',type=Path,required=True)
     q.add_argument('--automation-manifest',type=Path,action='append',default=[])
-    q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144)
+    q=command('artifact-read');q.add_argument('handle');q.add_argument('--offset',type=int,default=0);q.add_argument('--limit',type=int,default=262144);q.add_argument('--text',action='store_true')
     q=command('resume-command');q.add_argument('worker_id');q.add_argument('--explain',action='store_true')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
@@ -117,14 +124,14 @@ async def dispatch(args,journal):
     if name in ('send','reply'):
         return await core.router.send(caller,args.to if name=='send' else 'reply-author',
             args.message if args.message is not None else read_file(args.message_file),expect_reply=args.request_reply,
-            client_request_id=args.client_request_id,in_reply_to=args.message_id if name=='reply' else None)
+            client_request_id=args.client_request_id,in_reply_to=args.message_id if name=='reply' else None,artifact_refs=args.artifact)
     if name=='inbox':return core.router.inbox(caller,args.limit,args.unread,cursor=args.cursor,paged=args.page,retained=args.retained)
     if name=='notifications':return await core.tool(caller,'peer_notifications',dict(action=args.action))
     if name=='ack':return core.router.ack(caller,args.message_id)
     if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
-    if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)),check=args.check)
-    if name=='status':return await core.status(caller,args.handle,refresh=args.refresh,scan_cursor=args.scan_cursor,scan_max_bytes=args.scan_max_bytes,explain_selection=args.explain_selection)
-    if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts)
+    if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)),check=args.check,compact=args.compact)
+    if name=='status':return await core.status(caller,args.handle,refresh=args.refresh,scan_cursor=args.scan_cursor,scan_max_bytes=args.scan_max_bytes,explain_selection=args.explain_selection,compact=args.compact)
+    if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts,compact=args.compact)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)
     if name=='activity':
@@ -142,6 +149,12 @@ async def dispatch(args,journal):
         body=dict(worker_id=args.worker_id,claude_agent_id=args.claude_agent_id,task_id=args.task_id,generation=args.generation,outcome=args.outcome,
                   client_request_id=args.client_request_id,check_only=args.check_only or None)
         return await backend.mirror(args.action,{k:v for k,v in body.items() if v is not None})
+    if name=='context-check':
+        from .selected_context import compare
+        return compare(journal,caller,args.handle,project=args.project)
+    if name=='context-prepare':
+        from .selected_context import prepare
+        return prepare(journal,caller,args.paths,project=args.project,base=args.base,untracked=args.untracked,runtimes=args.runtime,max_bytes=args.max_bytes)
     if name=='artifact-add':
         from .artifacts import Artifacts
         return Artifacts(journal).add_file(args.file,caller,max_bytes=args.max_bytes)
@@ -176,7 +189,7 @@ async def dispatch(args,journal):
         from .files import atomic_json
         atomic_json(args.manifest.with_name(args.manifest.name+('.unarchive-result.json' if args.unarchive else '.result.json')),result)
         return result
-    if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit))
+    if name=='artifact-read':return await core.tool(caller,'artifact_read',dict(handle=args.handle,offset=args.offset,limit=args.limit,text=args.text))
     if name in ('resume-worker','resume-command'):
         from .recovery import resume_command,resume_worker
         return resume_command(journal,caller,args.worker_id,explain=args.explain) if name=='resume-command' else await resume_worker(journal,caller,args.worker_id,read_file(args.task_file),args.completion_mode,args.client_request_id)

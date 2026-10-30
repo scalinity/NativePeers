@@ -226,7 +226,7 @@ class Stream:
             error=diagnostic(event,submitted=True,code=code,provider='grok')
             if reason in ('max_turn_requests','max_turns'):
                 error.update(message=f'Grok reached limits.max_native_turns_per_task ({self.native_max_turns}); native --max-turns ended this input.',
-                             limit=dict(field='limits.max_native_turns_per_task',value=self.native_max_turns,native_flag='--max-turns'))
+                             limit=dict(field='limits.max_native_turns_per_task',value=self.native_max_turns,native_flag='--max-turns',observed=event.get('num_turns')))
         return dict(status='completed' if success else 'canceled' if canceled else 'failed',text=''.join(self.text),
                     usage=event.get('usage'),error=error,model_usage=event.get('modelUsage'),native_request_id=event.get('requestId'),
                     native_internal_rounds=event.get('num_turns'))

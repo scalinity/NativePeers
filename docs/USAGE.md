@@ -242,3 +242,49 @@ Usage intelligence and its exact commands, native sources, installation, freshne
 Use `npeer status GROUP_ID --explain-selection --json` (MCP `task_status` with `explain_selection:true`) to inspect canonical home/layout, requested and observed models, effort, current cached pool measurements, local demand and release closure. This inspection does not refresh usage or reserve quota. Use `npeer resume-command WORKER_ID --explain --json` for an ownership-only resume prerequisite report; live/unknown captured births and missing pipe proof retain ownership. A normal resume still verifies external native ownership and exact history.
 
 Isolated input preparation is limited to 20 seconds across capture, revalidation and materialization. Git dirty/selected input bytes are bounded at 10 MiB and explicit Git selections at 1024 files; selected non-Git copies retain their 256-file/10 MiB bounds. Plans show selected bytes/files and dirty patch size. Oversized inputs must be narrowed before dispatch. Retained unique workspaces are never swept automatically.
+
+## Bounded review and selected ownership handoffs
+
+Use `context-prepare --project /absolute/repo --base BASE --path PATH` to capture
+an exact selected diff and base/current source in one immutable artifact. New
+untracked files require both `--path` and `--untracked`. The default packet limit
+is 262144 bytes; an oversized selection reports its measured size and is refused
+without truncation. `--max-bytes` can explicitly select up to 10 MiB. Unselected
+paths and native histories are omitted. External diff, textconv, pagers and custom
+filters never execute; selected filters are refused. Current dirty/staged content,
+file digests/modes, base/HEAD and observation time remain distinct.
+
+Tailor [bounded-review.json](../examples/bounded-review.json), put the returned
+`context_refs` on its worker and use `spawn --check --compact --spec FILE --json`.
+The concise view reuses the normal identity, readiness and limit checks. Planned
+tools are labeled separately from native effective tools observed after launch.
+A Claude analysis request for `requirements.required_tools:["git_diff"]` needs a
+prepared packet; no Bash or workspace escalation is granted. Dispatch with the
+same specification after resolving blockers. Read-only workers can call
+`artifact_read` with `text:true, limit:16000` to fit native tool-output limits (CLI `artifact-read HANDLE --text`) and follow
+`next_offset`; default base64 pages remain available for exact binary/byte reads.
+UTF-8 text pages end on complete characters; follow their byte `next_offset`. Invalid UTF-8 or a misaligned arbitrary offset requires exact base64 mode.
+
+`result TASK_ID --compact --json` selects only that task's bounded preview. Group
+compact reads show initial outcome counts, latest phase, active/queued work and
+two recent tasks, preserving historical failures. Findings, checks, limitations,
+errors and omitted previews link to the full immutable result/artifact. Full
+`result` and `--include-artifacts` remain available; compact and artifact-page
+modes are mutually exclusive. Compact reads do not claim completion or delivery.
+CLI and MCP use the same representation (`compact:true`). Worker IDs get a typed
+error with the owning group inspection route rather than being guessed as tasks.
+
+For authorized peer coordination, `context-prepare` can add selected runtime facts
+with `--runtime codex` (or another named provider). `send` and `reply` accept
+repeated `--artifact HANDLE`; MCP accepts `artifact_refs`. The existing artifact
+reader grants apply. A recipient runs `context-check HANDLE --project PATH` to
+compare frozen selected file digests/modes, HEAD and selected/approved runtime
+fingerprints with current observations. It changes no Git/runtime/account state.
+The packet records no transport or model acknowledgment; use exact message status
+for admission/ingestion and retain uncertainty without replay.
+
+Completion notices label their task/phase and actual error, native cap/configured
+value and observed count when reported. Their preparation-time group context
+separates initial failures, later results and active follow-ups. Retained immutable
+records remain authoritative after that snapshot. Quiet routing remains governed
+by [the notification policy](NOTIFICATIONS.md).

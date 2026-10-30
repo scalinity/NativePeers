@@ -1,3 +1,17 @@
+# Evaluation backlog — source qualified, installed dependency pending (2026-10-30)
+
+- [x] Integrate existing budget PR5 with separate logical inputs, native rounds, walls and waits.
+- [x] Implement selected immutable diff/source packets, compact preflight/results, historical task attribution, phase/failure notices and source/runtime handoffs for issues10–14.
+- [x] Complete useful native Claude review and an exact59057-byte artifact-only recheck; fix encoding, comparison, source-import and subsequent GitHub findings with regressions.
+- [x] Qualify deliberate native cap failures and separate completed/queued later phases; retain actual failed attempts and reported counter semantics.
+- [x] Pass final combined source suite:1099 tests/1048 subtests, four skips. Preserve earlier failed runs and their scope in the qualification record.
+- [ ] Coordinate affected installed source/runtime qualification with the separately owned issue7 transition. Source publication does not activate the selected package.
+- [ ] Obtain genuine delayed-controller-frame and standalone visible-tail acceptance, complete actual peer coordination, append the observed evaluation and close only accepted issues.
+
+[Source/candidate qualification](evidence/np-eval-backlog.json) · [Acceptance tracker16](https://github.com/scalinity/NativePeers/issues/16). The fixed rubric and historical64.5/100 remain unchanged. No installed/TUI acceptance is inferred from these source and candidate-native checks.
+
+---
+
 # NativePeers Lineage for Claude Code (in progress, 2026-10-30)
 
 Contract: docs/CLAUDE_LINEAGE_MOD.md rev 1.0 (sha256 e9e03790…40b9) · kickoff docs/CLAUDE_LINEAGE_KICKOFF.md rev 1.0 (sha256 af4724f4…b769). Branch `feat/claude-lineage-mod` in `.worktrees/claude-lineage-mod`, base `0ee014f`. Claude Code 2.1.314 (sha256 21d6e7b9…32ed).
