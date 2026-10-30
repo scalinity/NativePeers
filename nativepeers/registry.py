@@ -36,8 +36,8 @@ class Registry:
             if queue_resume:
                 # A queue may bootstrap a cold native resume, never revive a
                 # replaced writer or displace an independently live owner.
-                known=db.execute('SELECT 1 FROM peer_instances WHERE peer_key=? AND pid=? AND process_start=?',
-                                 (key.handle,owner['pid'],owner['start'])).fetchone()
+                known=db.execute('SELECT 1 FROM peer_instances WHERE pid=? AND process_start=?',
+                                 (owner['pid'],owner['start'])).fetchone()
                 current=db.execute("SELECT descriptor_json FROM peer_instances WHERE peer_key=? AND status='live' ORDER BY last_seen DESC LIMIT 1",(key.handle,)).fetchone()
                 require(not known and (not current or not matches(json.loads(current[0])['owner'])),
                         'TARGET_REBOUND','Queue registration cannot replace an existing native writer')

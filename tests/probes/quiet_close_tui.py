@@ -71,7 +71,9 @@ ACTIVE = re.compile(r"(?:esc to interrupt|working(?:\s|\.|…)|thinking(?:\s|\.|
 
 def require_quiet_frame(frame, final):
     text = "\n".join(frame.get("chat_tail", []) + frame["lines"])
-    tail = text.rsplit(final, 1)[-1] if final and final in text else text
+    if final and text.count(final) > 1:
+        raise RuntimeError("The identifiable final was rendered again after its original boundary")
+    tail = text.split(final, 1)[-1] if final and final in text else text
     forbidden = ("Blocked by hook", "NativePeers notification retained", "completion-phase-closed",
                  "notification-phase-closed", "retained notification", "retention notice")
     if any(value.lower() in tail.lower() for value in forbidden):
@@ -304,25 +306,66 @@ class Family:
         return self.cleanup
 
 
+def abort_constructor(process, run, role, error):
+    """Stop only this Popen child if native birth inspection failed.
+
+    Its unreaped child PID is owned. No unverified process group is signaled;
+    descendant and output cleanup stay explicitly uncertain and refuse a pass.
+    """
+    record = {"status": "FAIL", "error": repr(error), "pid": process.pid,
+              "ownership": "child returned by this Popen; no native birth established",
+              "descendant_cleanup": "UNVERIFIED", "output_eof": False, "signals": []}
+    try:
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            if process.poll() is None:
+                process.send_signal(sig)
+                record["signals"].append(sig.name)
+            try:
+                record["exit_code"] = process.wait(timeout=STOP_WAIT)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        record["child_dead"] = process.poll() is not None
+    except BaseException as cleanup_error:
+        record["cleanup_error"] = repr(cleanup_error)
+    for stream in (process.stdin, process.stdout):
+        if stream is not None:
+            stream.close()
+    try:
+        save(run / f"{role}.constructor-failure.json", record)
+    except BaseException as save_error:
+        error.add_note("Launch record could not be saved: " + repr(save_error))
+    error.add_note("Owned constructor failure: " + json.dumps(record))
+
+
 class Tui(Family):
     def __init__(self, command, cwd, env, run, role, emulator):
         master, slave = pty.openpty()
-        fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLS, 0, 0))
+        process = None
+        self.master, self.role, self.run, self.eof = master, role, run, False
+        self.raw = self.timeline = None
         try:
+            fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", ROWS, COLS, 0, 0))
+            self.raw = (run / f"{role}.ansi").open("wb", buffering=0)
+            self.timeline = (run / f"{role}.frames.jsonl").open("w")
+            self.screen = emulator.HistoryScreen(COLS, ROWS, history=10000)
+            self.stream = emulator.Stream(self.screen)
+            self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
+            self.frames, self.offset, self.audit = [], 0, None
             process = subprocess.Popen(command, cwd=cwd, env=env, stdin=slave, stdout=slave, stderr=slave,
                                        start_new_session=True, close_fds=True)
+            super().__init__(process)
+            save(run / f"{role}.launch.json", {"command": command, "cwd": str(cwd), "owner": self.birth})
+        except BaseException as error:
+            if process is not None:
+                abort_constructor(process, run, role, error)
+            os.close(master)
+            for stream in (self.raw, self.timeline):
+                if stream is not None:
+                    stream.close()
+            raise
         finally:
             os.close(slave)
-        self.master, self.role, self.run, self.eof = master, role, run, False
-        self.raw = (run / f"{role}.ansi").open("wb", buffering=0)
-        self.timeline = (run / f"{role}.frames.jsonl").open("w")
-        self.screen = emulator.HistoryScreen(COLS, ROWS, history=10000)
-        self.stream = emulator.Stream(self.screen)
-        self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
-        self.frames, self.offset = [], 0
-        self.audit = None
-        super().__init__(process)
-        save(run / f"{role}.launch.json", {"command": command, "cwd": str(cwd), "owner": self.birth})
 
     def pump(self):
         self.capture()
@@ -390,16 +433,26 @@ class Metadata(Family):
     ALLOWED = {"initialize", "hooks/list", "config/read", "config/batchWrite", "thread/queue/list"}
 
     def __init__(self, binary, cwd, env, run, role):
-        self.log = (run / f"{role}.rpc.jsonl").open("w")
-        self.errors = (run / f"{role}.stderr").open("wb")
-        command = [str(binary), "app-server", "--listen", "stdio://"]
-        save(run / f"{role}.launch.json", {"command": command, "cwd": str(cwd), "scope": "metadata-only"})
-        process = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                   stderr=self.errors, start_new_session=True, close_fds=True)
-        self.items, self.eof, self.sequence = queue.Queue(), False, 0
-        super().__init__(process)
-        self.reader = threading.Thread(target=self.read, daemon=True)
-        self.reader.start()
+        self.log = self.errors = None
+        process = None
+        try:
+            self.log = (run / f"{role}.rpc.jsonl").open("w")
+            self.errors = (run / f"{role}.stderr").open("wb")
+            command = [str(binary), "app-server", "--listen", "stdio://"]
+            save(run / f"{role}.launch.json", {"command": command, "cwd": str(cwd), "scope": "metadata-only"})
+            process = subprocess.Popen(command, cwd=cwd, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                       stderr=self.errors, start_new_session=True, close_fds=True)
+            self.items, self.eof, self.sequence = queue.Queue(), False, 0
+            super().__init__(process)
+            self.reader = threading.Thread(target=self.read, daemon=True)
+            self.reader.start()
+        except BaseException as error:
+            if process is not None:
+                abort_constructor(process, run, role, error)
+            for stream in (self.log, self.errors):
+                if stream is not None:
+                    stream.close()
+            raise
 
     def start(self):
         self.call("initialize", {"clientInfo": {"name": "quiet-close-tui-metadata", "version": "1"},
@@ -580,7 +633,9 @@ def native_tail(home, native_id, final, forbidden=()):
                       if record.get("type") == "event_msg" and record.get("payload", {}).get("type") == "task_complete"
                       and record["payload"].get("last_agent_message") == final]
         if boundaries:
-            return {"path": str(path), "completed_record": boundaries[-1], "after": records[boundaries[-1] + 1:]}
+            return {"path": str(path), "completed_record": boundaries[0],
+                    "turn_id": records[boundaries[0]]["payload"].get("turn_id"),
+                    "after": records[boundaries[0] + 1:]}
     return None
 
 
@@ -590,7 +645,7 @@ def require_native_silence(home, native_id, final, forbidden):
         raise RuntimeError("Native history did not establish the identifiable final turn's completion")
     for record in tail["after"]:
         if record.get("type") == "compacted" or record.get("payload", {}).get("type") in (
-                "task_started", "turn_started", "context_compacted"):
+                "task_started", "turn_started", "task_complete", "turn_complete", "context_compacted"):
             raise RuntimeError("Original queued input started native work or compaction after the completed final")
     return tail
 

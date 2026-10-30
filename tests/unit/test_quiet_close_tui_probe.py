@@ -27,6 +27,37 @@ class QuietCloseTuiProbeTests(unittest.TestCase):
                 probe.require_quiet_frame({"lines": [final, text]}, final)
         probe.require_quiet_frame({"chat_tail": ["Worked for 1s", "Blocked by hook", final],
                                    "lines": ["Worked for 2s", "prompt"]}, final)
+        with self.assertRaises(RuntimeError):
+            probe.require_quiet_frame({"lines": [final, "Worked for 1s", final, "Worked for 2s"]}, final)
+
+    def test_constructor_failure_stops_only_its_popen_child_and_retains_uncertainty(self):
+        for kind in (probe.Tui, probe.Metadata):
+            with self.subTest(kind=kind.__name__), tempfile.TemporaryDirectory() as tmp:
+                run = Path(tmp)
+                process = Mock(pid=123)
+                process.poll.side_effect = [None, 0]
+                process.wait.return_value = 0
+                resource = object.__new__(kind)
+                with patch.object(probe.subprocess, "Popen", return_value=process), \
+                        patch("nativepeers.process.identity", side_effect=PermissionError("birth denied")), \
+                        patch.object(probe.pty, "openpty", return_value=(9, 10)), \
+                        patch.object(probe.fcntl, "ioctl"), patch.object(probe.os, "close") as close:
+                    with self.assertRaises(PermissionError):
+                        if kind is probe.Tui:
+                            resource.__init__(["owned-codex"], run, {}, run, "owned", Mock())
+                        else:
+                            resource.__init__(Path("owned-codex"), run, {}, run, "owned")
+                    if kind is probe.Tui:
+                        self.assertTrue(resource.raw.closed and resource.timeline.closed)
+                        self.assertEqual({call.args[0] for call in close.call_args_list}, {9, 10})
+                    else:
+                        self.assertTrue(resource.log.closed and resource.errors.closed)
+                process.send_signal.assert_called_once_with(probe.signal.SIGTERM)
+                process.wait.assert_called_once_with(timeout=probe.STOP_WAIT)
+                record = json.loads((run / "owned.constructor-failure.json").read_text())
+                self.assertEqual(record["status"], "FAIL")
+                self.assertEqual(record["descendant_cleanup"], "UNVERIFIED")
+                self.assertFalse(record["output_eof"])
 
     def test_help_never_launches_native_or_network(self):
         with patch.object(probe.subprocess, "Popen", side_effect=AssertionError("native launch")), \
@@ -322,6 +353,12 @@ class QuietCloseTuiProbeTests(unittest.TestCase):
             write(header, done)
             self.assertEqual(probe.require_native_silence(home, "owned-native", "FINAL", ["LATE_BODY"])["after"], [])
             write(header, done, {"type": "event_msg", "payload": {"type": "task_started"}})
+            with self.assertRaises(RuntimeError):
+                probe.require_native_silence(home, "owned-native", "FINAL", [])
+            write(header, done, {"type": "event_msg", "payload": {"type": "task_started"}}, done)
+            with self.assertRaises(RuntimeError):
+                probe.require_native_silence(home, "owned-native", "FINAL", [])
+            write(header, done, done)
             with self.assertRaises(RuntimeError):
                 probe.require_native_silence(home, "owned-native", "FINAL", [])
             write(header, {"type": "response_item", "payload": {"text": "LATE_BODY"}}, done)

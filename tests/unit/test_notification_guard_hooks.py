@@ -332,6 +332,17 @@ class GuardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(notification_policy.status(self.journal,recipient['handle']),closed)
         self.assertEqual(self.journal.all("SELECT 1 FROM events WHERE kind IN ('notification-policy-opened','notification-suppressed')"),[])
 
+    def test_queue_bootstrap_cannot_switch_the_conversation_of_an_existing_process(self):
+        owner=identity(os.getpid()).json()
+        first=self.registry.register('codex',self.home,self.native,'foreground',owner,str(self.root),{'kind':'fake'})
+        before=self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id')
+        with self.assertRaises(PeerError) as raised:
+            self.registry.register('codex',self.home,'00000000-0000-4000-8000-0000000000ff','background',
+                                   owner,str(self.root),{'kind':'fake'},queue_resume=True)
+        self.assertEqual(raised.exception.code,'TARGET_REBOUND')
+        self.assertEqual(self.journal.all('SELECT * FROM peer_instances ORDER BY incarnation_id'),before)
+        self.assertEqual(self.registry.get(first['handle'])['incarnation_id'],first['incarnation_id'])
+
     def test_main_prints_only_guard_blocks_and_never_blocks_on_errors(self):
         def run(result,event='UserPromptSubmit'):
             raw=json.dumps({'hook_event_name':event,'session_id':self.native,'prompt':'x'}).encode();output=io.StringIO()
