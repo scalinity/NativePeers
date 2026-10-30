@@ -177,7 +177,8 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
         try { await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the route stays pending; the lease decides */ }
         s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
       }
-      const text = finalAnswer(t, await summary($, s, t), owner, s.terminals)
+      const final = String(t.data?.final_text ?? '').trim()
+      const text = finalAnswer(t, await summary($, s, t), owner, s.terminals, final.length > 0 && open.answer.trim().endsWith(final))
       yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
       Object.assign(s, { phase: 'COMPLETING', inflight: undefined });await saveShadow($, s)
       yield { kind: 'stop', stopReason: 'end_turn', usage: usage > 0 ? { input_tokens: 0, output_tokens: usage, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: shadowModel(s.provider) } : null }

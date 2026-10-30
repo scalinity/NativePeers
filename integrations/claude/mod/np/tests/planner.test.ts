@@ -98,4 +98,5 @@ test('the final answer carries NativePeers references and says who delivered it'
   expect(text).toContain('worker W · group G · task T · native N')
   expect(text).toContain('artifacts: result R')
   expect(text).toContain('delivered via NativePeers notice')
+  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1], true).startsWith('partial')).toBe(false)
 })

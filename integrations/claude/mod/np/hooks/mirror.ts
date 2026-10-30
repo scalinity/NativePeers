@@ -192,12 +192,14 @@ export type Summary = {
 }
 
 // The final answer the parent reads in the notification (spec 7.5.1).
-export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[]): string {
+// `shown`: the step already streamed the worker's final text, so only the footer
+// follows it; the step's whole answer is still what the parent reads.
+export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[], shown = false): string {
   const d = terminal.data ?? {}
   const status = String(d.status ?? 'completed')
   const body = headTail(String(d.final_text ?? ''), 12288)
   const lines: string[] = []
-  if (body.text.trim()) lines.push(body.truncated ? body.text + `\n[… truncated; full text: npeer result ${s.taskId ?? s.workerId} ]` : body.text)
+  if (body.text.trim() && !shown) lines.push(body.truncated ? body.text + `\n[… truncated; full text: npeer result ${s.taskId ?? s.workerId} ]` : body.text)
   if (status === 'interrupted') lines.push('(interrupted — partial result above)')
   lines.push('')
   const model = s.modelObserved && s.modelRequested && s.modelObserved !== s.modelRequested

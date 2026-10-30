@@ -93,6 +93,12 @@ class Recorder:
         if self.provider == 'claude':
             from .claude import Claude
             return Claude(self.cwd)
+        if self.provider == 'grok':
+            from .grok import Grok
+            return Grok(self.cwd)
+        if self.provider == 'antigravity':
+            from .antigravity import Antigravity
+            return Antigravity(self.cwd)
         return None
 
     def feed(self, event):
