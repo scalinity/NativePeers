@@ -3,7 +3,7 @@
     {
       "kind": "agent",
       "name": "m1-activity",
-      "scope": "M1 implementation in this worktree, uncommitted"
+      "scope": "M1, uncommitted in this worktree; status requested"
     }
   ],
   "blockers": [],
@@ -13,6 +13,12 @@
     "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
     "types_sha256": "a053c5ca3d00baeeffaef7a5a0d15b172047e04c6fdd7ad840fb0a29f0fd3ce3",
     "version": "2.1.314"
+  },
+  "compat_check": {
+    "2.1.309": "PASS",
+    "2.1.314": "PASS",
+    "module": "nativepeers/claude_mod_check.py",
+    "probe": "integrations/claude/mod-check"
   },
   "documents": {
     "docs/CLAUDE_LINEAGE_KICKOFF.md": {
@@ -86,8 +92,8 @@
     "M2": "NOT_STARTED",
     "M3": "MOD_AND_HARNESS_PASS (live slice pending M2)",
     "M4": "NOT_STARTED",
-    "M5": "NOT_STARTED",
-    "M6": "NOT_STARTED"
+    "M5": "ADOPTION_HARNESS_PASS (Path B); normalizers pending",
+    "M6": "INSTALLER_AND_COMPAT_CHECK_BUILT (CLI wiring pending)"
   },
   "mod": {
     "harness": [
@@ -102,7 +108,7 @@
     "tsc": "pass (engine-laid tsconfig)",
     "validate": "pass"
   },
-  "next_action": "Review and commit M1 when m1-activity reports; then spawn an Opus M2 agent for the bridge NativeBackend, delivery ownership, leases and input/interrupt (brief at hand); meanwhile Path B/C harness, M6 installer and docs.",
+  "next_action": "On m1-activity report: review diff, run focused + full suite, commit M1; spawn Opus M2 agent with scratchpad/m2-brief.md; then wire install --claude-mod and runtime-check mod verdict into cli.py after M2; commit docs/LINEAGE_USAGE.md after live confirmation.",
   "repository": {
     "base": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "branch": "feat/claude-lineage-mod",
@@ -111,11 +117,11 @@
       ".worktrees/issue-7"
     ],
     "first_commit": "051d625",
-    "head": "7ac96c2",
+    "head": "267be6a",
     "origin_main_at_start": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "path": "/Users/danny/Documents/Tools/NativePeers",
     "worktree": ".worktrees/claude-lineage-mod"
   },
   "schema": "nativepeers.claude-lineage-checkpoint.v1",
-  "updated_at": "2026-10-30T16:00:31-0400"
+  "updated_at": "2026-10-30T16:10:23-0400"
 }
