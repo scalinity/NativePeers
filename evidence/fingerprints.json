@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-30T19:06:52.297970-04:00",
+  "at": "2026-10-30T19:22:30.362030-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,8 +60,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "312e7fe949e5d5a31eaf8255f19650f6d30563ff",
-  "current_verification": "evidence/claude-lineage-verification.json",
+  "code_commit": "973ba45fdaa4ffe771996f018c4e687432a16747",
+  "current_verification": "evidence/issue-7-silent-queue.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
     "acceptance": "evidence/acceptance.json extensions.models_antigravity_implementation",
@@ -177,7 +177,7 @@
     "nativepeers/grok_install.py": "caf6a4fb0c2348697586c0174f7a221fc7f197e611c310b0efbcf2d39f75974a",
     "nativepeers/grok_worker.py": "d516aa46e525ef08ebc8da93e7681bd7a44c840ed9efaf5f7d78072ae2576051",
     "nativepeers/history_cleanup.py": "3b59afd9f17060e4ebf4f0d9122fc27c3ee0245e14aaa6389442c84fd891ab32",
-    "nativepeers/hooks.py": "fa2f38c2086814bd10cf3dbc7be28c418b84e5682e8757aa577bbc5f3a323b8a",
+    "nativepeers/hooks.py": "4e944723f5de620a148a6dff79cf4625634fe2d9af9f363e842b546e10d82b68",
     "nativepeers/install.py": "da00ffe46c3c6cb494ade876623c81fb691848d9a14ea9240420f21a8a2fec6c",
     "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
     "nativepeers/journal.py": "44f284c9aad07c416ce6efd4ef5c94134ab9b5b3a21543f61716c9d08bf99be6",
