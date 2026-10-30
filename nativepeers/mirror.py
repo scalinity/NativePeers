@@ -56,14 +56,17 @@ def supervising(journal, group_id):
     return not manifest.get('released') and matches(manifest['owner'])
 
 
-def expire(journal, *, group_id=None, supervised=None):
-    """Fall back every mirror-owned route whose lease has lapsed. A push route with no live supervisor is retained, as close-out does."""
+def expire(journal, *, group_id=None, supervised=None, worker_id=None, handback=False):
+    """Fall back every mirror-owned route whose lease has lapsed. A push route with no live supervisor is retained, as close-out does.
+
+    `handback` falls back one worker's mirror-owned routes whatever its lease: a display-only re-attach takes over a
+    worker whose earlier shadow can no longer surface, so those generations go back to NativePeers delivery (§6.4)."""
     now = time.time();moved = []
     lapsed = ("SELECT r.group_id,r.completion_generation,r.state,r.mode,d.task_id,t.worker_id FROM completion_routes r "
               "JOIN task_delivery d ON d.group_id=r.group_id AND d.completion_generation=r.completion_generation AND d.owner='mirror' "
-              "JOIN tasks t ON t.task_id=d.task_id WHERE r.state IN (?,?)" + (' AND r.group_id=?' if group_id else '') +
-              ' AND NOT EXISTS (SELECT 1 FROM mirror_leases l WHERE l.worker_id=t.worker_id AND l.claude_session=d.claude_session AND l.expires_at>?)')
-    params = (PENDING, SURFACING) + ((group_id,) if group_id else ()) + (now,)
+              "JOIN tasks t ON t.task_id=d.task_id WHERE r.state IN (?,?)" + (' AND r.group_id=?' if group_id else '') + (' AND t.worker_id=?' if worker_id else '') +
+              ('' if handback else ' AND NOT EXISTS (SELECT 1 FROM mirror_leases l WHERE l.worker_id=t.worker_id AND l.claude_session=d.claude_session AND l.expires_at>?)'))
+    params = (PENDING, SURFACING) + ((group_id,) if group_id else ()) + ((worker_id,) if worker_id else ()) + (() if handback else (now,))
     if not journal.one(lapsed + ' LIMIT 1', params):return moved  # The common case takes no write lock.
     with journal.transaction() as db:
         for row in db.execute(lapsed, params).fetchall():
@@ -80,7 +83,9 @@ def expire(journal, *, group_id=None, supervised=None):
 
 def attach(journal, worker_id, session, agent, parent_key, *, sessions, display_only=True, check_only=False):
     """The worker's exclusive lease for this session. A live lease held by another session refuses with MIRROR_OWNED."""
-    if not check_only:expire(journal)
+    if not check_only:
+        expire(journal)
+        if display_only:expire(journal, worker_id=worker_id, handback=True)
     now = time.time()
     with journal.transaction() as db:
         held = db.execute('SELECT * FROM mirror_leases WHERE worker_id=? AND expires_at>?', (worker_id, now)).fetchone()

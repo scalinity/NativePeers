@@ -139,6 +139,24 @@ class RouteTests(RouteCase):
         self.assertEqual(self.state(group), 'UNCLAIMED')
 
 
+class HandbackTests(RouteCase):
+    def test_a_display_only_reattach_inside_the_ttl_hands_pending_routes_back(self):
+        # The bridge died and restarted within the lease TTL; the old shadow cannot surface any more.
+        group, worker, _ = self.worker()
+        attached = mirror.attach(self.j, worker, SESSION, 'agent2', 'parent', sessions=[SESSION], display_only=True)
+        self.assertTrue(attached['attached'])
+        self.assertEqual(self.state(group), 'UNCLAIMED')
+        self.assertEqual(mirror.surfacing(self.j, worker, [SESSION], generation=1)['changed'], False)
+
+    def test_a_reattach_after_surfacing_leaves_the_route_unknown_and_a_check_changes_nothing(self):
+        group, worker, _ = self.worker()
+        mirror.surfacing(self.j, worker, [SESSION], generation=1)
+        mirror.attach(self.j, worker, SESSION, 'agent2', 'parent', sessions=[SESSION], display_only=True, check_only=True)
+        self.assertEqual(self.state(group), mirror.SURFACING)
+        mirror.attach(self.j, worker, SESSION, 'agent2', 'parent', sessions=[SESSION], display_only=True)
+        self.assertEqual(self.state(group), 'NOTIFICATION_UNKNOWN')
+
+
 class RaceTests(RouteCase):
     def race(self, surfacer, sweeper):
         """Surfacing and the expiry sweep from two connections, released together."""
