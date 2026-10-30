@@ -6,7 +6,7 @@ import { TAGS, modelLabel } from './agents'
 import { request } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, shadows } from './shadow'
-import { getBridge, getFaults, getIndex, getLineage, getUi, setUi } from './state'
+import { getBridge, getFaults, getIndex, getLineage, getMember, getUi, setUi } from './state'
 
 export const PANE_ID = 'np-lineage'
 const ACTIVE = ['queued', 'starting', 'running', 'waiting']
@@ -100,7 +100,12 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
   const head = `⟐ np · ${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.stopped ? ` · ${c.stopped} stopped` : ''}${c.failed ? ` · ${c.failed} failed` : ''}`
   const status = faults.fallthrough ? ' · agent types off (fallthrough; /np doctor)' : bridge.state !== 'ready' ? ` · bridge ${bridge.state}${bridge.reason ? ': ' + bridge.reason.slice(0, 60) : ''}` : ''
   const rows = workers.filter(w => !w.parentWorkerId).slice(-4)
-  const offers = workers.filter(w => ACTIVE.includes(w.status) && !w.agentId && w.mirrorOwner !== 'other').slice(0, 2)
+  // A running worker with no live shadow here (none, or one that faulted or ended) is offered for attach.
+  const offers: NpWorker[] = []
+  for (const w of workers) {
+    if (offers.length >= 2 || !ACTIVE.includes(w.status) || w.mirrorOwner === 'other') continue
+    if (!w.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, w.agentId)).phase)) offers.push(w)
+  }
   return (
     <Box flexDirection="column">
       <Box flexDirection="row">

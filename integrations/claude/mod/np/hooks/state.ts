@@ -21,7 +21,12 @@ export async function bridgeExited($: EngineInterface, socket: string, value: Np
 }
 
 export async function getLineage($: EngineInterface): Promise<NpWorker[]> { return read($, lineageAtom) }
-export async function setLineage($: EngineInterface, value: NpWorker[]): Promise<void> { await update($, lineageAtom, () => value) }
+// The bridge names a worker's shadow only while its lease lives; a lease that lapsed during a bridge outage keeps this
+// session's own shadow link unless another session now mirrors the worker.
+export async function setLineage($: EngineInterface, value: NpWorker[]): Promise<void> {
+  await update($, lineageAtom, prev => value.map(w => w.agentId || w.mirrorOwner === 'other' ? w
+    : { ...w, agentId: prev.find(p => p.workerId === w.workerId)?.agentId }))
+}
 
 export async function getFaults($: EngineInterface): Promise<NpFaults> { return read($, faultsAtom) }
 export async function setFaults($: EngineInterface, value: NpFaults): Promise<void> { await update($, faultsAtom, () => value) }
