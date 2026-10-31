@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "stage": "One np bridge start per session when a command arrives during startup (desktop first message); race-free bridge state and manifests",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+  "scope": "The np mod bridge start (launch single-flight, failed-start, doctor-restore and exit state writes judged inside the updater, exits matched by a per-launch id), /np doctor reporting from the live connection, per-process bridge manifests released on close, and removal of compiled JavaScript committed beside the mod sources. The desktop app run (AC9) needs the person after install.",
+  "finding": {
+    "observed": "Desktop check: the first message /np doctor started the session while activation started bridge A; the command started bridge B; both chose socket b-c4a99405a223.sock, B failed BRIDGE_RUNNING, deleted A's manifest and overwrote the state to down while A (pid 57570) stayed connected.",
+    "evidence": "desktop session 6ef2bbab transcript; live listener on the session socket with no manifest; zero-API reproduction (two starts, bridge down) with the pre-fix mod"
+  },
+  "tests": {
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1092,
+      "failed": 32,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Run on the branch merged with main 4146b47. The identical failure set, by test id, as the run before the merge and the merged desktop-host run: failures shared with main plus the two evidence-pointer checks this publication regenerates."
+    },
+    "focused": {
+      "status": "PASS",
+      "passed": 57,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_bridge_backend.py tests/contract/test_bridge_inputs.py tests/unit/test_desktop_host.py tests/unit/test_claude_mod_install.py"
+    },
+    "mod": {
+      "status": "PASS",
+      "passed": 21,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "bridge: ready",
+        "tripwire_hits": 0
+      },
+      "control": "The same run on the pre-fix mod (f3bcc2e): starts 2, doctor bridge: down (A bridge already serves this Claude session)."
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-startup-race-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 in a temporary HOME with the np mod loaded by --plugin-dir; replay bridge behind a wrapper npeer that waits 3 s; no model input",
+      "scope": "/np doctor typed while activation's bridge start is in flight: one bridge start, doctor reports bridge: ready, no tripwire hit. The pre-fix mod (f3bcc2e) under the same run: two starts, bridge down with BRIDGE_RUNNING.",
+      "source_head": "a95be16"
+    }
+  ],
+  "limitations": [
+    "The desktop app run (AC9) is verified only by the person after install.",
+    "The desktop composer shows \"/np isn't a command here.\" for /np; the command still runs.",
+    "A desktop session whose state already reads down from the pre-fix mod stays down until a new session starts on the installed fix."
+  ],
+  "independent_review": {
+    "reviewer": "codex gpt-6.1-sol xhigh, NativePeers analysis workers (read-only)",
+    "note": "Reviewers read source and reproduced interleavings against the documented $.state read/compare/retry behaviour; they ran no test suite.",
+    "rounds": [
+      {
+        "reviewed": "f3bcc2e..6f79545",
+        "worker": "2e0adc47-589b-4ca0-84ad-4c13ab6630e2",
+        "native": "01a18f5f-949f-7003-81de-b94331f693c2",
+        "result_artifact": "art_0fae54fa-5584-4c41-ab1c-ae0228b99fbd",
+        "findings": [
+          {
+            "severity": "P1",
+            "summary": "The startup guard was checked before an unprotected session-id await, so activation and /np doctor could both start a bridge.",
+            "disposition": "FIXED in 50a06a0: launch() takes the single start slot synchronously before its first await; callers wait for an in-flight start through $ calls."
+          },
+          {
+            "severity": "P2",
+            "summary": "A failed start could overwrite a connected bridge's state with down after its connection check went stale.",
+            "disposition": "FIXED in 50a06a0 and 1c08cf9: the failed-start updater keeps a ready state."
+          },
+          {
+            "severity": "P2",
+            "summary": "Doctor could restore ready after the bridge had exited.",
+            "disposition": "FIXED in 1c08cf9: liveness and generation are judged inside the updater on every retry."
+          },
+          {
+            "severity": "P2",
+            "summary": "Pre-existing: shutdown cleanup could unlink a successor's manifest recorded at the same path while close() drained an in-flight spawn.",
+            "disposition": "FIXED in 1c08cf9 after a compare-before-unlink in 50a06a0 left a window: each bridge process keeps its own manifest file and releases only that file."
+          }
+        ]
+      },
+      {
+        "reviewed": "f3bcc2e..50a06a0",
+        "worker": "d769f25d-5d48-4c57-ac22-be24ea76f06c",
+        "native": "01a18f69-a867-7ca1-89dc-b0d6bddbc8b4",
+        "result_artifact": "art_c080a559-7c7e-4ce6-81f4-e7028b253a85",
+        "findings": [
+          {
+            "severity": "P2",
+            "summary": "Doctor's restore checked liveness before update(), which reads, compares and retries.",
+            "disposition": "FIXED in 1c08cf9 (bridgeRestored takes a live predicate evaluated inside the updater)."
+          },
+          {
+            "severity": "P2",
+            "summary": "Module-local guards let a hot-reload predecessor overwrite its successor's state.",
+            "disposition": "FIXED in 1c08cf9 (rules judged on the shared state inside the updater) and ff2bbfd (exit matched by launch id)."
+          },
+          {
+            "severity": "P2",
+            "summary": "The manifest compare-then-unlink left a window between the read and the unlink across processes.",
+            "disposition": "FIXED in 1c08cf9: manifest file per process id, so release never reads another process's record."
+          },
+          {
+            "severity": "P2",
+            "summary": "An accepted late rebind could overwrite or recreate a successor's manifest record.",
+            "disposition": "FIXED in 1c08cf9: no record once released; each process writes only its own path."
+          }
+        ]
+      },
+      {
+        "reviewed": "f3bcc2e..1c08cf9",
+        "worker": "8687b82d-c5ec-4fe3-b18a-a9d70174687b",
+        "native": "01a18f71-60bc-7c21-afcd-d9b862dc32fe",
+        "result_artifact": "art_e176bcef-7698-4bef-b9f3-5d93cff32099",
+        "result": "All four previous P2 findings resolved; no new defect introduced.",
+        "findings": [
+          {
+            "severity": "P2",
+            "summary": "Pre-existing in f3bcc2e: a predecessor's exit matched by a reused socket path could mark a live successor down (SIGTERM drain during a hot reload).",
+            "disposition": "FIXED in ff2bbfd: each launch stores a nonsecret random id in the shared state; the exit updater compares that id."
+          }
+        ]
+      },
+      {
+        "reviewed": "ff2bbfd",
+        "worker": "8687b82d-c5ec-4fe3-b18a-a9d70174687b",
+        "task": "43610bc5-1961-48f4-8e45-7ac9e9d3f836",
+        "result_artifact": "art_7eff2aa6-ce09-4c29-bb49-51fd7cdac9a7",
+        "result": "Resolved: a predecessor's exit after socket reuse, in both the reload overlap and the SIGTERM drain; no shared-state ownership check still uses the socket or a module-local generation; the launch id reaches only session $.state and the bearer token stays out of it. No new defect.",
+        "findings": []
+      }
+    ],
+    "failed_attempts": [
+      "lineage-race-review-1 failed before the worker started; no input was submitted."
+    ]
+  }
+}
