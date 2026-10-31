@@ -61,3 +61,13 @@ Close with one row for every original actionable source ID (duplicate IDs may sh
 | REVIEW_TASK / F004 | pending approval/blocked | Exact missing decision, scope, provider or dependency |
 
 These are allowed dispositions, not fabricated findings. `optional` or `low priority` is not an evidence-backed rejection. Pending findings remain incomplete; never report all addressed while one is pending. Native checks, parent-run checks and reviewer-only observations remain separately attributed. No repeated perfect-score loop.
+
+## Parent: originating task and execution point
+
+Carry the originating-task label and selected change/base through the review request, consolidated TODO, `/address` and final acceptance. Attribute a useful tool-repair detour to its own task; its review covers only that detour. Close out the requested original task even when the detour consumed more work.
+
+For an already-authorized privileged change affecting security/authentication enforcement, network availability or integrity-baseline promotion, settle independent review of the **exact proposed change, validation and recovery before execution**. When an eligible different-vendor read-only route is authorized and available, obtain one bounded review packet, reconcile its findings and follow `/address` within the existing authorization before executing. Missing authorization, provider/capability, review or recovery facts are exact pending dependencies. Functional checks or an unrelated review cannot replace that review or grant permission. A trivial edit or read-only diagnostic needs no automatic worker launch.
+
+The final report names the actual task, final changed paths/behavior, every finding's disposition, whether independent review covered the final delta, and recovery limits. Report source, package/install, native delivery/ingestion and physical/UI checks separately as relevant; unrun checks stay NOT_RUN. An unreviewed material final delta or a pending finding remains visible and incomplete. Use disposable examples for this convention; no host/network operation follows from an example.
+
+The executable accounting exercise is [review-parent-exercise.json](../examples/review-parent-exercise.json), checked by `tests/contract/test_review_workflow.py`. It verifies ID conservation, a toy suggestion correction, evidence-backed dispositions and scope/approval examples; it is fixture consistency, not proof of model compliance or native delivery. The actual scoped review and parent remediation supply that separate behavioral evidence.

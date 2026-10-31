@@ -52,5 +52,67 @@
   "complete": false,
   "toy_before": "def label(task):\n    return \"detour\"\n",
   "toy_after": "def label(task):\n    return task\n",
-  "toy_current": "def total(a, b):\n    return a + b\ndef validate(value):\n    if not isinstance(value, str) or not value:\n        raise ValueError(\"required text\")\n    return value\n"
+  "toy_current": "def total(a, b):\n    return a + b\ndef validate(value):\n    if not isinstance(value, str) or not value:\n        raise ValueError(\"required text\")\n    return value\n",
+  "scope_cases": [
+    {
+      "name": "origin plus detour",
+      "originating_task": "Example maintenance",
+      "detour": "Example tool repair",
+      "review_coverage": [
+        "Example tool repair"
+      ],
+      "final_task": "Example maintenance",
+      "origin_review": "NOT_RUN",
+      "complete": false,
+      "actions": []
+    },
+    {
+      "name": "privileged authorized proposal",
+      "originating_task": "Disposable integrity baseline",
+      "authorized": true,
+      "proposal": "Replace only disposable baseline with calculated toy digest",
+      "validation": "Compare toy digest to expected",
+      "recovery": "Restore retained disposable baseline",
+      "review_coverage": [
+        "Disposable integrity baseline"
+      ],
+      "sequence": [
+        "prepare exact proposal/validation/recovery packet",
+        "read-only independent review",
+        "consolidate all IDs",
+        "parent /address",
+        "verify dispositions before authorized execution"
+      ],
+      "actions": [],
+      "execution": "NOT_RUN"
+    },
+    {
+      "name": "missing provider",
+      "originating_task": "Disposable network maintenance",
+      "authorized": true,
+      "review_coverage": [],
+      "review": "BLOCKED: eligible provider unavailable",
+      "execution": "BLOCKED: missing independent review",
+      "complete": false,
+      "actions": []
+    },
+    {
+      "name": "review only",
+      "originating_task": "Read-only diagnostic",
+      "authorized": false,
+      "review_coverage": [
+        "Read-only diagnostic"
+      ],
+      "actions": [],
+      "execution": "NOT_RUN"
+    },
+    {
+      "name": "trivial diagnostic",
+      "originating_task": "Read-only diagnostic",
+      "review_coverage": [],
+      "worker_launches": 0,
+      "actions": [],
+      "execution": "NOT_RUN"
+    }
+  ]
 }

@@ -41,3 +41,19 @@ class ReviewWorkflowExerciseTests(unittest.TestCase):
         self.assertEqual(current['total'](1,2),3)
         for value in (None,[], ''):
             with self.assertRaises(ValueError):current['validate'](value)
+
+    def test_origin_detour_and_privileged_cases_grant_no_actions(self):
+        cases={case['name']:case for case in self.exercise['scope_cases']}
+        origin=cases['origin plus detour']
+        self.assertEqual(origin['final_task'],origin['originating_task'])
+        self.assertNotIn(origin['originating_task'],origin['review_coverage'])
+        self.assertEqual(origin['origin_review'],'NOT_RUN');self.assertFalse(origin['complete'])
+        proposal=cases['privileged authorized proposal']
+        for field in ('proposal','validation','recovery'):self.assertTrue(proposal[field])
+        self.assertLess(proposal['sequence'].index('read-only independent review'),proposal['sequence'].index('parent /address'))
+        self.assertEqual(proposal['execution'],'NOT_RUN')
+        self.assertFalse(cases['missing provider']['complete'])
+        self.assertIn('missing independent review',cases['missing provider']['execution'])
+        self.assertFalse(cases['review only']['authorized'])
+        self.assertEqual(cases['trivial diagnostic']['worker_launches'],0)
+        for case in cases.values():self.assertEqual(case['actions'],[])
