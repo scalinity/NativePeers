@@ -1,3 +1,15 @@
+# Review/remediation and live follow-up workflow — scoped implementation (2026-10-30)
+
+- [x] One source-owned [review contract](docs/NATIVE_REVIEW.md): exact severities, stable readable/structured IDs and locations, explicit incomplete accounting, preserved raw reports and optional generic-worker compatibility.
+- [x] Parent `/address` includes every Critical, Warning and Suggestion, keeps source attribution through deduplication and gives each ID an evidence-backed disposition. Originating task and privileged-change proposal/recovery review remain explicit.
+- [x] Live owned-worker parent follow-ups retain their requested push/wait mode, exact task/phase/status and collection commands. Bare task waits preserve phase mode; explicit fallback changes are documented. Mirror, quiet, accepted and uncertain routes retain their ownership.
+- [x] Actual read-only native Claude review returned seven matching findings; F001–F007 are fixed and parent-verified with scoped commits. A substantive final correction/probe review is running.
+- [ ] Complete exact-source verification, supported owned skill installation, the installed four-phase Codex fixture and the actual `/np-eval` record. Issues #28/#32/#33/#34 and tracker #16 remain open until their respective acceptance is observed.
+
+[Scoped verification and all-finding dispositions](evidence/review-followup-workflow.json). Current evidence is source-only and explicitly leaves installation/native acceptance NOT_RUN. The initial unprovisioned-worktree failures and pre-submission reviewer launch failure are retained; they are not clean passes. Existing #7 qualification remains separately scoped. No Pi, network, CodexForge or unrelated lineage work is included.
+
+---
+
 # Issue 7 — installed and qualified (2026-10-30)
 
 - [x] Silent native queue disposition before model, history or visible work rows; strict exact-recipient policy and separate suppression retained.

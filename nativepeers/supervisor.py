@@ -496,7 +496,9 @@ class Group:
             generation=max(int(n) for n in phases)+1
             policy['phases']=dict(phases,**{str(generation):[task_id]})
             db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
-            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait',route_state(owner),None,None,new_id(),self.generation))
+            parent_request=message['from'].get('peer_key')==self.row['parent_key']
+            mode='push' if parent_request and (message.get('expect_reply') or policy['completion_mode']=='push') else 'wait'
+            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],mode,route_state(owner),None,None,new_id(),self.generation))
             record(db,task_id,self.id,generation,owner,origin=meta.get('origin'),session=meta.get('claude_session'),agent=meta.get('claude_agent_id'))
         self.policy=policy
         try:
@@ -512,7 +514,13 @@ class Group:
     async def wait(self,payload,reader):
         require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Wait requires the owning parent')
         timeout=payload.get('timeout_ms',WAIT_MAX_MS)/1000;require(0<timeout<=WAIT_MAX_MS/1000,'PROTOCOL_ERROR','Wait exceeds 30 seconds')
-        mode=payload.get('on_timeout') or ('push' if self.policy['completion_mode']=='push' else 'retain')
+        mode=payload.get('on_timeout')
+        if mode is None:
+            # A request-reply follow-up may be push even in a wait-mode group.
+            # A bare task wait must retain that exact phase's chosen fallback.
+            generations=wait_generations(self.id,self.policy,payload['handle'])
+            route=self.journal.one('SELECT mode FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generations[0])) if payload['handle']!=self.id and len(generations)==1 else None
+            mode='push' if (route['mode'] if route else self.policy['completion_mode'])=='push' else 'retain'
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         waiter=new_id();deadline=time.monotonic()+timeout;output=False
         disconnected=asyncio.create_task(reader.read(1))

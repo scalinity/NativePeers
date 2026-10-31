@@ -1,0 +1,118 @@
+{
+  "kind": "disposable exercise; not native acceptance",
+  "originating_task": "Example maintenance",
+  "reports": [
+    {
+      "task": "R1",
+      "text": "## Code Review: Example maintenance\n### Summary\nDisposable accounting exercise; no native worker or host action.\n### \ud83d\udd34 Critical Issues (Must Fix)\n1. **[F001] Incorrect total** - disposable.py:1\n   - Problem: disposable exercise assertion; inspect the accompanying disposition.\n### \ud83d\udfe1 Warnings (Should Fix)\n1. **[F002] Validate required input** - disposable.py:2\n   - Problem: disposable exercise assertion; inspect the accompanying disposition.\n2. **[F004] Unsupported allegation** - disposable.py:4\n   - Problem: disposable exercise assertion; inspect the accompanying disposition.\n### \ud83d\udd35 Suggestions (Consider)\n1. **[F003] Clarify task label** - disposable.py:3\n   - Problem: disposable exercise assertion; inspect the accompanying disposition.\n2. **[F005] Out-of-scope host change** - disposable.py:5\n   - Problem: disposable exercise assertion; inspect the accompanying disposition.\n### \u2705 Good Practices\n- Isolated example; no host changes.\n### Verdict\nRequest Changes\n```nativepeers-result\n{\"findings\": [{\"severity\": \"critical\", \"summary\": \"F001: Incorrect total\", \"file\": \"disposable.py\", \"line\": 1}, {\"severity\": \"warning\", \"summary\": \"F002: Validate required input\", \"file\": \"disposable.py\", \"line\": 2}, {\"severity\": \"info\", \"summary\": \"F003: Clarify task label\", \"file\": \"disposable.py\", \"line\": 3}, {\"severity\": \"warning\", \"summary\": \"F004: Unsupported allegation\", \"file\": \"disposable.py\", \"line\": 4}, {\"severity\": \"info\", \"summary\": \"F005: Out-of-scope host change\", \"file\": \"disposable.py\", \"line\": 5}], \"tests_run\": [{\"command\": \"host changes\", \"outcome\": \"not_run\", \"details\": \"Not authorized; disposable exercise only\"}]}\n```"
+    },
+    {
+      "task": "R2",
+      "text": "## Code Review: Example maintenance\n### Summary\nDisposable accounting exercise; no native worker or host action.\n### \ud83d\udd34 Critical Issues (Must Fix)\n1. **[F001] Incorrect total** - disposable.py:1\n   - Problem: disposable exercise assertion; inspect the accompanying disposition.\n### \ud83d\udfe1 Warnings (Should Fix)\nNone.\n### \ud83d\udd35 Suggestions (Consider)\nNone.\n### \u2705 Good Practices\n- Isolated example; no host changes.\n### Verdict\nRequest Changes\n```nativepeers-result\n{\"findings\": [{\"severity\": \"critical\", \"summary\": \"F001: Incorrect total\", \"file\": \"disposable.py\", \"line\": 1}], \"tests_run\": [{\"command\": \"host changes\", \"outcome\": \"not_run\", \"details\": \"Not authorized; disposable exercise only\"}]}\n```"
+    }
+  ],
+  "todos": [
+    {
+      "sources": [
+        "R1:F001",
+        "R2:F001"
+      ],
+      "disposition": "fixed and verified",
+      "evidence": "Toy total independently equals 3; one coupled defect, both source IDs retained."
+    },
+    {
+      "sources": [
+        "R1:F002"
+      ],
+      "disposition": "already satisfied",
+      "evidence": "Current toy validator raises ValueError on absent input; execute it."
+    },
+    {
+      "sources": [
+        "R1:F003"
+      ],
+      "disposition": "fixed and verified",
+      "evidence": "Toy label now names the originating task; check exact output."
+    },
+    {
+      "sources": [
+        "R1:F004"
+      ],
+      "disposition": "rejected as incorrect/inapplicable",
+      "evidence": "Claim assumes list input accepted; current validator rejects it with ValueError."
+    },
+    {
+      "sources": [
+        "R1:F005"
+      ],
+      "disposition": "pending approval/blocked",
+      "evidence": "Host changes are outside this example authorization; no execution permitted."
+    }
+  ],
+  "complete": false,
+  "toy_before": "def label(task):\n    return \"detour\"\n",
+  "toy_after": "def label(task):\n    return task\n",
+  "toy_current": "def total(a, b):\n    return a + b\ndef validate(value):\n    if not isinstance(value, str) or not value:\n        raise ValueError(\"required text\")\n    return value\n",
+  "scope_cases": [
+    {
+      "name": "origin plus detour",
+      "originating_task": "Example maintenance",
+      "detour": "Example tool repair",
+      "review_coverage": [
+        "Example tool repair"
+      ],
+      "final_task": "Example maintenance",
+      "origin_review": "NOT_RUN",
+      "complete": false,
+      "actions": []
+    },
+    {
+      "name": "privileged authorized proposal",
+      "originating_task": "Disposable integrity baseline",
+      "authorized": true,
+      "proposal": "Replace only disposable baseline with calculated toy digest",
+      "validation": "Compare toy digest to expected",
+      "recovery": "Restore retained disposable baseline",
+      "review_coverage": [
+        "Disposable integrity baseline"
+      ],
+      "sequence": [
+        "prepare exact proposal/validation/recovery packet",
+        "read-only independent review",
+        "consolidate all IDs",
+        "parent /address",
+        "verify dispositions before authorized execution"
+      ],
+      "actions": [],
+      "execution": "NOT_RUN"
+    },
+    {
+      "name": "missing provider",
+      "originating_task": "Disposable network maintenance",
+      "authorized": true,
+      "review_coverage": [],
+      "review": "BLOCKED: eligible provider unavailable",
+      "execution": "BLOCKED: missing independent review",
+      "complete": false,
+      "actions": []
+    },
+    {
+      "name": "review only",
+      "originating_task": "Read-only diagnostic",
+      "authorized": false,
+      "review_coverage": [
+        "Read-only diagnostic"
+      ],
+      "actions": [],
+      "execution": "NOT_RUN"
+    },
+    {
+      "name": "trivial diagnostic",
+      "originating_task": "Read-only diagnostic",
+      "review_coverage": [],
+      "worker_launches": 0,
+      "actions": [],
+      "execution": "NOT_RUN"
+    }
+  ]
+}

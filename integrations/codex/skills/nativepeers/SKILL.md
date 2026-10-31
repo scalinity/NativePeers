@@ -13,10 +13,10 @@ Use the native shell and `npeer`. Workers are real native conversations with the
 
 ## Bounded review
 
-Prepare only the changed paths and essential source:
+Keep the originating-task label through review, `/address` and final acceptance. For an authorized privileged security/network/baseline change, settle review of the exact proposal and recovery before execution; missing facts stay pending. Trivial edits/diagnostics need no automatic worker. Declare the parent review/remediation loop before delegation. For an authorized implementation review, load `/address` after consolidation and account for every Critical, Warning and Suggestion, including duplicates and pending items, using the shared contract. Review-only ends with its report. Before delegating a review, read [the shared review contract](/Users/danny/Documents/Tools/NativePeers/docs/NATIVE_REVIEW.md). Include it in the packet with the changed paths and essential source:
 
 ```sh
-npeer context-prepare --project /absolute/repo --base BASE_COMMIT --path src/file.py --path tests/test_file.py --json
+npeer context-prepare --project /absolute/repo --base BASE_COMMIT --path docs/NATIVE_REVIEW.md --path src/file.py --path tests/test_file.py --json
 ```
 
 Add `--untracked new_file.py --path new_file.py` for explicit new inputs. The immutable packet includes base/current selected source, real diff, dirty/staged identity and omissions. Large selections fail with their measured size: narrow the paths or explicitly choose `--max-bytes`. Binary content is tagged base64. No diff, textconv, pager or custom filter runs.
