@@ -1,7 +1,7 @@
 // A worker's conversation as the pane shows it, built from its activity log. Pure: no $ here.
 import type { NpRow, NpTranscript } from '../types'
 import type { Activity } from './mirror'
-import { duration } from './mirror'
+import { commandOf, duration } from './mirror'
 
 export const MAX_ROWS = 80
 const MAX_TEXT = 3000
@@ -14,11 +14,24 @@ function clip(text: string, limit: number): string {
 
 // What a person or the parent wrote, without the routing envelope NativePeers wraps around a follow-up for the worker:
 // 'NativePeers · Message', a blank line, the text, then '— NativePeers references —' and its ids.
+// The contract NativePeers appends to every task it sends a worker is the worker's, not the person's either.
 export function bodyOf(text: string): string {
-  const head = /^NativePeers · [^\n]*\n\n/.exec(text)
-  if (!head) return text
-  const end = text.lastIndexOf('\n\n— NativePeers references —')
-  return end > head[0].length ? text.slice(head[0].length, end) : text.slice(head[0].length)
+  let out = text
+  const head = /^NativePeers · [^\n]*\n\n/.exec(out)
+  if (head) {
+    const end = out.lastIndexOf('\n\n— NativePeers references —')
+    out = end > head[0].length ? out.slice(head[0].length, end) : out.slice(head[0].length)
+  }
+  const contract = out.indexOf('\n\nNativePeers contract:')
+  return contract >= 0 ? out.slice(0, contract) : out
+}
+
+// A long message folded behind Show more: its first 14 lines, at most 900 characters.
+export function clampMessage(text: string, open: boolean): { text: string; clamped: boolean } {
+  let out = text.split('\n').slice(0, 14).join('\n')
+  if (out.length > 900) out = out.slice(0, 900)
+  const clamped = out.length < text.length
+  return { text: clamped && !open ? out.trimEnd() + ' …' : text, clamped }
 }
 
 // A tool's output as a narrow pane shows it: its first lines, each cut to a width, and how many lines are left out.
@@ -80,7 +93,7 @@ export function applyActivity(t: NpTranscript, events: readonly Activity[]): NpT
           break
         }
         case 'tool.started':
-          rows.push({ kind: 'tool', text: clip(String(d.title ?? d.kind ?? 'tool'), 200), item: `t:${gen}:${e.item ?? e.seq}`, gen })
+          rows.push({ kind: 'tool', text: clip(commandOf(String(d.title ?? d.kind ?? 'tool')), 200), item: `t:${gen}:${e.item ?? e.seq}`, gen })
           break
         case 'tool.completed': {
           const held = find(`t:${gen}:${e.item ?? ''}`)
@@ -93,7 +106,7 @@ export function applyActivity(t: NpTranscript, events: readonly Activity[]): NpT
         }
         case 'files.changed': {
           const paths = Array.isArray(d.paths) ? d.paths.map(String) : []
-          rows.push({ kind: 'tool', text: `Edited ${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` and ${paths.length - 3} more` : ''} (+${d.stats?.added ?? 0} −${d.stats?.removed ?? 0})`, gen })
+          rows.push({ kind: 'note', text: `Edited ${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` and ${paths.length - 3} more` : ''} (+${d.stats?.added ?? 0} −${d.stats?.removed ?? 0})`, gen })
           break
         }
         case 'plan.updated': {
@@ -112,7 +125,7 @@ export function applyActivity(t: NpTranscript, events: readonly Activity[]): NpT
           const final = String(d.final_text ?? '')
           if (final.trim() && !texts(gen).some(r => same(r.full ?? r.text, final))) rows.push({ kind: 'text', text: clip(final.trim(), MAX_TEXT), gen })
           const error = d.error?.code ? `: ${d.error.code}${d.error.message ? ' ' + String(d.error.message).slice(0, 200) : ''}` : ''
-          rows.push({ kind: 'note', text: `${status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}${error}.`, gen })
+          rows.push({ kind: 'note', text: `${status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}${error}.`, item: `end:${gen}:${e.seq}`, gen })
           for (const r of texts(gen)) delete r.full
           break
         }

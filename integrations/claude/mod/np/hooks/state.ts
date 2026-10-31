@@ -49,6 +49,14 @@ export async function setUi($: EngineInterface, change: Partial<NpUi>): Promise<
   await update($, uiAtom, ui => ({ ...ui, ...change }))
 }
 
+// Opens or closes one conversation row (a long message, a tool's output); the newest 200 choices are kept.
+export async function toggleExpanded($: EngineInterface, key: string): Promise<void> {
+  await update($, uiAtom, ui => {
+    const held = ui.expanded ?? []
+    return { ...ui, expanded: held.includes(key) ? held.filter(k => k !== key) : [...held, key].slice(-200) }
+  })
+}
+
 // A worker's unsent message. A settling answer touches only the draft of its own request: a newer one stays.
 export async function putDraft($: EngineInterface, draft: NpDraft, onlyIf?: string): Promise<void> {
   await update($, uiAtom, ui => onlyIf !== undefined && ui.drafts?.[draft.workerId]?.requestId !== onlyIf ? ui

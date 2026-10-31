@@ -47,10 +47,16 @@ export function ref(seq: number): string {
   return '#' + seq
 }
 
+// A shell call as a person reads it: the command, without the shell that wraps it ("/bin/zsh -lc 'ls -A'" -> "ls -A").
+export function commandOf(text: string): string {
+  const m = /^(?:\/usr)?(?:\/bin\/)?(?:ba|z)?sh -l?c (['"])([\s\S]*)\1$/.exec(text.trim())
+  return m ? (m[1] === "'" ? (m[2] ?? '').replace(/'\\''/g, "'") : m[2] ?? '') : text
+}
+
 function detailOf(kind: string, input: any): string {
   if (!input || typeof input !== 'object') return String(input ?? '').slice(0, 300)
-  if (typeof input.command === 'string') return input.command.slice(0, 300)
-  if (Array.isArray(input.command)) return input.command.join(' ').slice(0, 300)
+  if (typeof input.command === 'string') return commandOf(input.command).slice(0, 300)
+  if (Array.isArray(input.command)) return commandOf(input.command.join(' ')).slice(0, 300)
   for (const key of ['file_path', 'path', 'pattern', 'query', 'url'])
     if (typeof input[key] === 'string') return input[key].slice(0, 300)
   return JSON.stringify(input).slice(0, 300)
@@ -97,7 +103,7 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
         break
       case 'tool.started': {
         const item = e.item ?? 'seq' + e.seq
-        const title = String(d.title ?? d.kind ?? 'tool'), kind = String(d.kind ?? 'other')
+        const title = commandOf(String(d.title ?? d.kind ?? 'tool')), kind = String(d.kind ?? 'other')
         tool(kind, title, detailOf(kind, d.input), ref(e.seq), { item, kind, startSeq: e.seq, title, detail: detailOf(kind, d.input), generation: e.generation })
         break
       }

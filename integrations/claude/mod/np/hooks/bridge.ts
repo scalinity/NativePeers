@@ -141,7 +141,11 @@ export async function followLineage($: EngineInterface): Promise<void> {
     try {
       const data = await request($, 'GET', `/v1/lineage?wait_ms=25000${cursor ? '&cursor=' + encodeURIComponent(cursor) : ''}`)
       cursor = data.cursor ?? cursor
-      if (data.changed !== false && Array.isArray(data.workers)) { await setLineage($, data.workers as NpWorker[]);$.ui.status(statusSummary(data.workers)) }
+      if (data.changed !== false && Array.isArray(data.workers)) {
+        await setLineage($, data.workers as NpWorker[])
+        // On the desktop app the footer's np menu carries the summary.
+        if ((await $.session.surface()) !== 'desktop') $.ui.status(statusSummary(data.workers))
+      }
     } catch {
       await sleep($, 2000)
     }
