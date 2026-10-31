@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "stage": "NativePeers recognizes the Claude desktop app engine as a mirror-only parent; np band readable on desktop; stale installed mod refreshed",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "4b98ea7ec9defa2ddc18fbdeccf63821d76e9e1c",
+  "scope": "Desktop host recognition (docs/CLAUDE_LINEAGE_MOD.md §6.7): nativepeers/desktop_host.py, hooks.observe owner detection and mirror-only registration, native_binaries, completion readiness; the np mod band layout and session-start command registration; npeer install --claude-mod stale-copy refresh. The desktop app run (AC9) needs the person after install.",
+  "tests": {
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1052,
+      "failed": 30,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "The 28 failures other than the two evidence-pointer checks are the identical set on unmodified main 4b98ea7 in the same environment (compared by test id); the two pointer checks are what this publication regenerates.",
+      "commit": "c7a5d4d"
+    },
+    "unmodified_main_baseline": {
+      "status": "FAIL",
+      "failed": 28,
+      "commit": "4b98ea7",
+      "command": ".venv/bin/python -m pytest -q tests"
+    },
+    "focused": {
+      "status": "PASS",
+      "passed": 157,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_notification_guard_hooks.py tests/unit/test_owned_caller_identity.py tests/unit/test_bridge_backend.py tests/unit/test_grok.py tests/unit/test_antigravity.py tests/unit/test_readiness.py tests/unit/test_install.py tests/unit/test_grok_diagnostics.py tests/contract/test_bridge_inputs.py tests/unit/test_desktop_host.py tests/unit/test_claude_mod_install.py"
+    },
+    "installer": {
+      "status": "PASS",
+      "passed": 6,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_claude_mod_install.py"
+    },
+    "mod": {
+      "status": "PASS",
+      "passed": 21,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "clean"
+    },
+    "zero_api_harness": {
+      "status": "PASS",
+      "tripwire_hits": 0,
+      "command": "tests/integration/claude_mod/mod_harness.py desktopfix codex_basic.json m3_pathA.json"
+    },
+    "desktop_host": {
+      "status": "PASS",
+      "passed": 8,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_desktop_host.py"
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "desktop-host-first-use-approval",
+      "status": "PASS",
+      "parent_context": "scratch state root; the installed Claude desktop engine 2.1.309; no model input",
+      "scope": "Bridge-side first-use approval on a scratch state root: private bundle copy, codesign requirement (team Q6L2SF6YDW, identifier com.anthropic.claude-code) and sandboxed --version passed in 2.37 s; the exact-hash approval check the hook uses took 0.10 s; no temporary copy left",
+      "source_head": "c7a5d4d"
+    }
+  ],
+  "findings": [
+    "The desktop session transcript (92338fcb) shows the NativePeers SessionStart hook ran in the desktop engine and refused registration (\"NativePeers registration unavailable: PeerError\") before this change.",
+    "Claude Code installs a copy of a directory-marketplace plugin and its update keys on the version alone."
+  ],
+  "limitations": [
+    "Desktop behavior (AC9) is verified only by the person after install.",
+    "Whether the desktop engine gives SessionStart hooks CLAUDE_ENV_FILE (needed for npeer commands from its Bash tool) is unverified; np:* delegation does not depend on it."
+  ],
+  "independent_review": {
+    "reviewer": "codex gpt-6.1-sol xhigh (NativePeers worker 25dc7e16-81f1-4a51-ae27-4e4fb2bfb0bc, native 01a18f3a-a054-7542-89a2-70e623e85e41)",
+    "reviewed": "4b98ea7..da909bb",
+    "result_artifact": "art_64d0efa8-bcdf-49c0-ac7e-8c5cc5199fee",
+    "note": "The reviewer could not run unit tests (read-only sandbox without a writable temporary directory); its findings rest on source and control-flow inspection.",
+    "findings": [
+      {
+        "severity": "P1",
+        "summary": "An unapproved desktop engine nearer in the ancestry was skipped, letting an enclosing approved owner be borrowed (hook, nearest_native, bind_caller).",
+        "disposition": "FIXED in c7a5d4d: every desktop engine copy is a native boundary; an unapproved nearest boundary refuses. Test: test_an_unapproved_desktop_engine_is_a_boundary_never_searched_past."
+      },
+      {
+        "severity": "P2",
+        "summary": "First-use approval inside the SessionStart hook could exceed its installed three-second timeout.",
+        "disposition": "FIXED in c7a5d4d: the hook never approves; the np bridge approves an unapproved engine on first use (2.37 s on the real engine) and registers through the hook path. Tests: test_the_bridge_approves_on_first_use_and_registers_a_mirror_only_parent, test_the_bridge_registers_only_below_an_unapproved_desktop_engine."
+      },
+      {
+        "severity": "P2",
+        "summary": "Hash-only approval keys blocked identical bytes at a second build path.",
+        "disposition": "FIXED in c7a5d4d: records keyed by exact path with the SHA-256 inside. Test: test_identical_bytes_at_another_path_get_their_own_approval."
+      },
+      {
+        "severity": "P2",
+        "summary": "An unsuccessful --version invocation was recorded as a permanent unsupported-version refusal.",
+        "disposition": "FIXED in c7a5d4d: only a definite signature failure or an unsupported version from a successful run is recorded. Test: test_only_a_definite_failure_is_recorded_and_an_unsuccessful_check_is_retried."
+      },
+      {
+        "severity": "P3",
+        "summary": "A recorded plugin installation whose files were removed counted as up to date.",
+        "disposition": "FIXED in c7a5d4d: a missing installPath directory is reinstalled. Test: test_an_installed_copy_that_differs_from_the_checkout_is_refreshed_and_an_equal_one_is_left."
+      }
+    ]
+  }
+}

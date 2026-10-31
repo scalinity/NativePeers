@@ -8,7 +8,7 @@
   "consumed": {
     "active_live_seconds": 2454,
     "parent_model_turns": 5,
-    "worker_task_inputs": 23
+    "worker_task_inputs": 24
   },
   "fallthrough_detected": false,
   "harness_runs": {
@@ -136,6 +136,17 @@
       ],
       "shadow_requests": 0,
       "worker_task_inputs": 4
+    },
+    {
+      "active_live_seconds": 0,
+      "at": "2026-10-30T19:58:00-0400",
+      "id": "desktop-review-1",
+      "note": "Independent read-only review (group 3fa29592); the first attempt failed before any worker started (SUPERVISOR_LOST, process creation during a concurrent full test run).",
+      "parent_model_turns": 0,
+      "providers": [
+        "codex gpt-6.1-sol xhigh"
+      ],
+      "worker_task_inputs": 1
     }
   ],
   "planning_allocation": {
@@ -146,5 +157,5 @@
   },
   "reserved": [],
   "schema": "nativepeers.claude-lineage-live-budget.v1",
-  "updated_at": "2026-10-30T19:08:00-0400"
+  "updated_at": "2026-10-30T19:58:00-0400"
 }
