@@ -639,14 +639,29 @@ def for_cli(journal, core, caller, session=None):
 def bind_registered(journal, registry, session, wait=8.0):
     """bind_session, waiting while the session is not registered yet: the mod starts its bridge at session start, and on
     --resume NativePeers' own SessionStart hook registers the new incarnation a moment later. Other refusals are final."""
-    deadline = time.monotonic() + wait
+    deadline = time.monotonic() + wait;desktop = False
     while True:
         try:
             return bind_session(journal, registry, session)
         except PeerError as error:
             pending = error.code == 'CALLER_UNBOUND' and set((error.details or {}).keys()) == {'claude_session'}
             if not pending or time.monotonic() >= deadline:raise
+            if not desktop:
+                desktop = True;register_desktop(journal, session)
+                continue
             time.sleep(0.25)
+
+
+def register_desktop(journal, session):
+    """A desktop engine's first session: its SessionStart hook refused because the engine has no approval yet, a check its
+    short timeout leaves to the bridge. Approve it here and register through the hook's own path (§6.7). An approved engine
+    is left to its hook."""
+    from .caller import nearest_native
+    from .desktop_host import approved, candidate
+    from .hooks import observe
+    nearest = nearest_native([p.json() for p in ancestry()[1:]], journal=journal)
+    if not nearest or not candidate(nearest['executable']) or approved(journal, nearest['executable']):return
+    observe('claude', {'hook_event_name': 'SessionStart', 'session_id': session, 'cwd': os.getcwd()}, journal, approve_desktop=True)
 
 
 def claim_free(socket):

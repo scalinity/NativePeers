@@ -98,7 +98,9 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
   }
   const c = counts(workers.filter(w => !w.parentWorkerId))
   const head = `⟐ np · ${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.stopped ? ` · ${c.stopped} stopped` : ''}${c.failed ? ` · ${c.failed} failed` : ''}`
-  const status = faults.fallthrough ? ' · agent types off (fallthrough; /np doctor)' : bridge.state !== 'ready' ? ` · bridge ${bridge.state}${bridge.reason ? ': ' + bridge.reason.slice(0, 60) : ''}` : ''
+  // The reason itself is /np doctor's: a raw error does not fit beside the buttons.
+  const status = faults.fallthrough ? ' · agent types off — /np doctor' : bridge.state === 'starting' ? ' · bridge starting'
+    : bridge.state !== 'ready' ? ` · bridge ${bridge.state} — /np doctor` : ''
   const rows = workers.filter(w => !w.parentWorkerId).slice(-4)
   // A running worker with no live shadow here (none, or one that faulted or ended) is offered for attach.
   const offers: NpWorker[] = []
@@ -108,21 +110,21 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
   }
   return (
     <Box flexDirection="column">
-      <Box flexDirection="row">
-        <Text dimColor>{head}{status} </Text>
+      <Box flexDirection="row" columnGap="sm">
+        <Box flexShrink={1}><Text dimColor wrap="truncate-end">{head}{status}</Text></Box>
         {c.running ? <Button key="stopall" label="Stop all" onPress={() => stopAll($)} /> : null}
         <Button key="pane" label="Pane" onPress={() => openPane($)} />
       </Box>
       {rows.map((w, n) => (
-        <Box key={'row-' + w.workerId} flexDirection="row">
-          <Text color={ACTIVE.includes(w.status) ? 'suggestion' : w.status === 'completed' ? 'success' : 'error'}>{TAGS[w.provider] ?? w.provider} </Text>
-          <Text>{modelLabel(w.modelObserved ?? w.modelRequested, w.provider)}{w.effort ? ' ' + w.effort : ''} · {w.title} · {elapsed(w, now)} · {w.status} </Text>
+        <Box key={'row-' + w.workerId} flexDirection="row" columnGap="sm">
+          <Text color={ACTIVE.includes(w.status) ? 'suggestion' : w.status === 'completed' ? 'success' : 'error'}>{TAGS[w.provider] ?? w.provider}</Text>
+          <Box flexShrink={1}><Text wrap="truncate-end">{modelLabel(w.modelObserved ?? w.modelRequested, w.provider)}{w.effort ? ' ' + w.effort : ''} · {w.title} · {elapsed(w, now)} · {w.status}</Text></Box>
           {w.agentId && index.includes(w.agentId) ? <Button key={'open-' + w.workerId} label="Open" hotkey={String(n + 1)} onPress={() => openView($, w.agentId!)} /> : null}
         </Box>
       ))}
       {offers.map(w => (
-        <Box key={'offer-' + w.workerId} flexDirection="row">
-          <Text dimColor>unmirrored: {TAGS[w.provider]} {w.title} </Text>
+        <Box key={'offer-' + w.workerId} flexDirection="row" columnGap="sm">
+          <Box flexShrink={1}><Text dimColor wrap="truncate-end">unmirrored: {TAGS[w.provider]} {w.title}</Text></Box>
           <Button key={'attach:' + w.workerId} label="Attach" onPress={() => undefined} />
         </Box>
       ))}

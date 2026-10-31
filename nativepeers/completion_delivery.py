@@ -29,6 +29,11 @@ def readiness(journal, parent_key):
             require(worker and worker['state'] in ('READY', 'RUNNING', 'IDLE_GRACE'),
                     'TARGET_OFFLINE', 'Parent worker controller has released ownership')
             value['generation'] = worker['generation']
+        elif kind == 'none' and peer.get('capabilities', {}).get('mirror'):
+            # A desktop-hosted parent has no inbox: the np mod mirrors its workers and NativePeers retains completions.
+            value.update(state='MIRROR_ONLY', reason='Desktop-hosted session without an inbox: completions are retained, and the np mod mirrors its workers',
+                         next_action='Collect retained results with npeer result, or watch np:* workers in the session')
+            return value
         elif kind in ('antigravity-native-hook','grok-native-hook'):
             from .compatibility import verify
             from .grok import executable as grok_executable

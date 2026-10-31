@@ -11,7 +11,9 @@ npeer install --claude-mod --dry-run --json   # shows the claude plugin commands
 npeer install --claude-mod --json             # runs them; a repeat run performs zero operations
 ```
 
-The installer registers this checkout's `integrations/claude/mod` folder as the local marketplace `nativepeers-local` and installs `np` at user scope, so it loads in Terminal sessions and in the desktop app's local Code sessions. The folder is read in place: after `git pull`, run `/reload-plugins` in a session. Remove it with `npeer uninstall --claude-mod --json`.
+The installer registers this checkout's `integrations/claude/mod` folder as the local marketplace `nativepeers-local` and installs `np` at user scope, so it loads in Terminal sessions and in the desktop app's local Code sessions. Claude Code keeps its own copy of an installed plugin: after `git pull`, run `npeer install --claude-mod --json` again, which refreshes the copy when it differs from the checkout, then start a new session or run `/reload-plugins`. Remove it with `npeer uninstall --claude-mod --json`.
+
+In the desktop app, a local Code session starts its engine with the first message you send, so the `⟐ np` band appears after it. NativePeers approves the desktop's bundled engine on first use, once its Anthropic code signature and version check out on a private copy. A desktop session has no inbox, so it is a mirror-only parent: `np:*` workers mirror and notify as in Terminal, and the first results of workers it starts with `npeer spawn` stay with NativePeers (`npeer result`).
 
 ## Delegating
 
