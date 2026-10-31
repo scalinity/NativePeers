@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/lineage-pane-conversation",
-    "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
-    "evidence": "evidence/claude-lineage-pane-conversation.json",
-    "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
-    "status": "PASS_WITH_OPEN_ITEMS"
+    "branch": "fix/issue-16-workflow",
+    "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+    "evidence": "evidence/issue-16-workflow.json",
+    "source_map_sha256": "b79155145c4f49d453b39cd11b6b8b25e3172ddbbf608d452b2baed1c89f288f",
+    "status": "SOURCE_REVIEW_IN_PROGRESS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d7e6cef",
-    "branch": "fix/lineage-pane-conversation",
-    "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
-    "last_verified_publication": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+    "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+    "branch": "fix/issue-16-workflow",
+    "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+    "last_verified_publication": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,57 +302,35 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/lineage-pane-conversation",
+    "branch": "fix/issue-16-workflow",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
-    "verified_remote_code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+    "verified_remote_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+    "verified_remote_code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "A worker's conversation in the NativePeers pane, with a field to message it; the report written in words",
+  "stage": "issue-16-workflow-source-review",
   "tests_current": {
-    "full_suite": {
-      "status": "PASS_WITH_PREEXISTING_FAILURES",
-      "passed": 1119,
-      "failed": 31,
+    "focused": {
+      "status": "PASS",
+      "tests": 25,
+      "subtests": 34
+    },
+    "budget_facade": {
+      "status": "PASS",
+      "tests": 30,
+      "subtests": 54
+    },
+    "initial_complete": {
+      "status": "FAIL",
+      "passed": 1148,
+      "failed": 2,
       "skipped": 4,
-      "command": ".venv/bin/python -m pytest -q tests",
-      "note": "Run on 27bc698 (from d7e6cef): the identical failure set, by test id, as the last lineage run; failures shared with main plus the evidence-pointer check that publication regenerates. ed9f0bb changes no Python module."
-    },
-    "mod": {
-      "status": "PASS",
-      "passed": 39,
-      "command": "claude plugin test integrations/claude/mod/np",
-      "validate": "passed",
-      "tsc": "tsc --noEmit clean"
-    },
-    "pane_conversation_harness": {
-      "status": "PASS",
-      "command": "tests/integration/claude_mod/run_pane_conversation.py",
-      "result": {
-        "opened_in_pane": true,
-        "tool_row": true,
-        "closing_note": true,
-        "input_reached_worker_once": true,
-        "you_row": true,
-        "follow_up_answer": true,
-        "shadow_model_requests": 0
-      }
-    },
-    "handback_harness": {
-      "status": "PASS",
-      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
-      "result": "deliver: one SubagentHandback call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself, parent notified after 8.1 s"
-    },
-    "startup_race_harness": {
-      "status": "PASS",
-      "command": "tests/integration/claude_mod/run_startup_race.py",
-      "result": {
-        "starts": 1,
-        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
-      }
+      "subtests": 1076,
+      "seconds": 278.32,
+      "failures": "Generated publication pointers still described predecessor source; assertions are unchanged. Functional tests passed. Final source qualification remains pending."
     }
   },
   "transports": {
@@ -361,7 +339,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T00:42:35.394736-04:00",
+  "updated_at": "2026-10-31T01:01:38.811562-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2014,6 +1992,33 @@
         "evidence": "evidence/review-followup-workflow.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PASS_WITH_TRACKER_OPEN"
+      }
+    },
+    {
+      "stage": "A worker's conversation in the NativePeers pane, with a field to message it; the report written in words",
+      "updated_at": "2026-10-31T00:42:35.394736-04:00",
+      "git": {
+        "base_commit": "d7e6cef",
+        "branch": "fix/lineage-pane-conversation",
+        "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+        "last_verified_publication": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/lineage-pane-conversation",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+        "verified_remote_code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/lineage-pane-conversation",
+        "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+        "evidence": "evidence/claude-lineage-pane-conversation.json",
+        "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
+        "status": "PASS_WITH_OPEN_ITEMS"
       }
     }
   ],
