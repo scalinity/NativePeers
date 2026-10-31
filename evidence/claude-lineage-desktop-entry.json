@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "stage": "Desktop entry: the pane opens for any started worker, and the np status entry stays until the footer menu is drawn",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "7171875",
+  "scope": "The np mod: the desktop pane opens beside the conversation when a worker this session has not seen starts running, however it was started (np agent type or npeer spawn from a shell), checked by a one-second timer over the lineage; the status entry carries the summary on the desktop app until the app has drawn the footer menu in that session; /np doctor reports what the app did with the footer. The desktop app run needs the person after install.",
+  "finding": {
+    "observed": "Desktop session 'Repo inventory with GPT-6.1-Terra' (engine 2.1.309), started 2026-10-31 2:08:26 AM EDT, after the #47 install at 2:03:52 AM EDT. Its Claude delegated with npeer spawn and npeer wait from Bash. No np entry appeared in the footer, no pane opened, and nothing drew above the prompt.",
+    "cause": "Confirmed: the mod loaded (mcp__np__catalog and mcp__np__mirror in the session's tools), its bridge (pid 44671) recorded peer np1_d3901754…, and the journal holds the spawned group 36b79339… under that parent key, so the lineage carried the worker. paneBeside was called only from the np agent type's spawn path (pathA), so a CLI spawn opened nothing; #47 had removed the band and turned off the status entry on the desktop app, leaving the footer menu as the only entry. Not established: why the footer menu did not appear. No engine debug log exists for desktop sessions, and the app log records no plugin drawing, so it is unknown whether the app raised SessionMode."
+  },
+  "context_checks": {
+    "ui_open_from_timer": "A scratch mod opening a pane from $.clock.after in a disposable terminal session: 'ui.open timeropen tp (unasked, 170 columns): placed'.",
+    "ui_open_from_detached_loop": "The same from a loop continuing after session.start returned: 'ui.open loopopen lp (unasked, 170 columns): placed'."
+  },
+  "tests": {
+    "mod": {
+      "status": "PASS",
+      "passed": 50,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "pane_conversation_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_pane_conversation.py",
+      "result": "opened in the pane, ✓ tool step, ✓ Completed mark, no send toast, the typed message reached the replay bridge once, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+    },
+    "handback_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
+      "result": "deliver and refuse passed on engines 2.1.314 and 2.1.309"
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
+      }
+    },
+    "full_suite": {
+      "status": "NOT_RUN",
+      "note": "This change touches no Python module."
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-desktop-entry-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "Pane conversation, handback deliver and refuse, and startup race runs passed on this engine. Harness runs draw the terminal surface, so the desktop-only pane opening and footer reporting are not exercised here.",
+      "source_head": "558eb1f"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-desktop-entry-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same runs passed on the desktop app's own engine, drawing the terminal surface.",
+      "source_head": "558eb1f"
+    },
+    {
+      "operation": "managed activation inbox and worker boundary",
+      "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "status": "PASS"
+    }
+  ],
+  "independent_review": {
+    "result": "NOT_RUN",
+    "note": "The lane's 32 worker inputs were spent on the earlier rounds."
+  },
+  "limitations": [
+    "Whether the desktop app draws the footer menu is unknown until a desktop run's /np doctor reports it.",
+    "The pane's opening for a CLI-started worker is desktop-only and is verified by the person after install; its decision (startedSince) is unit-tested and its call (paneBeside) is the one that already opened the pane on the desktop app for np agent spawns.",
+    "Checks carried unchanged from evidence/issue-39-managed-activation.json remain that record's lane's."
+  ]
+}
