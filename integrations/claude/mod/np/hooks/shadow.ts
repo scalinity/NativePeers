@@ -109,11 +109,11 @@ async function bind($: EngineInterface, s: NpShadow): Promise<string | undefined
 
 async function forward($: EngineInterface, s: NpShadow, input: NpInput, mode: 'queue' | 'steer'): Promise<string> {
   input.attempts += 1
-  // A forwarded input starts another generation: the kept report no longer ends the run.
-  s.report = undefined;s.handbacks = undefined
   try {
     const r = await request($, 'POST', `/v1/workers/${s.workerId}/input`, { client_request_id: requestId(input.uuid), text: input.text, origin: input.origin, mode, delivery_owner: 'mirror' })
     Object.assign(input, { forwarded: true, disposition: r.disposition, reason: r.reason, generation: r.generation })
+    // An accepted input starts another generation: the kept report no longer ends the run. A refused one keeps it.
+    if (r.disposition !== 'refused') { s.report = undefined;s.handbacks = undefined }
   } catch (error) {
     const code = error instanceof BridgeError ? error.code : 'TRANSPORT'
     if (input.attempts >= 3 || !['BRIDGE_UNREACHABLE', 'BRIDGE_DOWN'].includes(code)) Object.assign(input, { forwarded: true, disposition: 'refused', reason: code })
@@ -169,15 +169,14 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
   // A step after the run answered, with no new input, is the engine asking for the report again (SubagentHandback):
   // hand it back, or end at once. Waiting on activity here would wait on a worker with nothing left to run.
   if (s.report !== undefined && ['COMPLETING', 'COMPLETED'].includes(s.phase) && !unforwarded(s.inputs).length) {
-    for (let n = 0;n < 8 && !needsHandback(s);n++) {
-      await sleep($, 250)
-      const fresh = await loadShadow($, s.agentId)
-      if (fresh?.handback) s.handback = true
-      if (fresh && unforwarded(fresh.inputs).length) { s.inputs = fresh.inputs;break }
-    }
+    // Asked again after a handback: a refused call returns at once, so this answer waits a moment. Without a known
+    // handback, the engine's note may still be landing.
+    if (s.handbacks) await sleep($, 1000)
+    for (let n = 0;n < 8 && !needsHandback(s);n++) await sleep($, 250)
+    // What arrived meanwhile wins: a follow-up goes on to be forwarded instead of the old report.
+    const fresh = await loadShadow($, s.agentId)
+    if (fresh) s.inputs = fresh.inputs
     if (!unforwarded(s.inputs).length) {
-      // Asked again after a handback: a refused call returns at once, so this answer waits a moment.
-      if (s.handbacks) await sleep($, 1000)
       const end = ending(e, s, '', s.report, 0, open.block++)
       await saveShadow($, s)
       for (const chunk of end.chunks) yield chunk
@@ -191,6 +190,13 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
   for (const input of unforwarded(s.inputs)) {
     const note = await forward($, s, input, o.followupMode === 'steer-if-supported' && o.steer ? 'steer' : 'queue')
     if (note) yield say(note)
+  }
+  // Every follow-up was refused after the run had answered: no generation starts, so the kept report ends the run.
+  if (s.report !== undefined && ['COMPLETING', 'COMPLETED'].includes(s.phase) && !unforwarded(s.inputs).length) {
+    const end = ending(e, s, open.answer, s.report, 0, open.block++)
+    await saveShadow($, s)
+    for (const chunk of end.chunks) yield chunk
+    return end.done
   }
   // A provider fallback moves the task to another worker: while the bridge says
   // so (continued_by), a terminal of the moved generation is not the end.
@@ -328,12 +334,9 @@ export async function mirrorCall($: EngineInterface, agentId: string | undefined
 
 // session.append for a shadow: record a follow-up row once, by its uuid.
 export async function captureRow($: EngineInterface, agentId: string | undefined, row: { door: string; origin: any; message: any }, uuid: string): Promise<void> {
-  if (agentId && handbackRequired(row)) {
-    handbackSeen.add(agentId)
-    const held = await loadShadow($, agentId)
-    if (held && !held.handback) { held.handback = true;await saveShadow($, held) }
-    return
-  }
+  // The note is kept in the module, never by saving the record here: a save of an older copy could undo the step's
+  // newer state. The step persists it (needsHandback).
+  if (agentId && handbackRequired(row)) { handbackSeen.add(agentId);return }
   const s = await loadShadow($, agentId)
   if (!s) return
   const found = followUp(row)

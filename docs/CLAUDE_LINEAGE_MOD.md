@@ -723,7 +723,7 @@ on('turn.step', async function* stepHook($, e, next) { ... }).catch(async functi
 | `message.delta` | `text` in the current text block | no |
 | `message.completed` (no prior deltas) | one `text` with the whole message | no |
 | `reasoning.delta` (`showReasoning:live`) | `thinking` (shown live, not recorded: X6) | no |
-| `tool.started` (live) | for each `tool.started` in the batch: `tool` (`mcp__np__mirror`, a fresh `toolu_…` id) and `input` `{title,kind,detail?,ref}`: the title first, `detail` only when it adds to the title, and `ref = #<seq>` of the `tool.started` event, unique within the shadow (a surface may show the input) | yes: `stop{tool_use}` |
+| `tool.started` (live) | for each `tool.started` in the batch: `tool` (`mcp__np__mirror`, a fresh `toolu_…` id) and `input` `{title,kind,detail?,ref}`: the title first, `detail` only when it adds to the title, and `ref = #<seq>` of the `tool.started` event, unique within the worker it mirrors; a fallback move clears the pending refs (a surface may show the input) | yes: `stop{tool_use}` |
 | `tool.started` + `tool.completed` already in the batch, or catch-up | the same, up to 8 parallel blocks per step; the tool hook answers immediately | yes |
 | `files.changed` without a tool event | a mirror `edit` block | yes |
 | `usage` | accumulate; report on the next stop chunk as `{input_tokens:0, output_tokens:Δ, cache_*:0, model:<observed>}` (display only: X7) | no |
@@ -784,7 +784,8 @@ In auto mode only a `SubagentHandback` call reaches the parent (X15). For such a
 - **Detection.** The engine's note row (door `note`, `origin.kind:'engine'`, naming `SubagentHandback(`) or its enforcement row marks the shadow `handback`. A note that lands before the shadow's record is held by the module until the first step.
 - **The report** is the §7.5.1 text with the worker's final text always included. It is the call's `message`, kept on the shadow until the run completes.
 - **The transcript** closes with a footer in words, with no ids: `— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s`. The worker's final text precedes it when it was not streamed.
-- **The call** is left to auto mode's classifier (X16, §7.6). A refused call returns as another step: after three tries the run ends on `end_turn` with `[NativePeers could not hand this report to the main conversation …; npeer result <group>]`.
+- **The call** is left to auto mode's classifier (X16, §7.6). A refused call returns as another step, answered after a one-second pause. After three refused tries the run ends on `end_turn` with `[NativePeers could not hand this report to the main conversation …; npeer result <group>]`, and the engine ends the run: its enforcement is bounded (`run_handback.py --refuse`).
+- **A follow-up** accepted before the handback starts another generation, whose report replaces the kept one. A refused follow-up starts none, so the kept report still ends the run, after the refusal note.
 - **A step after the answer** with no new input is the engine asking for the report again. It hands the kept report back, or ends at once; it never waits on activity from a worker with nothing left to run.
 - Failures that end a run before any activity (spawn refused, binding failed) end the same way, with their text as the report.
 
@@ -870,7 +871,7 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
 3. **`UserMessage` in shadow views.** Label provenance: `From main agent` (coordinator), `You` (person) and `Task from main · via NativePeers` (adoption brief). `UserMessage` props carry no agent id or view (D), so label by `origin.kind`: coordinator rows occur only in subagent transcripts. Gates G1 and G3 confirm the kinds. The row folds to one line unless `isExpanded`, keeping T3's "Show full message" behavior through ctrl+o.
 4. **`AbovePrompt` band** (respect `hasSurvey`, `maxRows` and collapse):
    - **Drawn** on the terminal (and everywhere under `band: always`). On the desktop app under `band: auto` the hook passes, and the pane carries the summary.
-   - **Main view:** `⟐ np · N delegates · r running · d done · f failed [Stop all] [Pane]`, then up to 4 rows: `<tag> <model> <effort> · <title> · <elapsed> · <status> [Open]`. `[Open]` calls `$.ui.view({agentId})`. Hotkeys are `1` to `4`.
+   - **Main view:** `⟐ np · N delegates · r running · d done · f failed [Stop all] [Pane]`, then up to 4 rows: `<tag> <model> <effort> · <title> · <elapsed> · <status> [Open]`. `[Open]` calls `$.ui.view({agentId})`, and is not offered on the desktop app (X17). Hotkeys are `1` to `4`.
    - **Shadow view** (`e.props.view.agentId` is a shadow): `↳ Subagent of main · <provider> · <model observed> · <effort> · <profile> · <elapsed> [Interrupt] [Stop] [Resume cmd] [Pane]`. `[Resume cmd]` uses `$.ui.copy` on the terminal. On remote surfaces copy has no path, so it shows the command in the pane instead.
    - **Offers:** `[Attach]` and `[Re-attach]` rows (§7.4 Path C).
    - **Degraded mode** (no shadows): rows open the pane viewer instead.
@@ -878,7 +879,7 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
    - lineage tree in words, `<Provider> · <title> · <Status> · <elapsed>`, including descendants (read-only);
    - details for the selected worker in words: model and effort (and the requested model when another was observed), access (`Read-only` or `Can edit its own workspace`), output tokens, latest activity. Its ids (worker, group, task, native, generation) are not shown: `[Copy IDs]` copies them;
    - on the desktop app: the band's summary with `[Stop all]` while delegates run, and `Its transcript is in Background tasks.` in place of `[Open]`;
-   - buttons: Open (where a main view can switch), Interrupt, Stop, Copy resume command, Patch preview (`delta-preview`), Copy IDs.
+   - buttons: Open (where a main view can switch), Attach (a running worker with no live shadow here, as in the band), Interrupt and Stop (a running worker), Copy resume command, Patch preview (`delta-preview`), Copy IDs.
    - In degraded mode it also renders the worker transcript from activity, as `Markdown` and `Code`.
 6. **Commands.**
 

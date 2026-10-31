@@ -5,7 +5,7 @@ import type { NpShadow, NpWorker } from '../types'
 import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } from './agents'
 import { request } from './bridge'
 import { duration } from './mirror'
-import { loadShadow } from './shadow'
+import { loadShadow, newShadow } from './shadow'
 import { getBridge, getFaults, getIndex, getLineage, getMember, getUi, setUi } from './state'
 import type { NpBridge, NpFaults } from '../types'
 
@@ -143,7 +143,7 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
         <Box key={'row-' + w.workerId} flexDirection="row" columnGap="sm">
           <Text color={ACTIVE.includes(w.status) ? 'suggestion' : w.status === 'completed' ? 'success' : 'error'}>{TAGS[w.provider] ?? w.provider}</Text>
           <Box flexShrink={1}><Text wrap="truncate-end">{modelLabel(w.modelObserved ?? w.modelRequested, w.provider)}{w.effort ? ' ' + w.effort : ''} · {w.title} · {elapsed(w, now)} · {w.status}</Text></Box>
-          {w.agentId && index.includes(w.agentId) ? <Button key={'open-' + w.workerId} label="Open" hotkey={String(n + 1)} onPress={() => openView($, w.agentId!)} /> : null}
+          {w.agentId && index.includes(w.agentId) && e.surface !== 'desktop' ? <Button key={'open-' + w.workerId} label="Open" hotkey={String(n + 1)} onPress={() => openView($, w.agentId!)} /> : null}
         </Box>
       ))}
       {offers.map(w => (
@@ -166,6 +166,11 @@ export async function renderPane($: EngineInterface, e: any, next: (e: any) => a
   const desktop = e.surface === 'desktop'
   const selected = workers.find(w => w.workerId === ui?.selected) ?? workers[workers.length - 1]
   const c = counts(workers.filter(w => !w.parentWorkerId))
+  // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
+  const attachable = selected && ACTIVE.includes(selected.status) && selected.mirrorOwner !== 'other' &&
+    (!selected.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, selected.agentId)).phase))
+  const target = selected && ((selected.agentId ? await loadShadow($, selected.agentId) : undefined) ??
+    newShadow('', selected.provider, selected.title, '', 0, { workerId: selected.workerId, generation: selected.generation }))
   const depth = (w: NpWorker): number => { let d = 0, cur: NpWorker | undefined = w;while (cur?.parentWorkerId && d < 6) { cur = workers.find(x => x.workerId === cur!.parentWorkerId);d++ }return d }
   return (
     <Box flexDirection="column">
@@ -187,7 +192,10 @@ export async function renderPane($: EngineInterface, e: any, next: (e: any) => a
           {details(selected).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
           <Box flexDirection="row" columnGap="sm">
             {!desktop && selected.agentId && index.includes(selected.agentId) ? <Button key="p-open" label="Open" onPress={() => openView($, selected.agentId!)} /> : null}
-            {!selected.agentId && ACTIVE.includes(selected.status) ? <Button key={'attach:' + selected.workerId} label="Attach" onPress={() => undefined} /> : null}
+            {attachable ? <Button key={'attach:' + selected.workerId} label="Attach" onPress={() => undefined} /> : null}
+            {target && ACTIVE.includes(selected.status) ? <Button key="p-interrupt" label="Interrupt" onPress={() => interruptWorker($, target)} /> : null}
+            {target && ACTIVE.includes(selected.status) ? <Button key="p-stop" label="Stop" onPress={() => stopWorker($, target)} /> : null}
+            {target ? <Button key="p-resume" label="Resume cmd" onPress={(p: { surface: string }) => copyResume($, target, p.surface)} /> : null}
             <Button key="p-ids" label="Copy IDs" onPress={(p: { surface: string }) => copyIds($, selected, p.surface)} />
           </Box>
           {desktop && selected.agentId ? <Text dimColor>Its transcript is in Background tasks.</Text> : null}

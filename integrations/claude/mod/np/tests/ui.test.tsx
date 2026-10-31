@@ -7,7 +7,7 @@ const workers = [
 const shadow = { agentId: 'a1', workerId: 'W1', groupId: 'G1', generation: 1, provider: 'codex', model: 'gpt-6.1-sol', effort: 'high', profile: 'analysis', title: 'Codebase review',
   phase: 'STREAMING', deliveryOwner: 'mirror', cursor: 4, pendingRefs: {}, inputs: [], briefConsumed: true, terminals: [], session: 's', startedAt: 1000, waits: 0, latest: 'pytest -q' }
 
-function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, paneOpen: false }) {
+function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, paneOpen: false }, held: Record<string, unknown> = shadow) {
   on('clock.now', () => ({ value: 61000 }))
   on('state.get', ($: any, e: any) => {
     const values: Record<string, unknown> = {
@@ -16,7 +16,7 @@ function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, pa
       shadows: ['a1'],
       faults: { fallthrough: false },
       ui,
-      shadow: e.id === 'a1' ? { shape: 'np-shadow-1', value: shadow } : undefined,
+      shadow: e.id === 'a1' ? { shape: 'np-shadow-1', value: held } : undefined,
     }
     const value = values[e.key]
     return { value: value === undefined ? { value: undefined, version: 0 } : { value, version: 1 } }
@@ -87,4 +87,19 @@ test('the pane offers Open on the terminal; on the desktop app it carries the su
   expect(await desktop.find({ type: 'Text', text: /^2 delegates · 1 running · 1 done$/ })).toBeTruthy()
   expect(await desktop.find({ type: 'Button', key: 'stopall' })).toBeTruthy()
   await desktop.unmount()
+})
+
+test('the pane offers Interrupt and Stop for a running worker, and Attach only when its shadow here has ended or faulted', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, selected: 'W1' })
+  const live = await $.ui.mount(pane('desktop'))
+  for (const key of ['p-interrupt', 'p-stop', 'p-resume']) expect(await live.find({ type: 'Button', key })).toBeTruthy()
+  expect(await live.find({ type: 'Button', key: 'attach:W1' })).toBeFalsy()
+  await live.unmount()
+})
+
+test('a running worker whose shadow faulted is offered Attach in the pane', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, selected: 'W1' }, { ...shadow, phase: 'FAULTED' })
+  const ui = await $.ui.mount(pane('desktop'))
+  expect(await ui.find({ type: 'Button', key: 'attach:W1' })).toBeTruthy()
+  await ui.unmount()
 })

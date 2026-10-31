@@ -99,4 +99,7 @@ export const register: Register = on => {
   // classifier, whose model request the tripwire refuses.
   on('tool.check', { tool: 'Agent' }, async ($, e, next) =>
     e.agentId === undefined && (await $.env.get('NP_DRIVER_ALLOW_AGENT')) === '1' ? { decision: 'allow' as const, reason: 'harness: scripted Agent call' } : next(e))
+  // NP_DRIVER_DENY_HANDBACK=1: every SubagentHandback in a subagent loop is refused, as a classifier refusal would be.
+  on('tool.check', { tool: 'SubagentHandback' }, async ($, e, next) =>
+    e.agentId !== undefined && (await $.env.get('NP_DRIVER_DENY_HANDBACK')) === '1' ? { decision: 'deny' as const, reason: 'harness: handback refused' } : next(e))
 }
