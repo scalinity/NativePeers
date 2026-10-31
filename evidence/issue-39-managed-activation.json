@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "originating_task": "NativePeers #39 managed activation delivery",
-  "stage": "SOURCE_REVIEW_PASS_INSTALLED_NATIVE_PENDING",
-  "status": "PENDING",
+  "stage": "INSTALLED_NATIVE_QUALIFIED",
+  "status": "PASS",
   "reviewed_commit": "9844b21",
   "design": "Exact registered recipient runtime and queue helper; selected runtime remains mandatory for new workers. Definitely unsubmitted runtime failures reuse immutable admission; quiet retention and accepted/uncertain attempts remain inert.",
   "tests": {
@@ -39,7 +39,21 @@
       "cwd": "/Users/danny/Documents/Tools/CodexForge/.worktrees/issue-39"
     },
     "installed_native": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "command": "PYTHONPATH=/Users/danny/Documents/Tools/NativePeers/evidence/scratch/issue-39/probe-deps .venv/bin/python evidence/scratch/issue-39/native_activation.py --run /Users/danny/Documents/Tools/NativePeers/evidence/scratch/issue-39/native-interval-06",
+      "cwd": "/Users/danny/Documents/Tools/NativePeers",
+      "exit_code": 0,
+      "proof_sha256": "ce3ab9bc5025ac5f233299f432bc7368e5303caca846f725a537f87d6e3f893d",
+      "controlled_interval_seconds": 44.954094,
+      "old_recipient_deliveries": 1,
+      "old_recipient_replies": 1,
+      "deferred_original_deliveries": 1,
+      "successful_worker_inputs_after_approval": 1,
+      "unqualified_worker": "FAILED with CAPABILITY_MISMATCH before native process/model input; group record admission is not input submission",
+      "cli_and_bound_mcp_status": "PASS before approval and after old-recipient ingestion",
+      "private_compensation": "PASS; expected current/previous/installed receipt/approval checked and restored",
+      "production_approval_unchanged": true,
+      "cleanup": "All owned native/PTY/controller families confirmed DEAD and output EOF; MCP communicate observed stdout/stderr EOF separately"
     },
     "remediation_runtime": {
       "status": "PASS",
@@ -159,29 +173,85 @@
       "seconds": 8.3,
       "source_commit": "9844b21",
       "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_native_delivery.py tests/unit/test_completion_delivery.py tests/unit/test_notification_policy.py tests/contract/test_phase_admission.py tests/contract/test_supervisor.py tests/contract/test_notifications.py"
+    },
+    "installed_quiet_retention": {
+      "status": "PASS",
+      "exit_code": 0,
+      "cwd": "/Users/danny/Documents/Tools/NativePeers",
+      "command": [
+        "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python",
+        "/Users/danny/Documents/Tools/NativePeers/tests/probes/quiet_close_tui.py",
+        "--nativepeers-root",
+        "/Users/danny/Documents/Tools/NativePeers",
+        "--run",
+        "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/issue-39/quiet-installed-01",
+        "--codex",
+        "/Users/danny/.local/bin/codex"
+      ],
+      "scope": "44 original warm/cold queued frames; completion rows/results are labeled fixtures, with full PTY capture through EOF and native-history checks",
+      "proof_sha256": "a3cc6f9745161a50350d18300b65203c5afd76d37c43f0652de793886bf5112f"
+    },
+    "installed_live_followup": {
+      "status": "PASS",
+      "exit_code": 0,
+      "cwd": "/Users/danny/Documents/Tools/NativePeers",
+      "command": [
+        "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python",
+        "/Users/danny/Documents/Tools/NativePeers/tests/probes/live_followup.py",
+        "--nativepeers-root",
+        "/Users/danny/Documents/Tools/NativePeers",
+        "--run",
+        "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/issue-39/followup-installed-01"
+      ],
+      "scope": "Four actual native worker phases in one history; phase3 accepted+ingested push once, phase4 quiet RETAINED; complete PTY/worker/controller EOF",
+      "proof_sha256": "ecbf62653b2fb298715b5907cd8320c8d7adf74b469cf3863c08cca1c300cef3"
+    },
+    "packaged_smoke": {
+      "status": "PASS",
+      "exit_code": 0,
+      "cwd": "/Users/danny/Documents/Tools/CodexForge",
+      "command": "/opt/homebrew/bin/python3 smoke.py --package /Users/danny/.local/share/codex-mcp-manager/current",
+      "log": "CodexForge/artifacts/issue-39-installed-smoke.log"
+    },
+    "rust_build": {
+      "status": "NOT_RUN",
+      "reason": "Documentation-only CodexForge companion; manager/launcher/adapters/smokes/patch inputs byte-identical, normal manager.validate_package and fresh installed smoke pass."
+    },
+    "physical_capture": {
+      "status": "NOT_RUN",
+      "reason": "No computer-use or physical capture change in scope."
     }
   },
   "operation_checks": [
     {
-      "operation": "managed activation inbox and new-worker boundary",
-      "parent_context": "Owned issue39 session; installed route pending",
+      "operation": "managed activation inbox and worker boundary",
+      "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",
       "provider": "codex",
       "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
   "runtime_scopes": [
     {
-      "operation": "intended installed inbox and worker runtime",
+      "operation": "Approved predecessor recipient and exact queue helper",
+      "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "status": "PASS"
+    },
+    {
+      "operation": "Selected candidate deferral, qualification and worker guard",
       "sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
   "limitations": [
-    "Installed/native acceptance pending. Existing Python processes may retain imported modules. Tracker #16 remains open. Setup totals and net time savings unknown."
+    "Tracker16 remains OPEN; this is not100/100 or all-provider certification.",
+    "Long-lived facades/bridges may retain imported Python; fresh installed invocations were qualified, no hot reload claimed.",
+    "Source synchronization is a coordinated sampled quiet point, not an atomic import switch.",
+    "Initial setup/collection totals and native tool/model round counts remain unknown; no net time-saving claim.",
+    "Physical capture and external network instrumentation NOT_RUN."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "7465c9ad7b2152d647ac01b5c2e759f2a921b732",
+  "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -293,7 +363,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
-  "updated_at": "2026-10-31T01:43:17.884886-04:00",
+  "updated_at": "2026-10-31T02:10:31.161225-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
@@ -453,10 +523,22 @@
         "fixed and independently accepted as read; parent checks verified",
         "9844b21",
         "GitHub4430668280: existing live acceptance helper passes journal and expiry, reserves Codex budget only after verification; real helper regression keeps Claude signature"
+      ],
+      [
+        "P004",
+        "fixed and independently accepted as read; parent checks verified",
+        "private transition driver",
+        "Preserve explicit initialized session bridges like MCP facades; four direct-function cases and real quiet sample pass"
+      ],
+      [
+        "F601",
+        "rejected with evidence",
+        "private transition record",
+        "Arbitrary60-second age cannot prove import completion; actual live doctor registry and33-minute initialized bridge observed, sampled/import-race limitation remains explicit"
       ]
     ],
     "final_recheck_task": "cf120e6e-64c6-495e-bb0f-9e02c0fe04d1",
-    "status": "ACCEPTED_SIX_NATIVE_PHASES_ALL_FINDINGS_DISPOSED",
+    "status": "ACCEPTED_SEVEN_NATIVE_PHASES_ALL_FINDINGS_DISPOSED",
     "reviewer_tests": "NOT_RUN; independent analysis/read-only findings, parent execution separately attributed",
     "second_task": "35b864f1-c7e0-4253-a4eb-46be3dea23a6",
     "second_result": "Fixed source accepted; F101-F106 remained on the proposed driver/last edge cases.",
@@ -469,11 +551,13 @@
       125028,
       58492,
       41533,
-      60964
+      60964,
+      19332
     ],
-    "logical_inputs": 6,
+    "logical_inputs": 7,
     "sixth_task": "cf120e6e-64c6-495e-bb0f-9e02c0fe04d1",
-    "reviewer_release": "Generation6 captured process/pipe closure: CLOSED, provider_exited true, output_eof true, owned process DEAD; resume-command --explain launched false."
+    "reviewer_release": "Generation6 captured process/pipe closure: CLOSED, provider_exited true, output_eof true, owned process DEAD; resume-command --explain launched false.",
+    "seventh_task": "41ec29d0-c490-4aef-b559-81722330f300"
   },
   "concurrent_base": "46ad3ba8039bf20f3faf9035b7572ea72b2698a8",
   "scoped_predecessors": [
@@ -486,6 +570,45 @@
       "record": "evidence/claude-lineage-pane-polish.json",
       "source_merge": "46ad3ba8039bf20f3faf9035b7572ea72b2698a8",
       "scope": "Separate owner-qualified pane polish preserved; no NativePeers Python changes, no checks attributed to issue39."
+    },
+    {
+      "record": "evidence/claude-lineage-native-pane.json",
+      "source_merge": "8a97a667c0d997ae0ba2ae4a0f3b8495d689d1f5",
+      "scope": "Separate owner integration preserved. NativePeers Python, Codex hooks and issue39 probe bytes equal the qualified32e1112 tree; no Lineage qualification attributed to issue39."
     }
-  ]
+  ],
+  "issue39": "Ready for closure after this verification record is published and synchronized; tracker16 remains OPEN",
+  "publication": {
+    "nativepeers_product_pr": 40,
+    "nativepeers_product_merge": "32e1112f042da48a2ea9a6a179c841f56f637075",
+    "codexforge_companion_pr": 11,
+    "codexforge_companion_merge": "3e05c9091506328c495fe01ff7339190e7d25db1",
+    "source_activation": "manager then runtime lock; source-activation-03 PASS; package/approval/host state unchanged",
+    "installer": "Dry run and supported default install PASS, operations[], changed:false"
+  },
+  "native_evidence": {
+    "successful_run": "evidence/scratch/issue-39/native-interval-06/qualification.json",
+    "failed_runs_retained": [
+      "evidence/scratch/issue-39/native-interval-01/qualification.json",
+      "evidence/scratch/issue-39/native-interval-02/qualification.json",
+      "evidence/scratch/issue-39/native-interval-03/qualification.json",
+      "evidence/scratch/issue-39/native-interval-04/qualification.json",
+      "evidence/scratch/issue-39/native-interval-05/qualification.json"
+    ],
+    "failure_attribution": "Harness assumptions/launch flags/EOF accounting/marker collision; all owned processes and output EOF verified; no accepted attempt replay",
+    "terminal_scope": "Complete PTY bytes captured through owned EOF; final-screen checks during defined quiet intervals, no physical-screen or raw-ANSI-byte-equality claim",
+    "external_model_inputs": "NOT_INSTRUMENTED; localhost models configured. Seven substantive paid native reviews separately measured."
+  },
+  "measurements": {
+    "review_selected_packet_bytes": 790512,
+    "review_result_text_bytes": 69687,
+    "logical_review_inputs": 7,
+    "native_model_tool_rounds": null,
+    "setup_total_calls": null,
+    "setup_total_seconds": null,
+    "collection_integration_seconds": null,
+    "net_time_saved": null,
+    "native_interval_localhost_requests": 36,
+    "human_interventions": 0
+  }
 }

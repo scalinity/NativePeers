@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "17c00aae87aced7410a5775b2ac999b8766f3204",
-  "reviewed_commit": "46ad3ba",
-  "publication_branch": "fix/lineage-native-pane",
-  "updated_at": "2026-10-31T02:03:06.639930-04:00",
-  "current_record": "evidence/claude-lineage-native-pane.json",
+  "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+  "reviewed_commit": "9844b21",
+  "publication_branch": "fix/managed-activation-delivery",
+  "updated_at": "2026-10-31T02:10:31.161225-04:00",
+  "current_record": "evidence/issue-39-managed-activation.json",
   "file_classes": {
     "product": {
       "files": {
@@ -412,29 +412,11 @@
   },
   "operation_checks": [
     {
-      "provider": "claude",
-      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
-      "operation": "np-native-pane-harness",
-      "status": "PASS",
-      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The pane conversation run with the restyled rows, handback deliver and refuse runs, and the startup race run passed on this engine, on the native pane branch merged with main at 32e1112.",
-      "source_head": "15f92f7"
-    },
-    {
-      "provider": "claude",
-      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
-      "operation": "np-native-pane-harness-desktop-engine",
-      "status": "PASS",
-      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The pane conversation, handback deliver and refuse, and startup race runs passed on the desktop app's own engine, on the native pane branch merged with main at 32e1112.",
-      "source_head": "15f92f7"
-    },
-    {
-      "operation": "managed activation inbox and new-worker boundary",
-      "parent_context": "Owned issue39 session; installed route pending",
+      "operation": "managed activation inbox and worker boundary",
+      "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",
       "provider": "codex",
       "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
-      "status": "NOT_RUN"
+      "status": "PASS"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
