@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/np-eval-backlog",
-    "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
-    "evidence": "evidence/np-eval-backlog.json",
-    "source_map_sha256": "5319fe0f73d28c4a7b8f06190ac14fd4efb5c4247b905d3458f112184bdbc999",
-    "status": "PARTIAL"
+    "branch": "fix/lineage-desktop-host",
+    "code_commit": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
+    "evidence": "evidence/claude-lineage-desktop.json",
+    "source_map_sha256": "2b2db81f0131a677ae08741b97d48b61215983b81eb0b3f0b9d686dc8ef57064",
+    "status": "PASS_WITH_OPEN_ITEMS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "423025446bad41c6613daff4528b42ec0ba8bd02",
-    "branch": "fix/np-eval-backlog",
-    "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
-    "last_verified_publication": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+    "base_commit": "4b98ea7ec9defa2ddc18fbdeccf63821d76e9e1c",
+    "branch": "fix/lineage-desktop-host",
+    "code_commit": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
+    "last_verified_publication": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,81 +302,58 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/np-eval-backlog",
+    "branch": "fix/lineage-desktop-host",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
-    "verified_remote_code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+    "verified_remote_commit": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
+    "verified_remote_code_commit": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Evaluation backlog source and candidate-native qualification; installed dependency pending",
+  "stage": "NativePeers recognizes the Claude desktop app engine as a mirror-only parent; np band readable on desktop; stale installed mod refreshed",
   "tests_current": {
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1082,
+      "failed": 32,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Of the 32 failures, 28 are the identical set on unmodified main 4b98ea7 by test id, two came with main's parent-loss and selected-context tests and fail identically on unmodified main ab0ce64, and two are the evidence-pointer checks this publication regenerates. The later merge of main ab0ce64 changed only nativepeers/compact.py; its tests and the related suites pass on the merged tree.",
+      "commit": "94f2fb0 (merged with main d2478e7)"
+    },
+    "unmodified_main_baseline": {
+      "status": "FAIL",
+      "commit": "4b98ea7 and ab0ce64",
+      "failed": 28,
+      "detail": "Full suite on 4b98ea7: 28 failures; on ab0ce64 the two new main tests above also fail."
+    },
     "focused": {
       "status": "PASS",
-      "tests": 118,
-      "subtests": 102,
-      "private_artifact": "evidence/scratch/np-eval-backlog/focused-review-fixes.txt"
+      "passed": 157,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_notification_guard_hooks.py tests/unit/test_owned_caller_identity.py tests/unit/test_bridge_backend.py tests/unit/test_grok.py tests/unit/test_antigravity.py tests/unit/test_readiness.py tests/unit/test_install.py tests/unit/test_grok_diagnostics.py tests/contract/test_bridge_inputs.py tests/unit/test_desktop_host.py tests/unit/test_claude_mod_install.py"
     },
-    "selected_final": {
+    "installer": {
       "status": "PASS",
-      "tests": 47,
-      "subtests": 30,
-      "private_artifact": "evidence/scratch/np-eval-backlog/focused-final.txt"
+      "passed": 6,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_claude_mod_install.py"
     },
-    "full": {
+    "mod": {
       "status": "PASS",
-      "tests": 1100,
-      "skipped": 4,
-      "subtests": 1048,
-      "seconds": 293.14,
-      "source_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
-      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-6.txt",
-      "scope": "Final product source including concurrent compact-membership handling; later publication edits are metadata only"
+      "passed": 21,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "clean"
     },
-    "installed_operations": {
-      "status": "BLOCKED",
-      "reason": "Shared root/package/guard transition remains with issue7 owner; backlog operations are not installed in current4b98ea7 root"
-    },
-    "visible_final_tail": {
-      "status": "BLOCKED",
-      "dependency": "https://github.com/scalinity/NativePeers/issues/7"
-    },
-    "historical_attribution": {
+    "zero_api_harness": {
       "status": "PASS",
-      "tests": 45,
-      "subtests": 29,
-      "private_artifact": "evidence/scratch/np-eval-backlog/historical-attribution-fix.txt"
+      "tripwire_hits": 0,
+      "command": "tests/integration/claude_mod/mod_harness.py desktopfix codex_basic.json m3_pathA.json"
     },
-    "publication_consistency": {
+    "desktop_host": {
       "status": "PASS",
-      "tests": 41,
-      "subtests": 9,
-      "private_artifact": "evidence/scratch/np-eval-backlog/final-source-focused.txt",
-      "scope": "Prior combined-source publication pointers; final pointers regenerated from latest exact pushed source"
-    },
-    "coordination_fixture": {
-      "status": "PASS",
-      "scope": "Offline two-parent fixture, real isolated Git worktrees and artifact grants, mock admission/runtime snapshots; no real runtime approval change",
-      "private_artifact": "evidence/scratch/np-eval-backlog/coordination-fixture-result.json"
-    },
-    "private_root_revocation_subdir": {
-      "status": "PASS",
-      "tests": 43,
-      "subtests": 56,
-      "private_artifact": "evidence/scratch/np-eval-backlog/private-path-revocation-subdir-fixes.txt"
-    },
-    "github_review": {
-      "status": "PASS",
-      "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
-      "scope": "Latest automated review reports no remaining findings; all four prior threads resolved after regressions"
-    },
-    "compact_membership": {
-      "status": "PASS",
-      "tests": 66,
-      "subtests": 45,
-      "private_artifact": "evidence/scratch/np-eval-backlog/compact-membership-check.txt"
+      "passed": 8,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_desktop_host.py"
     }
   },
   "transports": {
@@ -385,7 +362,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T20:07:55.625747-04:00",
+  "updated_at": "2026-10-30T20:17:09.214964-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1578,6 +1555,33 @@
         "code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
         "evidence": "evidence/np-eval-backlog.json",
         "source_map_sha256": "596ae3fe6594e8e40e14c1c4c2e557990e85d3c1b758ad78dbe084c7b9f85610",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Evaluation backlog source and candidate-native qualification; installed dependency pending",
+      "updated_at": "2026-10-30T20:07:55.625747-04:00",
+      "git": {
+        "base_commit": "423025446bad41c6613daff4528b42ec0ba8bd02",
+        "branch": "fix/np-eval-backlog",
+        "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+        "last_verified_publication": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/np-eval-backlog",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+        "verified_remote_code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/np-eval-backlog",
+        "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+        "evidence": "evidence/np-eval-backlog.json",
+        "source_map_sha256": "5319fe0f73d28c4a7b8f06190ac14fd4efb5c4247b905d3458f112184bdbc999",
         "status": "PARTIAL"
       }
     }
