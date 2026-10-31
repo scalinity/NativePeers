@@ -291,4 +291,3 @@ Antigravity repeats are zero-operation; package, approvals and non-owned setting
 are unchanged. #39 is accepted through its owner's closing record. Independent
 Lineage #51 remains separately owned. #16 stays open for its full-score workflow
 observations; source and installed success do not establish a perfect session.
-

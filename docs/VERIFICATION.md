@@ -436,4 +436,3 @@ Physical-screen observation and universal provider certification are not claimed
 Tracker #16 remains open: a QUIET receipt does not prove this parent's final
 visible tail, and the measured useful workflow still includes bounded manual
 recovery. No paid experiment is run solely to improve its score.
-
