@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "stage": "issue-7-silent-queue-source",
-  "status": "PARTIAL",
+  "stage": "issue-7-installed-silent-queue",
+  "status": "PASS",
   "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
   "issue": "https://github.com/scalinity/NativePeers/issues/7",
   "tests": {
@@ -13,15 +13,26 @@
       "private_artifact": "evidence/scratch/issue-7/focused-source-final.log"
     },
     "full": {
-      "status": "NOT_RUN",
+      "status": "PASS",
+      "tests": 1117,
+      "subtests": 1056,
+      "skipped": 4,
+      "seconds": 292.91,
+      "exit_code": 0,
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
-      "scope": "Newly merged desktop and selected-context source plus notification fix and reviewed oracles"
+      "cwd": "/Users/danny/Documents/Tools/NativePeers",
+      "source_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/full-nativepeers.log"
     },
     "installed_native": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/qualification.json",
+      "scope": "Exact selected package, supported reinstall, four trusted hooks, mandatory package smoke, doctor and quota metadata"
     },
     "standalone_tui": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/standalone-tui/qualification.json",
+      "scope": "Normally registered standalone native TUI:44 mixed frames,22 warm and22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit"
     },
     "probe_offline": {
       "status": "PASS",
@@ -57,19 +68,70 @@
       "status": "PASS",
       "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
       "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
+    },
+    "genuine_worker_push": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/genuine-workers/qualification.json",
+      "scope": "Three actual Codex worker/controller phases: OPEN delivery, QUIET pre-submission retention, accepted-before-close original completion silent consumption"
+    },
+    "registered_owner_transition": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/legacy-transition-05/qualification.json",
+      "scope": "Registered old owner retains exact receiving guard after distinct managed package selection and approval; zero suppressed model requests, retained original body/receipt and legitimate control. Legacy block UI not silent qualification"
+    },
+    "installer": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/install-preservation-final/install-02.json",
+      "repeat_operations": 0,
+      "scope": "Preserved local Claude notes through reviewed exact-file reconciliation; non-owned settings semantically unchanged"
+    },
+    "external_paid_model": {
+      "status": "NOT_RUN",
+      "scope": "Localhost fixtures qualify native routing and UI; external network traffic is NOT_INSTRUMENTED"
+    },
+    "guarded_rollback": {
+      "status": "PASS",
+      "private_artifact": "/Users/danny/Documents/Tools/CodexForge/artifacts/quiet-close-issue-7/rollback-check-final.json",
+      "scope": "Check-only; no selection/approval writes"
+    },
+    "host_preservation": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/install-preservation-final/host-after.json",
+      "scope": "Protected authentication, shell and provider files unchanged except owned hook/trust updates; non-owned configuration semantic hashes unchanged"
     }
   },
   "operation_checks": [
     {
-      "operation": "policy/hook/installer/identity regressions",
-      "parent_context": "offline temporary journals and mocked native ownership",
+      "provider": "codex",
+      "operation": "silent-queue-tui",
+      "parent_context": "Fresh normally registered standalone TUI, warm/cold exact resume",
       "status": "PASS",
-      "evidence": "evidence/scratch/issue-7/focused-source-final.log"
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/standalone-tui/qualification.json"
     },
     {
-      "operation": "installed queue silent consumption and visible tail",
-      "parent_context": "fresh owned standalone receiver, candidate not activated",
-      "status": "NOT_RUN"
+      "provider": "codex",
+      "operation": "controller-push",
+      "parent_context": "Three fresh standalone parents and native Codex workers",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/genuine-workers/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "registered-owner-after-selection",
+      "parent_context": "Already running exact owner; selected package changed",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/legacy-transition-05/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "installed-hooks-package",
+      "parent_context": "Regular installed launcher, exact global hook trust, normal package smoke",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/qualification.json"
     }
   ],
   "reviews": [
@@ -87,7 +149,7 @@
         },
         {
           "id": "P2",
-          "state": "FIXED_SOURCE_AWAITING_PACKAGE_GATE",
+          "state": "FIXED_PACKAGE_GATE_PASS",
           "detail": "Native stable/experimental protocol bundles must be regenerated and qualified in normal CodexForge assembly."
         }
       ]
@@ -136,6 +198,38 @@
       "status": "PASS",
       "scope": "Reopen audit sequencing P2 fixed; exact immutable package-pin variant rechecked.",
       "private_artifact": "evidence/scratch/issue-7/combined-oracle-recheck-result.json"
+    },
+    {
+      "status": "PASS",
+      "worker_id": "fba9c1b8-16e8-48ef-9013-17b64bb80e6b",
+      "task_id": "9168889c-70e4-4a31-8d4d-0c4c0859f838",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "scope": "Strict reopen frame sequencing and legacy package pin; no findings"
+    },
+    {
+      "status": "PASS",
+      "worker_id": "fba9c1b8-16e8-48ef-9013-17b64bb80e6b",
+      "task_id": "a78108c2-0de7-46e5-8c75-fed83f353817",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "scope": "Combined inherited inputs and preservation of prior approval fields; no findings"
+    },
+    {
+      "status": "PASS",
+      "worker_id": "fba9c1b8-16e8-48ef-9013-17b64bb80e6b",
+      "task_id": "89c3fa24-6ef9-4cc6-9a3f-2dac2cb50053",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "scope": "Bounded cleanup retry and fixture cwd; five in-memory cases; no findings"
+    },
+    {
+      "status": "PASS",
+      "worker_id": "fba9c1b8-16e8-48ef-9013-17b64bb80e6b",
+      "task_id": "c6730341-fafd-4bfb-b1f7-a96a2787d142",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "scope": "Installed local skill notes and exact-file reconciliation; no findings"
     }
   ],
   "private_artifacts": "evidence/scratch/issue-7/",
@@ -144,7 +238,7 @@
     "The separate normal-update package0.166-4a9 is currently selected/approved; it does not include the issue7 native consume extension.",
     "Source and probe failures remain retained separately."
   ],
-  "code_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
+  "code_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -256,7 +350,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "45dd6c105855e33128f30affdd10fda515fe0dafc66f7317dad57c2adf71545f",
-  "updated_at": "2026-10-30T21:08:01.945925-04:00",
+  "updated_at": "2026-10-30T21:19:49.399050-04:00",
   "failed_experiments": [
     {
       "status": "FAIL",
@@ -291,8 +385,8 @@
     },
     "patch_reapply": {
       "status": "PASS",
-      "files_compared": 135,
-      "private_artifact": "artifacts/quiet-close-issue-7/reapply-final-05.json"
+      "files_compared": 139,
+      "private_artifact": "artifacts/quiet-close-issue-7/reapply-final-08.json"
     },
     "package": {
       "status": "PASS",
@@ -300,19 +394,27 @@
       "package": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000",
       "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
       "gates": 22,
-      "scope": "Built and qualified candidate; guarded activation pending",
+      "scope": "Installed current; guarded exact approval and fresh installed qualification PASS",
       "private_artifact": "artifacts/quiet-close-issue-7/candidate-build-08.json"
     },
     "fixing_commits": [
       "215ce96fce6912b23e87ae637b931b20d5a4393f",
-      "e4fccbf",
-      "9c78a2e"
+      "e4fccbf987d4f166223bb86141aba727509713cd",
+      "9c78a2ed2bb2d58f59eec5555e2329cbec7dd2df",
+      "2a720250fa6afe1c06b2bd526765905ea897f4ff",
+      "53b80adb7834dbf85b443be0639e28432af9b495"
     ],
     "additional_checks": {
       "status": "PASS",
       "private_artifact": "artifacts/quiet-close-issue-7/additional-native-07.json",
       "queue_full": 20,
       "hook_browser": 30
+    },
+    "installed_source_commit": "611bca3650ebddf2f10fb8a5ccf8a7d476d51dc2",
+    "manager_tests": {
+      "status": "PASS",
+      "tests": 23,
+      "private_artifact": "artifacts/quiet-close-issue-7/final-manager-tests.log"
     }
   },
   "prior_source_full_runs": [
@@ -387,6 +489,36 @@
       "code_commit": "49dab4be1197f036f5fbb125ae7a6154bfc24fb3",
       "private_artifact": "evidence/scratch/issue-7/full-source-current-main.log",
       "scope": "Combined main; latest fixture path changes require final installed full run"
+    }
+  ],
+  "installed_package": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000",
+  "installed_executable": {
+    "path": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000/bin/codex",
+    "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+    "size": 310007192
+  },
+  "installed_at_eastern": "2026-10-30T21:17:49.525804-04:00",
+  "fixing_commits": [
+    "c73ea81e782e0394e3efc2f2a009b2d853d9ca85",
+    "cdcbd66afe1cf759feae4afc9057fef70901d16e",
+    "6495ad5e2d3b4d4c16aea9766a8f94fb155426e4",
+    "aac1fa811c51455abc2c7a179d0bfea59c98e65c"
+  ],
+  "retained_failures": [
+    {
+      "status": "FAIL",
+      "private_artifact": "artifacts/quiet-close-issue-7/activation-1793408359063650000/activation.json",
+      "reason": "Worker seam passed; unverified former-group processes caused guarded compensation. Later passive absence and independently reviewed bounded cleanup preceded successful retry."
+    },
+    {
+      "status": "FAIL",
+      "private_artifact": "evidence/scratch/issue-7/legacy-transition-04/qualification.json",
+      "reason": "Bounded selection wait expired; fresh05 used new frame and passed. Original accepted frame was not replayed."
+    },
+    {
+      "status": "FAIL",
+      "private_artifact": "evidence/scratch/issue-7/install-preservation-final/install.json",
+      "reason": "Local skill ownership conflict preserved; reviewed canonical reconciliation and supported retry passed."
     }
   ]
 }

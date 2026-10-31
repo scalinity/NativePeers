@@ -69,3 +69,7 @@ Worker/inbox renewal never writes quota/status-line receipts. Quota mismatch rep
 Offline tests use fake executables and temporary journals. Native read-only check results, native model/permission/return checks and daily approval transitions are recorded separately in [verification](VERIFICATION.md). A source PR does not change the installed main checkout or daily receipts.
 
 The public CLI surfaces are documented in the [Claude CLI reference](https://code.claude.com/docs/en/cli-reference) and [Antigravity headless reference](https://www.antigravity.google/docs/cli/headless/). These document interfaces, not a promise of unchanged private inbox or permission semantics across every patch. The local support envelope and exact measured results remain separate.
+
+## Managed Codex quiet queue qualification
+
+Issue #7 qualifies `/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000/bin/codex` (SHA-256 `467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10`) through normal CodexForge assembly, guarded selection and expected-old worker/inbox approval. Fresh standalone TUI qualification covers44 mixed frames, exact resume, reopen and permitted controls; three actual native worker/controller phases separately cover active push and quiet suppression. Quota metadata has its own check and is not used as worker/inbox approval. Existing immutable leases remain pinned; new work selects current. Commands, exact source scope, preserved predecessor and guarded rollback are in [verification](VERIFICATION.md).
