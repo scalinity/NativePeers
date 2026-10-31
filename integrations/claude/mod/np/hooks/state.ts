@@ -26,8 +26,9 @@ export async function bridgeFailed($: EngineInterface, value: NpBridge): Promise
 export async function bridgeRestored($: EngineInterface, value: NpBridge, live: () => boolean): Promise<void> {
   await update($, bridgeAtom, current => current.state !== 'ready' && live() ? value : current)
 }
-export async function bridgeExited($: EngineInterface, socket: string, value: NpBridge): Promise<void> {
-  await update($, bridgeAtom, current => current.socket === socket ? value : current)
+// A successor may reuse the socket path, so an exit is matched by its launch, not its socket.
+export async function bridgeExited($: EngineInterface, launch: string, value: NpBridge): Promise<void> {
+  await update($, bridgeAtom, current => current.launch === launch ? value : current)
 }
 
 export async function getLineage($: EngineInterface): Promise<NpWorker[]> { return read($, lineageAtom) }

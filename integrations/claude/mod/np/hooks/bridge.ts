@@ -12,7 +12,7 @@ export class BridgeError extends Error {
 }
 
 // The token lives only in module memory: never in $.state, $.store or a log.
-let connection: { socket: string; token: string; generation: number } | undefined
+let connection: { socket: string; token: string; generation: number; launch: string } | undefined
 let launches = 0
 let launching = false
 
@@ -50,7 +50,7 @@ export async function sleep($: EngineInterface, ms: number): Promise<void> {
   await $.process.run(['/bin/sleep', String(ms / 1000)], { timeoutMs: ms + 10000 })
 }
 
-async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; text: string }, unknown>, generation: number, socket: string): Promise<void> {
+async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; text: string }, unknown>, generation: number, launchId: string): Promise<void> {
   let ended: unknown
   try {
     while (true) { const piece = await child.next();if (piece.done) { ended = piece.value;break } }
@@ -59,8 +59,8 @@ async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; 
   }
   if (connection?.generation !== generation) return
   connection = undefined
-  // After a hot reload the previous instance's bridge exits beside this one's: only its own bridge's exit marks the state down.
-  await bridgeExited($, socket, { state: 'down', reason: 'bridge exited ' + JSON.stringify(ended ?? null).slice(0, 120), since: await $.clock.now() })
+  // After a hot reload the previous instance's bridge exits beside this one's: only its own launch's exit marks the state down.
+  await bridgeExited($, launchId, { state: 'down', reason: 'bridge exited ' + JSON.stringify(ended ?? null).slice(0, 120), since: await $.clock.now() })
 }
 
 // Starts `npeer bridge` for this session and reads its one ready line. The
@@ -104,20 +104,21 @@ async function start($: EngineInterface, session: string, cwd: string, npeer: st
     if (!connection) await bridgeFailed($, { state: 'down', reason, since: await $.clock.now() })
     return { reason }
   }
-  connection = { socket: ready.socket, token: ready.token, generation }
+  const launchId = Math.random().toString(36).slice(2, 10) + '-' + generation
+  connection = { socket: ready.socket, token: ready.token, generation, launch: launchId }
   const { token: _token, ...hello } = ready
-  await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: ready.socket, since: await $.clock.now() })
-  void pump($, child, generation, ready.socket)
+  await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: ready.socket, launch: launchId, since: await $.clock.now() })
+  void pump($, child, generation, launchId)
   return { hello }
 }
 
 // /np doctor's exact answer: a hook that read the state while a start was still in flight could have
 // left it stale, so a live connection restores the ready state its own start set.
 export async function restoreReady($: EngineInterface, hello: any, generation: number | undefined): Promise<void> {
-  const socket = connection?.socket
+  const socket = connection?.socket, launchId = connection?.launch
   if (!socket || connection?.generation !== generation) return
   // Only the connection that answered the hello, while it is still the live one: judged in the updater on every retry.
-  await bridgeRestored($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket, since: await $.clock.now() },
+  await bridgeRestored($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket, launch: launchId, since: await $.clock.now() },
     () => connection !== undefined && connection.generation === generation)
 }
 
