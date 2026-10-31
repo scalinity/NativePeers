@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "stage": "Evaluation backlog installed acceptance and unavailable compact records",
-  "status": "INSTALLED_ACCEPTANCE_PASS_COORDINATION_PENDING",
+  "status": "ISSUES_10_12_14_ACCEPTED_TRACKER_16_OPEN",
   "reviewed_commit": "4146b47bdf381194c1e947ad7a214b052168dc76",
   "scope": "Compact-result source fix, installed CLI/MCP qualification, installed review recipe and consumption of the separately owned issue-7 qualification. Physical main and provider configuration remain outside this editing lane.",
   "tests": {
@@ -133,11 +133,10 @@
     }
   ],
   "limitations": [
-    "Issue-14 final selected-path comparison request 1ec1313e-63bf-4f1b-9aef-84f5d25ee9b3 remains submitted-unconfirmed until a recipient observation or reply is available; no replay.",
-    "Original native fixture scopes remain distinct: 44 manually framed mixed controls, three genuine native worker/controller phases and external paid inference NOT_RUN for those fixtures.",
-    "No current full-suite pass is inferred from the source77564c6 owner run or the focused compact checks.",
-    "The fixed evaluation rubric and historical64.5/100 remain unchanged; final session evaluation follows actual coordination close-out.",
-    "Issue28 separately records live-worker follow-up delivery limitations; this lane used explicit owned resume and group/task waits."
+    "The tracker16 goal of a fully observed100/100 is not declared. Issue28 records live-owned-worker follow-up delivery friction outside this lane; this lane used explicit owned resume and waits.",
+    "Original native fixture scopes remain distinct:44 manually framed mixed controls,three genuine native worker/controller phases,and external paid inference NOT_RUN for those fixtures.",
+    "Whole-source results remain tied to their actual source:1117/1056/four skips at77564c6, later1119/1056/four skips at2ae4acd from the owner. Final qualification-prose/checkpoint changes receive12 focused coherence checks,not a transferred full-suite pass.",
+    "The private evaluation master and original64.5/100 baseline are preserved. No private evaluation record or native transcript is published."
   ],
   "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
   "source": {
@@ -251,6 +250,41 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "45dd6c105855e33128f30affdd10fda515fe0dafc66f7317dad57c2adf71545f",
-  "updated_at": "2026-10-30T21:33:12.062197-04:00",
-  "source_map_scope": "The source map and code_commit retain the original reviewed compact fix at29d1f32. Each later installed/dependency operation names its own actual source; no current full-suite pass is inferred."
+  "updated_at": "2026-10-30T21:43:33.315112-04:00",
+  "source_map_scope": "The source map and code_commit retain the original reviewed compact fix at29d1f32. Each later installed/dependency operation names its own actual source; no current full-suite pass is inferred.",
+  "coordination": {
+    "status": "PASS",
+    "packet": "art_1e471e0b-42a8-47e9-9c7e-aa68e934ebc4",
+    "request": "1ec1313e-63bf-4f1b-9aef-84f5d25ee9b3",
+    "reply": "d46899b6-f7c8-4ac8-a7b4-a408c7b95945",
+    "request_state": "REPLY_RECORDED",
+    "reply_native_ingestion": "INGESTED",
+    "processing": "MODEL_REPORTED_PROCESSED",
+    "recipient_comparison": {
+      "frozen_head": "5c6b21db38ae8123cddf39448ce65d302a650ed3",
+      "current_head": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+      "changed_paths": [
+        "integrations/claude/skills/nativepeers/SKILL.md"
+      ],
+      "selected_runtime_matches": true,
+      "approved_runtime_matches": true,
+      "mutation": false
+    },
+    "parent_comparison_head": "781d6627dd50845e340668e57391972fd20217cb",
+    "actual_integration": "Frozen commit is an ancestor of physical main; compact source/tests and Codex skill unchanged. The one selected Claude skill delta came from issue-7 guidance reconciliation, not lineage/compact work. Lineage PR26 touched none of the selected four paths."
+  },
+  "closed_issues": [
+    {
+      "number": 10,
+      "comment": "https://github.com/scalinity/NativePeers/issues/10#issuecomment-6537201131"
+    },
+    {
+      "number": 12,
+      "comment": "https://github.com/scalinity/NativePeers/issues/12#issuecomment-6537031547"
+    },
+    {
+      "number": 14,
+      "comment": "https://github.com/scalinity/NativePeers/issues/14#issuecomment-6537311522"
+    }
+  ]
 }
