@@ -61,15 +61,21 @@ def review_packet(packet, ranges):
                 else:merged.append((start,end))
             for start, end in merged:
                 row['excerpts'].append(dict(version='current', start_line=start, end_line=end,
-                                            sha256=item['current_sha256'], text=''.join(lines[start-1:end])))
+                                            file_sha256=item['current_sha256'],
+                                            excerpt_sha256=hashlib.sha256(''.join(lines[start-1:end]).encode()).hexdigest(),
+                                            text=''.join(lines[start-1:end])))
             row['versions']['current']['line_count'] = len(lines)
+        excerpt_bytes = sum(len(e['text'].encode()) for e in row['excerpts'])
+        row['base_same_as_current'] = item['base_sha256'] == item['current_sha256']
+        row['omitted_bytes'] = row['versions']['current']['byte_size'] - excerpt_bytes
+        if not row['base_same_as_current']:row['omitted_bytes'] += row['versions']['base']['byte_size']
         row['omitted'] = 'Base source is in the full recovery artifact; current source outside excerpts is omitted. The exact selected Git diff is included.'
         files.append(row)
     selected_bytes = sum(v['byte_size'] for f in files for v in f['versions'].values())
     excerpt_bytes = sum(len(e['text'].encode()) for f in files for e in f['excerpts'])
     return dict(packet, representation='review', files=files,
                 source_bytes=dict(full_versions=selected_bytes, excerpts=excerpt_bytes,
-                                  omitted_versions=selected_bytes-excerpt_bytes,
+                                  omitted_source=sum(f['omitted_bytes'] for f in files),
                                   diff='Exact Git diff is additional; source-byte counts are decoded UTF-8/binary, not tokens or serialized savings.'),
                 boundaries=dict(packet['boundaries'], full_selected_content=False,
                                 source='Explicit current LF line ranges; unchanged supporting files and untracked text appear once. Changed files otherwise have diff context only. Recover full source before judging omitted branches/callers.'))

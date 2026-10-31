@@ -48,8 +48,10 @@ class SelectedContextTests(unittest.IsolatedAsyncioTestCase):
         excerpt=a['excerpts'][0]
         self.assertEqual((excerpt['version'],excerpt['start_line'],excerpt['end_line']),('current',4995,5008))
         self.assertEqual(excerpt['text'],''.join(changed.splitlines(keepends=True)[4994:5008]))
-        self.assertEqual(excerpt['sha256'],hashlib.sha256(changed.encode()).hexdigest())
+        self.assertEqual(excerpt['file_sha256'],hashlib.sha256(changed.encode()).hexdigest())
+        self.assertEqual(excerpt['excerpt_sha256'],hashlib.sha256(excerpt['text'].encode()).hexdigest())
         self.assertEqual(len(caller['excerpts']),1)
+        self.assertEqual(caller['omitted_bytes'],0);self.assertTrue(caller['base_same_as_current'])
         recovery=Artifacts(self.j).read(compact['recovery']['artifact_id'],self.caller.key,limit=262144,text=True)
         # Page the full immutable object; a primary byte cap does not truncate recovery.
         raw=recovery['text']
