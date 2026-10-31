@@ -37,7 +37,7 @@
     },
     "full_suite": {
       "status": "NOT_RUN",
-      "note": "No Python module changed; the last full run (1119 passed, 31 failed, the standing failure set) was on 27bc698."
+      "note": "This change touches no Python module. The merged Python source is PR #40's, reviewed under evidence/issue-39-managed-activation.json; the last full run in this lane (1119 passed, 31 failed, the standing failure set) was on 27bc698."
     }
   },
   "operation_checks": [
@@ -47,8 +47,8 @@
       "operation": "np-native-pane-harness",
       "status": "PASS",
       "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The pane conversation run with the restyled rows, handback deliver and refuse runs, and the startup race run passed on this engine.",
-      "source_head": "b0a851a"
+      "scope": "The pane conversation run with the restyled rows, handback deliver and refuse runs, and the startup race run passed on this engine, on the native pane branch merged with main at 32e1112.",
+      "source_head": "15f92f7"
     },
     {
       "provider": "claude",
@@ -56,8 +56,15 @@
       "operation": "np-native-pane-harness-desktop-engine",
       "status": "PASS",
       "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The pane conversation, handback deliver and refuse, and startup race runs passed on the desktop app's own engine.",
-      "source_head": "b0a851a"
+      "scope": "The pane conversation, handback deliver and refuse, and startup race runs passed on the desktop app's own engine, on the native pane branch merged with main at 32e1112.",
+      "source_head": "15f92f7"
+    },
+    {
+      "operation": "managed activation inbox and new-worker boundary",
+      "parent_context": "Owned issue39 session; installed route pending",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "status": "NOT_RUN"
     }
   ],
   "independent_review": {
@@ -67,7 +74,8 @@
   "limitations": [
     "The footer menu is verified in the test kit on the desktop surface; harness runs draw the terminal surface, so its look in the desktop app is confirmed only by the person after install.",
     "The terminal keeps a pane's focus ring by position, so conversation rows do not fold there; long messages and the first 6 lines of a step's output show in full.",
-    "The desktop app rings a focused text field and InputProps offers no styling: the ring shows while the person types."
+    "The desktop app rings a focused text field and InputProps offers no styling: the ring shows while the person types.",
+    "The managed activation check from evidence/issue-39-managed-activation.json is carried here unchanged and remains NOT_RUN; it belongs to that record's lane."
   ],
   "code_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
   "source": {
