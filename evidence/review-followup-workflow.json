@@ -304,7 +304,7 @@
     "Pi, routers, Mac network/security settings and CodexForge are untouched."
   ],
   "rollback": "Revert this task delta through normal Git publication and run the supported owned installer; preserve later configuration, approvals, leases and histories.",
-  "code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
+  "code_commit": "b7ad9f8b0d62ee5cd5f251a3c0d60559d97bc4ed",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -416,7 +416,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
-  "updated_at": "2026-10-30T22:36:35.367533-04:00",
+  "updated_at": "2026-10-30T22:52:22.486097-04:00",
   "disposable_privileged_packet": {
     "status": "PASS",
     "scope": "Exact toy before/after bytes plus verified validation/recovery SHA256, imported through existing immutable artifact API; no host execution.",

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
+  "code_commit": "b7ad9f8b0d62ee5cd5f251a3c0d60559d97bc4ed",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
-  "publication_branch": "fix/review-followup-20261030",
-  "updated_at": "2026-10-30T22:36:35.367533-04:00",
+  "publication_branch": "docs/review-followup-acceptance-20261030",
+  "updated_at": "2026-10-30T22:52:22.486097-04:00",
   "current_record": "evidence/review-followup-workflow.json",
   "file_classes": {
     "product": {
@@ -407,23 +407,37 @@
   },
   "operation_checks": [
     {
-      "operation": "source-focused-extraction-and-phase-regressions",
-      "parent_context": "isolated worktree; Python3.14.10",
+      "operation": "complete-source-and-installed-suite",
+      "parent_context": "Isolated final source plus protected installed1125fa7",
       "status": "PASS"
     },
     {
-      "operation": "supported-owned-skill-installation",
-      "parent_context": "protected daily installation",
-      "status": "NOT_RUN"
+      "operation": "owned-Claude-Codex-Antigravity-skill-install",
+      "parent_context": "Supported owned installers; three matching copies and zero-operation repeat",
+      "status": "PASS"
     },
     {
-      "operation": "installed-live-owned-Codex-followup",
-      "parent_context": "disposable standalone parent/localhost model fixture",
-      "status": "NOT_RUN"
+      "operation": "installed-live-followup-four-phases",
+      "parent_context": "Disposable actual standalone parent, one owned history, localhost model fixture",
+      "status": "PASS",
+      "provider": "codex",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10"
     },
     {
-      "operation": "physical-UI-capture",
-      "parent_context": "daily interactive session",
+      "operation": "installed-CLI-and-authenticated-MCP-facade-parity",
+      "parent_context": "Actual native-shell caller; official SDK facade, not separate stdio/UI",
+      "status": "PASS"
+    },
+    {
+      "operation": "current-selected-Codex-worker-inbox",
+      "parent_context": "Concurrent external managed selection; no approval or activation by this lane",
+      "status": "BLOCKED",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
+    },
+    {
+      "operation": "external-paid-Codex-inference-and-other-provider-UI",
+      "parent_context": "Outside this bounded fixture/review slice",
       "status": "NOT_RUN"
     }
   ],
