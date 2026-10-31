@@ -44,7 +44,7 @@
       "status": "PASS",
       "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
       "scope": "The pane conversation run with the relaid conversation and its top-row controls, and handback deliver and refuse runs, passed on this engine.",
-      "source_head": "fix/lineage-pane-polish"
+      "source_head": "ef86f3c"
     },
     {
       "provider": "claude",
@@ -53,7 +53,7 @@
       "status": "PASS",
       "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
       "scope": "The pane conversation run passed on the desktop app's own engine.",
-      "source_head": "fix/lineage-pane-polish"
+      "source_head": "ef86f3c"
     }
   ],
   "independent_review": {
