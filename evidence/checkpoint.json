@@ -216,9 +216,9 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/review-followup-20261030",
-    "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+    "code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
     "evidence": "evidence/review-followup-workflow.json",
-    "source_map_sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5",
+    "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
     "status": "PARTIAL"
   },
   "feature_work": {
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
     "branch": "fix/review-followup-20261030",
-    "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
-    "last_verified_publication": "462f7f98621f539d123f35ff17b91514f95daafd",
+    "code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
+    "last_verified_publication": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,13 +305,13 @@
     "branch": "fix/review-followup-20261030",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
-    "verified_remote_code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+    "verified_remote_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
+    "verified_remote_code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "SOURCE_CHECKS_PASSED_PENDING_FINAL_REVIEW_AND_INSTALLED_ACCEPTANCE",
+  "stage": "SOURCE_FULL_PASS_REVIEWED_PENDING_INSTALLED_ACCEPTANCE",
   "tests_current": {
     "initial_complete_suite": {
       "status": "FAIL",
@@ -344,7 +344,7 @@
     },
     "probe_offline": {
       "status": "PASS",
-      "tests": 2
+      "tests": 4
     },
     "installed_combined": {
       "status": "NOT_RUN"
@@ -363,6 +363,21 @@
       "passed": 3,
       "command": "python -m pytest -q tests/unit/test_evidence_checkpoint.py",
       "scope": "Current published source record; installed/native operations remain NOT_RUN."
+    },
+    "final_corrections": {
+      "status": "PASS",
+      "passed": 43,
+      "subtests": 8,
+      "scope": "Final parser, compact results, phase boundaries and probe validations."
+    },
+    "final_complete_source_suite": {
+      "status": "PASS",
+      "passed": 1144,
+      "skipped": 4,
+      "subtests": 1060,
+      "seconds": 288.96,
+      "command": "python -m pytest -q",
+      "source_scope": "bfc423d product/integration/test classes; source evidence current; all earlier attempts retained."
     }
   },
   "transports": {
@@ -371,7 +386,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T22:22:12.521814-04:00",
+  "updated_at": "2026-10-30T22:36:35.367533-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1859,6 +1874,33 @@
       "current_review": {
         "branch": "fix/review-followup-20261030",
         "code_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
+        "evidence": "evidence/review-followup-workflow.json",
+        "source_map_sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "SOURCE_CHECKS_PASSED_PENDING_FINAL_REVIEW_AND_INSTALLED_ACCEPTANCE",
+      "updated_at": "2026-10-30T22:22:12.521814-04:00",
+      "git": {
+        "base_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
+        "branch": "fix/review-followup-20261030",
+        "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+        "last_verified_publication": "462f7f98621f539d123f35ff17b91514f95daafd",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/review-followup-20261030",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+        "verified_remote_code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/review-followup-20261030",
+        "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
         "evidence": "evidence/review-followup-workflow.json",
         "source_map_sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5",
         "status": "PARTIAL"

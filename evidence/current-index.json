@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+  "code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "publication_branch": "fix/review-followup-20261030",
-  "updated_at": "2026-10-30T22:22:12.521814-04:00",
+  "updated_at": "2026-10-30T22:36:35.367533-04:00",
   "current_record": "evidence/review-followup-workflow.json",
   "file_classes": {
     "product": {
@@ -101,7 +101,7 @@
         "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
         "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
         "nativepeers/worker_process.py": "cce84b886514b9e5de2f161d1daace7a88e54ff4ba189ecd68f8dcdea53f8097",
-        "nativepeers/worker_report.py": "946bf1d83520fa0c05422b9fe3d014bd13f9436fdf8fcba1a7bc7889c0bc5142",
+        "nativepeers/worker_report.py": "22f6e29aa584a6fc483fd4694cdf5f172ce5e002ee53794c377ed10d5c900bea",
         "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
         "nativepeers/workspace_retirement.py": "4b2493aeff87eccf6ba8e5443d8d880a72375843471f4bd8153311f6a0e28f62",
         "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5"
+      "sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8"
     },
     "launchers": {
       "files": {
@@ -293,7 +293,7 @@
         "tests/probes/cleanup_owned.py": "e7001d0d5c2e5bf1eaab8a5cf238ad0aa789edcba56249cbdfe487b8d1328e76",
         "tests/probes/launch.py": "55f6a261237b9ac8a5474c0a0a76b8fa2ec06af3f6401868b1a13ca2b44b446e",
         "tests/probes/legacy_owner_guard.py": "683fb3d5d67e346d6860559967d466a6ac98511be6e9e089995183cbf4a19ab5",
-        "tests/probes/live_followup.py": "b794d5ab77240f816fc2846c266f3b562bd1f5f7c349b231e09ea7294a801ec3",
+        "tests/probes/live_followup.py": "7602e18528adff35d5b92da7abf3242de00fadf1d5cdc3e50bd8331c3488b9bf",
         "tests/probes/notification_guard.py": "8a6d160ba9af4540adec1d9bbd2818592f0cee9675a54c408ba050fc319fd925",
         "tests/probes/passive_native.py": "eba1da5be14f08aaa6f028bb73d11ca276a2db56d47679408639df1266aef1fe",
         "tests/probes/publish_current.py": "e6b72c8740f8a6bb4c533d5a175ece2e6c1b085222ee582e875be11e7a914e37",
@@ -352,7 +352,7 @@
         "tests/unit/test_isolated_copy.py": "317c2d00e9d8299e28d029268b164bfc17acb0fc0c2e792dc8333f027e1edced",
         "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
-        "tests/unit/test_live_followup_probe.py": "afab42b95908b2c0e9dd22fb0c2c32cd7fe998424e1b62f518c64b49f49c5fb3",
+        "tests/unit/test_live_followup_probe.py": "a8c0521c7f88e3cdd205447d1267c924b6d4ec9937a5a82cf12e757f7276518f",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
         "tests/unit/test_native_delivery.py": "1c8fc383fefb1a8f7882cf3c25f56971ce73e151ea1e2e60a20c9668aba2e389",
@@ -393,7 +393,7 @@
         "tests/unit/test_usage_statusline.py": "f53042aa4c0d73a494e0528d44b33cc4254db1333ca1cdf1170ea167b554699f",
         "tests/unit/test_worker_delta.py": "cd8e85ef414c3d49660789cffa20efc8741708d174110770d2362067d89e20eb",
         "tests/unit/test_worker_models.py": "4e0af6c70626f1ba44d00cfb8666887c89b404cec53987832a8d209ba6ad8093",
-        "tests/unit/test_worker_report.py": "b71a2b494bc1f14d0fbc410d30c4e4e8b2c1f8a87e7aaf50341174cfedd7a4fb",
+        "tests/unit/test_worker_report.py": "e0595c4cddfe89d48fbc0c958d9bfeb9abe4c628e4924c01fb2031a49b42ee44",
         "tests/unit/test_worker_shell_binding.py": "bf6a82e47c2faaac47a5388f260c6b37c2a55fa42cabfcb8d19d588e0c0ffd6c",
         "tests/unit/test_worker_visibility.py": "0908c164408308396008dc18b9b1526f860de028ff4669f6df1d9ebb16f087db",
         "tests/unit/test_workspace_freeze.py": "9324dd95d7e4648cd6299861384f9186b7167ff29ecf12c01a11439c5291053a",
@@ -402,7 +402,7 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 238,
-      "sha256": "e2f94197547c86c907e43d93d16ddf0570b0e4c3dd61be60eab3bcfff422cc26"
+      "sha256": "3e7ce8f4944ae0262127dd6a747a1af2532068a4e43bd1b2456df8107f65d336"
     }
   },
   "operation_checks": [

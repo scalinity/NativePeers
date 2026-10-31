@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "stage": "SOURCE_CHECKS_PASSED_PENDING_FINAL_REVIEW_AND_INSTALLED_ACCEPTANCE",
+  "stage": "SOURCE_FULL_PASS_REVIEWED_PENDING_INSTALLED_ACCEPTANCE",
   "status": "PARTIAL",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "originating_task": "NativePeers review/remediation/follow-up workflow (#28, #32, #33, #34)",
@@ -43,7 +43,7 @@
     },
     "probe_offline": {
       "status": "PASS",
-      "tests": 2
+      "tests": 4
     },
     "installed_combined": {
       "status": "NOT_RUN"
@@ -62,6 +62,21 @@
       "passed": 3,
       "command": "python -m pytest -q tests/unit/test_evidence_checkpoint.py",
       "scope": "Current published source record; installed/native operations remain NOT_RUN."
+    },
+    "final_corrections": {
+      "status": "PASS",
+      "passed": 43,
+      "subtests": 8,
+      "scope": "Final parser, compact results, phase boundaries and probe validations."
+    },
+    "final_complete_source_suite": {
+      "status": "PASS",
+      "passed": 1144,
+      "skipped": 4,
+      "subtests": 1060,
+      "seconds": 288.96,
+      "command": "python -m pytest -q",
+      "source_scope": "bfc423d product/integration/test classes; source evidence current; all earlier attempts retained."
     }
   },
   "reviews": [
@@ -85,6 +100,30 @@
       ],
       "native_rounds": 36,
       "native_runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed"
+    },
+    {
+      "task_id": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+      "group_id": "449af990-8347-41f9-9828-f00a731274ad",
+      "native_id": "51218aab-2f08-4679-a393-48fe5f3ebe9d",
+      "requested_model": "sonnet",
+      "observed_model": "claude-sonnet-5-5",
+      "profile": "analysis/inherit-read-only",
+      "findings": 5,
+      "source_scope": "32681bb ->b356d02; all F101-F105 fixed and independently rechecked in phase2.",
+      "full_report_bytes": 12932,
+      "compact_summary_truncated": true,
+      "raw_recovery": "Read authorized immutable result artifact; no formatting-only model turn."
+    },
+    {
+      "task_id": "adb1348e-fcfe-4264-b2f1-6f1fcd62a393",
+      "group_id": "449af990-8347-41f9-9828-f00a731274ad",
+      "native_id": "51218aab-2f08-4679-a393-48fe5f3ebe9d",
+      "requested_model": "sonnet",
+      "observed_model": "claude-sonnet-5-5",
+      "profile": "analysis/inherit-read-only",
+      "findings": 0,
+      "completion_phase": 2,
+      "source_scope": "Final narrow parser/probe corrections over b356d02, material code at bfc423d; source reading only; executed checks attributed to parent."
     }
   ],
   "finding_dispositions": [
@@ -150,6 +189,51 @@
       "state": "fixed and verified",
       "commit": "91953c6",
       "verification": "27 tests / 40 subtests; location matching and retained overflow"
+    },
+    {
+      "id": "F101",
+      "summary": "F101: is_review treats F-numbered summaries and loose headings as proof of a review, so ordinary implementation reports are flagged incomplete",
+      "severity": "warning",
+      "source_task": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+      "state": "fixed and verified",
+      "commit": "c0f5722",
+      "verification": "28 parser/schema/workflow tests and40 subtests;43 focused parser/compact/phase/probe tests and8 subtests; candidate refusal and receipt counterexamples included."
+    },
+    {
+      "id": "F102",
+      "summary": "F102: header search and appendix marker split are not fence-aware",
+      "severity": "info",
+      "source_task": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+      "state": "fixed and verified",
+      "commit": "c0f5722",
+      "verification": "28 parser/schema/workflow tests and40 subtests;43 focused parser/compact/phase/probe tests and8 subtests; candidate refusal and receipt counterexamples included."
+    },
+    {
+      "id": "F103",
+      "summary": "F103: overflow test does not exercise the documented first-20 recovery path",
+      "severity": "info",
+      "source_task": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+      "state": "fixed and verified",
+      "commit": "c0f5722",
+      "verification": "28 parser/schema/workflow tests and40 subtests;43 focused parser/compact/phase/probe tests and8 subtests; candidate refusal and receipt counterexamples included."
+    },
+    {
+      "id": "F104",
+      "summary": "F104: probe candidate-source refusal runs outside try, so no BLOCKED report and exit 1",
+      "severity": "info",
+      "source_task": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+      "state": "fixed and verified",
+      "commit": "215d865",
+      "verification": "28 parser/schema/workflow tests and40 subtests;43 focused parser/compact/phase/probe tests and8 subtests; candidate refusal and receipt counterexamples included."
+    },
+    {
+      "id": "F105",
+      "summary": "F105: receipt stages are collected but never asserted, and result validation has no offline test",
+      "severity": "info",
+      "source_task": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+      "state": "fixed and verified",
+      "commit": "bfc423d",
+      "verification": "28 parser/schema/workflow tests and40 subtests;43 focused parser/compact/phase/probe tests and8 subtests; candidate refusal and receipt counterexamples included."
     }
   ],
   "retained_failures": [
@@ -195,7 +279,7 @@
     "Pi, routers, Mac network/security settings and CodexForge are untouched."
   ],
   "rollback": "Revert this task delta through normal Git publication and run the supported owned installer; preserve later configuration, approvals, leases and histories.",
-  "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
+  "code_commit": "bfc423d1d3eaabc9c081f8f191ebf6dfddb4ec3f",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -290,7 +374,7 @@
     "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
     "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
     "nativepeers/worker_process.py": "cce84b886514b9e5de2f161d1daace7a88e54ff4ba189ecd68f8dcdea53f8097",
-    "nativepeers/worker_report.py": "946bf1d83520fa0c05422b9fe3d014bd13f9436fdf8fcba1a7bc7889c0bc5142",
+    "nativepeers/worker_report.py": "22f6e29aa584a6fc483fd4694cdf5f172ce5e002ee53794c377ed10d5c900bea",
     "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
     "nativepeers/workspace_retirement.py": "4b2493aeff87eccf6ba8e5443d8d880a72375843471f4bd8153311f6a0e28f62",
     "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
@@ -306,6 +390,14 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5",
-  "updated_at": "2026-10-30T22:22:12.521814-04:00"
+  "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
+  "updated_at": "2026-10-30T22:36:35.367533-04:00",
+  "disposable_privileged_packet": {
+    "status": "PASS",
+    "scope": "Exact toy before/after bytes plus verified validation/recovery SHA256, imported through existing immutable artifact API; no host execution.",
+    "artifact_id": "art_6f58203c-9597-4d7e-a498-b7f2756406a2",
+    "bytes": 1253,
+    "sha256": "9ced9c8f5a01f106d9e5adf4843021b01e95d2ae42e14c9a3cb4d129ad3ddd56",
+    "execution": "NOT_RUN"
+  }
 }
