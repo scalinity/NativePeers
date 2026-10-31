@@ -4,7 +4,7 @@
 - [x] Implement selected immutable diff/source packets, compact preflight/results, historical task attribution, phase/failure notices and source/runtime handoffs for issues10–14.
 - [x] Complete useful native Claude review and an exact59057-byte artifact-only recheck; fix encoding, comparison, source-import and subsequent GitHub findings with regressions.
 - [x] Qualify deliberate native cap failures and separate completed/queued later phases; retain actual failed attempts and reported counter semantics.
-- [x] Pass final combined source suite:1099 tests/1048 subtests, four skips. Preserve earlier failed runs and their scope in the qualification record.
+- [x] Pass final combined source suite:1100 tests/1048 subtests, four skips. Preserve earlier failed runs and their scope in the qualification record.
 - [ ] Coordinate affected installed source/runtime qualification with the separately owned issue7 transition. Source publication does not activate the selected package.
 - [ ] Obtain genuine delayed-controller-frame and standalone visible-tail acceptance, complete actual peer coordination, append the observed evaluation and close only accepted issues.
 
