@@ -7,6 +7,7 @@ import re
 import socket
 import stat
 import signal
+import time
 
 from ..errors import PeerError, require
 from ..files import async_advisory_lock, canonical
@@ -38,6 +39,7 @@ async def codex_queue(peer, message, *, journal, before_launch=None):
         rendered=render(message)
         async with async_advisory_lock(journal.root/'locks/runtime.lock',timeout=QUEUE_LOCK_TIMEOUT):
             runtime=codex_inbox_runtime(journal,peer)
+            require(time.time()<message['expires_at'],'EXPIRED_BEFORE_SUBMISSION','Message expired while waiting for native admission')
             if before_launch:before_launch()
             # Cancellation/unknown failure after this point may have created a helper.
             launching=True

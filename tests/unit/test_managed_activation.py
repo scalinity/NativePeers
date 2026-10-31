@@ -149,6 +149,16 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await task)['state'],'CAPABILITY_MISMATCH')
         self.assertFalse((self.root/'launches').exists())
 
+    async def test_runtime_lock_wait_cannot_submit_after_original_expiry(self):
+        lock=advisory_lock(self.j.root/'locks/runtime.lock');lock.__enter__()
+        task=asyncio.create_task(self.send(expires_seconds=.01))
+        try:
+            await asyncio.sleep(.03);self.assertFalse(task.done())
+        finally:lock.__exit__(None,None,None)
+        outcome=await task
+        self.assertEqual(outcome['state'],'EXPIRED_BEFORE_SUBMISSION')
+        self.assertFalse((self.root/'launches').exists())
+
     def test_failed_or_interrupted_approval_preserves_whole_receipt_and_selection(self):
         self.select(self.new)
         receipt=self.j.root/'compat/runtime.json';before=receipt.read_bytes()
