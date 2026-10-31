@@ -10,17 +10,18 @@ Exact source/package fingerprints, failed attempts, commands, limits and rollbac
 
 ---
 
-# Evaluation backlog — source qualified, installed dependency pending (2026-10-30)
+# Evaluation backlog — installed acceptance recorded; full-score goal open (2026-10-30)
 
-- [x] Integrate existing budget PR5 with separate logical inputs, native rounds, walls and waits.
-- [x] Implement selected immutable diff/source packets, compact preflight/results, historical task attribution, phase/failure notices and source/runtime handoffs for issues10–14.
-- [x] Complete useful native Claude review and an exact59057-byte artifact-only recheck; fix encoding, comparison, source-import and subsequent GitHub findings with regressions.
-- [x] Qualify deliberate native cap failures and separate completed/queued later phases; retain actual failed attempts and reported counter semantics.
-- [x] Pass final combined source suite:1100 tests/1048 subtests, four skips. Preserve earlier failed runs and their scope in the qualification record.
-- [ ] Coordinate affected installed source/runtime qualification with the separately owned issue7 transition. Source publication does not activate the selected package.
-- [ ] Obtain genuine delayed-controller-frame and standalone visible-tail acceptance, complete actual peer coordination, append the observed evaluation and close only accepted issues.
+- [x] Integrate separate logical-input/native-round/wall budgets; retain deliberate failed attempts and later phases with their actual counters.
+- [x] Close issues #3, #10, #11, #12, #13 and #14 with scoped installed/native checks.
+- [x] Complete useful native Claude packet reviews, reproduce and fix the absent completed-result marker in PR #24, and independently recheck the patch.
+- [x] Qualify installed compact CLI/bound-MCP reads and the installed bounded-review recipe without Bash escalation or global permission changes.
+- [x] Consume issue #7's installed qualification: 44 explicitly framed standalone controls and three separate genuine worker/controller phases, with retained results and visible-tail checks.
+- [x] Complete the real selected-path/runtime peer exchange; distinguish admission, native ingestion, model-reported processing and actual disjoint integration.
+- [x] Append the fixed-rubric evaluation: **94.5/100 with 100% coverage**. Preserve the historical **64.5/100** baseline and prior partial records.
+- [ ] Resolve [#28's live-worker follow-up delivery gap](https://github.com/scalinity/NativePeers/issues/28) and earn the remaining full-score anchors through actual work; [tracker #16](https://github.com/scalinity/NativePeers/issues/16) remains open.
 
-[Source/candidate qualification](evidence/np-eval-backlog.json) · [Acceptance tracker16](https://github.com/scalinity/NativePeers/issues/16). The fixed rubric and historical64.5/100 remain unchanged. No installed/TUI acceptance is inferred from these source and candidate-native checks.
+[Installed acceptance and operation scopes](evidence/np-eval-acceptance.json) · [Issue #7 qualification](evidence/issue-7-silent-queue.json). The local evaluation report is `np-eval-2026-10-30-nativepeers-acceptance-01a18f75`; private history and native transcripts are not published. Source-suite results retain their exact source, and localhost routing/UI fixtures do not establish external paid inference. The remaining score deductions cover follow-up delivery, optional report-format recovery and incomplete measurement of total orchestration cost.
 
 ---
 
