@@ -17,7 +17,9 @@ class WorkspaceTests(unittest.TestCase):
    j.close()
  def test_spawn_examples_and_bad_types(self):
   schema=json.loads((ROOT/'schemas/spawn.v1.json').read_text())
-  for p in (ROOT/'examples').glob('*-to-two-*.json'):validate(json.loads(p.read_text()),schema)
+  for p in (ROOT/'examples').glob('*.json'):
+   value=json.loads(p.read_text())
+   if 'workers' in value:validate(value,schema)
   for value in [{'workers':[]},{'workers':[{'provider':'codex','title':'x','task':'x'}],'limits':{'max_depth':True}},{'workers':[{'provider':'codex','title':'x','task':'x','from':'spoof'}]}]:
    with self.assertRaises(PeerError):validate(value,schema)
  def test_non_git_analysis_needs_no_snapshot_copy(self):

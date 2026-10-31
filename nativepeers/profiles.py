@@ -13,7 +13,7 @@ PYTHON=ROOT/'.venv/bin/python'
 
 
 def facade_config(journal,binding):
-    return dict(command=str(PYTHON),args=['-m','nativepeers.mcp_server','--binding',str(binding)],
+    return dict(command=str(PYTHON),args=['-P','-m','nativepeers.mcp_server','--binding',str(binding)],
                 cwd=str(ROOT),env={'NPEER_HOME':str(journal.root),'PYTHONPATH':str(ROOT)},enabled=True)
 
 
@@ -53,7 +53,7 @@ def claude_arguments(journal,binding,spec,native_id,*,resume=False,home=None):
     require(profile in ('analysis','workspace'),'PERMISSION_CAPABILITY_UNKNOWN','Trusted profile requires an explicit operator grant')
     overrides={'enabledPlugins':{k:False for k in settings.get('enabledPlugins',{})}}
     args=['-p','--output-format','stream-json','--verbose','--model',spec['model'],
-          '--permission-mode','dontAsk','--max-turns',str(spec.get('max_task_turns',8)),
+          '--permission-mode','dontAsk','--max-turns',str(spec.get('native_max_turns',128)),
           '--strict-mcp-config','--mcp-config',json.dumps({'mcpServers':{'nativepeers':{k:v for k,v in facade_config(journal,binding).items() if k!='enabled'}}})]
     if spec.get('reasoning_effort'):args+=['--effort',spec['reasoning_effort']]
     if profile=='analysis':

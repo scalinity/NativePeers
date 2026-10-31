@@ -11,6 +11,7 @@ import { PANE_ID, copyResume, interruptWorker, openPane, openView, renderBand, r
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'
+const COMMAND = { name: 'np', description: 'NativePeers lineage: status, pane, open, stop, interrupt, attach, reattach, doctor, resume-cmd', argumentHint: '[pane|open N|stop N|stop all|interrupt N|attach N|all|reattach|doctor|resume-cmd N]', immediate: true as const }
 const MODEL_PREFIX = 'np-mirror-'
 const SECTION = [
   'NativePeers agent types (np:codex, np:claude, np:antigravity, np:grok) delegate to independent native CLI workers whose live transcripts appear in the tasks list.',
@@ -43,7 +44,6 @@ async function workerMode($: EngineInterface): Promise<boolean> {
 async function activate($: EngineInterface, cwd: string, o: Options): Promise<void> {
   if (activated || inert) return
   activated = true
-  await $.command.register({ name: 'np', description: 'NativePeers lineage: status, pane, open, stop, interrupt, attach, reattach, doctor, resume-cmd', argumentHint: '[pane|open N|stop N|stop all|interrupt N|attach N|all|reattach|doctor|resume-cmd N]', immediate: true })
   const version = (await $.session.version()).version
   if (!atLeast(version, MIN_ENGINE) || !version.startsWith('2.')) {
     await setBridge($, { state: 'degraded', reason: `Claude Code ${version} is outside the verified range (minimum 2.1.309)`, since: 0 })
@@ -226,6 +226,8 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const r = await next(e)
     if (await workerMode($)) { inert = true;return r }
+    // The desktop composer accepts the commands a session has at start; activation there waits for its surface.
+    await $.command.register(COMMAND)
     if (e.isInteractive || (await $.env.get('NP_MOD_HEADLESS')) === '1') await activate($, e.cwd, o)
     return r
   })

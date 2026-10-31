@@ -4,6 +4,13 @@ from nativepeers.provider_errors import classify,diagnostic
 from nativepeers.claude_stream import Evidence
 
 
+def test_claude_native_round_exhaustion_names_its_separate_cap():
+    result=Evidence().failure({'subtype':'error_max_turns','is_error':True},1,native_max_turns=200)
+    assert result['code']=='BUDGET_EXHAUSTED'
+    assert 'max_native_turns_per_task' in result['message']
+    assert result['limit']=={'field':'limits.max_native_turns_per_task','value':200,'native_flag':'--max-turns','observed':None}
+
+
 @pytest.mark.parametrize('value,expected',[
     ({'message':'Authentication succeeded','error':{'code':'quota_exhausted'}},'QUOTA_EXHAUSTED'),
     ({'error':{'type':'authentication_error','message':'Unable to read quota'}},'AUTH_REQUIRED'),

@@ -28,7 +28,7 @@ class GrokWorkerTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(args[args.index('--sandbox')+1],'nativepeers-'+profile)
                 self.assertEqual(args[args.index('--tools')+1],','.join(tool_ids(profile)))
                 self.assertEqual(args[args.index('--permission-mode')+1],'dontAsk')
-                self.assertEqual(args[args.index('--max-turns')+1],'8')
+                self.assertEqual(args[args.index('--max-turns')+1],'128')
                 self.assertEqual(args[args.index('--deny')+1],'MCPTool(*)')
                 self.assertIn('--no-auto-update',args);self.assertIn('--no-subagents',args);self.assertIn('--disable-web-search',args)
                 if profile=='workspace':

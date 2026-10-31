@@ -86,13 +86,22 @@ def native_binaries(journal=None):
             # Dropping retained paths could let a nested old Grok process borrow
             # an outer provider. Refuse binding while passive diagnostics remain usable.
             raise PeerError('CAPABILITY_MISMATCH','Runtime approval receipt is unreadable; native caller boundaries cannot be verified') from None
+        from .desktop_host import paths as desktop_paths
+        for path in desktop_paths(journal):binaries[Path(path)]='claude'
     return binaries
 
 
+def native_provider(executable,binaries):
+    """A native binary's provider. Every desktop engine copy is a Claude boundary, approved or not: an unapproved one
+    is never searched past for an enclosing owner (§6.7)."""
+    from .desktop_host import candidate
+    return binaries.get(Path(executable)) or ('claude' if candidate(executable) else None)
+
+
 def nearest_native(ancestors, *executables,journal=None):
-    binaries=set(native_binaries(journal))
-    binaries.update(Path(executable) for executable in executables)
-    return next((p for p in ancestors if Path(p['executable']) in binaries),None)
+    binaries=dict(native_binaries(journal))
+    binaries.update({Path(executable):'selected' for executable in executables})
+    return next((p for p in ancestors if native_provider(p['executable'],binaries)),None)
 
 
 def verify_owned_binding(journal, value, ancestors, *, provider=None, native_id=None):
@@ -145,14 +154,14 @@ def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
     ancestors = [p.json() for p in ancestry()]
     # A nested CLI cannot borrow an enclosing conversation's verified identity.
     binaries=native_binaries(journal)
-    nearest=next((p for p in ancestors if Path(p['executable']) in binaries),None)
-    if nearest and binaries[Path(nearest['executable'])] in ('antigravity','grok'):
-        provider=binaries[Path(nearest['executable'])]
+    nearest=next((p for p in ancestors if native_provider(p['executable'],binaries)),None)
+    provider=native_provider(nearest['executable'],binaries) if nearest else None
+    if provider in ('antigravity','grok'):
         candidates=registry.for_owner(provider,nearest)
         require(len(candidates)==1,'CALLER_UNBOUND',provider+' owner has no unique hook-observed native session')
         p=candidates[0]
         return Caller('peer',p['handle'],p['incarnation_id'],p.get('policy',{}))
-    if nearest and binaries[Path(nearest['executable'])]=='claude':
+    if provider=='claude':
         require(False,'CALLER_UNBOUND','Claude tool has no hook-provided binding')
     if native:
         candidates = [p for p in registry.for_native('codex',native) if native_ancestor(p['owner'],ancestors)

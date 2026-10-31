@@ -17,7 +17,7 @@ class Evidence:
             if content.get('type') in ('tool_use','tool_result','server_tool_use'):self.tools=True
         return synthetic
 
-    def failure(self,terminal,exit_code):
+    def failure(self,terminal,exit_code,*,native_max_turns=None):
         terminal_observed=terminal is not None
         terminal=terminal or {}
         terminal_failed=terminal.get('is_error') is True or terminal.get('subtype')!='success' or exit_code!=0
@@ -28,6 +28,9 @@ class Evidence:
         if code=='PROVIDER_TASK_FAILED':
             code=next((value for event in reversed(self.synthetic) if (value:=classify(event))!='PROVIDER_TASK_FAILED'),code)
         error=diagnostic({'api_errors':self.synthetic,'terminal':terminal,'exit_code':exit_code},submitted=True,code=code)
+        if terminal.get('subtype')=='error_max_turns':
+            error.update(message=f'Claude reached limits.max_native_turns_per_task ({native_max_turns}); native --max-turns ended this input.',
+                         limit=dict(field='limits.max_native_turns_per_task',value=native_max_turns,native_flag='--max-turns',observed=terminal.get('num_turns')))
         usages=[e.get('message',{}).get('usage',{}) for e in self.synthetic]
         terminal_usage=terminal.get('usage')
         if terminal_usage is not None:usages.append(terminal_usage)

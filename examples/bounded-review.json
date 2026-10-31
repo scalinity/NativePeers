@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "client_request_id": "REPLACE_WITH_FRESH_REQUEST_ID",
+  "completion_mode": "wait",
+  "limits": {
+    "wall_time_seconds": 900,
+    "max_task_turns_per_worker": 2,
+    "max_native_turns_per_task": 64,
+    "followup_grace_seconds": 0
+  },
+  "workers": [{
+    "provider": "claude",
+    "model": "sonnet",
+    "title": "Bounded selected-change review",
+    "task": "Review the attached exact diff and selected source. Use artifact_read with text:true and limit:16000; follow next_offset. Report concrete bugs with file/line and reasoning, or no findings with explicit coverage limits. Run no shell commands. Checks not run remain not_run. Return findings and checks in the optional nativepeers-result block during this task.",
+    "permission_profile": "analysis",
+    "workspace": {"mode": "inherit-read-only"},
+    "requirements": {"task_type": "review", "required_tools": ["git_diff"]},
+    "context_refs": []
+  }]
+}

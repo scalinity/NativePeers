@@ -54,6 +54,20 @@ class ClaudeModInstall(unittest.TestCase):
         path = Path(str(self.state)+'.log')
         return path.read_text().splitlines() if path.exists() else []
 
+    def test_an_installed_copy_that_differs_from_the_checkout_is_refreshed_and_an_equal_one_is_left(self):
+        (self.source/'np/hooks').mkdir(parents=True);(self.source/'np/hooks/register.tsx').write_text('new')
+        copy = self.tmp/'cache/np/1.0.0';(copy/'hooks').mkdir(parents=True);(copy/'hooks/register.tsx').write_text('old')
+        (copy/'.claude-plugin/types').mkdir(parents=True);(copy/'.claude-plugin/types/index.d.ts').write_text('engine-written')
+        self.write(markets=[{'name': 'nativepeers-local', 'source': 'directory', 'path': str(self.source)}],
+                   plugins=[{'id': 'np@nativepeers-local', 'enabled': True, 'scope': 'user', 'installPath': str(copy)}])
+        self.assertEqual(self.run_apply(dry_run=True)['operations'],
+                         ['claude plugin uninstall np@nativepeers-local --scope user', 'claude plugin install np@nativepeers-local --scope user'])
+        (copy/'hooks/register.tsx').write_text('new')
+        self.assertEqual(self.run_apply(dry_run=True)['operations'], [])
+        __import__('shutil').rmtree(copy)  # A recorded installation whose files are gone is reinstalled.
+        self.assertEqual(self.run_apply(dry_run=True)['operations'],
+                         ['claude plugin uninstall np@nativepeers-local --scope user', 'claude plugin install np@nativepeers-local --scope user'])
+
     def test_dry_run_plans_without_changing_anything(self):
         value = self.run_apply(dry_run=True)
         self.assertEqual(value['operations'], [f'claude plugin marketplace add {self.source}', 'claude plugin install np@nativepeers-local --scope user'])
