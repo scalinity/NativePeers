@@ -93,6 +93,21 @@ class SelectedContextTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(PeerError):self.packet(source_format='review',max_bytes=8)
         self.assertEqual(self.j.all('SELECT * FROM artifacts'),before)
 
+    async def test_review_peer_send_refuses_missing_recovery_before_recording_or_delivery(self):
+        from unittest.mock import AsyncMock
+        info=self.packet(source_format='review');core=Core(self.j)
+        peer=self.registry.register('claude',self.root/'recipient-home',new_id(),'review recipient',identity(os.getpid()).json(),str(self.repo),{'kind':'fake'},owner_kind='test')
+        self.j.db.execute("UPDATE peer_instances SET status='live' WHERE peer_key=?",(self.caller.key,))
+        with patch.object(core.router,'admit',new_callable=AsyncMock,return_value={'state':'fixture'}) as admit:
+            with self.assertRaises(PeerError) as error:
+                await core.router.send(self.caller,peer['handle'],'review',artifact_refs=[info['artifact_id']])
+            self.assertEqual(error.exception.code,'PROTOCOL_ERROR');admit.assert_not_awaited()
+            self.assertEqual(self.j.all('SELECT * FROM send_requests'),[])
+            await core.router.send(self.caller,peer['handle'],'review',artifact_refs=info['context_refs'])
+            admit.assert_awaited_once()
+            for ref in info['context_refs']:
+                self.assertTrue(Artifacts(self.j).read(ref,peer['handle'],text=True)['text'])
+
     def read(self,info):
         page=Artifacts(self.j).read(info['artifact_id'],self.caller.key,text=True);text=page['text']
         while page['next_offset'] is not None:
