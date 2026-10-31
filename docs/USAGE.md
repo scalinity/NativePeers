@@ -2,6 +2,8 @@
 
 Use these commands from a registered native conversation's shell tool. All providers share the same routing core and JSON envelope. `--json` may follow the subcommand. Success has `ok:true`; errors have stable `error.code` and `may_have_received`. Exit 6 means delivery uncertainty: keep the request ID and reconcile rather than sending a fresh copy.
 
+A definitely unsubmitted Codex runtime refusal is `ADMISSION_DEFERRED`: wait for the runtime owner, then repeat the unchanged command and client request ID. It preserves the original message, attempt, expiry and recipient incarnation. Accepted/uncertain input is never replayed; quiet `RETAINED` remains permanent. Doctor lists the selected worker runtime separately from each live Codex recipient route.
+
 A definite send failure returns `ok:false` and the documented nonzero exit code. Its `data` retains the message and client-request IDs for inspection. Held, queued and ingested receipts remain distinct; a held receipt does not establish model processing. An outbox record without confirmed admission also returns exit 6.
 
 Completion pushes have their own readiness. `spawn --check` reports `ready_scope:"worker_execution"`; `ready` describes the workers, quota and capacity. Its separate `completion_delivery` and `push_ready` describe the original parent's return route. A blocked push adds a warning on push preflight, spawn and wait timeout, while useful workers and explicit result collection remain available. `whoami` includes the exact native UUID/owner and `inbox_readiness`. CLI and bound MCP use the same checks. Quota approval, worker execution, parent inbox and bound MCP readiness remain separate.

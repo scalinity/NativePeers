@@ -7,15 +7,17 @@ import re
 import socket
 import stat
 import signal
+import time
 
 from ..errors import PeerError, require
-from ..files import canonical
+from ..files import async_advisory_lock, canonical
 from ..launch import launch_environment
 from ..models import PEER_FRAME, new_id
 from ..process import identity,signal_owned
 from ..presentation import render
 
 QUEUE_STOP_GRACE=2
+QUEUE_LOCK_TIMEOUT=5
 
 
 async def stop_queue_writer(process,owner):
@@ -28,14 +30,39 @@ async def stop_queue_writer(process,owner):
             raise PeerError('DELIVERY_UNKNOWN','Queue helper cleanup could not be confirmed; reconcile the owned attempt',may_have_received=True) from None
 
 
-async def codex_queue(peer, message):
-    executable = (Path.home()/".local/share/codex-mcp-manager/current/bin/codex").resolve(strict=True)
-    env = launch_environment("codex")
-    env["CODEX_HOME"] = peer["home"]
-    process = await asyncio.create_subprocess_exec(str(executable), "queue", "--thread",
-        peer["peer_key"]["native_session_id"], "--message", render(message),
-        env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True)
+async def codex_queue(peer, message, *, journal, before_launch=None, admission_deadline=None):
+    from ..compatibility import codex_inbox_runtime
+    launching=False
+    try:
+        env = launch_environment("codex")
+        env["CODEX_HOME"] = peer["home"]
+        rendered=render(message)
+        async with async_advisory_lock(journal.root/'locks/runtime.lock',timeout=QUEUE_LOCK_TIMEOUT):
+            runtime=codex_inbox_runtime(journal,peer)
+            now=time.time()
+            require(now<message['expires_at'],'EXPIRED_BEFORE_SUBMISSION','Message expired while waiting for native admission')
+            require(admission_deadline is None or now<admission_deadline,'EXPIRED_BEFORE_SUBMISSION','Controller lifetime ended while waiting for native admission')
+            if before_launch:before_launch()
+            # Cancellation/unknown failure after this point may have created a helper.
+            launching=True
+            process = await asyncio.create_subprocess_exec(runtime["path"], "queue", "--thread",
+                peer["peer_key"]["native_session_id"], "--message", rendered,
+                env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True)
+    except asyncio.CancelledError as error:
+        if not launching:error.definitely_unsubmitted=True
+        raise
+    except PeerError:
+        raise
+    except Exception as error:
+        if launching:raise
+        raise PeerError('ADMISSION_DEFERRED','Queue helper was not started; retry the unchanged client request ID',
+                        details={'cause':type(error).__name__}) from error
+    return await _finish_codex_queue(process,peer,runtime)
+
+
+async def _finish_codex_queue(process,peer,runtime):
+    """Queue codec/cleanup, also used by the explicit private qualification probe."""
     try:owner=identity(process.pid).json()
     except ProcessLookupError:owner=None
     try:
@@ -55,7 +82,7 @@ async def codex_queue(peer, message):
         raise PeerError("DELIVERY_UNKNOWN", "Native queue outcome is unconfirmed", may_have_received=True,
                         details={"exit_code":process.returncode, "diagnostic":stderr.decode(errors="replace")[:1024]})
     return dict(stage="ACCEPTED_QUEUED", external_submission_id=match[1].decode(),
-                native_expiry_enforced=False, evidence_kind="native-queue-admission")
+                native_expiry_enforced=False, evidence_kind="native-queue-admission", runtime=runtime)
 
 
 def socket_endpoint(peer):

@@ -701,7 +701,20 @@ async def helper_action(config, action, role):
             return first
         if action in ("open", "close", "status"):
             return product_cli(config, "notifications", action)
-        router = Router(journal, registry)
+        # This explicit pre-approval qualification route exercises the real native
+        # codec in private state; it does not grant product admission or an approval.
+        from nativepeers.adapters.native_delivery import _finish_codex_queue
+        from nativepeers.compatibility import fingerprint
+        from nativepeers.launch import launch_environment
+        async def qualification_queue(target,message):
+            binary, _ = select_codex(config['binary'])
+            runtime=fingerprint(binary,fresh=True)
+            env=launch_environment('codex');env['CODEX_HOME']=target['home']
+            process=await asyncio.create_subprocess_exec(runtime['path'],'queue','--thread',target['peer_key']['native_session_id'],
+                '--message',render(message),env=env,stdin=asyncio.subprocess.DEVNULL,stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,start_new_session=True,close_fds=True)
+            return await _finish_codex_queue(process,target,runtime)
+        router = Router(journal, registry,adapters={'codex-native-queue':qualification_queue})
         receiver = json.loads((run / "receiver-identity.json").read_text())["key"]
         if action.startswith("queue-batch-") or action in ("active", "push", "root"):
             batch = action.removeprefix("queue-batch-") if action.startswith("queue-batch-") else None

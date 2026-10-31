@@ -12,6 +12,21 @@ function clip(text: string, limit: number): string {
   return text.length > limit ? text.slice(0, limit) + '…' : text
 }
 
+// What a person or the parent wrote, without the routing envelope NativePeers wraps around a follow-up for the worker:
+// 'NativePeers · Message', a blank line, the text, then '— NativePeers references —' and its ids.
+export function bodyOf(text: string): string {
+  const head = /^NativePeers · [^\n]*\n\n/.exec(text)
+  if (!head) return text
+  const end = text.lastIndexOf('\n\n— NativePeers references —')
+  return end > head[0].length ? text.slice(head[0].length, end) : text.slice(head[0].length)
+}
+
+// A tool's output as a narrow pane shows it: its first lines, each cut to a width, and how many lines are left out.
+export function excerpt(output: string, lines = 6, width = 80): { text: string; more: number } {
+  const all = output.split('\n')
+  return { text: all.slice(0, lines).map(l => l.length > width ? l.slice(0, width - 1) + '…' : l).join('\n'), more: Math.max(0, all.length - lines) }
+}
+
 function same(a: string, b: string): boolean {
   return a.trim().slice(0, MAX_FULL) === b.trim().slice(0, MAX_FULL)
 }
@@ -25,7 +40,8 @@ export function applyActivity(t: NpTranscript, events: readonly Activity[]): NpT
   const texts = (gen: number) => rows.filter(r => r.kind === 'text' && r.gen === gen)
   const write = (row: NpRow, text: string) => { row.full = text.slice(0, MAX_FULL);row.text = clip(text, MAX_TEXT) }
   // A follow-up's text arrives as input.queued (while the worker runs) and again with its task.started: one row.
-  const said = (requestId: unknown, origin: unknown, text: string, gen: number) => {
+  const said = (requestId: unknown, origin: unknown, raw: string, gen: number) => {
+    const text = bodyOf(raw)
     if (!text.trim()) return
     const key = typeof requestId === 'string' && requestId ? 'in:' + requestId : undefined
     const held = key ? find(key) : undefined
@@ -41,7 +57,7 @@ export function applyActivity(t: NpTranscript, events: readonly Activity[]): NpT
       const d = e.data && typeof e.data === 'object' ? e.data : {}
       switch (e.kind) {
         case 'task.started':
-          if (gen <= 1) { if (d.input_preview && !rows.some(r => r.kind === 'task')) rows.push({ kind: 'task', text: clip(String(d.input_preview), MAX_TEXT), gen }) }
+          if (gen <= 1) { if (d.input_preview && !rows.some(r => r.kind === 'task')) rows.push({ kind: 'task', text: clip(bodyOf(String(d.input_preview)), MAX_TEXT), gen }) }
           else said(d.client_request_id, d.origin, String(d.input_preview ?? ''), gen)
           break
         case 'input.queued':

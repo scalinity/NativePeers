@@ -25,19 +25,28 @@ def parents(journal):
 
 
 async def submit(provider,text,label):
-    journal=Journal(STATE);peer=parents(journal)[provider]
-    budget=LiveBudget(ROOT/'evidence/live-budget.json');reservation=budget.reserve(label,tranche='remaining_mandatory')
-    identifier=new_id();envelope={'schema_version':1,'message_id':identifier,'kind':'notify','origin':'explicit-disposable-test-harness',
-       'from':{'kind':'external-local','source_label':'authorized NativePeers acceptance harness'},'to':{'peer_key':peer['handle']},'body':{'text':text},'expect_reply':False}
-    run=private_directory(ROOT/'evidence/private/final-batch')
-    record={'provider':provider,'native_id':peer['peer_key']['native_session_id'],'reservation':reservation,'message_id':identifier,'label':label,'text':text,'submitted_at':time.time(),
-        'source_dependencies':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'nativepeers').rglob('*.py'))}}
-    atomic_json(run/(identifier+'.json'),record);budget.admit(reservation)
-    try:receipt=await (claude_inbox if provider=='claude' else codex_queue)(peer,envelope)
-    except BaseException as error:record['error']=str(error);atomic_json(run/(identifier+'.json'),record);raise
-    record['receipt']=receipt;atomic_json(run/(identifier+'.json'),record)
-    print(json.dumps({'native_id':record['native_id'],'reservation':reservation,'message_id':identifier,'receipt':receipt}))
-    journal.close()
+    journal=Journal(STATE)
+    try:
+        peer=parents(journal)[provider];budget=LiveBudget(ROOT/'evidence/live-budget.json')
+        identifier=new_id();now=time.time()
+        envelope={'schema_version':1,'message_id':identifier,'exchange_id':new_id(),'kind':'notify','origin':'explicit-disposable-test-harness',
+           'created_at':now,'expires_at':now+1800,'from':{'kind':'external-local','source_label':'authorized NativePeers acceptance harness'},
+           'to':{'peer_key':peer['handle']},'body':{'text':text},'expect_reply':False}
+        run=private_directory(ROOT/'evidence/private/final-batch')
+        record={'provider':provider,'native_id':peer['peer_key']['native_session_id'],'reservation':None,'message_id':identifier,'label':label,'text':text,'submitted_at':now,
+            'source_dependencies':{str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted((ROOT/'nativepeers').rglob('*.py'))}}
+        atomic_json(run/(identifier+'.json'),record)
+        def admit():
+            record['reservation']=budget.reserve(label,tranche='remaining_mandatory')
+            budget.admit(record['reservation']);atomic_json(run/(identifier+'.json'),record)
+        try:
+            if provider=='codex':receipt=await codex_queue(peer,envelope,journal=journal,before_launch=admit)
+            else:
+                admit();receipt=await claude_inbox(peer,envelope)
+        except BaseException as error:record['error']=str(error);atomic_json(run/(identifier+'.json'),record);raise
+        record['receipt']=receipt;atomic_json(run/(identifier+'.json'),record)
+        print(json.dumps({'native_id':record['native_id'],'reservation':record['reservation'],'message_id':identifier,'receipt':receipt}))
+    finally:journal.close()
 
 
 def worker(provider,name,nonce,sibling=None):
