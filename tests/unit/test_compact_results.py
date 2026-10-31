@@ -31,11 +31,11 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         lease=dict(spec=dict(max_task_turns=200),tasks_started=1)
         self.j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',(self.worker,self.group,None,'claude',self.native,'review','sonnet','claude-sonnet-5-5',None,str(self.j.root),None,'IDLE_GRACE',1,json.dumps(lease)))
 
-    def add(self,state='COMPLETED',summary='No findings.',error=None,findings=None,model_observed='claude-sonnet-5-5',native_id='current'):
+    def add(self,state='COMPLETED',summary='No findings.',error=None,findings=None,model_observed='claude-sonnet-5-5',native_id='current',limitations=None):
         task=new_id();self.ids.append(task)
         record=dict(task_id=task,group_id=self.group,status=state.lower(),summary=summary,error=error,
                     worker=dict(provider='claude',native_session_id=self.native if native_id=='current' else native_id,title='review'),model_requested='sonnet',model_observed=model_observed,
-                    findings=findings or [],verification=dict(tests_run=[],limitations=['Tests not run: analysis profile.']),changes={})
+                    findings=findings or [],verification=dict(tests_run=[],limitations=limitations if limitations is not None else ['Tests not run: analysis profile.']),changes={})
         artifact=Artifacts(self.j).put(canonical(record),self.caller.key,media_type='application/json') if state!='RUNNING' else None
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task,self.worker,None,None,state,artifact,None,1,'{}'))
         self.policy=dict(initial_tasks=self.ids[:1],phases={str(i+1):[t] for i,t in enumerate(self.ids)})
@@ -54,6 +54,20 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(len(json.dumps(frame).encode()),4096)
         self.assertNotIn(self.ids[-1],json.dumps(cli));self.assertEqual(before,self.j.all('SELECT * FROM completion_routes'))
         self.assertIn('Tests not run',cli['tasks'][0]['limitations'])
+
+    async def test_empty_rejected_review_stays_incomplete_through_compact_rendering(self):
+        from nativepeers.worker_report import extract
+        raw='Review retained\n```nativepeers-result\n'+json.dumps(dict(findings=[dict(severity='high',summary='F001: defect')],tests_run=[]))+'\n```'
+        findings,checks,limits=extract(raw)
+        target=self.add(summary=raw,findings=findings,limitations=limits)
+        with patch('nativepeers.cli.bind_caller',return_value=self.caller):
+            cli=await dispatch(parser().parse_args(['result',target,'--compact','--json']),self.j)
+        mcp=await Core(self.j).tool(self.caller,'task_result',dict(handle=target,compact=True))
+        self.assertEqual(cli,mcp);self.assertTrue(cli['tasks'][0]['report_incomplete'])
+        self.assertEqual(cli['tasks'][0]['findings']['count'],0)
+        self.assertEqual(self.service.result(self.caller,target)['results'][0]['summary'],raw)
+        clean=self.add(limitations=[])
+        self.assertFalse(self.service.result(self.caller,clean,compact=True)['tasks'][0]['report_incomplete'])
 
     async def test_failed_initial_completed_later_and_running_followup_are_separate(self):
         failed=self.add('FAILED',error=dict(code='BUDGET_EXHAUSTED',message='Native round cap',may_have_received=True,limit=dict(field='limits.max_native_turns_per_task',value=1,observed=1)))

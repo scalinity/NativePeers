@@ -36,7 +36,11 @@ def settle_stopped_tasks(db,worker_id,generation,reason):
 def assert_released(journal,row):
     from .workspace_retirement import retirement
     require(not retirement(journal,row['worker_id']), 'WORKSPACE_RETIRED', 'Workspace retirement was prepared; recover its verified archive instead of resuming this writer')
-    require(row['state']=='RELEASED_RESUMABLE','OWNERSHIP_CONFLICT','Worker has not released its native writer')
+    live=row['state'] in ('READY','RUNNING','IDLE_GRACE') and row.get('peer_key')
+    require(row['state']=='RELEASED_RESUMABLE','OWNERSHIP_CONFLICT','Worker has not released its native writer',
+            details={'worker_id':row['worker_id'],'group_id':row['group_id'],'state':row['state'],
+                     'next_action':'Send a serialized live follow-up to the exact peer; do not start a second native writer.' if live else 'Inspect group ownership and release state before resuming; this state cannot accept a live follow-up.',
+                     'command':'npeer send --to '+row['peer_key']+' --message TEXT --request-reply --client-request-id NEW_ID --json' if live else 'npeer status '+row['group_id']+' --json'})
     closure=release_status(journal,row)
     require(closure['released'],'CLEANUP_UNCERTAIN','Previous process/output closure is unproved; inspect the retained release details',details=closure)
     home=recorded_home(journal,row)

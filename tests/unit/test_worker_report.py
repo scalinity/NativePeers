@@ -48,6 +48,99 @@ class WorkerReportTests(unittest.TestCase):
         self.assertEqual((findings,checks),([],[]))
         self.assertEqual(limitations,['Malformed structured worker report; provider final text retained.'])
 
+    def review(self,items,structured=None):
+        text='## Code Review: disposable review\n### Summary\nSelected fixture only; shell not run.\n'
+        for title,severity in [('🔴 Critical Issues (Must Fix)','critical'),('🟡 Warnings (Should Fix)','warning'),('🔵 Suggestions (Consider)','info')]:
+            text+='### '+title+'\n'
+            selected=[item for item in items if item['severity']==severity]
+            text+='\n'.join(f"{n}. **[{item['summary'].split(':')[0]}] Title** - {item['file']}:{item['line']}" for n,item in enumerate(selected,1)) or 'None.'
+            text+='\n'
+        text+='### ✅ Good Practices\n- Positive observation, no remediation.\n### Verdict\nApprove with Suggestions\n'
+        return text+self.report(dict(findings=items if structured is None else structured,tests_run=[dict(command='pytest',outcome='not_run',details='Read test source only')]))
+
+    def test_mixed_review_and_positive_observations_match_exact_ids(self):
+        items=[dict(severity=severity,summary=f'F00{n}: Title',file='fixture.py',line=n) for n,severity in enumerate(('critical','warning','info'),1)]
+        findings,checks,limitations=extract(self.review(items))
+        self.assertEqual([item['severity'] for item in findings],['critical','warning','info'])
+        self.assertEqual([item['summary'].split(':')[0] for item in findings],['F001','F002','F003'])
+        self.assertEqual(checks[0]['outcome'],'not_run');self.assertEqual(limitations,[])
+
+    def test_true_no_findings_differs_from_rejected_or_missing_structure(self):
+        self.assertEqual(extract(self.review([]))[2],[])
+        item=dict(severity='warning',summary='F001: Reachable fixture',file='fixture.py',line=3)
+        for invalid in ('high','medium','low','unknown'):
+            findings,checks,limits=extract(self.review([item],[dict(item,severity=invalid)]))
+            self.assertEqual(findings,[]);self.assertTrue(any('Invalid findings entry' in line for line in limits))
+            self.assertTrue(any('correspondence incomplete' in line for line in limits))
+        for value in ({},{'findings':[]},{'findings':[],'tests_run':None}):
+            self.assertTrue(extract('## Code Review: missing required arrays\n'+self.report(value))[2])
+
+    def test_prefaced_and_missing_headers_cannot_disable_correspondence(self):
+        item=dict(severity='info',summary='F001: Suggestion',file='fixture.py',line=1)
+        valid=self.review([item])
+        self.assertEqual(extract('A preface.\n'+valid)[2],[])
+        mismatched=self.review([item],[dict(item,summary='F002: Different')])
+        for text in ('A preface.\n'+mismatched,valid.replace('## Code Review:','## code review:'),valid.replace('## Code Review:','Plain heading:')):
+            self.assertTrue(any('correspondence incomplete' in line for line in extract(text)[2]))
+
+    def test_markdown_fix_blocks_do_not_fabricate_readable_items(self):
+        item=dict(severity='critical',summary='F001: Patch markdown',file='fixture.md',line=1)
+        valid=self.review([item])
+        patch='\n   - Risk: input 1,2 follows subtraction and returns -1 instead of 3.\n   - Fix:\n```markdown\n### Warnings (Should Fix)\n1. **[F002] Example only** - example.md:9\n```\n'
+        valid=valid.replace('### 🟡 Warnings',patch+'### 🟡 Warnings')
+        self.assertEqual(extract(valid)[2],[])
+        # A fenced item cannot supply a missing real readable ID.
+        forged=valid.replace('1. **[F001] Title** - fixture.md:1','None.').replace('[F002] Example only** - example.md:9','[F001] Example only** - fixture.md:1')
+        self.assertTrue(any('correspondence incomplete' in line for line in extract(forged)[2]))
+
+    def test_correspondence_includes_locations_and_retains_overflow(self):
+        item=dict(severity='info',summary='F001: Suggestion',file='fixture.py',line=1)
+        for structured in ([dict(item,file='other.py')],[dict(item,line=2)],[dict(severity='info',summary=item['summary'])]):
+            self.assertTrue(any('correspondence incomplete' in line for line in extract(self.review([item],structured))[2]))
+        items=[dict(item,summary=f'F{i:03}: Suggestion') for i in range(1,22)]
+        findings,checks,limits=extract(self.review(items))
+        self.assertEqual(findings,[]);self.assertIn('Invalid findings list; provider final text retained.',limits)
+        findings,checks,limits=extract(self.review(items,items[:20]))
+        self.assertEqual(len(findings),20)
+        self.assertTrue(any('correspondence incomplete' in line for line in limits))
+
+    def test_generic_optional_reports_remain_optional(self):
+        from nativepeers.worker_report import report_incomplete
+        for value in ({},{'findings':[dict(severity='info',summary='ordinary implementation observation')]},{'tests_run':[]}):
+            findings,checks,limits=extract(self.report(value));self.assertEqual(limits,[])
+        for prefix in ('Ordinary implementation answer.\n','## Code Review implementation notes\n'):
+            text=prefix+self.report({'findings':[dict(severity='info',summary='F003: timeout default is now push-aware')]})
+            findings,checks,limits=extract(text);self.assertEqual(len(findings),1);self.assertEqual(limits,[])
+            self.assertFalse(report_incomplete(text,limits))
+        limits=extract('Ordinary implementation answer.')[2]
+        self.assertFalse(report_incomplete('Ordinary implementation answer.',limits))
+        self.assertTrue(report_incomplete('## Code Review: missing appendix',limits))
+
+    def test_quoted_headers_and_appendices_do_not_hide_a_real_review(self):
+        item=dict(severity='critical',summary='F001: Contract patch',file='contract.md',line=1)
+        quoted='````markdown\n## Code Review: quoted example\n```nativepeers-result\n{"findings":[],"tests_run":[]}\n```\n````\n'
+        valid=quoted+self.review([item])
+        valid=valid.replace('### 🟡 Warnings',quoted+'### 🟡 Warnings')
+        findings,checks,limits=extract(valid)
+        self.assertEqual(limits,[]);self.assertEqual(findings[0]['summary'],item['summary'])
+        self.assertIn('No structured worker report supplied',extract(quoted)[2][0])
+        from nativepeers.worker_report import report_incomplete
+        self.assertFalse(report_incomplete(quoted,extract(quoted)[2]))
+
+    def test_correspondence_rejects_missing_extra_duplicate_and_recategorized_ids(self):
+        item=dict(severity='info',summary='F001: Useful suggestion',file='fixture.py',line=3)
+        for structured in ([],[dict(item,summary='F002: Other')],[item,item],[dict(item,severity='warning')]):
+            with self.subTest(structured=structured):
+                self.assertTrue(any('correspondence incomplete' in line for line in extract(self.review([item],structured))[2]))
+
+    def test_closed_single_appendix_and_check_outcomes(self):
+        raw=self.report(dict(findings=[],tests_run=[dict(command='pytest',outcome=outcome) for outcome in ('passed','failed','not_run','success')]))
+        findings,checks,limits=extract(raw)
+        self.assertEqual([item['outcome'] for item in checks],['passed','failed','not_run'])
+        self.assertIn('Invalid tests_run entry; provider final text retained.',limits)
+        for invalid in (raw.rsplit('```',1)[0],raw+raw):
+            self.assertIn('Malformed structured worker report; provider final text retained.',extract(invalid)[2])
+
 
 class WorkerReportRetentionTests(unittest.IsolatedAsyncioTestCase):
     async def test_completed_task_retains_raw_final_after_recursive_optional_report(self):
