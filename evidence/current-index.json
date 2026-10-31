@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "560270b7f0134ce2b07c216cdaa2faa9d1ad62c7",
-  "reviewed_commit": "df3df5a",
-  "publication_branch": "fix/lineage-desktop-handback",
-  "updated_at": "2026-10-30T22:41:48.654271-04:00",
-  "current_record": "evidence/claude-lineage-desktop-handback.json",
+  "code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
+  "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
+  "publication_branch": "docs/review-followup-acceptance-20261030",
+  "updated_at": "2026-10-30T23:15:03.563269-04:00",
+  "current_record": "evidence/review-followup-workflow.json",
   "file_classes": {
     "product": {
       "files": {
@@ -408,13 +408,56 @@
   },
   "operation_checks": [
     {
+      "operation": "complete-source-and-installed-suite",
+      "parent_context": "Isolated final source plus protected installed1125fa7",
+      "status": "PASS"
+    },
+    {
+      "operation": "owned-Claude-Codex-Antigravity-skill-install",
+      "parent_context": "Supported owned installers; three matching copies and zero-operation repeat",
+      "status": "PASS"
+    },
+    {
+      "operation": "installed-live-followup-four-phases",
+      "parent_context": "Disposable actual standalone parent, one owned history, localhost model fixture",
+      "status": "PASS",
+      "provider": "codex",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10"
+    },
+    {
+      "operation": "installed-CLI-and-authenticated-MCP-facade-parity",
+      "parent_context": "Actual native-shell caller; official SDK facade, not separate stdio/UI",
+      "status": "PASS"
+    },
+    {
+      "operation": "current-selected-Codex-runtime-approval",
+      "parent_context": "Existing activation owner qualification; passive doctor exact approval match; this lane made no approval/activation change.",
+      "status": "PASS",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
+    },
+    {
+      "operation": "external-paid-Codex-inference-and-other-provider-UI",
+      "parent_context": "Outside this bounded fixture/review slice",
+      "status": "NOT_RUN"
+    },
+    {
+      "operation": "current-selected-Codex-live-followup-owner-qualification",
+      "parent_context": "Parallel owned fixture on bb45eb7; parent read-only hash/contract/receipt/native-history/ANSI-through-EOF validation; no new inference.",
+      "status": "PASS",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
+    },
+    {
       "provider": "claude",
       "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
       "operation": "np-handback-harness",
       "status": "PASS",
       "parent_context": "disposable interactive claude 2.1.314 in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input (auto mode's classifier requests refused by the tripwire)",
       "scope": "One np:codex shadow: the engine's handback note seen, one SubagentHandback call carrying the report with ids, no enforcement row, the parent notified 1.0 s after the worker ended, not stopped by anyone; the pre-fix mod hung under the same run. With --refuse: three refused calls, the shadow's note, the run ended by itself and the parent was notified after 8.0 s.",
-      "source_head": "3be5d68"
+      "source_head": "3be5d68",
+      "attribution": "Existing lineage-owner record, not rerun by workflow lane",
+      "record": "evidence/claude-lineage-desktop-handback.json"
     },
     {
       "provider": "claude",
@@ -423,7 +466,9 @@
       "status": "PASS",
       "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
       "scope": "The same handback run on the desktop app's own engine: one SubagentHandback call, no enforcement row, the parent notified 1.0 s after the worker ended; the startup race run on this engine started one bridge and reported Bridge: Connected. With --refuse on this engine: three refused calls, the shadow's note, the parent notified after 8.0 s.",
-      "source_head": "3be5d68"
+      "source_head": "3be5d68",
+      "attribution": "Existing lineage-owner record, not rerun by workflow lane",
+      "record": "evidence/claude-lineage-desktop-handback.json"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
