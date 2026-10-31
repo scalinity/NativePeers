@@ -1,3 +1,17 @@
+# Managed Codex activation — installed scoped acceptance (2026-10-31)
+
+- [x] Keep an approved live Codex recipient reachable through its exact running executable and queue helper while the selected candidate awaits qualification; new workers still verify selected current.
+- [x] Retry only definitely unsubmitted selected-candidate intent with its immutable request/message/attempt, expiry and recipient incarnation. Accepted, uncertain and quiet-retained inputs remain inert.
+- [x] Publish NativePeers PR #40 (`32e1112`) and the documentation-only CodexForge PR #11 (`3e05c90`); synchronized installed source preserves the package, approval, host files, old leases and unrelated Lineage changes.
+- [x] Final reviewed source: 1,169 tests / 1,068 subtests / four skips. Seven substantive different-vendor native review phases; every finding has a disposition.
+- [x] Installed real-native localhost interval: about45 seconds selected-before-approval, one old-recipient message/reply, one original deferred delivery after qualification, unqualified worker refused before native process/model input, one worker input after approval, and conditional private rollback with unchanged production receipt.
+- [x] Existing #7 route:44 warm/cold native queued frames. Existing #28 route:four actual worker phases, one accepted+ingested push, then quiet RETAINED. Complete PTY capture and owned process/output EOF are recorded separately from physical UI.
+- [ ] Tracker #16 remains OPEN. Setup/collection totals and native model/tool rounds are unknown; no100/100 or net time-saving claim.
+
+[Exact scoped source, installed/native checks and findings](evidence/issue-39-managed-activation.json). Five failed harness attempts are preserved and attributed; none was replayed or relabeled as a pass. Long-lived facades/bridges retain imported modules; fresh installed invocations were qualified. The existing runtime and verified predecessor remain selected/retained without a Rust rebuild because all CodexForge runtime inputs are byte-identical. Physical capture and external-network instrumentation are NOT_RUN.
+
+---
+
 # Review/remediation and live follow-up workflow — installed scoped acceptance (2026-10-30)
 
 - [x] Implement #32, #33 and #34 with one shared [review contract](docs/NATIVE_REVIEW.md), exact readable/structured accounting, every-severity parent `/address` and originating-task/privileged-change boundaries.
