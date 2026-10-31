@@ -64,8 +64,8 @@ class DelegationDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_budget_errors_name_the_offending_field_request_and_current_ceiling(self):
         for policy,field,requested,ceiling in (
-            ({},'wall_time_seconds',2400,1800),
-            ({},'max_task_turns_per_worker',9,8),
+            ({'task_wall_seconds':1800},'wall_time_seconds',2400,1800),
+            ({'max_task_turns':8},'max_task_turns_per_worker',9,8),
             ({'task_wall_seconds':42},'wall_time_seconds',43,42),
             ({'max_task_turns':3},'max_task_turns_per_worker',4,3),
         ):
@@ -75,8 +75,11 @@ class DelegationDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
                     with patch('nativepeers.delegation.provider_home') as home,self.assertRaises(PeerError) as error:
                         await self.delegation.spawn(self.caller,self.request(**{field:requested}),check=check)
                     self.assertEqual(error.exception.code,'BUDGET_EXHAUSTED')
-                    self.assertEqual(error.exception.details,{'field':'limits.'+field,'requested':requested,'ceiling':ceiling})
-                    self.assertEqual(error.exception.message,f'limits.{field} requested {requested} exceeds ceiling {ceiling}')
+                    key='task_wall_seconds' if field=='wall_time_seconds' else 'max_task_turns'
+                    path=str(self.journal.root/'policy.json')
+                    self.assertEqual(error.exception.details,{'field':'limits.'+field,'requested':requested,'ceiling':ceiling,
+                        'policy_key':key,'source':'policy.json','policy_file':path})
+                    self.assertEqual(error.exception.message,f'limits.{field} requested {requested} exceeds ceiling {ceiling}; {key} from policy.json ({path})')
                     self.assertFalse(error.exception.may_have_received);home.assert_not_called()
                     for table in ('groups','workers','tasks','spawn_requests'):
                         self.assertEqual(self.journal.one('SELECT COUNT(*) n FROM '+table)['n'],0)
@@ -88,6 +91,19 @@ class DelegationDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(limits=limits),patch('nativepeers.delegation.provider_home') as home,self.assertRaises(PeerError) as error:
                 await self.delegation.spawn(self.caller,self.request(**limits))
             self.assertEqual(error.exception.code,code);home.assert_not_called()
+
+    async def test_explicit_group_ceiling_rejects_a_longer_task_before_planning(self):
+        atomic_json(self.journal.root/'policy.json',{'group_wall_seconds':3600})
+        for check in (False,True):
+            with self.subTest(check=check),patch('nativepeers.delegation.provider_home') as home,self.assertRaises(PeerError) as error:
+                await self.delegation.spawn(self.caller,self.request(wall_time_seconds=7200),check=check)
+            self.assertEqual(error.exception.code,'BUDGET_EXHAUSTED')
+            self.assertEqual(error.exception.details['policy_key'],'group_wall_seconds')
+            self.assertEqual(error.exception.details['field'],'limits.wall_time_seconds')
+            self.assertEqual(error.exception.details['ceiling'],3600)
+            for text in ('task_wall_seconds','group_wall_seconds','policy.json',str(self.journal.root/'policy.json')):
+                self.assertIn(text,error.exception.message)
+            home.assert_not_called()
 
     async def test_budget_boundaries_keep_requested_limits_and_delegation_depth(self):
         binary=self.root/'.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('metadata fixture only')
@@ -105,6 +121,72 @@ class DelegationDiagnosticsTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(lease['grants']['max_depth'],1)
             self.assertEqual((lease['spec']['wall_time_seconds'],lease['spec']['max_task_turns']),(1800,8))
             start.assert_awaited_once()
+
+    async def test_long_explicit_limits_are_admitted_without_an_implicit_group_cutoff(self):
+        from nativepeers.supervisor import Group
+        binary=self.root/'.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('metadata fixture only')
+        atomic_json(self.journal.root/'compat/runtime.json',{'providers':{'claude':fingerprint(binary)}})
+        request=self.request(wall_time_seconds=7200,max_task_turns_per_worker=40)
+        with patch('nativepeers.delegation.Path.home',return_value=self.root),patch.dict(os.environ,{'CLAUDE_CONFIG_DIR':str(self.root/'.claude')}),patch.object(self.delegation,'ensure_supervisor',new_callable=AsyncMock):
+            plan=await self.delegation.spawn(self.caller,request,check=True)
+            self.assertTrue(plan['ready'],plan['failures'])
+            self.assertEqual((plan['workers'][0]['wall_time_seconds'],plan['workers'][0]['max_task_turns']),(7200,40))
+            actual=await self.delegation.spawn(self.caller,request)
+        group=Group(self.journal,actual['group_id'])
+        self.assertGreaterEqual(group.lifetime_deadline(),group.policy['created_at']+7200)
+        self.assertIsNone(actual['progress']['deadline'])
+
+    async def test_check_reports_effective_defaults_ceilings_and_their_sources(self):
+        binary=self.root/'.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('metadata fixture only')
+        atomic_json(self.journal.root/'compat/runtime.json',{'providers':{'claude':fingerprint(binary)}})
+        with patch('nativepeers.delegation.Path.home',return_value=self.root),patch.dict(os.environ,{'CLAUDE_CONFIG_DIR':str(self.root/'.claude')}):
+            for supplied in ({},{'task_wall_seconds_default':2400,'task_wall_seconds':4000,'max_task_turns':3}):
+                with self.subTest(policy=supplied):
+                    atomic_json(self.journal.root/'policy.json',supplied)
+                    plan=await self.delegation.spawn(self.caller,self.request(),check=True)
+                    wall=plan['limits']['wall_time_seconds'];turns=plan['limits']['max_task_turns_per_worker']
+                    self.assertEqual(wall['effective'],2400 if supplied else 1800)
+                    self.assertEqual(wall['default']['value'],2400 if supplied else 1800)
+                    self.assertEqual(wall['default']['source'],'policy.json' if supplied else 'built-in default')
+                    self.assertEqual(wall['ceiling']['value'],4000 if supplied else None)
+                    self.assertEqual(wall['ceiling']['policy_key'],'task_wall_seconds')
+                    self.assertEqual(wall['ceiling']['policy_file'],str(self.journal.root/'policy.json'))
+                    self.assertEqual(turns['effective'],3 if supplied else 8)
+                    self.assertEqual(turns['ceiling']['value'],3 if supplied else None)
+            request=self.request(wall_time_seconds=3600,max_task_turns_per_worker=2)
+            plan=await self.delegation.spawn(self.caller,request,check=True)
+            self.assertEqual(plan['limits']['wall_time_seconds']['source'],'spawn spec')
+            self.assertEqual(plan['limits']['wall_time_seconds']['effective'],3600)
+
+    async def test_doctor_exposes_the_same_omitted_limits_without_a_provider_turn(self):
+        with patch('nativepeers.cli.bind_caller',return_value=self.caller),patch('nativepeers.compatibility.diagnose',return_value=[]),patch('nativepeers.readiness.readiness',return_value={}),patch('nativepeers.readiness.operation_readiness',return_value=[]),patch('nativepeers.usage.install.readiness',return_value={}):
+            value=await dispatch(parser().parse_args(['doctor','--json']),self.journal)
+        self.assertEqual(value['limits']['wall_time_seconds']['effective'],1800)
+        self.assertEqual(value['limits']['max_task_turns_per_worker']['effective'],8)
+        self.assertIsNone(value['limits']['wall_time_seconds']['ceiling']['value'])
+        self.assertEqual(value['limits']['max_task_turns_per_worker']['default']['source'],'built-in default')
+
+    async def test_native_rounds_have_an_independent_request_default_and_ceiling(self):
+        from nativepeers.grok_worker import arguments
+        from nativepeers.profiles import claude_arguments
+        binary=self.root/'.local/bin/claude';binary.parent.mkdir(parents=True);binary.write_text('metadata fixture only')
+        atomic_json(self.journal.root/'compat/runtime.json',{'providers':{'claude':fingerprint(binary)}})
+        with patch('nativepeers.delegation.Path.home',return_value=self.root),patch.dict(os.environ,{'CLAUDE_CONFIG_DIR':str(self.root/'.claude')}):
+            for native,expected in ((None,128),(200,200)):
+                with self.subTest(native=native):
+                    request=self.request(max_task_turns_per_worker=1)
+                    if native is not None:request['limits']['max_native_turns_per_task']=native
+                    plan=await self.delegation.spawn(self.caller,request,check=True)
+                    spec=plan['workers'][0]
+                    self.assertEqual(spec['max_task_turns'],1)
+                    self.assertEqual(spec['native_max_turns'],expected)
+                    self.assertEqual(plan['limits']['max_native_turns_per_task']['effective'],expected)
+                    for args in (arguments(spec),claude_arguments(self.journal,self.root/'binding',spec,new_id(),home=self.root/'.claude')):
+                        self.assertEqual(args[args.index('--max-turns')+1],str(expected))
+            atomic_json(self.journal.root/'policy.json',{'native_max_turns':150})
+            with self.assertRaises(PeerError) as error:
+                await self.delegation.spawn(self.caller,self.request(max_native_turns_per_task=200),check=True)
+            self.assertEqual(error.exception.details['policy_key'],'native_max_turns')
 
     def test_wait_help_discloses_the_timeout_ceiling_and_default(self):
         output=io.StringIO()

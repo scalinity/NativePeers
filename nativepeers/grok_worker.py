@@ -107,7 +107,7 @@ def arguments(spec,native_id=None):
           '--model',spec['model'],'--sandbox','nativepeers-'+spec['permission_profile'],
           '--permission-mode','dontAsk','--tools',','.join(tools),'--no-subagents','--disable-web-search',
           '--disallowed-tools','Agent,search_tool,use_tool','--deny','MCPTool(*)',
-          '--max-turns',str(spec.get('max_task_turns',8))]
+          '--max-turns',str(spec.get('native_max_turns',128))]
     for tool in ('Read','Grep')+(('Bash','Edit','Write') if spec['permission_profile']=='workspace' else ()):
         args+=['--allow',tool]
     require(not spec.get('reasoning_effort'),'EFFORT_UNSUPPORTED','Grok models does not advertise per-model reasoning effort; omit it')
@@ -186,8 +186,9 @@ async def catalog(executable,*,timeout=30,terminate_grace=1,home=None):
 
 class Stream:
     """Native streaming-json framing; engine usage never substitutes selection."""
-    def __init__(self,native_id,profile):
+    def __init__(self,native_id,profile,*,native_max_turns=None):
         self.native_id=native_id;self.allowed=set(allowed_tools(profile));self.text=[];self.size=0;self.terminal=None;self.tools=None
+        self.native_max_turns=native_max_turns
         self.advertised_tools=None;self.denied_advertised_tools=[]
 
     def observe(self,event):
@@ -223,6 +224,9 @@ class Stream:
         if not success:
             code='USER_CANCELED' if canceled else 'BUDGET_EXHAUSTED' if reason in ('max_tokens','max_turn_requests','max_turns') else classify(event)
             error=diagnostic(event,submitted=True,code=code,provider='grok')
+            if reason in ('max_turn_requests','max_turns'):
+                error.update(message=f'Grok reached limits.max_native_turns_per_task ({self.native_max_turns}); native --max-turns ended this input.',
+                             limit=dict(field='limits.max_native_turns_per_task',value=self.native_max_turns,native_flag='--max-turns',observed=event.get('num_turns')))
         return dict(status='completed' if success else 'canceled' if canceled else 'failed',text=''.join(self.text),
                     usage=event.get('usage'),error=error,model_usage=event.get('modelUsage'),native_request_id=event.get('requestId'),
                     native_internal_rounds=event.get('num_turns'))

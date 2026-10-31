@@ -55,7 +55,7 @@ The incoming native message contains `message_id`, `exchange_id`, `in_reply_to`,
 
 Peer frames are at most 64 KiB, inline text 12 KiB, local control responses 2 MiB, artifact pages 256 KiB and registered artifacts 10 MiB. Artifact pages carry a digest, byte count, base64 data and `next_offset`. Artifact handles grant access only to the registered immutable file; arbitrary file paths are not artifact handles. Spawn `context_refs` are explicit registered handles already readable by the parent, then granted to the new worker. Whole histories are not copied.
 
-`artifact-read` opens the installed journal read-only, preserving live WAL grants without schema initialization, chmod, directory creation or NativePeers write-lock files. SQLite needs readable live WAL/SHM sidecars; when a read-only filesystem prevents their creation, the CLI returns a structured `CAPABILITY_MISMATCH` instead of using a stale immutable snapshot. Analysis workers can use authorized artifacts without write access to NativePeers state. Codex workers receive their exact owned binding through a worker-local shell environment overlay, including when the native shell inherits only its core variables. This changes no sandbox, global environment policy or shell-wide Python import path. Missing/stale identities and ungranted artifacts still fail. Admission errors for `limits.wall_time_seconds` and `limits.max_task_turns_per_worker` report the field, requested value and current ceiling; admission limits are unchanged.
+`artifact-read` opens the installed journal read-only, preserving live WAL grants without schema initialization, chmod, directory creation or NativePeers write-lock files. SQLite needs readable live WAL/SHM sidecars; when a read-only filesystem prevents their creation, the CLI returns a structured `CAPABILITY_MISMATCH` instead of using a stale immutable snapshot. Analysis workers can use authorized artifacts without write access to NativePeers state. Codex workers receive their exact owned binding through a worker-local shell environment overlay, including when the native shell inherits only its core variables. This changes no sandbox, global environment policy or shell-wide Python import path. Missing/stale identities and ungranted artifacts still fail.
 
 Use [the Claude-to-Codex example](../examples/claude-to-two-codex.json) or [the Codex-to-Claude example](../examples/codex-to-two-claude.json) as a batch template. The Sol example requests `gpt-6.1-sol` and `xhigh` without a fallback. Installed catalog checks precede dispatch; entitlement remains a real-inference question. Requested and provider-reported models are stored separately. Effort observation stays unverified when the backend does not independently echo it.
 
@@ -65,7 +65,34 @@ Waiting for one task in a multi-task batch leaves the batch notification unchang
 
 For writing tasks use `permission_profile:"workspace"` and `workspace:{"mode":"isolated-worktree"}`. Each worker gets a separate branch/worktree and an exact baseline. Dirty tracked changes are captured into that worktree, selected untracked files require `untracked_allowlist`, and secrets are excluded. NativePeers does not stash, reset, clean or automatically merge the source checkout. Results retain the owned worktree path for inspection.
 
-The optional private state `policy.json` follows [the example](../examples/policy.json). It sets concurrency, depth, task/group duration, pending-message and hop limits and maps absolute native-home paths to short labels. A task request may narrow these limits. Changes are local operator configuration, not authority granted by an inbound message. Historical verification counts remain in `evidence/live-budget.json`; cumulative input and active-time ceilings are disabled. Each operation still has explicit deadlines and concurrency limits. Historical counts do not block new authorized tests.
+The optional `policy.json` lives in the NativePeers state directory (`NPEER_HOME`, default `~/.local/state/nativepeers`) and follows [the example](../examples/policy.json). Omitted-request defaults are separate from operator ceilings. With no file, a request for `limits.wall_time_seconds:7200` and `limits.max_task_turns_per_worker:40` is accepted. A `null` ceiling means no operator ceiling; positive integers set one. An omitted request uses its default, narrowed to any configured ceiling. A larger explicit request is rejected before reservation. Existing `task_wall_seconds`, `max_task_turns` and `group_wall_seconds` entries retain their ceiling meaning.
+
+| Policy key | Built-in value | Meaning |
+|---|---|---|
+| `task_wall_seconds_default` | 1800 | Wall time for each task input when omitted |
+| `task_wall_seconds` | `null` | Optional task wall-time ceiling |
+| `max_task_turns_default` | 8 | Logical task inputs per worker/controller generation when omitted |
+| `max_task_turns` | `null` | Optional logical-input ceiling |
+| `native_max_turns_default` | 128 | Native model-round cap per task input when omitted |
+| `native_max_turns` | `null` | Optional native-round ceiling |
+| `group_wall_seconds` | `null` | Optional overall group lifetime ceiling from generation creation |
+| `workers_per_group` | 4 | Worker count and requested concurrency ceiling per group |
+| `workers_total` | 8 | Active worker ceiling across groups |
+| `max_depth` | 1 | Delegation depth ceiling; caller grants also apply |
+| `pending_messages` | 32 | Pending-request ceiling |
+| `exchange_hops` | 8 | Message-exchange hop ceiling |
+| `request_expiry_seconds` | 1800 | Default incoming request expiry |
+| `followup_grace_seconds` | 600 | Default and ceiling for idle follow-up grace; a spec may request zero |
+| `home_labels` | `{}` | Native-home path to short-label map |
+| `usage` | `{}` | Usage preferences; [defaults and optional pool ceilings](USAGE_INTELLIGENCE.md) |
+
+Without a group ceiling, each task still has a wall deadline, logical inputs are counted, and the supervisor exits after idle grace or loss of its parent. Group status reports `progress.deadline:null`. An explicit `group_wall_seconds` shorter than the requested task wall time is rejected with a message naming both `task_wall_seconds` and `group_wall_seconds`. The group ceiling can end later follow-ups; choose it for the intended whole batch. Owned resume retains the task limits, applies current operator ceilings, and renews the group lifetime under the current group policy.
+
+`limits.max_task_turns_per_worker` counts logical task inputs for every provider, including follow-ups and fallback attempts, within a controller generation. Native model/tool rounds are separate. `limits.max_native_turns_per_task` supplies Claude's and Grok's native `--max-turns` cap for each input, independent of the logical-input count. Codex and Antigravity do not use this native-round setting; Antigravity uses task wall time for its native print timeout. Native cap exhaustion names `limits.max_native_turns_per_task` and the effective value in the terminal reason.
+
+`spawn --check --json` includes `limits` with effective values, defaults, ceilings, policy keys, sources (`built-in default`, `policy.json` or `spawn spec`) and the policy file path. `doctor --json` reports the same limits for an omitted request. Ceiling errors keep `field`, `requested` and `ceiling` in their details and add `policy_key`, `source` and `policy_file`, so the operator can find the setting to edit. The per-tool wait remains bounded to 30000 ms; task duration is independent of a single wait call.
+
+Changes are local operator configuration, not authority granted by an inbound message. Historical verification counts remain in `evidence/live-budget.json`; cumulative input and active-time ceilings are disabled. Historical counts do not block new authorized tests.
 
 ## Quiet close-out notifications
 
@@ -215,3 +242,49 @@ Usage intelligence and its exact commands, native sources, installation, freshne
 Use `npeer status GROUP_ID --explain-selection --json` (MCP `task_status` with `explain_selection:true`) to inspect canonical home/layout, requested and observed models, effort, current cached pool measurements, local demand and release closure. This inspection does not refresh usage or reserve quota. Use `npeer resume-command WORKER_ID --explain --json` for an ownership-only resume prerequisite report; live/unknown captured births and missing pipe proof retain ownership. A normal resume still verifies external native ownership and exact history.
 
 Isolated input preparation is limited to 20 seconds across capture, revalidation and materialization. Git dirty/selected input bytes are bounded at 10 MiB and explicit Git selections at 1024 files; selected non-Git copies retain their 256-file/10 MiB bounds. Plans show selected bytes/files and dirty patch size. Oversized inputs must be narrowed before dispatch. Retained unique workspaces are never swept automatically.
+
+## Bounded review and selected ownership handoffs
+
+Use `context-prepare --project /absolute/repo --base BASE --path PATH` to capture
+an exact selected diff and base/current source in one immutable artifact. New
+untracked files require both `--path` and `--untracked`. The default packet limit
+is 262144 bytes; an oversized selection reports its measured size and is refused
+without truncation. `--max-bytes` can explicitly select up to 10 MiB. Unselected
+paths and native histories are omitted. External diff, textconv, pagers and custom
+filters never execute; selected filters are refused. Current dirty/staged content,
+file digests/modes, base/HEAD and observation time remain distinct.
+
+Tailor [bounded-review.json](../examples/bounded-review.json), put the returned
+`context_refs` on its worker and use `spawn --check --compact --spec FILE --json`.
+The concise view reuses the normal identity, readiness and limit checks. Planned
+tools are labeled separately from native effective tools observed after launch.
+A Claude analysis request for `requirements.required_tools:["git_diff"]` needs a
+prepared packet; no Bash or workspace escalation is granted. Dispatch with the
+same specification after resolving blockers. Read-only workers can call
+`artifact_read` with `text:true, limit:16000` to fit native tool-output limits (CLI `artifact-read HANDLE --text`) and follow
+`next_offset`; default base64 pages remain available for exact binary/byte reads.
+UTF-8 text pages end on complete characters; follow their byte `next_offset`. Invalid UTF-8 or a misaligned arbitrary offset requires exact base64 mode.
+
+`result TASK_ID --compact --json` selects only that task's bounded preview. Group
+compact reads show initial outcome counts, latest phase, active/queued work and
+two recent tasks, preserving historical failures. Findings, checks, limitations,
+errors and omitted previews link to the full immutable result/artifact. Full
+`result` and `--include-artifacts` remain available; compact and artifact-page
+modes are mutually exclusive. Compact reads do not claim completion or delivery.
+CLI and MCP use the same representation (`compact:true`). Worker IDs get a typed
+error with the owning group inspection route rather than being guessed as tasks.
+
+For authorized peer coordination, `context-prepare` can add selected runtime facts
+with `--runtime codex` (or another named provider). `send` and `reply` accept
+repeated `--artifact HANDLE`; MCP accepts `artifact_refs`. The existing artifact
+reader grants apply. A recipient runs `context-check HANDLE --project PATH` to
+compare frozen selected file digests/modes, HEAD and selected/approved runtime
+fingerprints with current observations. It changes no Git/runtime/account state.
+The packet records no transport or model acknowledgment; use exact message status
+for admission/ingestion and retain uncertainty without replay.
+
+Completion notices label their task/phase and actual error, native cap/configured
+value and observed count when reported. Their preparation-time group context
+separates initial failures, later results and active follow-ups. Retained immutable
+records remain authoritative after that snapshot. Quiet routing remains governed
+by [the notification policy](NOTIFICATIONS.md).

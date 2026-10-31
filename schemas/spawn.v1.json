@@ -240,6 +240,11 @@
           "type": "integer",
           "minimum": 1
         },
+        "max_native_turns_per_task": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Native model-round cap per task input for Claude and Grok. Independent of logical task inputs; Codex and Antigravity do not use this cap."
+        },
         "followup_grace_seconds": {
           "type": "integer",
           "minimum": 0

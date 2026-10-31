@@ -14,7 +14,7 @@ from .control import group_call
 from .errors import PeerError,SupervisorNotStarted,require
 from .files import async_advisory_lock,atomic_json,canonical,private_directory,sha256
 from .launch import launch_environment,provider_home,home_environment
-from .models import bounded_text,new_id,title
+from .models import WAIT_MAX_MS,bounded_text,new_id,title
 from .notifications import claim_wait,wait_generations,wait_output,settle_deferred
 from .process import matches
 from .profiles import ROOT,PYTHON
@@ -44,14 +44,21 @@ class Delegation:
 
     def group(self,caller,handle):
         group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(handle,))
+        worker_handle=None
         if not group:
             row=self.journal.one('SELECT w.group_id FROM tasks t JOIN workers w USING(worker_id) WHERE task_id=?',(handle,))
+            if not row:
+                worker_handle=self.journal.one('SELECT group_id,worker_id FROM workers WHERE worker_id=?',(handle,))
+                row=worker_handle
             require(row,'PROTOCOL_ERROR','Unknown task/group handle');group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(row['group_id'],))
         require(caller.kind=='peer' and (caller.key==group['parent_key'] or caller.grants.get('group_id')==group['group_id']),
                 'APPROVAL_BLOCKED','Task is outside the bound caller grant')
+        require(not worker_handle,'PROTOCOL_ERROR','This is a worker ID; status/result require an exact task or group ID',
+                details=dict(handle_kind='worker',group_id=group['group_id'],next_action='npeer status '+group['group_id']+' --compact --json'))
         return group
 
-    async def spawn(self,caller,request,*,check=False):
+    async def spawn(self,caller,request,*,check=False,compact=False):
+        require(not compact or check,'PROTOCOL_ERROR','Compact spawn output requires --check')
         require(caller.kind=='peer','CALLER_UNBOUND','Delegation requires a verified native caller')
         require(not caller.grants.get('worker_id') or caller.grants.get('can_spawn'), 'APPROVAL_BLOCKED','Worker cannot delegate at its current depth')
         require(isinstance(request,dict),'PROTOCOL_ERROR','Spawn specification must be an object')
@@ -68,7 +75,7 @@ class Delegation:
             if 'model' in worker:
                 require(worker['model'].strip() and not any(ord(c)<32 for c in worker['model']),
                         'PROTOCOL_ERROR','Worker model must be a nonempty native model ID or alias')
-        from .policy import load
+        from .policy import load,spawn_limits
         local=load(self.journal)
         workers=request.get('workers');require(isinstance(workers,list) and 0<len(workers)<=local['workers_per_group'],'CAPACITY_UNAVAILABLE','Batch exceeds configured worker limit')
         require(request.get('schema_version',1)==1,'PROTOCOL_ERROR','Unknown spawn schema version')
@@ -87,11 +94,16 @@ class Delegation:
         require(len(workers)<=limits.get('max_concurrent_workers',4)<=min(local['workers_per_group'],caller.grants.get('max_concurrent_workers',4)),
                 'CAPACITY_UNAVAILABLE','Batch exceeds the caller concurrency ceiling')
         require(not request.get('survive_parent') or caller.grants.get('survive_parent'),'APPROVAL_BLOCKED','Detached survival requires an explicit operator grant')
-        wall=limits.get('wall_time_seconds',local['task_wall_seconds']);turns=limits.get('max_task_turns_per_worker',local['max_task_turns'])
-        for field,requested,budget_ceiling in (('wall_time_seconds',wall,local['task_wall_seconds']),
-                                               ('max_task_turns_per_worker',turns,local['max_task_turns'])):
-            require(1<=requested<=budget_ceiling,'BUDGET_EXHAUSTED',f'limits.{field} requested {requested} exceeds ceiling {budget_ceiling}',
-                    details={'field':'limits.'+field,'requested':requested,'ceiling':budget_ceiling})
+        effective_limits=spawn_limits(local,limits)
+        wall=effective_limits['wall_time_seconds']['effective'];turns=effective_limits['max_task_turns_per_worker']['effective']
+        native_turns=effective_limits['max_native_turns_per_task']['effective']
+        for field,requested,key in (('wall_time_seconds',wall,'task_wall_seconds'),('wall_time_seconds',wall,'group_wall_seconds'),
+                                    ('max_task_turns_per_worker',turns,'max_task_turns'),('max_native_turns_per_task',native_turns,'native_max_turns')):
+            budget_ceiling=local[key];source=local['sources'][key]
+            mismatch='; task_wall_seconds must fit group_wall_seconds' if key=='group_wall_seconds' else ''
+            require(budget_ceiling is None or requested<=budget_ceiling,'BUDGET_EXHAUSTED',
+                    f'limits.{field} requested {requested} exceeds ceiling {budget_ceiling}; {key} from {source["source"]} ({source["policy_file"]})'+mismatch,
+                    details=dict(field='limits.'+field,requested=requested,ceiling=budget_ceiling,**source))
         group_id=new_id();policy=dict(original_request=original,workers=[],initial_tasks=[],completion_mode=request.get('completion_mode','push'),
             followup_grace_seconds=min(local['followup_grace_seconds'],max(0,limits.get('followup_grace_seconds',local['followup_grace_seconds']))),wall_time_seconds=wall,group_wall_seconds=local['group_wall_seconds'],
             depth=depth,allow_sibling_messages=bool(request.get('allow_sibling_messages',False)),survive_parent=bool(request.get('survive_parent',False)),
@@ -147,7 +159,7 @@ class Delegation:
             workspace=spec.get('workspace',{'mode':'inherit-read-only'})
             require(profile!='analysis' or workspace.get('mode','inherit-read-only')=='inherit-read-only','PROTOCOL_ERROR','Analysis uses a read-only workspace')
             require(profile!='workspace' or workspace.get('mode') in ('isolated-worktree','isolated-copy'),'WORKSPACE_SNAPSHOT_REQUIRED','Writing workers require an isolated worktree or explicit isolated copy')
-            spec.update(permission_profile=profile,cwd=parent['cwd'],wall_time_seconds=wall,max_task_turns=turns)
+            spec.update(permission_profile=profile,cwd=parent['cwd'],wall_time_seconds=wall,max_task_turns=turns,native_max_turns=native_turns)
             spec['model']=spec.get('model',codex_config.get('model') if spec['provider']=='codex' else claude_config.get('model','sonnet'))
             if spec['provider']=='antigravity':
                 configured=json.loads(agy_settings.read_text()).get('model') if agy_settings.exists() else None
@@ -177,7 +189,10 @@ class Delegation:
             require(isinstance(refs,list) and len(refs)<=16 and all(isinstance(r,str) for r in refs),'PROTOCOL_ERROR','Context references must be registered artifact handles')
             from .artifacts import Artifacts
             for ref in refs:Artifacts(self.journal).read(ref,caller.key,0,1)
-            if refs:spec['task']+='\nApproved context artifacts (read through artifact_read): '+', '.join(refs)
+            if not check and spec['provider']=='claude' and profile=='analysis' and 'git_diff' in spec.get('requirements',{}).get('required_tools',[]):
+                from .selected_context import packets
+                require(packets(self.journal,caller,refs),'REVIEW_CONTEXT_REQUIRED','Analysis diff review requires a context-prepare artifact in context_refs; no input was submitted')
+            if refs:spec['task']+='\nApproved context artifacts (read through artifact_read with text:true and limit:16000; follow next_offset until complete): '+', '.join(refs)
             worker_id,task_id=new_id(),new_id();binding=self.journal.root/'bindings'/new_id()
             grants=dict(worker_id=worker_id,group_id=group_id,depth=depth,max_depth=ceiling,profiles=[profile],
                 can_spawn=depth<limits.get('max_depth',1),max_concurrent_workers=limits.get('max_concurrent_workers',4),
@@ -231,6 +246,13 @@ class Delegation:
             failures=[];planned=[]
             for worker in prepared:
                 lease=worker['lease'];spec=lease['spec'];provider=spec['provider']
+                from .selected_context import packets
+                context=packets(self.journal,caller,spec.get('context_refs',[]))
+                tools=['Read','Glob','Grep','artifact_read'] if provider=='claude' and spec['permission_profile']=='analysis' else ['native '+spec['permission_profile']+' profile','artifact_read']
+                required=spec.get('requirements',{}).get('required_tools',[])
+                if 'git_diff' in required and provider=='claude' and spec['permission_profile']=='analysis' and not context:
+                    failures.append(dict(provider=provider,title=spec['title'],error=dict(code='REVIEW_CONTEXT_REQUIRED',
+                        message='Analysis has Read/Glob/Grep, without git diff. Use npeer context-prepare --path PATH --base BASE, then attach context_refs; keep the analysis profile.')))
                 try:
                     verify(self.journal,provider,lease['executable'])
                     if provider=='antigravity':
@@ -251,13 +273,13 @@ class Delegation:
                         verify_worker_ready(self.journal,dict(spec,provider='antigravity',model=candidate['model']),candidate['executable'])
                     except PeerError as error:alternative['unavailable']=error.json()
                     alternatives.append(alternative)
-                planned.append(dict(spec,logical_task_slots={'limit':turns,'used':0,'remaining':turns},workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable'],fallbacks=alternatives))
+                planned.append(dict(spec,tools=dict(planned=tools,native_effective='NOT_OBSERVED before launch'),review_context=context,logical_task_slots={'limit':turns,'used':0,'remaining':turns},workspace=worker['workspace'],provider_home=lease['provider_home'],executable=lease['executable'],fallbacks=alternatives))
             frozen=await asyncio.to_thread(freeze,parent['cwd'],[w['workspace'] for w in prepared],expected_baseline=batch_baseline,journal=self.journal)
             quota_blocked=[item for item,worker in zip(quota['workers'],prepared) if item['blockable'] and worker['lease']['spec'].get('quota_policy','respect-known-limits')!='warn']
             pool_blocked=[d for d in quota['demands'] if d['ceiling'] is not None and d['active_workers']+d['proposed_workers']>d['ceiling']]
             from .completion_delivery import annotate,readiness
-            return annotate(dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],ready_scope='worker_execution',usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
-                workers=planned,baseline=frozen.baseline,failures=failures,
+            plan=annotate(dict(state='CHECKED',read_only=True,ready=not failures and not quota_blocked and not pool_blocked and active+len(prepared)<=local['workers_total'],ready_scope='worker_execution',usage=quota,quota_blocked=quota_blocked,pool_concurrency_blocked=pool_blocked,
+                workers=planned,baseline=frozen.baseline,failures=failures,limits=effective_limits,
                 input_preparation=dict(selected_files=len(frozen.untracked)+frozen.baseline.get('dirty_input_files',0),selected_bytes=sum(len(data) for data,mode in frozen.untracked.values())+frozen.baseline.get('dirty_input_bytes',0),dirty_patch_bytes=len(frozen.patch or b''),time_limit_seconds=20,input_limit_bytes=10485760),
                 capacity=dict(active=active,requested=len(prepared),ceiling=local['workers_total'],reservation_made=False),
                 native_helpers=[dict(provider=provider,operation='model/list' if provider=='codex' else 'models',model_input=False)
@@ -265,6 +287,10 @@ class Delegation:
                 client_request_id=request_id,existing_group_id=prior['group_id'] if prior else None,
                 limitations=['A plan does not reserve capacity or guarantee later entitlement, runtime tools or unchanged files/configuration.']),
                 readiness(self.journal,caller.key),push=policy['completion_mode']=='push')
+            if compact:
+                from .compact import preflight
+                return preflight(caller,parent,plan)
+            return plan
         if active+len(prepared)>local['workers_total']:
             candidates=self.journal.all("SELECT worker_id,group_id FROM workers w WHERE state='IDLE_GRACE' AND NOT EXISTS(SELECT 1 FROM tasks t WHERE t.worker_id=w.worker_id AND t.state IN ('QUEUED','RUNNING','WAITING','APPROVAL_BLOCKED'))")
             for idle in candidates:
@@ -348,7 +374,7 @@ class Delegation:
                 await asyncio.sleep(.03)
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 
-    def status(self,caller,handle,*,explain_selection=False,completion=True):
+    def status(self,caller,handle,*,explain_selection=False,completion=True,compact=False):
         group=self.group(caller,handle)
         result=dict(group_id=group['group_id'],state=group['state'],workers=self.journal.all(
             'SELECT worker_id,peer_key,provider,native_id,role_title,model_requested,model_observed,effort_requested,state,generation FROM workers WHERE group_id=?',(group['group_id'],)),
@@ -390,6 +416,9 @@ class Delegation:
                 worker['release']=release_status(self.journal,full)
         result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn')
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
+        if compact:
+            from .compact import result_view
+            return result_view(self,result,json.loads(group['policy_json']),handle)
         return result
 
     def progress(self,group,*,worker_id=None):
@@ -406,7 +435,7 @@ class Delegation:
             'queued_tasks':sum(t['state']=='QUEUED' for t in current),
             'initial_batch_complete':all(states[t] in TERMINAL for t in initial) if initial else None,
             'latest_completion_phase':max(visible,default=None),
-            'deadline':policy['created_at']+policy.get('group_wall_seconds',policy.get('wall_time_seconds',0)) if 'created_at' in policy else None,
+            'deadline':policy['created_at']+policy.get('group_wall_seconds',policy.get('wall_time_seconds',0)) if 'created_at' in policy and policy.get('group_wall_seconds',policy.get('wall_time_seconds')) is not None else None,
             'last_native_activity':dict(at=activity['at'],category=activity['kind'],task_id=activity['subject_id']) if activity else None,
             'activity_is_success':False}
 
@@ -436,8 +465,12 @@ class Delegation:
             groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results']),progress=self.progress(row)))
         return {'groups':groups,'next_cursor':encode(scope,rows[limit-1]['page_id'],ceiling) if len(rows)>limit else None}
 
-    def result(self,caller,handle,*,include_artifacts=False):
+    def result(self,caller,handle,*,include_artifacts=False,compact=False):
+        require(not compact or not include_artifacts,'PROTOCOL_ERROR','Choose compact previews or full artifact pages')
         status=self.status(caller,handle);policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(status['group_id'],))['policy_json'])
+        if compact:
+            from .compact import result_view
+            return result_view(self,status,policy,handle)
         value=self._render_result(status,policy,handle)
         if include_artifacts:
             from .artifacts import Artifacts
@@ -467,6 +500,8 @@ class Delegation:
                 artifact=self.journal.one('SELECT relative_path FROM artifacts WHERE artifact_id=?',(task['result_artifact_id'],))
                 result=json.loads((self.journal.root/'artifacts'/artifact['relative_path']).read_text())
                 raw=result['summary'].encode();result['summary']=raw[:12288].decode(errors='ignore');result['summary_truncated']=len(raw)>12288
+                from .compact import phase
+                result['completion_phase']=phase(policy,task['task_id'])
                 result['result_artifact_id']=task['result_artifact_id'];result['initial_task']=task['task_id'] in policy['initial_tasks'];results.append(result)
                 from .fallback import result_details
                 result.update(result_details(self.journal,task['task_id']))
@@ -510,10 +545,10 @@ class Delegation:
         return {'ready':True,'result':self._render_result(status,policy,handle),'notification_output_uncertain':claimed,
                 'notification_disposition':('tool-result-output-pending-observation' if claimed else 'retained-result-read') if generations else 'batch-notification-unchanged'}
 
-    async def wait(self,caller,handle,timeout_ms=30000,on_timeout=None):
-        require(type(timeout_ms) is int and 1<=timeout_ms<=30000,'PROTOCOL_ERROR',
-                f'timeout_ms requested {timeout_ms!r}; must be an integer from 1 to 30000 ms (ceiling 30000)',
-                details={'field':'timeout_ms','requested':timeout_ms,'minimum':1,'ceiling':30000})
+    async def wait(self,caller,handle,timeout_ms=WAIT_MAX_MS,on_timeout=None):
+        require(type(timeout_ms) is int and 1<=timeout_ms<=WAIT_MAX_MS,'PROTOCOL_ERROR',
+                f'timeout_ms requested {timeout_ms!r}; must be an integer from 1 to {WAIT_MAX_MS} ms (ceiling {WAIT_MAX_MS})',
+                details={'field':'timeout_ms','requested':timeout_ms,'minimum':1,'ceiling':WAIT_MAX_MS})
         require(on_timeout in (None,'push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         terminal=self.terminal_wait(caller,handle,timeout_ms)
         if terminal is not None:

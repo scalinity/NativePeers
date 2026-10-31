@@ -1,3 +1,17 @@
+# Evaluation backlog — source qualified, installed dependency pending (2026-10-30)
+
+- [x] Integrate existing budget PR5 with separate logical inputs, native rounds, walls and waits.
+- [x] Implement selected immutable diff/source packets, compact preflight/results, historical task attribution, phase/failure notices and source/runtime handoffs for issues10–14.
+- [x] Complete useful native Claude review and an exact59057-byte artifact-only recheck; fix encoding, comparison, source-import and subsequent GitHub findings with regressions.
+- [x] Qualify deliberate native cap failures and separate completed/queued later phases; retain actual failed attempts and reported counter semantics.
+- [x] Pass final combined source suite:1099 tests/1048 subtests, four skips. Preserve earlier failed runs and their scope in the qualification record.
+- [ ] Coordinate affected installed source/runtime qualification with the separately owned issue7 transition. Source publication does not activate the selected package.
+- [ ] Obtain genuine delayed-controller-frame and standalone visible-tail acceptance, complete actual peer coordination, append the observed evaluation and close only accepted issues.
+
+[Source/candidate qualification](evidence/np-eval-backlog.json) · [Acceptance tracker16](https://github.com/scalinity/NativePeers/issues/16). The fixed rubric and historical64.5/100 remain unchanged. No installed/TUI acceptance is inferred from these source and candidate-native checks.
+
+---
+
 # NativePeers Lineage for Claude Code (in progress, 2026-10-30)
 
 Contract: docs/CLAUDE_LINEAGE_MOD.md rev 1.0 (sha256 e9e03790…40b9) · kickoff docs/CLAUDE_LINEAGE_KICKOFF.md rev 1.0 (sha256 af4724f4…b769). Branch `feat/claude-lineage-mod` in `.worktrees/claude-lineage-mod`, base `0ee014f`. Claude Code 2.1.314 (sha256 21d6e7b9…32ed).
@@ -47,6 +61,19 @@ Contract: docs/CLAUDE_LINEAGE_MOD.md rev 1.0 (sha256 e9e03790…40b9) · kickoff
 - [ ] Merge and any daily runtime approval transition remain owner actions. Main is the live checkout and was not edited or installed by this PR.
 
 [Source-only verification record](evidence/runtime-approvals-issue-4.json) · [Current update workflow](docs/RUNTIME_UPDATES.md). The PR records the final publication-head suite and cleanup. Native inference, original-parent ingestion, bound MCP, effective permission and quota-source checks are not implied by this record; historical checks retain their original source/runtime scope.
+
+---
+
+# Spawn limits issue 3 — source change for review
+
+- [x] Separate omitted-request defaults (1800 seconds / 8 logical inputs / 128 native rounds) from optional operator ceilings; retain existing policy keys as ceilings.
+- [x] Remove the implicit group cutoff, reject an explicit shorter group ceiling before planning, and preserve requested limits through resume and fallback.
+- [x] Expose effective limits and sources in spawn checks and doctor; identify configured ceiling errors and native-round exhaustion.
+- [x] Document defaults, ceilings and all four providers' counter meanings; retain schema version 1 and validate every spawn example.
+- [x] Pass the unchanged focused baseline: 56 tests / 62 subtests. Pass the candidate focused checks: 127 tests / 174 subtests, including the unchanged 30000 ms wait bound.
+- [x] Reproduce and correct the independent Sol review finding: parent-loss shutdown records a JSON-safe unset deadline. Recheck lifecycle, profile, fallback, selected-home and supervisor behavior: 45 tests / 34 subtests.
+
+The pull request records the final-head complete-suite result and independent-review dispositions. The installed-verification fingerprint checks remain unchanged and detect candidate source drift from the installed snapshot; evidence is not regenerated for this unmerged source change. Installed-runtime acceptance is not run. Main remains the installed runtime and is updated only after pull-request review and merge. Runtime-update approval interruptions are tracked separately in issue 4.
 
 ---
 

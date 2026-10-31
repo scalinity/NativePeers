@@ -59,6 +59,30 @@ class ResumeIdempotencyTests(unittest.IsolatedAsyncioTestCase):
         values.update(overrides)
         return await resume_worker(self.journal, self.caller, **values)
 
+    async def test_resume_retains_explicit_limits_until_an_operator_sets_ceilings(self):
+        row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(self.worker,))
+        lease=json.loads(row['lease_json']);lease['spec'].update(wall_time_seconds=7200,max_task_turns=40,native_max_turns=200)
+        self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(lease).decode(),self.worker))
+        await self.resume()
+        spec=json.loads(self.journal.one('SELECT lease_json FROM workers WHERE worker_id=?',(self.worker,))['lease_json'])['spec']
+        self.assertEqual((spec['wall_time_seconds'],spec['max_task_turns'],spec['native_max_turns']),(7200,40,200))
+        other=self.add_worker();row=self.journal.one('SELECT * FROM workers WHERE worker_id=?',(other,))
+        lease=json.loads(row['lease_json']);lease['spec'].update(wall_time_seconds=7200,max_task_turns=40,native_max_turns=200)
+        self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(lease).decode(),other))
+        atomic_json(self.journal.root/'policy.json',{'task_wall_seconds':42,'max_task_turns':3,'group_wall_seconds':60,'native_max_turns':100})
+        await self.resume('limited-resume',worker_id=other)
+        spec=json.loads(self.journal.one('SELECT lease_json FROM workers WHERE worker_id=?',(other,))['lease_json'])['spec']
+        self.assertEqual((spec['wall_time_seconds'],spec['max_task_turns'],spec['native_max_turns']),(42,3,100))
+        policy=json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?',(row['group_id'],))['policy_json'])
+        self.assertEqual(policy['group_wall_seconds'],60)
+
+    async def test_old_lease_resume_uses_the_native_default_without_reducing_logical_inputs(self):
+        atomic_json(self.journal.root/'policy.json',{'native_max_turns_default':256})
+        await self.resume()
+        spec=json.loads(self.journal.one('SELECT lease_json FROM workers WHERE worker_id=?',(self.worker,))['lease_json'])['spec']
+        self.assertEqual(spec['max_task_turns'],2)
+        self.assertEqual(spec['native_max_turns'],256)
+
     def snapshot(self):
         return {table: self.journal.all('SELECT * FROM ' + table + ' ORDER BY rowid')
                 for table in ('workers', 'groups', 'tasks', 'completion_routes', 'resume_requests')}

@@ -243,7 +243,7 @@ class SupervisorDeliveryTests(unittest.IsolatedAsyncioTestCase):
             mirror.record(db, task, group, 1, 'mirror', session=SESSION, agent='agent1');mirror.grant(db, worker, SESSION, 'agent1', 'parent', display_only=False)
         supervisor = Group(j, group)
         sent = AsyncMock(return_value={'state': 'INGESTED', 'message_id': new_id()})
-        with patch.object(Router, 'send', sent), patch('nativepeers.delegation.Delegation.result', return_value={'results': [dict(task_id=task, status='completed', summary='done', result_artifact_id=artifact,
+        with patch.object(Router, 'send', sent), patch('nativepeers.delegation.Delegation.result', return_value={'tasks':supervisor.tasks(),'results': [dict(task_id=task, status='completed', summary='done', result_artifact_id=artifact,
                                                                                                                  worker=dict(provider='codex', native_session_id='native', title='w'))]}):
             await supervisor.notify(1)
             sent.assert_not_awaited()
