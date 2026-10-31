@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "stage": "A worker's conversation in the NativePeers pane, with a field to message it; the report written in words",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "d7e6cef",
+  "scope": "The np mod: the pane's worker list and conversation view (rows from the activity log, a live follower, a message field sending a person's follow-up through the bridge), /np open falling back to that conversation, the report's closing lines with one handle, no separate closing text in a handback run, error toasts in words. The desktop app run needs the person after install.",
+  "finding": {
+    "observed": "Desktop check after PR #37 (Auto, engine 2.1.309), 2026-10-30 11:49 PM EDT. The pane's Resume cmd answered 'No resume command: Error: Worker has not released its native writer'. The Background tasks view showed the transcript with no field to message the worker and hides finished runs. The transcript showed the final text twice, the second time with worker, group, task, native and artifact ids. The pane's buttons ran past its width while the worker ran. The worker (gpt-6.1-sol, low) answered 'one file: README.md' after running `rg --files -g '*' -g '!*/**'`, which lists only top-level regular files; the folder also holds tally/, tests/ and .git/.",
+    "cause": "A worker in its follow-up grace still holds its native conversation, so no resume command exists yet. The desktop app draws no main view and its Background tasks have no input (X17). It shows a handed-back report as the run's last message beside the shadow's own closing line (X19). The wrong answer is the worker's reading of 'files' and does not involve NativePeers: the bridge relayed its command and output unchanged."
+  },
+  "tests": {
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1119,
+      "failed": 31,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Run on 27bc698 (from d7e6cef): the identical failure set, by test id, as the last lineage run; failures shared with main plus the evidence-pointer check that publication regenerates. ed9f0bb changes no Python module."
+    },
+    "mod": {
+      "status": "PASS",
+      "passed": 39,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "pane_conversation_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_pane_conversation.py",
+      "result": {
+        "opened_in_pane": true,
+        "tool_row": true,
+        "closing_note": true,
+        "input_reached_worker_once": true,
+        "you_row": true,
+        "follow_up_answer": true,
+        "shadow_model_requests": 0
+      }
+    },
+    "handback_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
+      "result": "deliver: one SubagentHandback call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself, parent notified after 8.1 s"
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
+      }
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-pane-conversation-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input (auto mode's classifier requests refused by the tripwire)",
+      "scope": "A finished np:codex worker's conversation opened by /np open in the pane; a message typed in its field reached the replay bridge once as human-claude-view and the worker's follow-up answer appeared in the same conversation. Handback runs on this engine: one call with no closing text outside the report; with --refuse, three tries and the run ended by itself.",
+      "source_head": "02d75c4"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-pane-conversation-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same pane conversation run on the desktop app's own engine passed; handback deliver and refuse runs passed with no closing text outside the report.",
+      "source_head": "02d75c4"
+    }
+  ],
+  "limitations": [
+    "The desktop app run is verified only by the person after install; harness runs draw the pane on the terminal surface.",
+    "A pane follow-up's result is delivered natively: a desktop parent has no inbox, so it stays in NativePeers and in the pane conversation rather than reaching the main conversation.",
+    "The engine flags every handed-back np report as unreviewed (X19), and a parent model may check the result again.",
+    "The desktop app shows the Agent call's prompt, including the np header, at the top of the Background tasks transcript; the worker itself receives only the brief.",
+    "The pane's Patch preview button (spec 7.9) is not built.",
+    "During a long worker run the engine's agent_summary side requests name the shadow's unserved model and fail without content (X18)."
+  ],
+  "independent_review": {
+    "reviewer": "codex gpt-6.1-sol xhigh, NativePeers analysis worker (read-only)",
+    "note": "The reviewer read source and traced sequences; it ran no test suite or harness. The three fixes in 02d75c4 came after the last review round: the 32-input worker budget was spent, so they are verified by tests and probes only.",
+    "rounds": [
+      {
+        "reviewed": "27bc698",
+        "group": "df8f86e0-dc10-4f08-a806-64627b7205b1",
+        "task": "68f9d25b-b014-4668-b5f0-c7b08ab683dc",
+        "result_artifact": "art_f50672b2-7d98-4278-a545-52dcb6946041",
+        "findings": [
+          {
+            "severity": "P2",
+            "id": "F001",
+            "summary": "Message and tool rows were keyed by item alone; providers reuse item ids across generations, so a follow-up's answer could join an earlier row.",
+            "disposition": "FIXED in ed9f0bb: rows keyed by generation and item"
+          },
+          {
+            "severity": "P2",
+            "id": "F002",
+            "summary": "Showing A, then B, then A again could leave A loading forever, and a late send could start or overwrite a conversation no longer shown.",
+            "disposition": "FIXED in ed9f0bb and ed71167: openConversation and activation start the conversation; a follower reads it each round and ends when another worker's is shown"
+          },
+          {
+            "severity": "P2",
+            "id": "F003",
+            "summary": "After a reload a shown conversation was not followed again.",
+            "disposition": "FIXED in ed9f0bb: activation follows ui.viewing"
+          },
+          {
+            "severity": "P2",
+            "id": "F004",
+            "summary": "A failed or uncertain send lost the message, and retyping it could admit a second copy.",
+            "disposition": "FIXED in ed9f0bb and ed71167: per-worker drafts keep the text and request id; a refusal returns it to the field, an uncertain answer offers Retry under the same id"
+          },
+          {
+            "severity": "P2",
+            "id": "F005",
+            "summary": "Final-answer matching compared against clipped text and every generation, so long answers showed twice and another generation's identical answer could be hidden; itemless final candidates repeated streamed text.",
+            "disposition": "FIXED in ed9f0bb: full-text match within the generation; itemless final candidates matched"
+          },
+          {
+            "severity": "P2",
+            "id": "F006",
+            "summary": "A malformed plan event stopped the conversation on the same page indefinitely.",
+            "disposition": "FIXED in ed9f0bb: each event applied separately; a failure becomes a note and the cursor advances"
+          },
+          {
+            "severity": "P2",
+            "id": "F007",
+            "summary": "The live recovery harness waited for removed footer strings.",
+            "disposition": "FIXED in ed9f0bb and ed71167: the live harnesses wait for the current closing lines in either case and record a timeout instead of a milestone"
+          }
+        ]
+      },
+      {
+        "reviewed": "ed9f0bb",
+        "task": "f49d904f-0040-4b17-a48c-e604503e541a",
+        "result_artifact": "art_ca6897eb-a84f-4c58-b142-e2516c29b6ef",
+        "result": "F001, F003, F005 and F006 resolved; F002, F004 and F007 partly.",
+        "findings": [
+          {
+            "severity": "P2",
+            "id": "F002",
+            "summary": "A follower could still re-initialize the shown conversation between two reads.",
+            "disposition": "FIXED in ed71167: a follower never starts a conversation and ends when another worker's is shown"
+          },
+          {
+            "severity": "P2",
+            "id": "F007",
+            "summary": "One provider-name pattern stayed case-sensitive and the footer waits ignored a failed wait.",
+            "disposition": "FIXED in ed71167"
+          },
+          {
+            "severity": "P2",
+            "id": "F008",
+            "summary": "A second send replaced the single draft, and an earlier answer could clear a newer draft.",
+            "disposition": "FIXED in ed71167: drafts per worker, settled only by their own request id, one unresolved message per worker"
+          },
+          {
+            "severity": "P2",
+            "id": "F009",
+            "summary": "A reload could strand a draft in 'sending'.",
+            "disposition": "FIXED in ed71167: activation turns a surviving 'sending' draft into 'uncertain', with Retry"
+          }
+        ]
+      },
+      {
+        "reviewed": "ed71167",
+        "task": "3ea26897-e8f1-4063-b31b-925e1db6bc6a",
+        "result": "Not run: the reviewer's logical task-turn limit (2) was reached; input not executed (BUDGET_EXHAUSTED). A fresh reviewer took the final round."
+      },
+      {
+        "reviewed": "ed71167",
+        "group": "af351e62-c9c1-4dd6-9980-5bc8546396d4",
+        "task": "31b2451f-4323-4de0-89f7-ae800144d4ca",
+        "native": "01a1903d-0926-7993-85b1-2ccd485b99e8",
+        "result_artifact": "art_e0769ef9-0ed3-45d4-9c82-5ca48db85e66",
+        "result": "F007 resolved; F002, F008 and F009 partly, with three narrower races.",
+        "findings": [
+          {
+            "severity": "P2",
+            "id": "F002",
+            "summary": "Activation read a cached selection and then reset the transcript, which could replace a conversation opened in between.",
+            "disposition": "FIXED in 02d75c4: one conversation per worker (state family); showing one never writes another"
+          },
+          {
+            "severity": "P2",
+            "id": "F008",
+            "summary": "The one-message check and the draft reservation were separate updates, so two quick sends could both go out.",
+            "disposition": "FIXED in 02d75c4: reserveDraft checks, reserves and clears the field in one update"
+          },
+          {
+            "severity": "P2",
+            "id": "F009",
+            "summary": "Interrupted drafts were settled only after a successful bridge start.",
+            "disposition": "FIXED in 02d75c4: settled at activation before the bridge starts"
+          }
+        ]
+      }
+    ]
+  }
+}
