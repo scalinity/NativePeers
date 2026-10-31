@@ -7,18 +7,18 @@
   "tests": {
     "full_suite": {
       "status": "PASS_WITH_PREEXISTING_FAILURES",
-      "passed": 1052,
-      "failed": 30,
+      "passed": 1082,
+      "failed": 32,
       "skipped": 4,
       "command": ".venv/bin/python -m pytest -q tests",
-      "note": "The 28 failures other than the two evidence-pointer checks are the identical set on unmodified main 4b98ea7 in the same environment (compared by test id); the two pointer checks are what this publication regenerates.",
-      "commit": "c7a5d4d"
+      "note": "Of the 32 failures, 28 are the identical set on unmodified main 4b98ea7 by test id, two came with main's parent-loss and selected-context tests and fail identically on unmodified main ab0ce64, and two are the evidence-pointer checks this publication regenerates. The later merge of main ab0ce64 changed only nativepeers/compact.py; its tests and the related suites pass on the merged tree.",
+      "commit": "94f2fb0 (merged with main d2478e7)"
     },
     "unmodified_main_baseline": {
       "status": "FAIL",
+      "commit": "4b98ea7 and ab0ce64",
       "failed": 28,
-      "commit": "4b98ea7",
-      "command": ".venv/bin/python -m pytest -q tests"
+      "detail": "Full suite on 4b98ea7: 28 failures; on ab0ce64 the two new main tests above also fail."
     },
     "focused": {
       "status": "PASS",
