@@ -93,7 +93,34 @@ or revoked approval cannot borrow that permission. No selected-runtime fallback 
 A definitely unsubmitted Codex runtime refusal uses `ADMISSION_DEFERRED`. Retry the
 original command with identical target, body, options and client request ID after
 qualification. It reuses the original message/attempt and expiry, checks the original
-recipient incarnation, and delivers once. This is caller-driven recovery, not a new
-polling service. Accepted/uncertain attempts remain inert. Quiet-policy `RETAINED`
+recipient incarnation, and delivers once. Peer recovery is caller-driven. The existing finite completion controller retries
+activation deferrals no more often than every 15 seconds, within the original message
+expiry; hard runtime refusals retain the result without retry. No new service is created. Accepted/uncertain attempts remain inert. Quiet-policy `RETAINED`
 remains permanently unsubmitted and is never replayed. Status exposes the original
 runtime cause; doctor separates selected-build readiness from live recipient routes.
+
+
+The install owner first runs `compatibility.retain_codex_recipients(journal)` from
+the reviewed candidate and inspects its `additions` and `expected` state. Under the
+manager update lock, `retain_codex_recipients(journal, apply=True,
+expected=plan['expected'])` rechecks selected current, existing Codex approvals and
+live owner fingerprints under the runtime lock. It adds only exact live incarnations
+matching existing non-revoked retained approvals. It approves no executable and
+preserves unrelated providers. Do this before synchronizing the installed source:
+old code ignores the additive grants, and new code then sees them immediately.
+A changed approval/retained record or selection refuses the stale plan. Source sync
+then takes manager-before-runtime locks. If synchronization fails, keep these valid
+additive grants; old code ignores them. Never restore an entire old receipt.
+
+Run native qualification outside the NativePeers runtime lock, since a real queue
+helper must acquire that lock. Keep the manager lock across any actual package
+selection/qualification and take the runtime lock only for exact guarded writes.
+On failed qualification, compensate selection only when the actual expected state
+still matches; keep the prior approval. Candidate-hosted sessions whose executable
+was never qualified remain blocked after compensation. Preserve their histories;
+qualify that exact runtime or resume normally on an approved runtime, then resolve
+the new incarnation rather than retargeting an old intent. Already loaded controllers
+keep their pre-install Python code until normal release; qualification of this change
+covers fresh controllers, without restarting existing work. Native validation records
+the real owner executable path and its equality to the verified queue fingerprint,
+plus recipient ingestion and complete terminal bytes through owned output EOF.
