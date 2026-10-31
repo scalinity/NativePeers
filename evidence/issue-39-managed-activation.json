@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "originating_task": "NativePeers #39 managed activation delivery",
-  "stage": "REMEDIATION_PUBLISHED_FINAL_REVIEW_PENDING_INSTALLED_NOT_RUN",
+  "stage": "COMBINED_SOURCE_FINAL_RECHECK_PENDING_INSTALLED_NOT_RUN",
   "status": "PENDING",
-  "reviewed_commit": "d7e6cef4e6649909a4e5f47d8bf7e456f1c620f3",
+  "reviewed_commit": "1589db49b28c3fe7e84bda9e8f5a474a0b232ead",
   "design": "Exact registered recipient runtime and queue helper; selected runtime remains mandatory for new workers. Definitely unsubmitted runtime failures reuse immutable admission; quiet retention and accepted/uncertain attempts remain inert.",
   "tests": {
     "focused_runtime": {
@@ -68,6 +68,21 @@
     "remediation_full_in_flight": {
       "status": "NOT_RUN",
       "scope": "Run began before final P001 edits and cannot establish an exact final full-suite pass."
+    },
+    "accepted_source_full": {
+      "status": "PASS",
+      "passed": 1161,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 266.63,
+      "source_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+      "scope": "Before F104-F106 and concurrent Lineage merge; not final combined acceptance."
+    },
+    "identity_budget_and_selected_candidate": {
+      "status": "PASS",
+      "tests": 66,
+      "subtests": 9,
+      "source_commit": "1589db49b28c3fe7e84bda9e8f5a474a0b232ead"
     }
   },
   "operation_checks": [
@@ -90,7 +105,7 @@
     "Final substantive independent recheck and installed native acceptance pending. Existing controllers keep loaded Python until normal release. Tracker #16 remains open. Initial setup totals unknown; no net time-savings claim."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+  "code_commit": "7dd0c70b10b812b8d6f6a6dfd42dc830105f20e0",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -127,7 +142,7 @@
     "nativepeers/cleanup.py": "76c2bc590e3678c962bfdd9d0f33d5f3104fa530a9c5de27cd4997daa2d67ab6",
     "nativepeers/cli.py": "846ace3e231d781a9f295f677ec79df741775d2898ce940bf455a3841ad3a5c8",
     "nativepeers/compact.py": "5df3d9ce5f2377df3160e8b0a6e93de0ba575b1c027abd554aaa7955874c6a0d",
-    "nativepeers/compatibility.py": "b7012e749b5c54a8266caa3819d2c1ffc3a799cee1c0a787f9b6c1c44e62451f",
+    "nativepeers/compatibility.py": "7426b24c316f9b3f42b815a52b22725fe3227971bb36508cd240c4e85d83934b",
     "nativepeers/completion_delivery.py": "13959875012275a48ecd428e5e45e9bff306540c1a6782e689424067f40fb6bd",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "45250cb060555064b9bdbe4937abdc7881b642b5b7b55f6181d92b7f3778e3e8",
@@ -201,8 +216,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "913ba3db5ad8e67b49ca9df5a69bfd4440553daedb35030d12acfa14f692a85c",
-  "updated_at": "2026-10-31T00:39:51.835925-04:00",
+  "source_map_sha256": "3c25b3928128c9b74ecb71c8b1674881160b2c08ca5a360e8d6470330660c6d4",
+  "updated_at": "2026-10-31T01:05:11.414743-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
@@ -272,10 +287,56 @@
         "fixed and verified",
         "82f8369",
         "63 queue/quiet/runtime tests/60 subtests; raw Router bound, explicit pre-approval codec fixture retained"
+      ],
+      [
+        "F101",
+        "fixed pending independent recheck",
+        "private driver",
+        "Exact clean worktree pin before NativePeers import; negative invalid-head check refuses before production access."
+      ],
+      [
+        "F102",
+        "fixed pending independent recheck",
+        "private driver",
+        "Read-only migration preflight before publication; exact merged-head resume; preflight02 CHECKED after observed base drift."
+      ],
+      [
+        "F103",
+        "fixed pending independent recheck",
+        "1589db4 / b15f4f4",
+        "Precise first-import/quiet synchronization scope and no forced facade restart."
+      ],
+      [
+        "F104",
+        "fixed pending independent recheck",
+        "ff9b81f",
+        "Per-grant fingerprint and retained exact worker identity across two relocations."
+      ],
+      [
+        "F105",
+        "fixed pending independent recheck",
+        "68e880a",
+        "No reservation before failed verification, exactly one after immutable retry."
+      ],
+      [
+        "F106",
+        "fixed pending independent recheck",
+        "ff9b81f",
+        "Only exact selected candidate defers; abandoned unselected runtime terminal."
       ]
     ],
-    "final_recheck_task": "35b864f1-c7e0-4253-a4eb-46be3dea23a6",
+    "final_recheck_task": "389ef792-c7d2-40e0-8f19-753270867f35",
     "status": "FINAL_RECHECK_PENDING",
-    "reviewer_tests": "NOT_RUN; parent checks separately attributed"
-  }
+    "reviewer_tests": "NOT_RUN; parent checks separately attributed",
+    "second_task": "35b864f1-c7e0-4253-a4eb-46be3dea23a6",
+    "second_result": "Fixed source accepted; F101-F106 remained on the proposed driver/last edge cases."
+  },
+  "concurrent_base": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+  "scoped_predecessors": [
+    {
+      "record": "evidence/claude-lineage-pane-conversation.json",
+      "source_merge": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+      "scope": "Separate owner-qualified integration preserved; its checks are not attributed to issue39."
+    }
+  ]
 }
