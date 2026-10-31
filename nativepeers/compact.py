@@ -46,6 +46,10 @@ def result_view(service, status, policy, handle, *, results=True):
             try:
                 rendered = service._render_result(dict(status, tasks=[task]), policy, task['task_id'])['results']
                 record = rendered[0] if rendered else {}
+                if not record and task['state']=='COMPLETED':
+                    row['unavailable']=dict(reason='Completed task has no recorded result artifact',
+                                            next_action='Inspect this exact task; no model input was replayed')
+                    rows.append(row);continue
                 if record and task['result_artifact_id']:
                     # Completed attribution belongs to this immutable task, not a
                     # later resume/fallback observation on its mutable worker row.
