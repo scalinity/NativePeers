@@ -59,7 +59,9 @@ def result_view(service, status, policy, handle, *, results=True):
                                model_observed=clip(record['model_observed'],128) if record.get('model_observed') else None)
                 error = record.get('error') or {}
                 verification = record.get('verification') or {}
+                report_incomplete=any(str(item).startswith(('No structured worker','Malformed structured worker','Invalid findings','Invalid tests_run','Review correspondence incomplete')) for item in verification.get('limitations',[]))
                 row.update(summary=clip(record.get('summary', ''), 420),
+                           report_incomplete=report_incomplete,
                            failure=dict(code=error.get('code'), message=clip(error.get('message', ''), 240),
                                         may_have_received=error.get('may_have_received'), limit=error.get('limit'), execution=error.get('execution')) if error else None,
                            findings=dict(count=len(record.get('findings', [])), preview=clip(json.dumps(record.get('findings', [])[:1], ensure_ascii=False), 250)),
@@ -89,6 +91,7 @@ def result_view(service, status, policy, handle, *, results=True):
                               findings_count=(row.get('findings') or {}).get('count'),
                               checks_count=(row.get('checks') or {}).get('count'),
                               unavailable=bool(row.get('unavailable')),
+                              report_incomplete=row.get('report_incomplete'),
                               failure=dict(code=clip(row['failure']['code'], 96) if row['failure'].get('code') else None,
                                            may_have_received=row['failure'].get('may_have_received'),
                                            details_omitted=True) if row.get('failure') else None)

@@ -8,14 +8,23 @@
     "max_native_turns_per_task": 64,
     "followup_grace_seconds": 0
   },
-  "workers": [{
-    "provider": "claude",
-    "model": "sonnet",
-    "title": "Bounded selected-change review",
-    "task": "Review the attached exact diff and selected source. Use artifact_read with text:true and limit:16000; follow next_offset. Report concrete bugs with file/line and reasoning, or no findings with explicit coverage limits. Run no shell commands. Checks not run remain not_run. Return findings and checks in the optional nativepeers-result block during this task.",
-    "permission_profile": "analysis",
-    "workspace": {"mode": "inherit-read-only"},
-    "requirements": {"task_type": "review", "required_tools": ["git_diff"]},
-    "context_refs": []
-  }]
+  "workers": [
+    {
+      "provider": "claude",
+      "model": "sonnet",
+      "title": "Bounded selected-change review",
+      "task": "Originating task: REPLACE_WITH_TASK. Selected change/base and acceptance: REPLACE_WITH_SCOPE. Read docs/NATIVE_REVIEW.md from the attached selected packet and follow its NativePeers adapter. Review the exact diff and selected source with file/line evidence and explicit reviewed/skipped coverage. Use artifact_read with text:true and limit:16000; follow next_offset. Stay read-only; run no shell commands. Return the readable Code Review plus one nativepeers-result JSON appendix in this task, using matching F001 IDs and exact critical/warning/info severities. Checks actually not run remain not_run. Do not expand scope or grant remediation authority.",
+      "permission_profile": "analysis",
+      "workspace": {
+        "mode": "inherit-read-only"
+      },
+      "requirements": {
+        "task_type": "review",
+        "required_tools": [
+          "git_diff"
+        ]
+      },
+      "context_refs": []
+    }
+  ]
 }
