@@ -8,7 +8,7 @@ import { BridgeError, request, sleep } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
 import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, reserveDraft, setTranscript, setUi } from './state'
-import { applyActivity } from './transcript'
+import { applyActivity, excerpt } from './transcript'
 import type { NpBridge, NpFaults } from '../types'
 
 export const PANE_ID = 'np-lineage'
@@ -62,8 +62,13 @@ export async function openPane($: EngineInterface): Promise<void> {
 // The desktop app's place for the band's content: the pane beside the conversation, opened (unfocused) when a
 // delegate starts and left alone while it is open.
 export async function paneBeside($: EngineInterface): Promise<void> {
-  if ((await $.ui.panes()).some(p => p.id === PANE_ID)) return
+  if (await paneShown($)) return
   await $.ui.open({ id: PANE_ID, title: PANE_TITLE })
+  await setUi($, { paneOpen: true })
+}
+
+export async function paneShown($: EngineInterface): Promise<boolean> {
+  return (await $.ui.panes()).some(p => p.id === PANE_ID && p.isShown !== false)
 }
 
 // What the pane's Interrupt, Stop and Resume cmd act on: the lineage row names the worker even while its shadow here
@@ -195,9 +200,24 @@ async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Pr
   }
 }
 
-// The desktop app draws no band (band: auto): its pane beside the conversation carries the same summary.
+// The desktop app draws no band (band: auto): its pane beside the conversation carries the same summary. While that pane
+// is closed, one line offers it back, since the app gives a mod no place of its own in its sidebar.
+async function reopenBand($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
+  const workers = await getLineage($), ui = await getUi($)
+  // ui.paneOpen changes on open and close, so this draws again; the panes listing is the truth.
+  if (!workers.length || e.props.hasSurvey || (ui?.paneOpen && await paneShown($))) return next(e)
+  const bridge = await getBridge($), faults = await getFaults($)
+  const { Box, Text, Button } = $.ui.resolve(e)
+  return (
+    <Box flexDirection="row" columnGap="sm" alignItems="center">
+      <Box flexShrink={1}><Text dimColor wrap="truncate-end">⟐ np · {summary(counts(workers.filter(w => !w.parentWorkerId)), bridge, faults)}</Text></Box>
+      <Button key="reopen" label="NativePeers" onPress={() => openPane($)} />
+    </Box>
+  )
+}
+
 export async function renderBand($: EngineInterface, e: any, next: (e: any) => any, always = false): Promise<any> {
-  if (e.surface === 'desktop' && !always) return next(e)
+  if (e.surface === 'desktop' && !always) return reopenBand($, e, next)
   const bridge = await getBridge($), workers = await getLineage($), index = await getIndex($), faults = await getFaults($)
   const ui = await getUi($)
   const viewed = e.props.view?.agentId as string | undefined
@@ -272,7 +292,7 @@ export async function renderPane($: EngineInterface, e: any, next: (e: any) => a
       {workers.length ? null : <Text dimColor>No workers in this session yet.</Text>}
       {workers.map(w => (
         <Box key={'tree-' + w.workerId} flexDirection="column">
-          <Button key={'sel-' + w.workerId} plain label={'  '.repeat(depth(w)) + w.title} onPress={() => openConversation($, w.workerId)} />
+          <Button key={'sel-' + w.workerId} plain label={'  '.repeat(depth(w)) + w.title + ' ›'} onPress={() => openConversation($, w.workerId)} />
           <Text dimColor>{'  '.repeat(depth(w))}{NAMES[w.provider] ?? w.provider} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
         </Box>
       ))}
@@ -289,8 +309,15 @@ function conversationRow(R: any, r: NpRow, n: number, previous: NpRow | undefine
     <Box key={'row-' + n} flexDirection="column"><Text bold>{r.kind === 'you' ? 'You' : 'Task from main'}</Text>{body(r.text)}</Box>)
   if (r.kind === 'text') return (
     <Box key={'row-' + n} flexDirection="column">{previous?.kind === 'text' ? null : <Text bold>{name}</Text>}{body(r.text)}</Box>)
-  if (r.kind === 'tool') return (
-    <Box key={'row-' + n} flexDirection="column"><Text dimColor>▸ {r.text}{r.status ? ' · ' + r.status : ''}</Text>{r.detail && Code ? <Code source={r.detail} /> : null}</Box>)
+  if (r.kind === 'tool') {
+    const out = r.detail ? excerpt(r.detail) : undefined
+    return (
+      <Box key={'row-' + n} flexDirection="column">
+        <Text dimColor>▸ {r.text}{r.status ? ' · ' + r.status : ''}</Text>
+        {out && Code ? <Code source={out.text} /> : null}
+        {out?.more ? <Text dimColor>… {out.more} more line{out.more === 1 ? '' : 's'}</Text> : null}
+      </Box>)
+  }
   return <Text key={'row-' + n} dimColor>{r.text}</Text>
 }
 
@@ -305,26 +332,39 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
   // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
   const attachable = running && w.mirrorOwner !== 'other' && (!w.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, w.agentId)).phase))
   const target = controlTarget(w, w.agentId ? await loadShadow($, w.agentId) : undefined)
+  // The controls sit at the top, the field alone at the bottom. The desktop app rings a focused field, so it is not
+  // focused there until the person picks it; elsewhere it takes the keyboard when the pane does.
+  const focus = e.surface === 'desktop' ? {} : { autoFocus: true as const }
   return (
     <Box flexDirection="column">
-      <Box flexDirection="row"><Button key="back" label="‹ Workers" onPress={() => setUi($, { viewing: undefined })} /></Box>
-      <Text bold>{w.title}</Text>
-      <Text dimColor>{name} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
-      {details(w).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
-      {rows.length ? null : <Text dimColor>{t.cursor ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
-      {rows.map((r, n) => conversationRow(R, r, n, rows[n - 1], name))}
-      {draft?.state === 'sending' ? <Text dimColor>Sending…</Text> : null}
-      {draft?.state === 'refused' ? <Text dimColor>Not delivered: {draft.reason ?? 'refused'}.</Text> : null}
-      {draft?.state === 'uncertain' ? <Text dimColor>Delivery uncertain: {draft.reason ?? 'no answer'}. Retry sends the same message once.</Text> : null}
-      {Input ? <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="send" autoFocus
-        value={draft?.state === 'refused' ? draft.text : undefined} onSubmit={(value: string) => sendToWorker($, w, value)} /> : null}
-      <Box flexDirection="row" flexWrap="wrap" columnGap="sm">
-        {draft?.state === 'uncertain' ? <Button key="p-retry" label="Retry" onPress={() => retryDraft($, w)} /> : null}
+      <Box flexDirection="row" flexWrap="wrap" columnGap="sm" rowGap="xs">
+        <Button key="back" label="‹ Workers" onPress={() => setUi($, { viewing: undefined })} />
         {running ? <Button key="p-interrupt" label="Interrupt" onPress={() => interruptWorker($, target)} /> : null}
         {running ? <Button key="p-stop" label="Stop" onPress={() => stopWorker($, target)} /> : null}
         {attachable ? <Button key={'attach:' + w.workerId} label="Attach" onPress={() => undefined} /> : null}
         <Button key="p-ids" label="Copy IDs" onPress={(p: { surface: string }) => copyIds($, w, p.surface)} />
       </Box>
+      <Box flexDirection="column" marginTop="sm">
+        <Text bold>{w.title}</Text>
+        <Text dimColor>{name} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
+        {details(w).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
+      </Box>
+      <Box flexDirection="column" marginTop="sm" rowGap="xs">
+        {rows.length ? null : <Text dimColor>{t.cursor ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
+        {rows.map((r, n) => conversationRow(R, r, n, rows[n - 1], name))}
+      </Box>
+      {draft?.state === 'sending' ? <Box marginTop="sm"><Text dimColor>Sending…</Text></Box> : null}
+      {draft?.state === 'refused' ? <Box marginTop="sm"><Text dimColor>Not delivered: {draft.reason ?? 'refused'}.</Text></Box> : null}
+      {draft?.state === 'uncertain' ? (
+        <Box flexDirection="row" columnGap="sm" alignItems="center" marginTop="sm">
+          <Box flexShrink={1}><Text dimColor>Delivery uncertain: {draft.reason ?? 'no answer'}.</Text></Box>
+          <Button key="p-retry" label="Retry" onPress={() => retryDraft($, w)} />
+        </Box>) : null}
+      {Input ? (
+        <Box marginTop="md">
+          <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="send" {...focus}
+            value={draft?.state === 'refused' ? draft.text : undefined} onSubmit={(value: string) => sendToWorker($, w, value)} />
+        </Box>) : null}
     </Box>
   )
 }
