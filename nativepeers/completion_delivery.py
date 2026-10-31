@@ -62,6 +62,8 @@ def describe(journal, route):
 def _describe(journal, route):
     """Read an existing attempt, never retry a completion or claim its result."""
     value = dict(route)
+    value['push_configured']=route['mode']=='push'
+    value['collection_command']='npeer result '+route['group_id']+' --json'
     message = journal.one('SELECT m.message_id FROM send_requests s JOIN messages m USING(message_id) '
                           "WHERE s.client_request_id=? AND m.to_key=? AND json_extract(m.payload_json,'$.from.kind')='controller' "
                           "AND json_extract(m.payload_json,'$.from.group_id')=? ORDER BY m.created_at DESC LIMIT 1",
@@ -80,6 +82,22 @@ def _describe(journal, route):
                             (route['delivery_id'],))
         if event:value['delivery'] = json.loads(event['payload_json'])
     return value
+
+
+def followup(journal,message_id):
+    """Exact committed message/task/phase linkage; no receipt or delivery mutation."""
+    row=journal.one('SELECT t.task_id,t.state,t.result_artifact_id,w.group_id,g.policy_json FROM tasks t '
+                    'JOIN workers w USING(worker_id) JOIN groups g USING(group_id) WHERE t.request_message_id=?',(message_id,))
+    if not row:return None
+    policy=json.loads(row['policy_json'])
+    phase=next((int(n) for n,ids in policy.get('phases',{}).items() if row['task_id'] in ids),None)
+    route=journal.one('SELECT mode,state FROM completion_routes WHERE group_id=? AND completion_generation=?',(row['group_id'],phase))
+    wait='npeer wait '+row['task_id']+' --timeout-ms 30000 --on-timeout retain --json'
+    result='npeer result '+row['task_id']+' --json'
+    return dict(group_id=row['group_id'],task_id=row['task_id'],completion_phase=phase,
+                completion_mode=route['mode'] if route else None,notification_state=route['state'] if route else 'MISSING',
+                task_state=row['state'],result_artifact_id=row['result_artifact_id'],
+                wait_command=wait,result_command=result,next_action=result if row['state'] in ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED') else wait)
 
 
 def annotate(value, route, *, push=False):

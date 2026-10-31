@@ -496,7 +496,9 @@ class Group:
             generation=max(int(n) for n in phases)+1
             policy['phases']=dict(phases,**{str(generation):[task_id]})
             db.execute('UPDATE groups SET policy_json=? WHERE group_id=?',(canonical(policy).decode(),self.id))
-            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],'wait',route_state(owner),None,None,new_id(),self.generation))
+            parent_request=message['from'].get('peer_key')==self.row['parent_key']
+            mode='push' if parent_request and (message.get('expect_reply') or policy['completion_mode']=='push') else 'wait'
+            db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.id,generation,self.row['parent_key'],mode,route_state(owner),None,None,new_id(),self.generation))
             record(db,task_id,self.id,generation,owner,origin=meta.get('origin'),session=meta.get('claude_session'),agent=meta.get('claude_agent_id'))
         self.policy=policy
         try:

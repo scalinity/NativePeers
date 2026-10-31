@@ -25,10 +25,13 @@ class Router:
         attempt = self.journal.one("SELECT * FROM attempts WHERE message_id=? ORDER BY started_at DESC LIMIT 1", (message_id,))
         # Consumption-time suppression is separate disposition evidence; attempt state is never downgraded.
         suppressed = self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='notification-suppressed' ORDER BY sequence LIMIT 1", (message_id,))
+        from .completion_delivery import followup
+        linked=followup(self.journal,message_id) if message['task_id'] else None
         return dict(message_id=message_id, exchange_id=message["exchange_id"], target=message["to_key"],
                     state=attempt["state"] if attempt else "OUTBOX_COMMITTED", attempt=attempt,
                     receipts=self.journal.all("SELECT * FROM receipts WHERE message_id=? ORDER BY at", (message_id,)),
-                    **({'suppression':json.loads(suppressed['payload_json'])} if suppressed else {}))
+                    **({'suppression':json.loads(suppressed['payload_json'])} if suppressed else {}),
+                    **({'followup':linked} if linked else {}))
 
     def authorize(self, caller, target, kind, reference=None):
         require(caller.kind in ("peer", "controller"), "CALLER_UNBOUND", "Peer sends require a verified native caller or leased controller")

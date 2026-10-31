@@ -19,6 +19,9 @@ from nativepeers.process import identity
 from nativepeers.recovery import resume_worker
 from nativepeers.registry import Registry
 from nativepeers.supervisor import Group
+from nativepeers.artifacts import Artifacts
+from nativepeers.recovery import assert_released
+from nativepeers.errors import PeerError
 
 
 class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
@@ -138,6 +141,45 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
         sent=await self.send();self.assertEqual(sent['state'],'TARGET_OFFLINE')
         self.assertFalse(json.loads(sent['attempt']['error_json'])['may_have_received'])
         self.assertFalse(self.sent)
+
+    async def test_parent_followup_modes_link_status_and_push_only_their_exact_phase(self):
+        # A previously accepted first phase must never be replayed by a follow-up.
+        self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED' WHERE completion_generation=1")
+        original=self.j.one('SELECT * FROM completion_routes WHERE completion_generation=1')
+        for index,(group_mode,requested,expected) in enumerate([('push',False,'push'),('push',True,'push'),('wait',True,'push'),('wait',False,'wait')]):
+            policy=json.loads(self.j.one('SELECT policy_json FROM groups')['policy_json']);policy['completion_mode']=group_mode
+            self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(policy).decode(),))
+            sent=await self.core.router.send(self.caller,self.target,'followup '+str(index),expect_reply=requested,client_request_id='mode-'+str(index))
+            linked=sent['followup'];self.assertEqual(linked['completion_mode'],expected)
+            self.assertEqual(linked['group_id'],self.gid);self.assertEqual(linked['completion_phase'],index+2)
+            self.assertIn(linked['task_id'],linked['wait_command']);self.assertIn('--on-timeout retain',linked['next_action'])
+            task=linked['task_id']
+            record=dict(task_id=task,group_id=self.gid,status='completed',summary='Exact followup '+str(index),worker=dict(title='fixture',provider='codex',native_session_id='fixture'),findings=[])
+            artifact=Artifacts(self.j).put(canonical(record),self.caller.key,media_type='application/json')
+            self.j.db.execute("UPDATE tasks SET state='COMPLETED',result_artifact_id=? WHERE task_id=?",(artifact,task))
+            status=await self.core.status(self.caller,sent['message_id'])
+            self.assertEqual(status['followup']['task_state'],'COMPLETED')
+            self.assertEqual(status['followup']['next_action'],'npeer result '+task+' --json')
+            # Use the real router and journal, replacing only native parent delivery.
+            deliver=AsyncMock(return_value=dict(stage='ACCEPTED_QUEUED',evidence_kind='fixture-parent'))
+            self.core.router.adapters['test']=deliver
+            with patch('nativepeers.core.Core',return_value=self.core):
+                await self.group.notify(index+2);await self.group.notify(index+2)
+            if expected=='push':
+                deliver.assert_awaited_once();body=deliver.call_args.args[1]['body']['text']
+                self.assertIn(task,body);self.assertIn('Exact followup '+str(index),body)
+            else:deliver.assert_not_awaited()
+            route=self.j.one('SELECT * FROM completion_routes WHERE completion_generation=?',(index+2,))
+            self.assertEqual(route['state'],'PUSH_ACCEPTED' if expected=='push' else 'UNCLAIMED')
+        self.assertEqual(self.j.one('SELECT * FROM completion_routes WHERE completion_generation=1'),original)
+
+    async def test_live_writer_refusal_names_exact_serialized_followup_route(self):
+        row=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.live,))
+        with self.assertRaises(PeerError) as error:assert_released(self.j,row)
+        self.assertEqual(error.exception.code,'OWNERSHIP_CONFLICT')
+        self.assertEqual(error.exception.details['worker_id'],self.live)
+        self.assertIn(self.target,error.exception.details['command'])
+        self.assertIn('--request-reply',error.exception.details['command'])
 
     async def test_shutdown_after_admission_before_reply_retains_uncertainty_without_replay(self):
         admitted=asyncio.Event();enqueue=self.group.enqueue
