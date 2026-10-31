@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "docs/review-followup-acceptance-20261030",
-    "code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
-    "evidence": "evidence/review-followup-workflow.json",
-    "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
-    "status": "PASS_WITH_TRACKER_OPEN"
+    "branch": "fix/managed-activation-delivery",
+    "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+    "evidence": "evidence/issue-39-managed-activation.json",
+    "source_map_sha256": "937e945abcb448ca71019e916752b67e4244e65b811d13a24072c15aa1743f48",
+    "status": "PENDING"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
-    "branch": "docs/review-followup-acceptance-20261030",
-    "code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
-    "last_verified_publication": "56f4643a685a08c0664ee2acf16fea56636b872c",
+    "base_commit": "d7e6cef4e6649909a4e5f47d8bf7e456f1c620f3",
+    "branch": "fix/managed-activation-delivery",
+    "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+    "last_verified_publication": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,97 +302,51 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "docs/review-followup-acceptance-20261030",
+    "branch": "fix/managed-activation-delivery",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
-    "verified_remote_code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
+    "verified_remote_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+    "verified_remote_code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "INSTALLED_WORKFLOW_ACCEPTANCE_PASS_EVALUATION_RECORDED",
+  "stage": "SOURCE_PUBLISHED_REVIEW_PENDING_INSTALLED_NOT_RUN",
   "tests_current": {
-    "initial_complete_suite": {
-      "status": "FAIL",
-      "passed": 1107,
-      "failed": 22,
-      "skipped": 4,
-      "subtests": 1060,
-      "reason": "Missing worktree .venv caused20 process fixtures to fail; two unchanged predecessor fingerprint assertions detect candidate drift."
+    "focused_runtime": {
+      "status": "PASS",
+      "tests": 57,
+      "subtests": 9,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_updates.py tests/unit/test_completion_delivery.py tests/unit/test_native_delivery.py",
+      "scope": "Initial implementation; path-only relocation case subsequently added and checked separately."
     },
-    "provisioned_failed_checks": {
-      "status": "PARTIAL",
-      "passed": 20,
-      "failed": 2,
-      "reason": "All20 environment failures pass after linking the existing project .venv; source verification fingerprints intentionally remain predecessor-scoped."
-    },
-    "review_contract_and_remediation": {
+    "path_only_and_runtime": {
       "status": "PASS",
       "tests": 27,
-      "subtests": 40
+      "subtests": 9,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_completion_delivery.py tests/unit/test_compatibility_receipts.py tests/unit/test_native_delivery.py tests/unit/test_operation_readiness.py"
     },
-    "delivery_boundary_remediation": {
+    "affected_notifications_followup": {
       "status": "PASS",
-      "tests": 86,
-      "subtests": 34
+      "tests": 63,
+      "subtests": 31
     },
-    "ownership_guidance": {
-      "status": "PASS",
-      "tests": 33,
-      "subtests": 20
-    },
-    "probe_offline": {
-      "status": "PASS",
-      "tests": 4
-    },
-    "installed_combined": {
-      "status": "PASS",
-      "passed": 1144,
+    "initial_complete": {
+      "status": "FAIL",
+      "passed": 1150,
+      "failed": 2,
       "skipped": 4,
-      "subtests": 1060,
-      "seconds": 278.1,
-      "source_commit": "1125fa733a8adb2ea5130580e23a00986b50c02a",
-      "scope": "Complete installed NativePeers suite; separate native runtime qualification follows its exact fingerprint."
+      "subtests": 1063,
+      "seconds": 269.8,
+      "reason": "Two predecessor publication/index fingerprint assertions; no product assertion failed. Final path-only regression was added later."
     },
-    "remediated_product_suite": {
+    "codexforge_manager": {
       "status": "PASS",
-      "passed": 1138,
-      "skipped": 4,
-      "subtests": 1060,
-      "seconds": 349.44,
-      "command": "python -m pytest -q --ignore=tests/unit/test_evidence_checkpoint.py",
-      "scope": "All product checks; unchanged source-evidence checks run separately."
+      "tests": 24,
+      "cwd": "/Users/danny/Documents/Tools/CodexForge/.worktrees/issue-39"
     },
-    "source_evidence_coherence": {
-      "status": "PASS",
-      "passed": 3,
-      "command": "python -m pytest -q tests/unit/test_evidence_checkpoint.py",
-      "scope": "Current published source record; installed/native operations remain NOT_RUN."
-    },
-    "final_corrections": {
-      "status": "PASS",
-      "passed": 43,
-      "subtests": 8,
-      "scope": "Final parser, compact results, phase boundaries and probe validations."
-    },
-    "final_complete_source_suite": {
-      "status": "PASS",
-      "passed": 1144,
-      "skipped": 4,
-      "subtests": 1060,
-      "seconds": 288.96,
-      "command": "python -m pytest -q",
-      "source_scope": "bfc423d product/integration/test classes; source evidence current; all earlier attempts retained."
-    },
-    "merged_default_suite": {
-      "status": "PASS",
-      "passed": 1144,
-      "skipped": 4,
-      "subtests": 1060,
-      "seconds": 274.92,
-      "command": "python -m pytest -q",
-      "scope": "Merged workflow qualification branch plus unchanged lineage PR37 source; per-operation native claims remain separately attributed."
+    "installed_native": {
+      "status": "NOT_RUN"
     }
   },
   "transports": {
@@ -401,7 +355,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T23:15:03.563269-04:00",
+  "updated_at": "2026-10-31T00:20:00.067955-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2027,6 +1981,33 @@
         "evidence": "evidence/review-followup-workflow.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "INSTALLED_WORKFLOW_ACCEPTANCE_PASS_EVALUATION_RECORDED",
+      "updated_at": "2026-10-30T23:15:03.563269-04:00",
+      "git": {
+        "base_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
+        "branch": "docs/review-followup-acceptance-20261030",
+        "code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
+        "last_verified_publication": "56f4643a685a08c0664ee2acf16fea56636b872c",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "docs/review-followup-acceptance-20261030",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
+        "verified_remote_code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "docs/review-followup-acceptance-20261030",
+        "code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
+        "evidence": "evidence/review-followup-workflow.json",
+        "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
+        "status": "PASS_WITH_TRACKER_OPEN"
       }
     }
   ],
