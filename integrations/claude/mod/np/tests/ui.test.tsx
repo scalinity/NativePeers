@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { controlTarget, headline } from '../hooks/ui'
+import { controlTarget, doctorText, headline } from '../hooks/ui'
 
 const workers = [
   { workerId: 'W1', groupId: 'G1', generation: 1, provider: 'codex', modelRequested: 'gpt-6.1-sol', effort: 'high', title: 'Codebase review', status: 'running', startedAt: 1000, agentId: 'a1' },
@@ -202,4 +202,13 @@ test('an opened tool step shows its output, and a long message folds behind Show
 test('a worker\'s headline names the model asked for when another answered', () => {
   expect(headline({ ...workers[0], modelObserved: 'gpt-6.1-mini', profile: 'analysis' } as any, 61000)).toMatch(/ \(asked for GPT-6.1 Sol\) · read-only · Running · 1m00s$/)
   expect(headline({ ...workers[0], modelObserved: 'gpt-6.1-sol' } as any, 61000)).not.toMatch(/asked for/)
+})
+
+test('/np doctor on the desktop app says what the app did with the footer menu', () => {
+  const facts = { version: '2.1.309', minimum: '2.1.309', supported: true, surface: 'desktop', npeer: '/x/npeer', connected: true, state: 'ready' }
+  expect(doctorText(facts)).toMatch(/^Footer menu: the app has not asked for the footer in this session; the status entry carries the summary$/m)
+  expect(doctorText({ ...facts, footer: 'drawn' })).toMatch(/^Footer menu: shown at the right of the prompt footer$/m)
+  expect(doctorText({ ...facts, footer: 'empty' })).toMatch(/^Footer menu: the app asked for the footer before any worker/m)
+  expect(doctorText({ ...facts, footer: 'no-select' })).toMatch(/^Footer menu: the app asked for the footer but offers no menu there/m)
+  expect(doctorText({ ...facts, surface: 'terminal' })).not.toMatch(/Footer menu/)
 })

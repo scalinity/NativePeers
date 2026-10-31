@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
-  "reviewed_commit": "9844b21",
-  "publication_branch": "fix/issue39-retry-guidance",
-  "updated_at": "2026-10-31T02:24:18.864021-04:00",
-  "current_record": "evidence/issue-39-managed-activation.json",
+  "code_commit": "57125351078e5fe17669cc5720ecfb190b353378",
+  "reviewed_commit": "7171875",
+  "publication_branch": "fix/lineage-desktop-entry",
+  "updated_at": "2026-10-31T02:22:58.760568-04:00",
+  "current_record": "evidence/claude-lineage-desktop-entry.json",
   "file_classes": {
     "product": {
       "files": {
@@ -43,7 +43,7 @@
         "nativepeers/cleanup.py": "76c2bc590e3678c962bfdd9d0f33d5f3104fa530a9c5de27cd4997daa2d67ab6",
         "nativepeers/cli.py": "846ace3e231d781a9f295f677ec79df741775d2898ce940bf455a3841ad3a5c8",
         "nativepeers/compact.py": "5df3d9ce5f2377df3160e8b0a6e93de0ba575b1c027abd554aaa7955874c6a0d",
-        "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
+        "nativepeers/compatibility.py": "7426b24c316f9b3f42b815a52b22725fe3227971bb36508cd240c4e85d83934b",
         "nativepeers/completion_delivery.py": "13959875012275a48ecd428e5e45e9bff306540c1a6782e689424067f40fb6bd",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
         "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8"
+      "sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede"
     },
     "launchers": {
       "files": {
@@ -139,20 +139,20 @@
         "integrations/claude/mod/.claude-plugin/marketplace.json": "ee35af957b34f5c589a14c41445930023e4933ef7b741381df7c79f026322122",
         "integrations/claude/mod/np/.claude-plugin/plugin.json": "d76d723ce6dc874ede14a0b80aa4e282244c2803298f4d56bab6079a656576f0",
         "integrations/claude/mod/np/.gitignore": "41713a4a3d0bab754c7478395d7a4861b3c685cbfa5d0bde780a2692556cd299",
-        "integrations/claude/mod/np/hooks/agents.ts": "89d3f13d64b8c7b480e78edc8191f6580e4d74b2f2f61072ff0c4c7e80065d27",
-        "integrations/claude/mod/np/hooks/bridge.ts": "47d424a056f6f4fb1f3d4ecd06d798c4c93adb7bb2b4dc29b83362281d83e940",
+        "integrations/claude/mod/np/hooks/agents.ts": "fc95de267b71dd6cbf7b006b76acd43304cc61b09b16b6a1ce4345074a4b4bd2",
+        "integrations/claude/mod/np/hooks/bridge.ts": "2bdf39650ac2f19b5167ddcefc5f8511830511777152539c14d632a370f08a37",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
         "integrations/claude/mod/np/hooks/mirror.ts": "94d776965e4bdc2ae6583385db33f1129d12a07ecbf0e315d8821446bcbe13b2",
-        "integrations/claude/mod/np/hooks/register.tsx": "d5700029274c1e8d0ab7e3f7a22a90c509440a99e2679599cc79aa1b9af1a71f",
+        "integrations/claude/mod/np/hooks/register.tsx": "8b5530462d8b41099e1d638404e1641ad9eccd6f515505f28d4f489f5ee217a8",
         "integrations/claude/mod/np/hooks/shadow.ts": "fb0c71ce3f6db403a07be6686bc5f076c025d2c942f0238bef927fd7d03ef9d6",
         "integrations/claude/mod/np/hooks/state.ts": "66395eb53c95422476da2a9b4273683eefe72f6c844c7080023cdb2bb59c31a7",
         "integrations/claude/mod/np/hooks/transcript.ts": "60831235dc021b3c6c015e41be825319501300ea03430dfd145d9e23ea343589",
-        "integrations/claude/mod/np/hooks/ui.tsx": "0e8001b6ae9f40ba794f41163fff125d1a88e095f8a7e872a260adc3bd185f40",
-        "integrations/claude/mod/np/tests/agents.test.ts": "551f1ff62641ce2d615c98270080f5266899e588fb6833e5060089cf6188c7bc",
+        "integrations/claude/mod/np/hooks/ui.tsx": "0a2190eb30903b42c477325ac219914a02e9d2b08a0b569c608ab354748d1b49",
+        "integrations/claude/mod/np/tests/agents.test.ts": "549ab5dd1bb0931a3f00f81fb18c87cbf0b3dcc7f9fce485f9c451699fe562f5",
         "integrations/claude/mod/np/tests/planner.test.ts": "41f71282a0ef622dfe12c1bbbf36052e9fbd2819f841963dcf44aa10607c9bd4",
         "integrations/claude/mod/np/tests/transcript.test.ts": "2330355b8592a683a68bac380ff48c8aaee355e10d783a0a5f6b40143b999862",
-        "integrations/claude/mod/np/tests/ui.test.tsx": "b9cb050775c855eeae929edbc903628f839fe8f2181bcb53b0974a699d0e1d1e",
+        "integrations/claude/mod/np/tests/ui.test.tsx": "3597f89dfb27b03f31e86f4fc56355a5fbf9c29ae6c776e186663cf21ca3b7f5",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "integrations/claude/mod/np/types/index.d.ts": "c29246274098f6fea557445dc23d8d176f879066e4f89b11e9bb468d3560c691",
         "integrations/claude/skills/nativepeers/SKILL.md": "6129889358034762810da7a0ed330fceaa11ec03617d0dd320407a4005932100",
@@ -160,7 +160,7 @@
         "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
       "file_count": 25,
-      "sha256": "989701164e9975aab3ceb03ff58a71c7828916517b43f3934b6184c62cccff76"
+      "sha256": "c42938818729de39c5aef224326a8dc62f2ccca012347720c95b8b7a39844bf1"
     },
     "tests": {
       "files": {
@@ -357,7 +357,7 @@
         "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
         "tests/unit/test_live_followup_probe.py": "a8c0521c7f88e3cdd205447d1267c924b6d4ec9937a5a82cf12e757f7276518f",
-        "tests/unit/test_managed_activation.py": "a5e6ebe5818824ea58704f68076d73f0a538da0eee9584e5bedaaf3b0ffe68bb",
+        "tests/unit/test_managed_activation.py": "9d59b84540a23d8d5eb986b6a49f9633da5552e4a3e2dc2c7bcbd022d59c76c1",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
         "tests/unit/test_native_delivery.py": "b51c7b8a3d9a4870d69afbacb0b47991851cb4df530e31fb69cd3ab4f2cadde2",
@@ -407,10 +407,28 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 241,
-      "sha256": "07e3d01a0146d3fdac1219550ad01ea76d0b3b92c1790ae13e324e30da467c4e"
+      "sha256": "7318c01ee1217bf9af40545b26d784ef82154d7eb496e7089603da9fc0d922ca"
     }
   },
   "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-desktop-entry-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "Pane conversation, handback deliver and refuse, and startup race runs passed on this engine. Harness runs draw the terminal surface, so the desktop-only pane opening and footer reporting are not exercised here.",
+      "source_head": "558eb1f"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-desktop-entry-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same runs passed on the desktop app's own engine, drawing the terminal surface.",
+      "source_head": "558eb1f"
+    },
     {
       "operation": "managed activation inbox and worker boundary",
       "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",
