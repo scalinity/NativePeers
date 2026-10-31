@@ -143,7 +143,7 @@
       "lineage-race-review-1 failed before the worker started; no input was submitted."
     ]
   },
-  "code_commit": "4742a5be3014fb73fbc2c756bd9d22e6afa0bbc8",
+  "code_commit": "2c96eac5034334fd723f0acd7e79991617eb4709",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -255,5 +255,5 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "4c14325cc7488a8de179c567d56bb65c3f1f3f10768f6228d6e87ae5aa7923d8",
-  "updated_at": "2026-10-30T21:21:08.180491-04:00"
+  "updated_at": "2026-10-30T21:22:08.957424-04:00"
 }
