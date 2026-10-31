@@ -251,7 +251,7 @@
     "Physical capture and external network instrumentation NOT_RUN."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "8a97a667c0d997ae0ba2ae4a0f3b8495d689d1f5",
+  "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -363,7 +363,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
-  "updated_at": "2026-10-31T02:08:21.105210-04:00",
+  "updated_at": "2026-10-31T02:10:31.161225-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
