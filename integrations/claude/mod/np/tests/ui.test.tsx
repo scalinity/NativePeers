@@ -1,4 +1,5 @@
 import { expect, test } from 'claude-code/testing'
+import { controlTarget } from '../hooks/ui'
 
 const workers = [
   { workerId: 'W1', groupId: 'G1', generation: 1, provider: 'codex', modelRequested: 'gpt-6.1-sol', effort: 'high', title: 'Codebase review', status: 'running', startedAt: 1000, agentId: 'a1' },
@@ -102,4 +103,11 @@ test('a running worker whose shadow faulted is offered Attach in the pane', asyn
   const ui = await $.ui.mount(pane('desktop'))
   expect(await ui.find({ type: 'Button', key: 'attach:W1' })).toBeTruthy()
   await ui.unmount()
+})
+
+test('the pane\'s worker controls name the lineage row\'s worker while its shadow is still binding', () => {
+  const row = workers[0] as any
+  expect(controlTarget(row, { ...shadow, workerId: undefined, phase: 'BINDING' } as any).workerId).toBe('W1')
+  expect(controlTarget(row, undefined)).toMatchObject({ workerId: 'W1', generation: 1, provider: 'codex' })
+  expect(controlTarget(row, shadow as any).agentId).toBe('a1')
 })

@@ -59,6 +59,12 @@ export async function paneBeside($: EngineInterface): Promise<void> {
   await $.ui.open({ id: PANE_ID, title: PANE_TITLE })
 }
 
+// What the pane's Interrupt, Stop and Resume cmd act on: the lineage row names the worker even while its shadow here
+// is still binding (no workerId yet).
+export function controlTarget(w: NpWorker, held: NpShadow | undefined): NpShadow {
+  return { ...(held ?? newShadow('', w.provider, w.title, '', 0, { generation: w.generation })), workerId: w.workerId }
+}
+
 export async function copyIds($: EngineInterface, w: NpWorker, surface: string): Promise<void> {
   const text = [`worker ${w.workerId}`, `group ${w.groupId}`, w.taskId && `task ${w.taskId}`, w.nativeId && `native ${w.nativeId}`, `generation ${w.generation}`].filter(Boolean).join('\n')
   const copied: any = await $.ui.copy({ text, surface: surface as any })
@@ -169,8 +175,7 @@ export async function renderPane($: EngineInterface, e: any, next: (e: any) => a
   // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
   const attachable = selected && ACTIVE.includes(selected.status) && selected.mirrorOwner !== 'other' &&
     (!selected.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, selected.agentId)).phase))
-  const target = selected && ((selected.agentId ? await loadShadow($, selected.agentId) : undefined) ??
-    newShadow('', selected.provider, selected.title, '', 0, { workerId: selected.workerId, generation: selected.generation }))
+  const target = selected && controlTarget(selected, selected.agentId ? await loadShadow($, selected.agentId) : undefined)
   const depth = (w: NpWorker): number => { let d = 0, cur: NpWorker | undefined = w;while (cur?.parentWorkerId && d < 6) { cur = workers.find(x => x.workerId === cur!.parentWorkerId);d++ }return d }
   return (
     <Box flexDirection="column">
