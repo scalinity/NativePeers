@@ -1,3 +1,15 @@
+# Issue 7 — installed and qualified (2026-10-30)
+
+- [x] Silent native queue disposition before model, history or visible work rows; strict exact-recipient policy and separate suppression retained.
+- [x] Registered-owner guard survives managed selection changes without approving an old runtime for new work.
+- [x] Normal source PRs merged, candidate assembled through 22 package gates, guarded activation and supported four-hook reinstall.
+- [x] Fresh installed standalone TUI 44-frame warm/cold drain, reopen and exact resume; genuine OPEN/QUIET/accepted-before-close native worker phases.
+- [x] Complete installed suite: 1117 tests / 1056 subtests, 4 skips; bounded independent Codex rechecks have no remaining findings.
+
+Exact source/package fingerprints, failed attempts, commands, limits and rollback are in [verification](docs/VERIFICATION.md) and [the public scoped record](evidence/issue-7-silent-queue.json). External paid-model and other-provider UI checks remain NOT_RUN for this change.
+
+---
+
 # Evaluation backlog — source qualified, installed dependency pending (2026-10-30)
 
 - [x] Integrate existing budget PR5 with separate logical inputs, native rounds, walls and waits.

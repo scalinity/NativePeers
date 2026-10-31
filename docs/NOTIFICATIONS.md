@@ -50,14 +50,18 @@ Grok `PreToolUse` and Antigravity `PreInvocation` filter pending frames before e
 | Path | Source support | Native qualification |
 |------|----------------|----------------------|
 | Claude interactive, native inbox | Pre-submission retention; owned `UserPromptSubmit` guard with `suppressOriginalPrompt` | The live guard was checked on one SessionStart-registered interactive TUI (below). Its blocks passed with no assistant turn; the original run is recorded FAIL only for an early transcript flush. [Claude's hooks documentation](https://code.claude.com/docs/en/hooks#userpromptsubmit) says `UserPromptSubmit` fires for cross-session messages to main conversations. |
-| Codex standalone, native queue | Pre-submission retention; trusted native `QueuedInput` consumption before turn startup; exact-owner prompt guard | Issue #7 candidate source checks are in progress. Final installed native/TUI qualification is pending; historical private app-server blocking checks below do not establish it. |
+| Codex standalone, native queue | Pre-submission retention; trusted native `QueuedInput` consumption before turn startup; exact-owner prompt guard | Issue #7 installed qualification PASS: 44 mixed queued frames across warm drain and cold exact-session resume, reopen and permitted controls; no late chat/hook/work rows or model requests. See [current verification](VERIFICATION.md). |
 | Grok hook inbox | Retention; `PreToolUse` filter; prompt reopen | Not qualified; no Grok live turn ran for this change |
 | Antigravity hook inbox | Retention; `PreInvocation` filter | The current executable has a preexisting `CAPABILITY_MISMATCH` and is not reapproved here. |
-| Controller completions | Route `RETAINED`; unsubmitted reservation released | Source tests only |
+| Controller completions | Route `RETAINED`; unsubmitted reservation released; accepted frames consumed silently | PASS: three genuine Codex worker/controller phases independently qualify OPEN push, QUIET retention and accepted-before-close consumption. |
 
 A configured hook definition does not prove that a running native process has loaded it. Codex also requires installer-recorded native hook trust, and readiness reports the guard as `passive-configuration-only` with `live_verified:false`. The match is exact: if a native transport ever changed the frame text, the prompt would be treated as human input and pass.
 
 ## Verification
+
+Current issue #7 installed source, native/TUI, genuine worker and rollback results are in [verification](VERIFICATION.md) and [the scoped record](../evidence/issue-7-silent-queue.json). The following dated checks retain their original scope.
+
+### October 26 historical qualification
 
 Source tests cover the stable-peer policy, receiving guards, provider hook filters, owned installers and schema upgrade. The final repaired worktree suite passed **764 tests and 742 subtests**, with four Linux-only skips, in **250.98 seconds**; the final main suite passed the same counts in **272.25 seconds**. The final upgrade review and parent focused run each passed 40 tests, including seven upgrade regressions. Earlier 757-test passes, the first run's two stale publication-fingerprint failures, and the baseline usage-source timeout plus isolated pass remain separately recorded in `evidence/quiet-notifications-20261026.json`.
 
