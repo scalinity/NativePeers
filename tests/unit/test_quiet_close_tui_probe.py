@@ -30,6 +30,44 @@ class QuietCloseTuiProbeTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             probe.require_quiet_frame({"lines": [final, "Worked for 1s", final, "Worked for 2s"]}, final)
 
+    def test_reopen_silence_uses_the_new_permitted_response_as_its_anchor(self):
+        frame = {"lines": ["WARM_FINAL", "Worked for 1s", "human reopen", "OPEN_FINAL", "Worked for 2s"]}
+        with self.assertRaises(RuntimeError):
+            probe.require_quiet_frame(frame, "WARM_FINAL")
+        probe.require_quiet_frame(frame, "OPEN_FINAL")
+        with self.assertRaises(RuntimeError):
+            probe.require_quiet_frame({"lines": frame["lines"] + ["Worked for 3s"]}, "OPEN_FINAL")
+
+    def test_reopen_audits_current_and_completion_wait_frames_without_later_output(self):
+        import inspect, textwrap
+        from types import SimpleNamespace
+        source = inspect.getsource(probe.run_probe)
+        start = source.index('    receiver.audit = audit_body\n    opened = command(receiver, "open")')
+        end = source.index('    cold_rows, cold_done, cold_final = begin_batch("cold")', start)
+        block = compile(textwrap.dedent(source[start:end]), "actual-reopen-block", "exec")
+        for stage in ("current", "completion-wait"):
+            for forbidden in ("NativePeers notification retained", "Worked for 3s"):
+                with self.subTest(stage=stage, forbidden=forbidden), tempfile.TemporaryDirectory() as tmp:
+                    run = Path(tmp)
+                    (run / "close-warm-policy.json").write_text(json.dumps({"message_cutoff": 7}))
+                    clean = {"lines": ["OPEN_FINAL", "Worked for 1s"]}
+                    dirty = {"lines": clean["lines"] + [forbidden]}
+                    receiver = SimpleNamespace(audit=None, frames=[dirty if stage == "current" else clean])
+                    quiet_final = ["WARM_FINAL"]
+                    def pump(predicate, description):
+                        receiver.frames.append(dirty)
+                        receiver.audit(dirty)  # No further terminal output after this frame.
+                    environment = dict(receiver=receiver, audit_body=lambda _: None,
+                        audit_quiet=lambda frame: probe.require_quiet_frame(frame, quiet_final[0]),
+                        command=lambda *_: {"state": "OPEN", "message_cutoff": 7},
+                        quiet_final=quiet_final, report={"commands": [{"final": "OPEN_FINAL"}]},
+                        pump_until=pump, native_tail=lambda *_: {}, native_id="owned-native", run=run,
+                        json=json, model=SimpleNamespace(count=lambda: 2), args=SimpleNamespace(drain_seconds=0),
+                        dwell=lambda _: None, save=lambda *_: None, require_native_silence=lambda *_: {},
+                        all_rows=[], queue_empty=lambda _: None, verify_originals=lambda *_: None, warm_rows=[])
+                    with self.assertRaises(RuntimeError):
+                        exec(block, environment)
+
     def test_constructor_failure_stops_only_its_popen_child_and_retains_uncertainty(self):
         for kind in (probe.Tui, probe.Metadata):
             with self.subTest(kind=kind.__name__), tempfile.TemporaryDirectory() as tmp:
@@ -256,6 +294,21 @@ class QuietCloseTuiProbeTests(unittest.TestCase):
         family.last_capture, family.cleanup = 0, None
         family.capture_errors, family.signals = [], []
         return family
+
+    def test_cleanup_waits_for_the_owned_child_to_be_reaped_after_identity_disappears(self):
+        from nativepeers import process
+        family = self.family([{"pid": 100, "start": "owner", "pgid": 100}])
+        polls = [None, None, None, None, 0]
+        family.process.poll.side_effect = lambda: polls.pop(0) if polls else 0
+        with patch.object(process, "descendants", return_value=[]), \
+                patch.object(process, "owned_status", return_value="DEAD"), \
+                patch.object(process, "signal_captured") as sent, \
+                patch.object(probe, "process_rows", return_value=[]), patch.object(probe.time, "sleep") as sleep:
+            result = family.stop(abrupt=True)
+        self.assertTrue(result["confirmed_dead"])
+        self.assertIsNotNone(result["exit_code"])
+        self.assertTrue(sleep.called)
+        sent.assert_not_called()
 
     def test_cleanup_tracks_descendants_through_a_retained_child_after_owner_death(self):
         from nativepeers import process

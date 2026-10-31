@@ -305,3 +305,17 @@ def test_termination_runs_cleanup_and_repeated_signal_cannot_interrupt_it(tmp_pa
     assert probe.main(['--nativepeers-root',str(tmp_path),'--run',str(tmp_path/'unused'),'--target-sha256','a'*64])==1
     resource.stop.assert_called_once();assert handlers==old
     report=json.loads((tmp_path/'qualification.json').read_text());assert report['status']=='FAIL';assert 'interrupted by signal' in report['error']
+
+
+def test_byte_identical_transition_requires_the_exact_distinct_package(selection):
+    base,binary,receipt,document,actual=selection
+    initial=probe.production_selection(base)
+    target=binary.parent/'qualified-new-package';(target/'bin').mkdir(parents=True)
+    newer=target/'bin/codex';newer.write_bytes(binary.read_bytes())
+    base.select_codex.return_value=(newer,{})
+    document['providers']['codex']={'path':str(newer),'sha256':actual['sha256'],'size':newer.stat().st_size}
+    receipt.write_text(json.dumps(document))
+    with pytest.raises(probe.Blocked,match='explicit target'):probe.target_selection(base,actual['sha256'],initial)
+    assert probe.target_selection(base,actual['sha256'],initial,target)['executable']['path']==str(newer)
+    with pytest.raises(probe.Blocked,match='explicit target package'):
+        probe.target_selection(base,actual['sha256'],initial,target.with_name('different-package'))
