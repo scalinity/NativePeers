@@ -340,14 +340,14 @@
     "standalone_tui": {
       "status": "PASS",
       "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/standalone-tui/qualification.json",
-      "scope": "Normally registered standalone native TUI:44 mixed frames,22 warm and22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit"
+      "scope": "Normally registered standalone native TUI: 44 mixed fixture frames, 22 warm and 22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit."
     },
     "probe_offline": {
       "status": "PASS",
       "tests": 24,
       "subtests": 29,
       "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
-      "scope": "45 focused guard/probe tests, including24 standalone probe tests;29 subtests in the combined run"
+      "scope": "24 standalone probe regressions; the original combined guard/probe run recorded 45 tests and 29 subtests."
     },
     "genuine_worker_probe_offline": {
       "status": "PASS",
@@ -375,7 +375,7 @@
     "combined_preinstall_tui": {
       "status": "PASS",
       "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
-      "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
+      "scope": "Historical selected 763301510afa preinstall run: 44 mixed frames, warm/cold exact resume and reviewed reopen/history repaint oracle. Installed checks are recorded separately under installed_native and standalone_tui."
     },
     "genuine_worker_push": {
       "status": "PASS",
