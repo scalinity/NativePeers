@@ -2,9 +2,9 @@
 // only Box, Text, Button, Code and Markdown, so they draw on every surface, and the
 // pane's Input where the surface has one.
 import type { EngineInterface } from 'claude-code'
-import type { NpRow, NpShadow, NpUi, NpWorker } from '../types'
+import type { NpDraft, NpRow, NpShadow, NpUi, NpWorker } from '../types'
 import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } from './agents'
-import { request, sleep } from './bridge'
+import { BridgeError, request, sleep } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
 import { getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, setTranscript, setUi, startTranscript } from './state'
@@ -120,25 +120,29 @@ const following = new Set<string>()
 // Shows a worker's conversation in the pane and keeps it current while it is shown.
 export async function openConversation($: EngineInterface, workerId: string, focus = false): Promise<void> {
   await setUi($, { paneOpen: true, viewing: workerId })
+  await startTranscript($, workerId)
   if (focus) await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true })
   void followConversation($, workerId)
 }
 
-// Long-polls the worker's activity while its conversation is on screen; five failed reads in a row end it until the
-// person opens it or sends to it again.
+// Long-polls the worker's activity while its conversation is on screen. Each round reads the conversation shown, so
+// reopening a worker continues from what it holds and a worker no longer shown is never written. Five failed rounds
+// in a row end it until the person opens the worker or sends to it again (activation restarts it after a reload).
 export async function followConversation($: EngineInterface, workerId: string): Promise<void> {
   if (following.has(workerId)) return
   following.add(workerId)
   try {
-    let t = await startTranscript($, workerId), misses = 0
-    while ((await getUi($)).viewing === workerId && misses < 5) {
+    let failures = 0
+    while ((await getUi($)).viewing === workerId && failures < 5) {
+      let t = await getTranscript($)
+      if (t.workerId !== workerId) t = await startTranscript($, workerId)
       try {
         const batch = await request($, 'GET', `/v1/workers/${workerId}/activity?after=${t.cursor}&wait_ms=20000&max=256`)
-        misses = 0
         const events = Array.isArray(batch.events) ? batch.events : []
-        if (events.length) { t = applyActivity(t, events);await setTranscript($, t) }
+        if (events.length) await setTranscript($, applyActivity(t, events))
+        failures = 0
       } catch {
-        misses += 1;await sleep($, 2000)
+        failures += 1;await sleep($, 2000)
       }
     }
   } finally {
@@ -147,17 +151,41 @@ export async function followConversation($: EngineInterface, workerId: string): 
 }
 
 // A message typed in the pane goes to the worker as a person's follow-up: a live worker takes it after its current
-// turn, a released one resumes with it. Its answer shows in this conversation.
+// turn, a released one resumes with it, and its answer shows in this conversation. The message is held as a draft
+// until the bridge answers.
 export async function sendToWorker($: EngineInterface, w: NpWorker, text: string): Promise<void> {
   if (!text.trim()) return
+  const draft: NpDraft = { workerId: w.workerId, text, requestId: `np-pane:${w.workerId}:${await $.clock.now()}`, state: 'sending' }
   // A new key draws an empty field.
-  await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
+  await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1, draft })
+  await deliverDraft($, w, draft)
+}
+
+// Sends an uncertain draft again under its own request id: the bridge admits it once.
+export async function retryDraft($: EngineInterface, w: NpWorker): Promise<void> {
+  const draft = (await getUi($)).draft
+  if (draft && draft.workerId === w.workerId) await deliverDraft($, w, { ...draft, state: 'sending' })
+}
+
+async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Promise<void> {
   const name = NAMES[w.provider] ?? w.provider
   try {
-    const r = await request($, 'POST', `/v1/workers/${w.workerId}/input`, { client_request_id: `np-pane:${w.workerId}:${await $.clock.now()}`, text, origin: 'human-claude-view', mode: 'queue' })
-    $.ui.toast(r.disposition === 'refused' ? `Not delivered: ${r.reason ?? 'refused'}.` : r.disposition === 'resumed' ? `Sent. ${name} is picking the conversation back up.` : `Sent to ${name}.`)
+    const r = await request($, 'POST', `/v1/workers/${w.workerId}/input`, { client_request_id: draft.requestId, text: draft.text, origin: 'human-claude-view', mode: 'queue' })
+    if (r.disposition === 'refused') {
+      await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1, draft: { ...draft, state: 'refused', reason: String(r.reason ?? 'refused') } })
+      $.ui.toast(`Not delivered: ${r.reason ?? 'refused'}. Your message is back in the field.`)
+      return
+    }
+    await setUi($, { draft: undefined })
+    $.ui.toast(r.disposition === 'resumed' ? `Sent. ${name} is picking the conversation back up.` : `Sent to ${name}.`)
     void followConversation($, w.workerId)
-  } catch (error) { $.ui.toast(`Not delivered: ${reason(error)}.`) }
+  } catch (error) {
+    // A request that left may have been admitted: only a retry under the same id is safe. One that never left returns
+    // to the field.
+    const uncertain = !(error instanceof BridgeError) || ['BRIDGE_UNREACHABLE', 'PROTOCOL_ERROR', 'DELIVERY_UNKNOWN', 'SUBMITTED_UNCONFIRMED'].includes(error.code)
+    await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1, draft: { ...draft, state: uncertain ? 'uncertain' : 'refused', reason: reason(error) } })
+    $.ui.toast(uncertain ? `Delivery uncertain: ${reason(error)}. Retry sends the same message once.` : `Not delivered: ${reason(error)}. Your message is back in the field.`)
+  }
 }
 
 // The desktop app draws no band (band: auto): its pane beside the conversation carries the same summary.
@@ -265,6 +293,7 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
   const { Box, Text, Button, Input } = R
   const t = await getTranscript($), now = await $.clock.now()
   const rows = t.workerId === w.workerId ? t.rows : []
+  const draft = ui.draft?.workerId === w.workerId ? ui.draft : undefined
   const running = ACTIVE.includes(w.status), name = NAMES[w.provider] ?? w.provider
   // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
   const attachable = running && w.mirrorOwner !== 'other' && (!w.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, w.agentId)).phase))
@@ -277,8 +306,13 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
       {details(w).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
       {rows.length ? null : <Text dimColor>{t.workerId === w.workerId ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
       {rows.map((r, n) => conversationRow(R, r, n, rows[n - 1], name))}
-      {Input ? <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="send" autoFocus onSubmit={(value: string) => sendToWorker($, w, value)} /> : null}
+      {draft?.state === 'sending' ? <Text dimColor>Sending…</Text> : null}
+      {draft?.state === 'refused' ? <Text dimColor>Not delivered: {draft.reason ?? 'refused'}.</Text> : null}
+      {draft?.state === 'uncertain' ? <Text dimColor>Delivery uncertain: {draft.reason ?? 'no answer'}. Retry sends the same message once.</Text> : null}
+      {Input ? <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="send" autoFocus
+        value={draft?.state === 'refused' ? draft.text : undefined} onSubmit={(value: string) => sendToWorker($, w, value)} /> : null}
       <Box flexDirection="row" flexWrap="wrap" columnGap="sm">
+        {draft?.state === 'uncertain' ? <Button key="p-retry" label="Retry" onPress={() => retryDraft($, w)} /> : null}
         {running ? <Button key="p-interrupt" label="Interrupt" onPress={() => interruptWorker($, target)} /> : null}
         {running ? <Button key="p-stop" label="Stop" onPress={() => stopWorker($, target)} /> : null}
         {attachable ? <Button key={'attach:' + w.workerId} label="Attach" onPress={() => undefined} /> : null}

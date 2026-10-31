@@ -44,3 +44,32 @@ test('events at or before the cursor are skipped, and the conversation keeps its
   expect(capped.rows.length).toBe(MAX_ROWS)
   expect(capped.rows[capped.rows.length - 1]?.text).toBe('m' + (MAX_ROWS + 9))
 })
+
+test('rows are keyed by generation: an item id reused by a follow-up starts a new row after it', () => {
+  const t = applyActivity(empty, [
+    ev(1, 'message.delta', { text: 'first answer' }, 'text', 1), ev(2, 'task.terminal', { status: 'completed', final_text: 'first answer' }, null, 1),
+    ev(3, 'task.started', { client_request_id: 'r1', origin: 'human-claude-view', input_preview: 'And again?' }, null, 2),
+    ev(4, 'message.delta', { text: 'second answer' }, 'text', 2), ev(5, 'tool.started', { title: 'ls' }, 'step0', 2), ev(6, 'tool.completed', { status: 'ok' }, 'step0', 2),
+  ])
+  expect(t.rows.map(r => r.text)).toEqual(['first answer', 'Completed.', 'And again?', 'second answer', 'ls'])
+  expect(t.rows[4]?.status).toBe('ok')
+})
+
+test('a final answer is matched in full within its own generation, and an itemless final candidate is not repeated', () => {
+  const long = 'x'.repeat(4000)
+  const t = applyActivity(empty, [ev(1, 'message.completed', { text: long }, 'm1'), ev(2, 'task.terminal', { status: 'completed', final_text: long })])
+  expect(t.rows.filter(r => r.kind === 'text').length).toBe(1)
+  expect(t.rows[0]?.full).toBe(undefined)
+  const streamed = applyActivity(empty, [ev(1, 'message.delta', { text: 'Done.' }, 'text'), ev(2, 'message.completed', { text: 'Done.', is_final_candidate: true })])
+  expect(streamed.rows.filter(r => r.kind === 'text').length).toBe(1)
+  // The same words in a later generation are its own answer.
+  const later = applyActivity(t, [ev(3, 'task.started', { origin: 'human-claude-view', input_preview: 'Repeat it.' }, null, 2), ev(4, 'task.terminal', { status: 'completed', final_text: 'Done.' }, null, 2)])
+  expect(later.rows.filter(r => r.kind === 'text' && r.text === 'Done.').length).toBe(1)
+})
+
+test('a malformed event becomes a note and the conversation moves on', () => {
+  const t = applyActivity(empty, [ev(1, 'plan.updated', { items: [null, { text: 'step', status: 'completed' }] }), ev(2, 'tool.completed', { output: null }, 'nope'),
+    { seq: 3, kind: 'message.completed', generation: 1, data: { get text() { throw new Error('bad') } } } as any, ev(4, 'message.completed', { text: 'still here' }, 'm9')])
+  expect(t.cursor).toBe(4)
+  expect(t.rows.map(r => r.text)).toEqual(['Plan:\n✓ step', 'An activity event could not be shown here.', 'still here'])
+})

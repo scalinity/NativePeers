@@ -7,8 +7,8 @@ import { BridgeError, connected, connectionGeneration, followLineage, heartbeat,
 import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
-import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state'
-import { PANE_ID, copyResume, doctorText, interruptWorker, openConversation, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
+import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage } from './state'
+import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'
@@ -53,7 +53,12 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
   place = { cwd, npeer: o.npeerPath || '/Users/danny/.local/bin/npeer' }
   const launched = await startBridge($)
   if (launched && 'reason' in launched) { $.ui.toast(`NativePeers bridge unavailable: ${launched.reason}. Run /np doctor.`);return }
-  if (launched) { await ready($, launched.hello);void followLineage($) }
+  if (launched) {
+    await ready($, launched.hello);void followLineage($)
+    // A conversation still shown after a reload is followed again: module variables, and the loop, started over.
+    const shown = (await getUi($)).viewing
+    if (shown) void followConversation($, shown)
+  }
   await pruneStore($)
 }
 

@@ -120,3 +120,20 @@ test('the pane\'s worker controls name the lineage row\'s worker while its shado
   expect(controlTarget(row, undefined)).toMatchObject({ workerId: 'W1', generation: 1, provider: 'codex' })
   expect(controlTarget(row, shadow as any).agentId).toBe('a1')
 })
+
+test('a refused message returns to the field, and an uncertain one offers Retry', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, draft: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'refused', reason: 'TARGET_OFFLINE' } })
+  const refused = await $.ui.mount(pane('desktop'))
+  expect((await refused.find({ type: 'Input', key: 'say-3' }) as any)?.props?.value ?? (await refused.find({ type: 'Input', key: 'say-3' }) as any)?.value).toBe('Also count them')
+  expect(await refused.find({ type: 'Text', text: /Not delivered: TARGET_OFFLINE/ })).toBeTruthy()
+  expect(await refused.find({ type: 'Button', key: 'p-retry' })).toBeFalsy()
+  await refused.unmount()
+})
+
+test('an uncertain message offers Retry under its own request', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, draft: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'uncertain', reason: 'socket closed' } })
+  const ui = await $.ui.mount(pane('desktop'))
+  expect(await ui.find({ type: 'Button', key: 'p-retry' })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /Delivery uncertain: socket closed/ })).toBeTruthy()
+  await ui.unmount()
+})
