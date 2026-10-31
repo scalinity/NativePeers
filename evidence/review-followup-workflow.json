@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "stage": "SOURCE_REMEDIATED_PENDING_FINAL_REVIEW_AND_INSTALLED_ACCEPTANCE",
+  "stage": "SOURCE_CHECKS_PASSED_PENDING_FINAL_REVIEW_AND_INSTALLED_ACCEPTANCE",
   "status": "PARTIAL",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "originating_task": "NativePeers review/remediation/follow-up workflow (#28, #32, #33, #34)",
@@ -47,6 +47,21 @@
     },
     "installed_combined": {
       "status": "NOT_RUN"
+    },
+    "remediated_product_suite": {
+      "status": "PASS",
+      "passed": 1138,
+      "skipped": 4,
+      "subtests": 1060,
+      "seconds": 349.44,
+      "command": "python -m pytest -q --ignore=tests/unit/test_evidence_checkpoint.py",
+      "scope": "All product checks; unchanged source-evidence checks run separately."
+    },
+    "source_evidence_coherence": {
+      "status": "PASS",
+      "passed": 3,
+      "command": "python -m pytest -q tests/unit/test_evidence_checkpoint.py",
+      "scope": "Current published source record; installed/native operations remain NOT_RUN."
     }
   },
   "reviews": [
@@ -61,7 +76,15 @@
       "profile": "analysis/inherit-read-only",
       "findings": 7,
       "checks_executed": "Read/Grep only; no shell tests",
-      "source_scope": "df3df5a ->32681bb selected packet; subsequent corrections pending recheck"
+      "source_scope": "df3df5a ->32681bb selected packet; subsequent corrections pending recheck",
+      "effective_tools": [
+        "Read",
+        "Glob",
+        "Grep",
+        "scoped NativePeers facade"
+      ],
+      "native_rounds": 36,
+      "native_runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed"
     }
   ],
   "finding_dispositions": [
@@ -158,7 +181,13 @@
       "status": "NOT_RUN"
     }
   ],
-  "runtime_scopes": [],
+  "runtime_scopes": [
+    {
+      "operation": "bounded read-only Claude review of selected candidate delta",
+      "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "scope": "Native review completed at installed source c4137d9; selected candidate context32681bb; no source/runtime approval transition."
+    }
+  ],
   "limits": [
     "Current source fingerprints describe published candidate source only; they do not qualify installed behavior or update any runtime approval.",
     "The existing #7 physical/native qualification retains its own source/runtime scope; only affected regressions and one bounded new follow-up fixture are in scope.",
@@ -166,7 +195,7 @@
     "Pi, routers, Mac network/security settings and CodexForge are untouched."
   ],
   "rollback": "Revert this task delta through normal Git publication and run the supported owned installer; preserve later configuration, approvals, leases and histories.",
-  "code_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
+  "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -278,5 +307,5 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5",
-  "updated_at": "2026-10-30T22:18:03.917559-04:00"
+  "updated_at": "2026-10-30T22:22:12.521814-04:00"
 }

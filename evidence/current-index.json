@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
+  "code_commit": "462f7f98621f539d123f35ff17b91514f95daafd",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "publication_branch": "fix/review-followup-20261030",
-  "updated_at": "2026-10-30T22:18:03.917559-04:00",
+  "updated_at": "2026-10-30T22:22:12.521814-04:00",
   "current_record": "evidence/review-followup-workflow.json",
   "file_classes": {
     "product": {
