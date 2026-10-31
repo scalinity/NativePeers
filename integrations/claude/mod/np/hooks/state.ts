@@ -2,13 +2,15 @@
 // validator resolves a read or update target only to an atom of the same file.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
-import type { NpBridge, NpFaults, NpShadow, NpWorker } from '../types'
+import type { NpBridge, NpDraft, NpFaults, NpShadow, NpTranscript, NpUi, NpWorker } from '../types'
 
 const bridgeAtom = atom({ plugin: 'np', key: 'bridge' } as const, { state: 'off', since: 0 } as NpBridge)
 const lineageAtom = atom({ plugin: 'np', key: 'lineage' } as const, [] as NpWorker[], { shape: 'np-lineage-1' })
 const indexAtom = atom({ plugin: 'np', key: 'shadows' } as const, [] as string[])
 const faultsAtom = atom({ plugin: 'np', key: 'faults' } as const, { fallthrough: false } as NpFaults)
-const uiAtom = atom({ plugin: 'np', key: 'ui' } as const, { bandCollapsed: false, paneOpen: false } as { bandCollapsed: boolean; paneOpen: boolean; selected?: string })
+const uiAtom = atom({ plugin: 'np', key: 'ui' } as const, { bandCollapsed: false, paneOpen: false } as NpUi)
+const transcripts = { plugin: 'np', key: 'transcript' } as const
+const NO_TRANSCRIPT: NpTranscript = { workerId: '', cursor: 0, rows: [] }
 const family = { plugin: 'np', key: 'shadow' } as const
 
 export const NONE: NpShadow = { agentId: '', generation: 0, provider: 'codex', title: '', phase: 'DETACHED', deliveryOwner: 'mirror', cursor: 0,
@@ -43,8 +45,51 @@ export async function getFaults($: EngineInterface): Promise<NpFaults> { return 
 export async function setFaults($: EngineInterface, value: NpFaults): Promise<void> { await update($, faultsAtom, () => value) }
 
 export async function getUi($: EngineInterface) { return read($, uiAtom) }
-export async function setUi($: EngineInterface, change: { paneOpen?: boolean; selected?: string; bandCollapsed?: boolean }): Promise<void> {
+export async function setUi($: EngineInterface, change: Partial<NpUi>): Promise<void> {
   await update($, uiAtom, ui => ({ ...ui, ...change }))
+}
+
+// A worker's unsent message. A settling answer touches only the draft of its own request: a newer one stays.
+export async function putDraft($: EngineInterface, draft: NpDraft, onlyIf?: string): Promise<void> {
+  await update($, uiAtom, ui => onlyIf !== undefined && ui.drafts?.[draft.workerId]?.requestId !== onlyIf ? ui
+    : { ...ui, drafts: { ...(ui.drafts ?? {}), [draft.workerId]: draft } })
+}
+export async function clearDraft($: EngineInterface, workerId: string, requestId: string): Promise<void> {
+  await update($, uiAtom, ui => {
+    if (ui.drafts?.[workerId]?.requestId !== requestId) return ui
+    const { [workerId]: _sent, ...rest } = ui.drafts
+    return { ...ui, drafts: rest }
+  })
+}
+// Takes the worker's single message slot and draws an empty field, in one update; false while its last message is
+// unresolved (sending or uncertain), so two quick sends never both go out.
+export async function reserveDraft($: EngineInterface, draft: NpDraft): Promise<boolean> {
+  let reserved = false
+  await update($, uiAtom, ui => {
+    const held = ui.drafts?.[draft.workerId]
+    reserved = !(held && (held.state === 'sending' || held.state === 'uncertain'))
+    return reserved ? { ...ui, sent: (ui.sent ?? 0) + 1, drafts: { ...(ui.drafts ?? {}), [draft.workerId]: draft } } : ui
+  })
+  return reserved
+}
+// A draft still 'sending' after a reload lost its answer: it may have arrived, so only a retry under its id is safe.
+export async function settleInterruptedDrafts($: EngineInterface): Promise<void> {
+  await update($, uiAtom, ui => {
+    const held = Object.values(ui.drafts ?? {})
+    if (!held.some(d => d.state === 'sending')) return ui
+    const drafts: Record<string, NpDraft> = {}
+    for (const d of held) drafts[d.workerId] = d.state === 'sending' ? { ...d, state: 'uncertain', reason: 'a reload interrupted it' } : d
+    return { ...ui, drafts }
+  })
+}
+
+// One conversation per worker: a follower writes only its own worker's, so showing another never races it.
+export async function getTranscript($: EngineInterface, workerId: string): Promise<NpTranscript> {
+  const t = await read($, atom({ ...transcripts, id: workerId }, NO_TRANSCRIPT, { shape: 'np-transcript-1' }))
+  return t.workerId === workerId ? t : { workerId, cursor: 0, rows: [] }
+}
+export async function setTranscript($: EngineInterface, value: NpTranscript): Promise<void> {
+  await update($, atom({ ...transcripts, id: value.workerId }, NO_TRANSCRIPT, { shape: 'np-transcript-1' }), () => value)
 }
 
 export async function getIndex($: EngineInterface): Promise<string[]> { return read($, indexAtom) }

@@ -85,6 +85,16 @@ export type NpShadow = {
 
 export type NpFaults = { fallthrough: boolean; reason?: string; at?: number }
 
+// The conversation the pane shows for one worker, built from its activity log.
+// `full` is kept on the running generation's text rows only, to match its final answer.
+export type NpRow = { kind: 'task' | 'you' | 'text' | 'tool' | 'note'; text: string; item?: string; status?: string; detail?: string; gen?: number; full?: string }
+export type NpTranscript = { workerId: string; cursor: number; rows: NpRow[] }
+
+// A message typed in the pane until the bridge answers: a refused one returns to the field, an uncertain one is retried
+// with the same request id, which the bridge admits once.
+export type NpDraft = { workerId: string; text: string; requestId: string; state: 'sending' | 'refused' | 'uncertain'; reason?: string }
+export type NpUi = { bandCollapsed: boolean; paneOpen: boolean; selected?: string; viewing?: string; sent?: number; drafts?: Record<string, NpDraft> }
+
 declare module 'claude-code' {
   interface PluginState {
     np: {
@@ -92,7 +102,8 @@ declare module 'claude-code' {
       lineage: Shaped<NpWorker[]>
       shadow: StateFamily<Shaped<NpShadow>>
       shadows: string[]
-      ui: { bandCollapsed: boolean; paneOpen: boolean; selected?: string }
+      ui: NpUi
+      transcript: StateFamily<Shaped<NpTranscript>>
       faults: NpFaults
     }
   }

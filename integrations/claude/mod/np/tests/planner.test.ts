@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, finalAnswer, humanFooter, openStep, planBatch, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, closingLine, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -63,7 +63,7 @@ test('generations folded into one run all reach its final answer, which the one 
   const text = finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1, 2], true, [{ generation: 1, text: 'one' }])
   expect(text.indexOf('[generation 1]\none')).toBe(0)
   expect(text).toContain('[generation 2]\ntwo')
-  expect(text).toContain('generations: 1, 2')
+  expect(text).toContain('Generations: 1, 2')
 })
 
 test('gaps, fallbacks, plans and inputs are marked, never silent', () => {
@@ -100,15 +100,16 @@ test('tool results replay output, exit, duration and diffs; a terminal without c
   expect(toolResult('codex', pending, [ev(4, 'task.terminal', { status: 'interrupted' })], 100).status).toBe('interrupted')
 })
 
-test('the final answer carries NativePeers references and says who delivered it', () => {
+test('the final answer closes in words with one handle, the group, and says who delivered it', () => {
   const terminal = ev(9, 'task.terminal', { status: 'failed', final_text: 'partial', error: { code: 'QUOTA_EXHAUSTED', message: 'limit' } })
   const text = finalAnswer(terminal, { provider: 'codex', modelRequested: 'gpt-6.1-sol', modelObserved: 'gpt-6.1-sol', effort: 'high', profile: 'analysis', workerId: 'W', groupId: 'G', taskId: 'T', nativeId: 'N', elapsedMs: 161000, resultArtifact: 'R' }, 'native', [1])
-  expect(text).toContain('— NativePeers · codex · gpt-6.1-sol · high · analysis · failed in 2m41s')
-  expect(text).toContain('error: QUOTA_EXHAUSTED limit')
-  expect(text).toContain('worker W · group G · task T · native N')
-  expect(text).toContain('artifacts: result R')
-  expect(text).toContain('delivered via NativePeers notice')
-  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'native', [1], false, [], 'wait')).toContain('result retained in NativePeers: npeer result G')
+  expect(text).toContain('— NativePeers · Codex · GPT-6.1 Sol · high effort · read-only · failed in 2m41s')
+  expect(text).toContain('Error: QUOTA_EXHAUSTED limit')
+  expect(text).toContain('Delivered by NativePeers · npeer result G')
+  // No worker, task, native or artifact ids: npeer result G names them.
+  for (const id of [' W ', ' T ', ' N ', ' R ', 'worker W', 'native N']) expect(text.includes(id)).toBe(false)
+  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'native', [1], false, [], 'wait')).toContain('Kept in NativePeers: npeer result G')
+  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'mirror', [1])).toContain('Details: npeer result G')
   expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1], true).startsWith('partial')).toBe(false)
 })
 
@@ -122,11 +123,10 @@ test('a detail that adds to the title is kept, and a long title is recorded as t
   expect(p.refs['#4']?.title).toBe(input.title)
 })
 
-test('the human footer names the worker in words and carries no ids', () => {
+test('the closing line names the worker in words, and the model asked for when another answered', () => {
   const terminal = ev(9, 'task.terminal', { status: 'completed', final_text: 'Done.' })
-  const text = humanFooter(terminal, { provider: 'codex', modelRequested: 'gpt-6.1-sol', modelObserved: 'gpt-6.1-sol', effort: 'low', profile: 'analysis', workerId: 'W', groupId: 'G', taskId: 'T', nativeId: 'N', elapsedMs: 5000, resultArtifact: 'R' })
-  expect(text).toBe('— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s')
-  for (const id of ['W', 'G', 'T', 'N', 'R']) expect(text.includes(' ' + id + ' ')).toBe(false)
-  const failed = humanFooter(ev(9, 'task.terminal', { status: 'failed', error: { code: 'QUOTA_EXHAUSTED', message: 'over the limit' } }), { provider: 'grok', workerId: 'W' })
-  expect(failed).toContain('Error: QUOTA_EXHAUSTED over the limit')
+  expect(closingLine(terminal, { provider: 'codex', modelRequested: 'gpt-6.1-sol', modelObserved: 'gpt-6.1-sol', effort: 'low', profile: 'analysis', workerId: 'W', elapsedMs: 5000 }))
+    .toBe('— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s')
+  expect(closingLine(terminal, { provider: 'claude', modelRequested: 'claude-opus-5-5', modelObserved: 'claude-sonnet-5-5', workerId: 'W' })).toContain('Sonnet 5.5 (asked for Opus 5.5)')
+  expect(closingLine(ev(9, 'task.terminal', { status: 'timed_out' }), { provider: 'grok', workerId: 'W' })).toBe('— NativePeers · Grok · timed out')
 })

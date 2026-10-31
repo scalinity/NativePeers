@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/managed-activation-delivery",
-    "code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
-    "evidence": "evidence/issue-39-managed-activation.json",
-    "source_map_sha256": "913ba3db5ad8e67b49ca9df5a69bfd4440553daedb35030d12acfa14f692a85c",
-    "status": "PENDING"
+    "branch": "fix/lineage-pane-conversation",
+    "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+    "evidence": "evidence/claude-lineage-pane-conversation.json",
+    "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
+    "status": "PASS_WITH_OPEN_ITEMS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d7e6cef4e6649909a4e5f47d8bf7e456f1c620f3",
-    "branch": "fix/managed-activation-delivery",
-    "code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
-    "last_verified_publication": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+    "base_commit": "d7e6cef",
+    "branch": "fix/lineage-pane-conversation",
+    "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+    "last_verified_publication": "371cbde3fb88ae7ec9dac0042904779135fd1180",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,79 +302,57 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/managed-activation-delivery",
+    "branch": "fix/lineage-pane-conversation",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
-    "verified_remote_code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+    "verified_remote_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+    "verified_remote_code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "REMEDIATION_PUBLISHED_FINAL_REVIEW_PENDING_INSTALLED_NOT_RUN",
+  "stage": "A worker's conversation in the NativePeers pane, with a field to message it; the report written in words",
   "tests_current": {
-    "focused_runtime": {
-      "status": "PASS",
-      "tests": 57,
-      "subtests": 9,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_updates.py tests/unit/test_completion_delivery.py tests/unit/test_native_delivery.py",
-      "scope": "Initial implementation; path-only relocation case subsequently added and checked separately."
-    },
-    "path_only_and_runtime": {
-      "status": "PASS",
-      "tests": 27,
-      "subtests": 9,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_completion_delivery.py tests/unit/test_compatibility_receipts.py tests/unit/test_native_delivery.py tests/unit/test_operation_readiness.py"
-    },
-    "affected_notifications_followup": {
-      "status": "PASS",
-      "tests": 63,
-      "subtests": 31
-    },
-    "initial_complete": {
-      "status": "FAIL",
-      "passed": 1150,
-      "failed": 2,
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1119,
+      "failed": 31,
       "skipped": 4,
-      "subtests": 1063,
-      "seconds": 269.8,
-      "reason": "Two predecessor publication/index fingerprint assertions; no product assertion failed. Final path-only regression was added later."
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Run on 27bc698 (from d7e6cef): the identical failure set, by test id, as the last lineage run; failures shared with main plus the evidence-pointer check that publication regenerates. ed9f0bb changes no Python module."
     },
-    "codexforge_manager": {
+    "mod": {
       "status": "PASS",
-      "tests": 24,
-      "cwd": "/Users/danny/Documents/Tools/CodexForge/.worktrees/issue-39"
+      "passed": 39,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
     },
-    "installed_native": {
-      "status": "NOT_RUN"
-    },
-    "remediation_runtime": {
+    "pane_conversation_harness": {
       "status": "PASS",
-      "tests": 96,
-      "subtests": 35,
-      "scope": "F001-F004 runtime/notification state and retry contracts"
+      "command": "tests/integration/claude_mod/run_pane_conversation.py",
+      "result": {
+        "opened_in_pane": true,
+        "tool_row": true,
+        "closing_note": true,
+        "input_reached_worker_once": true,
+        "you_row": true,
+        "follow_up_answer": true,
+        "shadow_model_requests": 0
+      }
     },
-    "readiness_and_grants": {
+    "handback_harness": {
       "status": "PASS",
-      "tests": 31,
-      "subtests": 9
+      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
+      "result": "deliver: one SubagentHandback call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself, parent notified after 8.1 s"
     },
-    "raw_router_and_qualification_codec": {
+    "startup_race_harness": {
       "status": "PASS",
-      "tests": 63,
-      "subtests": 60
-    },
-    "pre_remediation_complete": {
-      "status": "PASS",
-      "passed": 1153,
-      "skipped": 4,
-      "subtests": 1063,
-      "seconds": 275.62,
-      "scope": "Before substantive review remediation; not transferred to final source."
-    },
-    "remediation_full_in_flight": {
-      "status": "NOT_RUN",
-      "scope": "Run began before final P001 edits and cannot establish an exact final full-suite pass."
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
+      }
     }
   },
   "transports": {
@@ -383,7 +361,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T00:39:51.835925-04:00",
+  "updated_at": "2026-10-31T00:42:35.394736-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2036,33 +2014,6 @@
         "evidence": "evidence/review-followup-workflow.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PASS_WITH_TRACKER_OPEN"
-      }
-    },
-    {
-      "stage": "SOURCE_PUBLISHED_REVIEW_PENDING_INSTALLED_NOT_RUN",
-      "updated_at": "2026-10-31T00:20:00.067955-04:00",
-      "git": {
-        "base_commit": "d7e6cef4e6649909a4e5f47d8bf7e456f1c620f3",
-        "branch": "fix/managed-activation-delivery",
-        "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-        "last_verified_publication": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-        "owned_uncommitted_changes": []
-      },
-      "publication": {
-        "branch": "fix/managed-activation-delivery",
-        "repository": "https://github.com/scalinity/NativePeers",
-        "status": "PUSHED",
-        "verified_remote_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-        "verified_remote_code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-        "source_zip_uploaded": false,
-        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
-      },
-      "current_review": {
-        "branch": "fix/managed-activation-delivery",
-        "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-        "evidence": "evidence/issue-39-managed-activation.json",
-        "source_map_sha256": "937e945abcb448ca71019e916752b67e4244e65b811d13a24072c15aa1743f48",
-        "status": "PENDING"
       }
     }
   ],

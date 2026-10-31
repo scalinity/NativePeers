@@ -8,6 +8,13 @@ const workers = [
 const shadow = { agentId: 'a1', workerId: 'W1', groupId: 'G1', generation: 1, provider: 'codex', model: 'gpt-6.1-sol', effort: 'high', profile: 'analysis', title: 'Codebase review',
   phase: 'STREAMING', deliveryOwner: 'mirror', cursor: 4, pendingRefs: {}, inputs: [], briefConsumed: true, terminals: [], session: 's', startedAt: 1000, waits: 0, latest: 'pytest -q' }
 
+const conversation = { workerId: 'W1', cursor: 7, rows: [
+  { kind: 'task', text: 'List the files in this folder.' },
+  { kind: 'tool', text: 'ls -A1', status: 'exit 0', detail: '.git\nREADME.md' },
+  { kind: 'text', text: 'It holds .git and README.md.' },
+  { kind: 'you', text: 'Also count them.', item: 'in:r1' },
+] }
+
 function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, paneOpen: false }, held: Record<string, unknown> = shadow) {
   on('clock.now', () => ({ value: 61000 }))
   on('state.get', ($: any, e: any) => {
@@ -18,6 +25,7 @@ function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, pa
       faults: { fallthrough: false },
       ui,
       shadow: e.id === 'a1' ? { shape: 'np-shadow-1', value: held } : undefined,
+      transcript: e.id === 'W1' ? { shape: 'np-transcript-1', value: conversation } : undefined,
     }
     const value = values[e.key]
     return { value: value === undefined ? { value: undefined, version: 0 } : { value, version: 1 } }
@@ -61,47 +69,48 @@ test('viewing a shadow shows its worker header with Interrupt, Stop and Resume c
 const pane = (surface: string) => ({ plugin: 'np', component: 'Pane', requestId: 'np-lineage', surface,
   props: { title: 'NativePeers', isFocused: true, bodyColumns: 100, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} } }) as any
 
-test('the pane names workers and the selected one in words, with its ids one press away', async ($, on) => {
+test('the pane lists workers by title, each opening its conversation; on the desktop app it carries the summary', async ($, on) => {
   state(on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount(pane(surface))
-    expect(await ui.find({ type: 'Button', key: 'sel-W1' })).toBeTruthy()
-    expect(await ui.find({ type: 'Text', text: /Model: Grok 4.7/ })).toBeTruthy()
-    expect(await ui.find({ type: 'Button', key: 'p-ids' })).toBeTruthy()
-    // No ids on screen, and no heading repeating the pane's own title.
-    expect(await ui.find({ type: 'Text', text: /worker W2|group G2/ })).toBeFalsy()
-    expect(await ui.find({ type: 'Text', text: /NativePeers lineage/ })).toBeFalsy()
+    for (const key of ['sel-W1', 'sel-W2']) expect(await ui.find({ type: 'Button', key })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /Codex · Running · 1m00s/ })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /Press a worker to read its conversation and message it/ })).toBeTruthy()
+    // No ids, no heading repeating the pane's title, no resume command and no pointer elsewhere.
+    expect(await ui.find({ type: 'Text', text: /worker W2|group G2|NativePeers lineage|Background tasks/ })).toBeFalsy()
+    expect(await ui.find({ type: 'Button', key: 'resume' })).toBeFalsy()
+    expect(Boolean(await ui.find({ type: 'Text', text: /^2 delegates · 1 running · 1 done$/ }))).toBe(surface === 'desktop')
     await ui.unmount()
   }
 })
 
-test('the pane offers Open on the terminal; on the desktop app it carries the summary and points to Background tasks', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: true, selected: 'W1' })
-  const terminal = await $.ui.mount(pane('terminal'))
-  expect(await terminal.find({ type: 'Button', key: 'p-open' })).toBeTruthy()
-  expect(await terminal.find({ type: 'Text', text: /Background tasks/ })).toBeFalsy()
-  expect(await terminal.find({ type: 'Text', text: /Model: GPT-6.1 Sol, high effort/ })).toBeTruthy()
-  await terminal.unmount()
-  const desktop = await $.ui.mount(pane('desktop'))
-  expect(await desktop.find({ type: 'Button', key: 'p-open' })).toBeFalsy()
-  expect(await desktop.find({ type: 'Text', text: /Its transcript is in Background tasks/ })).toBeTruthy()
-  expect(await desktop.find({ type: 'Text', text: /^2 delegates · 1 running · 1 done$/ })).toBeTruthy()
-  expect(await desktop.find({ type: 'Button', key: 'stopall' })).toBeTruthy()
-  await desktop.unmount()
+test('a worker\'s conversation shows what it was asked, said and did, with a field to message it and its controls', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 2 })
+  for (const surface of ['terminal', 'desktop'] as const) {
+    const ui = await $.ui.mount(pane(surface))
+    expect(await ui.find({ type: 'Button', key: 'back' })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /^Codebase review$/ })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /Model: GPT-6.1 Sol, high effort/ })).toBeTruthy()
+    for (const text of [/Task from main/, /▸ ls -A1 · exit 0/, /^Codex$/, /^You$/]) expect(await ui.find({ type: 'Text', text })).toBeTruthy()
+    expect(await ui.find({ type: 'Input', key: 'say-2' })).toBeTruthy()
+    for (const key of ['p-interrupt', 'p-stop', 'p-ids']) expect(await ui.find({ type: 'Button', key })).toBeTruthy()
+    expect(await ui.find({ type: 'Button', key: 'attach:W1' })).toBeFalsy()
+    await ui.unmount()
+  }
 })
 
-test('the pane offers Interrupt and Stop for a running worker, and Attach only when its shadow here has ended or faulted', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: true, selected: 'W1' })
-  const live = await $.ui.mount(pane('desktop'))
-  for (const key of ['p-interrupt', 'p-stop', 'p-resume']) expect(await live.find({ type: 'Button', key })).toBeTruthy()
-  expect(await live.find({ type: 'Button', key: 'attach:W1' })).toBeFalsy()
-  await live.unmount()
-})
-
-test('a running worker whose shadow faulted is offered Attach in the pane', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: true, selected: 'W1' }, { ...shadow, phase: 'FAULTED' })
+test('a running worker whose shadow faulted is offered Attach in its conversation', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1' }, { ...shadow, phase: 'FAULTED' })
   const ui = await $.ui.mount(pane('desktop'))
   expect(await ui.find({ type: 'Button', key: 'attach:W1' })).toBeTruthy()
+  await ui.unmount()
+})
+
+test('a finished worker\'s conversation offers no Interrupt or Stop, and says when it is still loading', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W2' })
+  const ui = await $.ui.mount(pane('desktop'))
+  for (const key of ['p-interrupt', 'p-stop']) expect(await ui.find({ type: 'Button', key })).toBeFalsy()
+  expect(await ui.find({ type: 'Text', text: /Loading the conversation/ })).toBeTruthy()
   await ui.unmount()
 })
 
@@ -110,4 +119,29 @@ test('the pane\'s worker controls name the lineage row\'s worker while its shado
   expect(controlTarget(row, { ...shadow, workerId: undefined, phase: 'BINDING' } as any).workerId).toBe('W1')
   expect(controlTarget(row, undefined)).toMatchObject({ workerId: 'W1', generation: 1, provider: 'codex' })
   expect(controlTarget(row, shadow as any).agentId).toBe('a1')
+})
+
+test('a refused message returns to the field, and an uncertain one offers Retry', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, drafts: { W1: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'refused', reason: 'TARGET_OFFLINE' } } })
+  const refused = await $.ui.mount(pane('desktop'))
+  expect((await refused.find({ type: 'Input', key: 'say-3' }) as any)?.props?.value ?? (await refused.find({ type: 'Input', key: 'say-3' }) as any)?.value).toBe('Also count them')
+  expect(await refused.find({ type: 'Text', text: /Not delivered: TARGET_OFFLINE/ })).toBeTruthy()
+  expect(await refused.find({ type: 'Button', key: 'p-retry' })).toBeFalsy()
+  await refused.unmount()
+})
+
+test('an uncertain message offers Retry under its own request', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, drafts: { W1: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'uncertain', reason: 'socket closed' } } })
+  const ui = await $.ui.mount(pane('desktop'))
+  expect(await ui.find({ type: 'Button', key: 'p-retry' })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /Delivery uncertain: socket closed/ })).toBeTruthy()
+  await ui.unmount()
+})
+
+test('a draft belongs to its worker: another worker\'s unresolved message shows nothing here', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 1, drafts: { W2: { workerId: 'W2', text: 'Elsewhere', requestId: 'np-pane:W2:1', state: 'uncertain' } } })
+  const ui = await $.ui.mount(pane('desktop'))
+  expect(await ui.find({ type: 'Button', key: 'p-retry' })).toBeFalsy()
+  expect(await ui.find({ type: 'Text', text: /Delivery uncertain|Sending/ })).toBeFalsy()
+  await ui.unmount()
 })
