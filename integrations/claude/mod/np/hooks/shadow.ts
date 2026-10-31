@@ -4,15 +4,17 @@
 import type { EngineInterface, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpInput, NpProvider, NpShadow } from '../types'
 import { BridgeError, request, sleep } from './bridge'
-import { SENTINEL, shadowModel, TAGS } from './agents'
-import { followUp, isBrief, requestId, unforwarded } from './inputs'
-import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from './mirror'
+import { NAMES, SENTINEL, shadowModel } from './agents'
+import { HANDBACK_TOOL, followUp, handbackRequired, isBrief, requestId, unforwarded } from './inputs'
+import { MIRROR_TOOL, finalAnswer, headTail, humanFooter, openStep, planBatch, toolResult } from './mirror'
 import { NONE, getIndex, getMember, setFaults, setMember } from './state'
 import type { Activity, Summary } from './mirror'
 
 const STEP_CAP_MS = 8 * 60 * 1000
 const QUIET_MS = 60 * 1000
 const STORE_LIMIT = 200
+// Shadows whose run the engine said must end with SubagentHandback, including a note that arrived before the shadow's record.
+const handbackSeen = new Set<string>()
 
 export async function loadShadow($: EngineInterface, agentId: string | undefined): Promise<NpShadow | undefined> {
   if (!agentId) return undefined
@@ -57,6 +59,28 @@ function result(e: TurnStepInput, answer: string, stopReason: 'end_turn' | 'tool
   return { turnId: e.turnId, index: e.index, answer, toolUses, stopReason, usage }
 }
 
+function needsHandback(s: NpShadow): boolean {
+  if (!s.handback && handbackSeen.has(s.agentId)) s.handback = true
+  return Boolean(s.handback)
+}
+
+// How a step that answered ends: with SubagentHandback carrying the parent's report where the engine requires it
+// (only that call reaches the parent there), else with end_turn and the step's text.
+// A refused call comes straight back as another step, so a run tries it HANDBACK_TRIES times, then says why it ends.
+const HANDBACK_TRIES = 3
+function ending(e: TurnStepInput, s: NpShadow, answer: string, report: string, outputTokens: number, index: number): { chunks: any[]; done: TurnStepResult } {
+  const usage = outputTokens > 0 ? { input_tokens: 0, output_tokens: outputTokens, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: shadowModel(s.provider) } : null
+  if (!needsHandback(s) || (s.handbacks ?? 0) > HANDBACK_TRIES) return { chunks: [{ kind: 'stop', stopReason: 'end_turn', usage }], done: result(e, answer, 'end_turn', [], outputTokens, s.provider) }
+  s.handbacks = (s.handbacks ?? 0) + 1
+  if (s.handbacks > HANDBACK_TRIES) {
+    const text = `\n[NativePeers could not hand this report to the main conversation: Claude Code refused SubagentHandback. The result stays in NativePeers: npeer result ${s.groupId ?? s.workerId ?? ''}]`
+    return { chunks: [{ kind: 'text', index, text }, { kind: 'stop', stopReason: 'end_turn', usage }], done: result(e, answer + text, 'end_turn', [], outputTokens, s.provider) }
+  }
+  const input = { message: report }
+  return { chunks: [{ kind: 'tool', index, id: toolId(), name: HANDBACK_TOOL }, { kind: 'input', index, json: JSON.stringify(input) }, { kind: 'stop', stopReason: 'tool_use', usage }],
+    done: result(e, answer, 'tool_use', [{ name: HANDBACK_TOOL, input }], outputTokens, s.provider) }
+}
+
 // Transport errors are retried with backoff; after five the step fails closed
 // through the registration's .catch.
 async function poll($: EngineInterface, path: string): Promise<any> {
@@ -88,6 +112,8 @@ async function forward($: EngineInterface, s: NpShadow, input: NpInput, mode: 'q
   try {
     const r = await request($, 'POST', `/v1/workers/${s.workerId}/input`, { client_request_id: requestId(input.uuid), text: input.text, origin: input.origin, mode, delivery_owner: 'mirror' })
     Object.assign(input, { forwarded: true, disposition: r.disposition, reason: r.reason, generation: r.generation })
+    // An accepted input starts another generation: the kept report no longer ends the run. A refused one keeps it.
+    if (r.disposition !== 'refused') { s.report = undefined;s.handbacks = undefined }
   } catch (error) {
     const code = error instanceof BridgeError ? error.code : 'TRANSPORT'
     if (input.attempts >= 3 || !['BRIDGE_UNREACHABLE', 'BRIDGE_DOWN'].includes(code)) Object.assign(input, { forwarded: true, disposition: 'refused', reason: code })
@@ -123,16 +149,39 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
   let usage = 0
   const say = (text: string) => { const chunk = { kind: 'text' as const, index: open.block++, text };open.answer += text;return chunk }
   if (s.spawnError || (!s.workerId && s.phase === 'FAULTED')) {
-    yield say(`NativePeers could not start this worker: ${s.spawnError ?? s.lastFault ?? 'unknown'}`)
-    yield { kind: 'stop', stopReason: 'end_turn', usage: null }
-    s.phase = 'COMPLETED';await saveShadow($, s)
-    return result(e, open.answer, 'end_turn', [], 0, s.provider)
+    const text = `NativePeers could not start this worker: ${s.spawnError ?? s.lastFault ?? 'unknown'}`
+    yield say(text)
+    Object.assign(s, { phase: 'COMPLETED', report: text })
+    const end = ending(e, s, open.answer, text, 0, open.block++)
+    await saveShadow($, s)
+    for (const chunk of end.chunks) yield chunk
+    return end.done
   }
   const failure = await bind($, s)
   if (failure) {
-    yield say(failure);yield { kind: 'stop', stopReason: 'end_turn', usage: null }
-    s.phase = 'COMPLETED';await saveShadow($, s)
-    return result(e, open.answer, 'end_turn', [], 0, s.provider)
+    yield say(failure)
+    Object.assign(s, { phase: 'COMPLETED', report: failure })
+    const end = ending(e, s, open.answer, failure, 0, open.block++)
+    await saveShadow($, s)
+    for (const chunk of end.chunks) yield chunk
+    return end.done
+  }
+  // A step after the run answered, with no new input, is the engine asking for the report again (SubagentHandback):
+  // hand it back, or end at once. Waiting on activity here would wait on a worker with nothing left to run.
+  if (s.report !== undefined && ['COMPLETING', 'COMPLETED'].includes(s.phase) && !unforwarded(s.inputs).length) {
+    // Asked again after a handback: a refused call returns at once, so this answer waits a moment. Without a known
+    // handback, the engine's note may still be landing.
+    if (s.handbacks) await sleep($, 1000)
+    for (let n = 0;n < 8 && !needsHandback(s);n++) await sleep($, 250)
+    // What arrived meanwhile wins: a follow-up goes on to be forwarded instead of the old report.
+    const fresh = await loadShadow($, s.agentId)
+    if (fresh) s.inputs = fresh.inputs
+    if (!unforwarded(s.inputs).length) {
+      const end = ending(e, s, '', s.report, 0, open.block++)
+      await saveShadow($, s)
+      for (const chunk of end.chunks) yield chunk
+      return end.done
+    }
   }
   if (s.inflight) {
     yield say(`[mirror resumed after reload; up to ${s.inflight.to - s.inflight.from} activity events may be missing here — the native history is complete]\n`)
@@ -141,6 +190,13 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
   for (const input of unforwarded(s.inputs)) {
     const note = await forward($, s, input, o.followupMode === 'steer-if-supported' && o.steer ? 'steer' : 'queue')
     if (note) yield say(note)
+  }
+  // Every follow-up was refused after the run had answered: no generation starts, so the kept report ends the run.
+  if (s.report !== undefined && ['COMPLETING', 'COMPLETED'].includes(s.phase) && !unforwarded(s.inputs).length) {
+    const end = ending(e, s, open.answer, s.report, 0, open.block++)
+    await saveShadow($, s)
+    for (const chunk of end.chunks) yield chunk
+    return end.done
   }
   // A provider fallback moves the task to another worker: while the bridge says
   // so (continued_by), a terminal of the moved generation is not the end.
@@ -195,12 +251,19 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
         else s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
       }
       const folded = await surfaceFolded($, s)
-      const final = String(t.data?.final_text ?? '').trim()
-      const text = finalAnswer(t, await summary($, s, t), owner, s.terminals, final.length > 0 && open.answer.trim().endsWith(final), folded, surfaced?.mode)
+      const final = String(t.data?.final_text ?? '').trim(), shown = final.length > 0 && open.answer.trim().endsWith(final)
+      const facts = await summary($, s, t)
+      // The parent's report always carries the worker's final text and the ids; where it travels by SubagentHandback,
+      // the transcript the person reads closes with names instead of ids.
+      const report = finalAnswer(t, facts, owner, s.terminals, false, folded, surfaced?.mode)
+      const text = !needsHandback(s) ? finalAnswer(t, facts, owner, s.terminals, shown, folded, surfaced?.mode)
+        : (shown || !final ? '' : headTail(final, 12288).text + '\n\n') + humanFooter(t, facts)
       yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
-      Object.assign(s, { phase: 'COMPLETING', inflight: undefined });await saveShadow($, s)
-      yield { kind: 'stop', stopReason: 'end_turn', usage: usage > 0 ? { input_tokens: 0, output_tokens: usage, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, model: shadowModel(s.provider) } : null }
-      return result(e, open.answer, 'end_turn', [], usage, s.provider)
+      Object.assign(s, { phase: 'COMPLETING', inflight: undefined, report, handbacks: undefined })
+      const end = ending(e, s, open.answer, report, usage, open.block++)
+      await saveShadow($, s)
+      for (const chunk of end.chunks) yield chunk
+      return end.done
     }
     if (moved?.state === 'moved' && moved.worker_id && moved.worker_id !== s.workerId && (plan.consumed ?? s.cursor) >= Number(batch.last_seq ?? 0)) {
       if (s.nativeGeneration === moved.from_generation) s.nativeGeneration = moved.generation
@@ -215,8 +278,8 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     // quiet minutes the step ends on a 'waiting' mirror call, which may hold.
     if (now - opened > STEP_CAP_MS && open.tools === 0) {
       s.waits += 1
-      const r = `${s.workerId}:${s.generation}:wait${s.waits}`
-      const input = { kind: 'wait', title: `${s.provider} is still working`, detail: '', ref: r }
+      const r = 'wait-' + s.waits
+      const input = { title: `${s.provider} is still working`, kind: 'wait', ref: r }
       s.pendingRefs = { ...s.pendingRefs, [r]: { item: 'wait' + s.waits, kind: 'wait', startSeq: s.cursor, title: input.title, detail: '', generation: s.generation } }
       Object.assign(s, { phase: 'TOOL_PENDING', inflight: undefined });await saveShadow($, s)
       const index = open.block++, id = toolId()
@@ -271,6 +334,9 @@ export async function mirrorCall($: EngineInterface, agentId: string | undefined
 
 // session.append for a shadow: record a follow-up row once, by its uuid.
 export async function captureRow($: EngineInterface, agentId: string | undefined, row: { door: string; origin: any; message: any }, uuid: string): Promise<void> {
+  // The note is kept in the module, never by saving the record here: a save of an older copy could undo the step's
+  // newer state. The step persists it (needsHandback).
+  if (agentId && handbackRequired(row)) { handbackSeen.add(agentId);return }
   const s = await loadShadow($, agentId)
   if (!s) return
   const found = followUp(row)
@@ -307,7 +373,7 @@ export async function completeShadow($: EngineInterface, agentId: string, reason
   if (fell) {
     s.fallthrough = true
     await setFaults($, { fallthrough: true, reason: `shadow ${agentId}: ${reason ?? 'model output'}`, at: Date.now() })
-    $.ui.toast(`np: a shadow made a model request (${TAGS[s.provider]}). NativePeers agent types are off until /np doctor passes.`)
+    $.ui.toast(`A shadow made a model request (${NAMES[s.provider]}). NativePeers agent types are off until /np doctor passes.`)
     try { await request($, 'POST', '/v1/mirror/fallthrough', { claude_agent_id: agentId, worker_id: s.workerId, reason: reason ?? 'unknown' }) } catch { /* recorded in state */ }
   }
   if (isAborted) {
@@ -326,6 +392,8 @@ export async function completeShadow($: EngineInterface, agentId: string, reason
   } else if (s.phase === 'COMPLETING') {
     s.phase = 'COMPLETED'
   }
+  // The run ended: no enforcement step will ask for the report again.
+  s.report = undefined;s.handbacks = undefined
   await saveShadow($, s)
 }
 

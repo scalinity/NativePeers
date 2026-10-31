@@ -2,19 +2,32 @@
 // only Box, Text, Button, Code and Markdown, so they draw on every surface.
 import type { EngineInterface } from 'claude-code'
 import type { NpShadow, NpWorker } from '../types'
-import { TAGS, modelLabel } from './agents'
+import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } from './agents'
 import { request } from './bridge'
 import { duration } from './mirror'
-import { loadShadow, shadows } from './shadow'
+import { loadShadow, newShadow } from './shadow'
 import { getBridge, getFaults, getIndex, getLineage, getMember, getUi, setUi } from './state'
+import type { NpBridge, NpFaults } from '../types'
 
 export const PANE_ID = 'np-lineage'
-const ACTIVE = ['queued', 'starting', 'running', 'waiting']
+const PANE_TITLE = 'NativePeers'
 
-function counts(workers: readonly NpWorker[]) {
-  return { total: workers.length, running: workers.filter(w => ACTIVE.includes(w.status)).length,
-    done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out'].includes(w.status)).length,
-    stopped: workers.filter(w => ['canceled', 'interrupted'].includes(w.status)).length }
+// '2 delegates · 1 running · 1 done', with the bridge's state when it is not ready.
+export function summary(c: ReturnType<typeof counts>, bridge: NpBridge, faults: NpFaults): string {
+  const head = `${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.stopped ? ` · ${c.stopped} stopped` : ''}${c.failed ? ` · ${c.failed} failed` : ''}`
+  // The reason itself is /np doctor's: a raw error does not fit beside the buttons.
+  return head + (faults.fallthrough ? ' · agent types off — /np doctor' : bridge.state === 'starting' ? ' · bridge starting'
+    : bridge.state !== 'ready' ? ` · bridge ${bridge.state} — /np doctor` : '')
+}
+
+// The selected worker in words; its ids are one press away (Copy IDs), not on screen.
+export function details(w: NpWorker): string[] {
+  const asked = w.modelRequested && w.modelObserved && w.modelObserved !== w.modelRequested ? ` (asked for ${modelLabel(w.modelRequested, w.provider)})` : ''
+  const access = w.profile === 'analysis' ? 'Read-only' : w.profile === 'workspace' ? 'Can edit its own workspace' : w.profile
+  const id = w.modelObserved ?? w.modelRequested
+  return [`Model: ${id ? modelLabel(id, w.provider) : 'the provider\'s default'}${w.effort ? `, ${w.effort} effort` : ''}${asked}`,
+    access ? `Access: ${access}` : '', w.outputTokens ? `Output: ${w.outputTokens} tokens` : '', w.latest ? `Latest: ${w.latest}` : '',
+    w.mirrorOwner === 'other' ? 'Shown in another Claude session.' : ''].filter(Boolean)
 }
 
 function elapsed(w: NpWorker, now: number): string {
@@ -24,43 +37,62 @@ function elapsed(w: NpWorker, now: number): string {
 // Claude Code drops a finished agent's task about 30 s after it ends; its view is refused from then on.
 export async function openView($: EngineInterface, agentId: string, quiet = false): Promise<string | undefined> {
   const r: any = await $.ui.view({ agentId })
-  if (r?.deny && !quiet) $.ui.toast('np: ' + r.deny)
+  if (r?.deny && !quiet) $.ui.toast(`Can't open that transcript here: ${r.deny}.`)
   return r?.deny
 }
 
 // Esc in a worker's view stops that worker (gate G4), so the band offers a way back.
 export async function mainView($: EngineInterface): Promise<void> {
   const r: any = await $.ui.view({})
-  if (r?.deny) $.ui.toast('np: ' + r.deny)
+  if (r?.deny) $.ui.toast(`Can't go back to the main conversation: ${r.deny}.`)
 }
 
 export async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE_ID, title: 'NativePeers lineage', focus: true })
+  await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true })
   await setUi($, { paneOpen: true })
+}
+
+// The desktop app's place for the band's content: the pane beside the conversation, opened (unfocused) when a
+// delegate starts and left alone while it is open.
+export async function paneBeside($: EngineInterface): Promise<void> {
+  if ((await $.ui.panes()).some(p => p.id === PANE_ID)) return
+  await $.ui.open({ id: PANE_ID, title: PANE_TITLE })
+}
+
+// What the pane's Interrupt, Stop and Resume cmd act on: the lineage row names the worker even while its shadow here
+// is still binding (no workerId yet).
+export function controlTarget(w: NpWorker, held: NpShadow | undefined): NpShadow {
+  return { ...(held ?? newShadow('', w.provider, w.title, '', 0, { generation: w.generation })), workerId: w.workerId }
+}
+
+export async function copyIds($: EngineInterface, w: NpWorker, surface: string): Promise<void> {
+  const text = [`worker ${w.workerId}`, `group ${w.groupId}`, w.taskId && `task ${w.taskId}`, w.nativeId && `native ${w.nativeId}`, `generation ${w.generation}`].filter(Boolean).join('\n')
+  const copied: any = await $.ui.copy({ text, surface: surface as any })
+  $.ui.toast(copied?.isCopied ? 'Worker IDs copied.' : text)
 }
 
 export async function stopAll($: EngineInterface): Promise<number> {
   const groups = new Set((await getLineage($)).filter(w => ACTIVE.includes(w.status) && !w.parentWorkerId).map(w => w.groupId))
   for (const group of groups) {
     try { await request($, 'POST', `/v1/groups/${group}/cancel`, { client_request_id: `np-stop-all:${group}:${await $.clock.now()}`, reason: 'Stop all from Claude Code' }) }
-    catch (error) { $.ui.toast('np: stop failed for ' + group + ': ' + String(error).slice(0, 120)) }
+    catch (error) { $.ui.toast(`Stop failed for group ${group}: ${String(error).slice(0, 120)}`) }
   }
-  if (groups.size) $.ui.toast(`np: stopping ${groups.size} group${groups.size > 1 ? 's' : ''} and their descendants`)
+  if (groups.size) $.ui.toast(`Stopping ${groups.size} group${groups.size > 1 ? 's' : ''} and their descendants.`)
   return groups.size
 }
 
 export async function interruptWorker($: EngineInterface, s: NpShadow): Promise<void> {
   try {
     const r = await request($, 'POST', `/v1/workers/${s.workerId}/interrupt`, { client_request_id: `np-int:${s.agentId}:${s.generation}:${await $.clock.now()}` })
-    $.ui.toast(`np: interrupt ${r.state ?? 'requested'} (${TAGS[s.provider]})`)
-  } catch (error) { $.ui.toast('np: interrupt failed: ' + String(error).slice(0, 160)) }
+    $.ui.toast(`Interrupt ${r.state ?? 'requested'}: ${NAMES[s.provider]} · ${s.title}.`)
+  } catch (error) { $.ui.toast(`Interrupt failed: ${String(error).slice(0, 160)}`) }
 }
 
 export async function stopWorker($: EngineInterface, s: NpShadow): Promise<void> {
   try {
     await request($, 'POST', `/v1/workers/${s.workerId}/cancel`, { client_request_id: `np-stop:${s.agentId}:${s.generation}`, reason: 'Stopped from the np band' })
-    $.ui.toast(`np: stopping ${TAGS[s.provider]} · ${s.title}`)
-  } catch (error) { $.ui.toast('np: stop failed: ' + String(error).slice(0, 160)) }
+    $.ui.toast(`Stopping ${NAMES[s.provider]} · ${s.title}.`)
+  } catch (error) { $.ui.toast(`Stop failed: ${String(error).slice(0, 160)}`) }
 }
 
 export async function copyResume($: EngineInterface, s: NpShadow, surface: string): Promise<void> {
@@ -68,11 +100,13 @@ export async function copyResume($: EngineInterface, s: NpShadow, surface: strin
     const r = await request($, 'GET', `/v1/workers/${s.workerId}/resume-command`)
     const text = String(r.command ?? r.shell ?? JSON.stringify(r)).slice(0, 4000)
     const copied: any = await $.ui.copy({ text, surface: surface as any })
-    $.ui.toast(copied?.isCopied ? 'np: resume command copied' : 'np: resume command — ' + text.slice(0, 300))
-  } catch (error) { $.ui.toast('np: no resume command: ' + String(error).slice(0, 160)) }
+    $.ui.toast(copied?.isCopied ? 'Resume command copied.' : `Resume command: ${text.slice(0, 300)}`)
+  } catch (error) { $.ui.toast(`No resume command: ${String(error).slice(0, 160)}`) }
 }
 
-export async function renderBand($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
+// The desktop app draws no band (band: auto): its pane beside the conversation carries the same summary.
+export async function renderBand($: EngineInterface, e: any, next: (e: any) => any, always = false): Promise<any> {
+  if (e.surface === 'desktop' && !always) return next(e)
   const bridge = await getBridge($), workers = await getLineage($), index = await getIndex($), faults = await getFaults($)
   const ui = await getUi($)
   const viewed = e.props.view?.agentId as string | undefined
@@ -97,10 +131,6 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
     }
   }
   const c = counts(workers.filter(w => !w.parentWorkerId))
-  const head = `⟐ np · ${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.stopped ? ` · ${c.stopped} stopped` : ''}${c.failed ? ` · ${c.failed} failed` : ''}`
-  // The reason itself is /np doctor's: a raw error does not fit beside the buttons.
-  const status = faults.fallthrough ? ' · agent types off — /np doctor' : bridge.state === 'starting' ? ' · bridge starting'
-    : bridge.state !== 'ready' ? ` · bridge ${bridge.state} — /np doctor` : ''
   const rows = workers.filter(w => !w.parentWorkerId).slice(-4)
   // A running worker with no live shadow here (none, or one that faulted or ended) is offered for attach.
   const offers: NpWorker[] = []
@@ -111,7 +141,7 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" columnGap="sm">
-        <Box flexShrink={1}><Text dimColor wrap="truncate-end">{head}{status}</Text></Box>
+        <Box flexShrink={1}><Text dimColor wrap="truncate-end">⟐ np · {summary(c, bridge, faults)}</Text></Box>
         {c.running ? <Button key="stopall" label="Stop all" onPress={() => stopAll($)} /> : null}
         <Button key="pane" label="Pane" onPress={() => openPane($)} />
       </Box>
@@ -119,7 +149,7 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
         <Box key={'row-' + w.workerId} flexDirection="row" columnGap="sm">
           <Text color={ACTIVE.includes(w.status) ? 'suggestion' : w.status === 'completed' ? 'success' : 'error'}>{TAGS[w.provider] ?? w.provider}</Text>
           <Box flexShrink={1}><Text wrap="truncate-end">{modelLabel(w.modelObserved ?? w.modelRequested, w.provider)}{w.effort ? ' ' + w.effort : ''} · {w.title} · {elapsed(w, now)} · {w.status}</Text></Box>
-          {w.agentId && index.includes(w.agentId) ? <Button key={'open-' + w.workerId} label="Open" hotkey={String(n + 1)} onPress={() => openView($, w.agentId!)} /> : null}
+          {w.agentId && index.includes(w.agentId) && e.surface !== 'desktop' ? <Button key={'open-' + w.workerId} label="Open" hotkey={String(n + 1)} onPress={() => openView($, w.agentId!)} /> : null}
         </Box>
       ))}
       {offers.map(w => (
@@ -132,32 +162,48 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
   )
 }
 
-export async function renderPane($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
-  const workers = await getLineage($), index = await getIndex($)
+// The pane lists this session's workers in words; on the desktop app (band: auto) it also carries the band's summary,
+// and leaves out Open: that app draws no main view to switch, so a worker's transcript is in its Background tasks.
+export async function renderPane($: EngineInterface, e: any, next: (e: any) => any, carriesBand = false): Promise<any> {
+  const workers = await getLineage($), index = await getIndex($), bridge = await getBridge($), faults = await getFaults($)
   const ui = await getUi($)
   const { Box, Text, Button } = $.ui.resolve(e)
   const now = await $.clock.now()
+  const desktop = e.surface === 'desktop'
   const selected = workers.find(w => w.workerId === ui?.selected) ?? workers[workers.length - 1]
+  const c = counts(workers.filter(w => !w.parentWorkerId))
+  // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
+  const attachable = selected && ACTIVE.includes(selected.status) && selected.mirrorOwner !== 'other' &&
+    (!selected.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, selected.agentId)).phase))
+  const target = selected && controlTarget(selected, selected.agentId ? await loadShadow($, selected.agentId) : undefined)
   const depth = (w: NpWorker): number => { let d = 0, cur: NpWorker | undefined = w;while (cur?.parentWorkerId && d < 6) { cur = workers.find(x => x.workerId === cur!.parentWorkerId);d++ }return d }
   return (
     <Box flexDirection="column">
-      <Text bold>NativePeers lineage</Text>
-      {workers.length ? null : <Text dimColor>No workers for this session yet.</Text>}
+      {desktop && carriesBand && workers.length ? (
+        <Box flexDirection="row" columnGap="sm">
+          <Box flexShrink={1}><Text dimColor>{summary(c, bridge, faults)}</Text></Box>
+          {c.running ? <Button key="stopall" label="Stop all" onPress={() => stopAll($)} /> : null}
+        </Box>
+      ) : null}
+      {workers.length ? null : <Text dimColor>No workers in this session yet.</Text>}
       {workers.map(w => (
         <Box key={'tree-' + w.workerId} flexDirection="row">
-          <Button key={'sel-' + w.workerId} plain label={`${'  '.repeat(depth(w))}${TAGS[w.provider] ?? w.provider} ${w.title} · ${w.status} · ${elapsed(w, now)}`}
+          <Button key={'sel-' + w.workerId} plain label={`${'  '.repeat(depth(w))}${NAMES[w.provider] ?? w.provider} · ${w.title} · ${statusLabel(w.status)}${w.startedAt ? ' · ' + elapsed(w, now) : ''}`}
             onPress={() => setUi($, { paneOpen: true, selected: w.workerId })} />
         </Box>
       ))}
       {selected ? (
         <Box flexDirection="column">
-          <Text dimColor>worker {selected.workerId} · group {selected.groupId}{selected.taskId ? ' · task ' + selected.taskId : ''} · generation {selected.generation}</Text>
-          <Text dimColor>native {selected.nativeId ?? '?'} · requested {selected.modelRequested ?? 'default'} · observed {selected.modelObserved ?? '?'}{selected.effort ? ' · ' + selected.effort : ''}{selected.profile ? ' · ' + selected.profile : ''}</Text>
-          <Text dimColor>{selected.outputTokens ? `${selected.outputTokens} output tokens · ` : ''}{selected.latest ?? ''}{selected.mirrorOwner === 'other' ? ' · mirrored in another session' : ''}</Text>
-          <Box flexDirection="row">
-            {selected.agentId && index.includes(selected.agentId) ? <Button key="p-open" label="Open" onPress={() => openView($, selected.agentId!)} /> : null}
-            {!selected.agentId && ACTIVE.includes(selected.status) ? <Button key={'attach:' + selected.workerId} label="Attach" onPress={() => undefined} /> : null}
+          {details(selected).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
+          <Box flexDirection="row" columnGap="sm">
+            {!desktop && selected.agentId && index.includes(selected.agentId) ? <Button key="p-open" label="Open" onPress={() => openView($, selected.agentId!)} /> : null}
+            {attachable ? <Button key={'attach:' + selected.workerId} label="Attach" onPress={() => undefined} /> : null}
+            {target && ACTIVE.includes(selected.status) ? <Button key="p-interrupt" label="Interrupt" onPress={() => interruptWorker($, target)} /> : null}
+            {target && ACTIVE.includes(selected.status) ? <Button key="p-stop" label="Stop" onPress={() => stopWorker($, target)} /> : null}
+            {target ? <Button key="p-resume" label="Resume cmd" onPress={(p: { surface: string }) => copyResume($, target, p.surface)} /> : null}
+            <Button key="p-ids" label="Copy IDs" onPress={(p: { surface: string }) => copyIds($, selected, p.surface)} />
           </Box>
+          {desktop && selected.agentId ? <Text dimColor>Its transcript is in Background tasks.</Text> : null}
         </Box>
       ) : null}
     </Box>
@@ -199,17 +245,39 @@ export async function renderSpinner($: EngineInterface, e: any, next: (e: any) =
 }
 
 export async function statusLine($: EngineInterface): Promise<void> {
-  const workers = await getLineage($)
-  const c = counts(workers.filter(w => !w.parentWorkerId))
-  $.ui.status(c.running ? `◉${c.running} running · ✓${c.done} · ✗${c.failed}` : undefined)
+  $.ui.status(statusSummary(await getLineage($)))
 }
 
 export async function statusText($: EngineInterface): Promise<string> {
-  const bridge = await getBridge($), workers = await getLineage($), list = await shadows($), faults = await getFaults($)
+  const bridge = await getBridge($), workers = await getLineage($), faults = await getFaults($)
   const now = await $.clock.now()
-  const lines = [`bridge: ${bridge.state}${bridge.reason ? ' — ' + bridge.reason : ''}${bridge.peer ? ' · peer ' + bridge.peer : ''}`,
-    `fallthrough: ${faults.fallthrough ? 'DETECTED — ' + (faults.reason ?? '') : 'none'}`, `shadows: ${list.length}`, '']
-  workers.forEach((w, n) => lines.push(`${n + 1}. ${TAGS[w.provider] ?? w.provider} ${modelLabel(w.modelObserved ?? w.modelRequested, w.provider)}${w.effort ? ' ' + w.effort : ''} · ${w.title} · ${w.status} · ${elapsed(w, now)} · worker ${w.workerId}${w.agentId ? '' : ' · unmirrored'}`))
-  if (!workers.length) lines.push('No NativePeers workers for this session.')
+  const lines = [`Bridge: ${bridge.state === 'ready' ? 'Connected' : statusLabel(bridge.state)}${bridge.reason ? ` (${bridge.reason})` : ''}`]
+  if (faults.fallthrough) lines.push(`Fallthrough detected: ${faults.reason ?? 'unknown'}. Run /np doctor.`)
+  lines.push('')
+  workers.forEach((w, n) => lines.push(`${n + 1}. ${NAMES[w.provider] ?? w.provider} ${modelLabel(w.modelObserved ?? w.modelRequested, w.provider)}${w.effort ? ' ' + w.effort : ''} · ${w.title} · ${statusLabel(w.status)}${w.startedAt ? ' · ' + elapsed(w, now) : ''}${w.agentId ? '' : ' · not mirrored here'}`))
+  if (!workers.length) lines.push('No NativePeers workers in this session.')
+  return lines.join('\n')
+}
+
+export type DoctorFacts = {
+  version: string; minimum: string; supported: boolean; surface: string; npeer: string; connected: boolean; state: string; reason?: string; restarted?: string
+  hello?: { protocol?: number; providers?: string[]; schema?: string }; helloError?: string; fallthrough?: { cleared: boolean; reason?: string }
+}
+
+// /np doctor in sentences; Claude Code puts "np: " before the first line. The desktop app keeps its own copy of
+// Claude Code and updates it itself, so the doctor says where its version comes from.
+export function doctorText(f: DoctorFacts): string {
+  const head = !f.supported ? `Not ready: Claude Code ${f.version} is older than ${f.minimum}, the oldest version this mod supports.`
+    : !f.connected ? `Not ready: the bridge is ${f.state}${f.reason ? ` (${f.reason})` : ''}.` : f.helloError ? 'Not ready: the bridge did not answer.' : 'Ready.'
+  const schema = f.hello?.schema ? f.hello.schema.replace(/^nativepeers\.activity\./, '') : ''
+  const lines = [head]
+  if (f.restarted) lines.push(f.restarted)
+  lines.push(`Claude Code: ${f.version}${f.surface === 'desktop' ? ' · the desktop app\'s own copy, which the app updates (Claude › Check for Updates…)' : ''}`)
+  lines.push(`Bridge: ${f.connected ? 'Connected' : statusLabel(f.state)}${f.hello?.protocol !== undefined ? ` (protocol ${f.hello.protocol}${schema ? ', activity schema ' + schema : ''})` : ''}`)
+  if (f.hello?.providers?.length) lines.push(`Providers: ${f.hello.providers.map(p => NAMES[p as keyof typeof NAMES] ?? p).join(', ')}`)
+  if (f.helloError) lines.push(`Bridge error: ${f.helloError}`)
+  if (f.fallthrough) lines.push(f.fallthrough.cleared ? `Fallthrough cleared (it was: ${f.fallthrough.reason ?? 'unknown'}). np agent types are offered again.`
+    : `Fallthrough: ${f.fallthrough.reason ?? 'detected'}. np agent types stay off until the bridge is ready.`)
+  lines.push(`npeer: ${f.npeer}`)
   return lines.join('\n')
 }

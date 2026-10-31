@@ -52,6 +52,16 @@ export function followUp(row: Row): { text: string; origin: NpInput['origin'] } 
   return text ? { text, origin } : null
 }
 
+// The engine's own note that a run must end with SubagentHandback, observed in sessions in auto mode:
+// a 'note' row at the start of the run and an enforcement row when it ends on plain text.
+export const HANDBACK_TOOL = 'SubagentHandback'
+export function handbackRequired(row: Row): boolean {
+  if (row.origin?.kind !== 'engine') return false
+  const blocks = Array.isArray(row.message.content) ? row.message.content as { type?: string; text?: string }[] : []
+  const text = typeof row.message.content === 'string' ? row.message.content : blocks.map(b => b.text ?? '').join('\n')
+  return text.includes(HANDBACK_TOOL + '(')
+}
+
 export function isBrief(text: string, brief: string | undefined): boolean {
   return brief !== undefined && text.trim() === brief.trim()
 }
