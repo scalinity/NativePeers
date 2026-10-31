@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/lineage-pane-polish",
-    "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-    "evidence": "evidence/claude-lineage-pane-polish.json",
-    "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
-    "status": "PASS_WITH_OPEN_ITEMS"
+    "branch": "fix/managed-activation-delivery",
+    "code_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
+    "evidence": "evidence/issue-39-managed-activation.json",
+    "source_map_sha256": "5aefde91c974dfe1b1516a2a69890f36f85fba4148cd2e9164d948b5a0ce2ac2",
+    "status": "PENDING"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d1ef0ad",
-    "branch": "fix/lineage-pane-polish",
-    "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-    "last_verified_publication": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+    "base_commit": "364bd53",
+    "branch": "fix/managed-activation-delivery",
+    "code_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
+    "last_verified_publication": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,45 +302,119 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/lineage-pane-polish",
+    "branch": "fix/managed-activation-delivery",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-    "verified_remote_code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+    "verified_remote_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
+    "verified_remote_code_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Pane polish on the desktop app: a way back to a closed pane, an unfocused message field, controls apart from the field, follow-ups without the routing envelope, short tool output",
+  "stage": "REVIEW_ACCEPTED_FINAL_COMBINED_CHECKS_PENDING",
   "tests_current": {
-    "mod": {
+    "focused_runtime": {
       "status": "PASS",
-      "passed": 42,
-      "command": "claude plugin test integrations/claude/mod/np",
-      "validate": "passed",
-      "tsc": "tsc --noEmit clean"
+      "tests": 57,
+      "subtests": 9,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_compatibility_receipts.py tests/unit/test_runtime_updates.py tests/unit/test_completion_delivery.py tests/unit/test_native_delivery.py",
+      "scope": "Initial implementation; path-only relocation case subsequently added and checked separately."
     },
-    "pane_conversation_harness": {
+    "path_only_and_runtime": {
       "status": "PASS",
-      "command": "tests/integration/claude_mod/run_pane_conversation.py",
-      "result": "opened in the pane, tool row, closing note, the typed message reached the replay bridge once, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+      "tests": 27,
+      "subtests": 9,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_completion_delivery.py tests/unit/test_compatibility_receipts.py tests/unit/test_native_delivery.py tests/unit/test_operation_readiness.py"
     },
-    "handback_harness": {
+    "affected_notifications_followup": {
       "status": "PASS",
-      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
-      "result": "deliver: one call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself"
+      "tests": 63,
+      "subtests": 31
     },
-    "startup_race_harness": {
+    "initial_complete": {
+      "status": "FAIL",
+      "passed": 1150,
+      "failed": 2,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 269.8,
+      "reason": "Two predecessor publication/index fingerprint assertions; no product assertion failed. Final path-only regression was added later."
+    },
+    "codexforge_manager": {
       "status": "PASS",
-      "command": "tests/integration/claude_mod/run_startup_race.py",
-      "result": {
-        "starts": 1,
-        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
-      }
+      "tests": 24,
+      "cwd": "/Users/danny/Documents/Tools/CodexForge/.worktrees/issue-39"
     },
-    "full_suite": {
+    "installed_native": {
+      "status": "NOT_RUN"
+    },
+    "remediation_runtime": {
+      "status": "PASS",
+      "tests": 96,
+      "subtests": 35,
+      "scope": "F001-F004 runtime/notification state and retry contracts"
+    },
+    "readiness_and_grants": {
+      "status": "PASS",
+      "tests": 31,
+      "subtests": 9
+    },
+    "raw_router_and_qualification_codec": {
+      "status": "PASS",
+      "tests": 63,
+      "subtests": 60
+    },
+    "pre_remediation_complete": {
+      "status": "PASS",
+      "passed": 1153,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 275.62,
+      "scope": "Before substantive review remediation; not transferred to final source."
+    },
+    "remediation_full_in_flight": {
       "status": "NOT_RUN",
-      "note": "No Python module changed; the last full run (1119 passed, 31 failed, the standing failure set) was on 27bc698."
+      "scope": "Run began before final P001 edits and cannot establish an exact final full-suite pass."
+    },
+    "accepted_source_full": {
+      "status": "PASS",
+      "passed": 1161,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 266.63,
+      "source_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+      "scope": "Before F104-F106 and concurrent Lineage merge; not final combined acceptance."
+    },
+    "identity_budget_and_selected_candidate": {
+      "status": "PASS",
+      "tests": 66,
+      "subtests": 9,
+      "source_commit": "1589db49b28c3fe7e84bda9e8f5a474a0b232ead"
+    },
+    "combined_before_caller": {
+      "status": "PASS",
+      "passed": 1164,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 267.87,
+      "source_commit": "b161775",
+      "scope": "Before P002 caller boundary; not final installed acceptance."
+    },
+    "retained_caller_boundary": {
+      "status": "PASS",
+      "passed": 55,
+      "subtests": 20,
+      "seconds": 12.94,
+      "source_commit": "364bd53",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_notification_guard_hooks.py tests/unit/test_desktop_host.py tests/unit/test_grok_diagnostics.py tests/contract/test_controller_boundaries.py"
+    },
+    "retained_caller_post_approval": {
+      "status": "PASS",
+      "passed": 20,
+      "subtests": 6,
+      "seconds": 1.04,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py",
+      "source_commit": "c950063"
     }
   },
   "transports": {
@@ -349,7 +423,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T01:12:52.236760-04:00",
+  "updated_at": "2026-10-31T01:19:37.708188-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2027,6 +2101,33 @@
         "branch": "fix/lineage-pane-conversation",
         "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
         "evidence": "evidence/claude-lineage-pane-conversation.json",
+        "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
+        "status": "PASS_WITH_OPEN_ITEMS"
+      }
+    },
+    {
+      "stage": "Pane polish on the desktop app: a way back to a closed pane, an unfocused message field, controls apart from the field, follow-ups without the routing envelope, short tool output",
+      "updated_at": "2026-10-31T01:12:52.236760-04:00",
+      "git": {
+        "base_commit": "d1ef0ad",
+        "branch": "fix/lineage-pane-polish",
+        "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "last_verified_publication": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/lineage-pane-polish",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "verified_remote_code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/lineage-pane-polish",
+        "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "evidence": "evidence/claude-lineage-pane-polish.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PASS_WITH_OPEN_ITEMS"
       }
