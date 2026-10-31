@@ -14,24 +14,24 @@
     },
     "full": {
       "status": "PASS",
-      "tests": 1117,
+      "tests": 1119,
       "subtests": 1056,
       "skipped": 4,
-      "seconds": 292.91,
+      "seconds": 362.71,
       "exit_code": 0,
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
       "cwd": "/Users/danny/Documents/Tools/NativePeers",
-      "source_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/full-nativepeers.log"
+      "source_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/full-nativepeers.log"
     },
     "installed_native": {
       "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/qualification.json",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/qualification.json",
       "scope": "Exact selected package, supported reinstall, four trusted hooks, mandatory package smoke, doctor and quota metadata"
     },
     "standalone_tui": {
       "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/standalone-tui/qualification.json",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/standalone-tui/qualification.json",
       "scope": "Normally registered standalone native TUI: 44 mixed fixture frames, 22 warm and 22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit."
     },
     "probe_offline": {
@@ -71,7 +71,7 @@
     },
     "genuine_worker_push": {
       "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/genuine-workers/qualification.json",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/genuine-workers/qualification.json",
       "scope": "Three actual Codex worker/controller phases: OPEN delivery, QUIET pre-submission retention, accepted-before-close original completion silent consumption"
     },
     "registered_owner_transition": {
@@ -107,7 +107,7 @@
       "parent_context": "Fresh normally registered standalone TUI, warm/cold exact resume",
       "status": "PASS",
       "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/standalone-tui/qualification.json"
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/standalone-tui/qualification.json"
     },
     {
       "provider": "codex",
@@ -115,7 +115,7 @@
       "parent_context": "Three fresh standalone parents and native Codex workers",
       "status": "PASS",
       "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/genuine-workers/qualification.json"
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/genuine-workers/qualification.json"
     },
     {
       "provider": "codex",
@@ -131,7 +131,7 @@
       "parent_context": "Regular installed launcher, exact global hook trust, normal package smoke",
       "status": "PASS",
       "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/qualification.json"
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/qualification.json"
     }
   ],
   "reviews": [
@@ -236,9 +236,9 @@
   "limitations": [
     "The 44-frame standalone probe uses explicitly labeled completion fixtures. Genuine native worker/controller delivery is qualified separately by the three phases under tests.genuine_worker_push.",
     "Both installed native probes use localhost model fixtures. External paid-model inference is NOT_RUN and external network traffic is NOT_INSTRUMENTED.",
-    "The complete source-suite PASS is tied to 77564c6. Later lineage bridge changes retain their own qualification. Earlier source/probe failures remain recorded separately."
+    "The current complete source-suite PASS is tied to2ae4acd; the earlier77564c6 run remains under prior_installed_runs. Earlier source/probe failures remain recorded separately."
   ],
-  "code_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+  "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -264,8 +264,8 @@
     "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
     "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
     "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
-    "nativepeers/bridge.py": "d1b5da96e70a37b81855d0c7a9584f37a6ea94e63b7b3e988fb148d5d8790bb2",
-    "nativepeers/bridge_backend.py": "50d866e5658390b8b92777f148961dd549825b24a2c6702c10309a8a28eeeaf8",
+    "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
+    "nativepeers/bridge_backend.py": "9272dd2145f68acdbaed890963fdb6e7e262685829d70f8e99ccbc059a9096f3",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
     "nativepeers/caller.py": "3856e3f24fe0cf192e018061da5b71ecdb638264082a1cf5ede4fd0982e7ab70",
     "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
@@ -349,8 +349,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "45dd6c105855e33128f30affdd10fda515fe0dafc66f7317dad57c2adf71545f",
-  "updated_at": "2026-10-30T21:19:49.399050-04:00",
+  "source_map_sha256": "4c14325cc7488a8de179c567d56bb65c3f1f3f10768f6228d6e87ae5aa7923d8",
+  "updated_at": "2026-10-30T21:34:35.900457-04:00",
   "failed_experiments": [
     {
       "status": "FAIL",
@@ -410,7 +410,7 @@
       "queue_full": 20,
       "hook_browser": 30
     },
-    "installed_source_commit": "611bca3650ebddf2f10fb8a5ccf8a7d476d51dc2",
+    "installed_source_commit": "516b8bb96077d2eed7fcaf185bbf456964094d8f",
     "manager_tests": {
       "status": "PASS",
       "tests": 23,
@@ -497,7 +497,7 @@
     "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
     "size": 310007192
   },
-  "installed_at_eastern": "2026-10-30T21:17:49.525804-04:00",
+  "installed_at_eastern": "2026-10-30T21:33:45.715567-04:00",
   "fixing_commits": [
     "c73ea81e782e0394e3efc2f2a009b2d853d9ca85",
     "cdcbd66afe1cf759feae4afc9057fef70901d16e",
@@ -521,5 +521,31 @@
       "reason": "Local skill ownership conflict preserved; reviewed canonical reconciliation and supported retry passed."
     }
   ],
-  "record_prose_updated_at": "2026-10-30T21:33:12.062197-04:00"
+  "prior_installed_runs": [
+    {
+      "status": "PASS",
+      "source_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+      "full": {
+        "status": "PASS",
+        "tests": 1117,
+        "subtests": 1056,
+        "skipped": 4,
+        "seconds": 292.91,
+        "exit_code": 0,
+        "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+        "cwd": "/Users/danny/Documents/Tools/NativePeers",
+        "source_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+        "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/full-nativepeers.log"
+      },
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/qualification.json",
+      "scope": "Completed before separately owned bridge merge; unchanged original result"
+    }
+  ],
+  "post_publication_source_refresh": {
+    "status": "PASS",
+    "source_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+    "reason": "Separately owned bridge source merged after the first complete run. All installed checks repeated against the actual new main; same exact managed package and notification hook bytes.",
+    "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/qualification.json"
+  },
+  "record_prose_updated_at": "2026-10-30T21:37:34.103747-04:00"
 }

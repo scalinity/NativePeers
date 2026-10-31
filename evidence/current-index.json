@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "2c96eac5034334fd723f0acd7e79991617eb4709",
-  "reviewed_commit": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
-  "publication_branch": "fix/lineage-desktop-race",
-  "updated_at": "2026-10-30T21:22:08.957424-04:00",
-  "current_record": "evidence/claude-lineage-startup-race.json",
+  "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+  "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+  "publication_branch": "fix/issue-7-silent-close",
+  "updated_at": "2026-10-30T21:34:35.900457-04:00",
+  "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
       "files": {
@@ -404,13 +404,36 @@
   },
   "operation_checks": [
     {
-      "provider": "claude",
-      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
-      "operation": "np-startup-race-harness",
+      "provider": "codex",
+      "operation": "silent-queue-tui",
+      "parent_context": "Fresh normally registered standalone TUI, warm/cold exact resume",
       "status": "PASS",
-      "parent_context": "disposable interactive claude 2.1.314 in a temporary HOME with the np mod loaded by --plugin-dir; replay bridge behind a wrapper npeer that waits 3 s; no model input",
-      "scope": "/np doctor typed while activation's bridge start is in flight: one bridge start, doctor reports bridge: ready, no tripwire hit. The pre-fix mod (f3bcc2e) under the same run: two starts, bridge down with BRIDGE_RUNNING.",
-      "source_head": "a95be16"
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/standalone-tui/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "controller-push",
+      "parent_context": "Three fresh standalone parents and native Codex workers",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/genuine-workers/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "registered-owner-after-selection",
+      "parent_context": "Already running exact owner; selected package changed",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/legacy-transition-05/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "installed-hooks-package",
+      "parent_context": "Regular installed launcher, exact global hook trust, normal package smoke",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/qualification.json"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
