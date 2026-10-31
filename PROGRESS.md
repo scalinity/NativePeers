@@ -1,12 +1,15 @@
-# Review/remediation and live follow-up workflow — scoped implementation (2026-10-30)
+# Review/remediation and live follow-up workflow — installed scoped acceptance (2026-10-30)
 
-- [x] One source-owned [review contract](docs/NATIVE_REVIEW.md): exact severities, stable readable/structured IDs and locations, explicit incomplete accounting, preserved raw reports and optional generic-worker compatibility.
-- [x] Parent `/address` includes every Critical, Warning and Suggestion, keeps source attribution through deduplication and gives each ID an evidence-backed disposition. Originating task and privileged-change proposal/recovery review remain explicit.
-- [x] Live owned-worker parent follow-ups retain their requested push/wait mode, exact task/phase/status and collection commands. Bare task waits preserve phase mode; explicit fallback changes are documented. Mirror, quiet, accepted and uncertain routes retain their ownership.
-- [x] Actual read-only native Claude review returned seven matching findings; F001–F007 are fixed and parent-verified with scoped commits. A substantive final correction/probe review is running.
-- [ ] Complete exact-source verification, supported owned skill installation, the installed four-phase Codex fixture and the actual `/np-eval` record. Issues #28/#32/#33/#34 and tracker #16 remain open until their respective acceptance is observed.
+- [x] Implement #32 ->#33 ->#34 with one shared [review contract](docs/NATIVE_REVIEW.md), exact readable/structured accounting, every-severity parent `/address` and originating-task/privileged-change boundaries.
+- [x] Publish #28's phase-specific live-follow-up route/status/refusal correction in merged [PR36](https://github.com/scalinity/NativePeers/pull/36), preserving singleton waits, phase1, accepted/uncertain receipts, mirror ownership and quiet retention.
+- [x] Fix and parent-verify all12 independent native findings (F001–F007,F101–F105); the final substantive recheck has no findings.
+- [x] Complete final source and installed suites: each1144 tests /1060 subtests /four skips; supported three-skill installation and zero-operation repeat; configuration/approval preservation; installed CLI/authenticated MCP facade parity.
+- [x] Pass one bounded installed Codex fixture with four distinct tasks in one native history. Runtime467acfa3...2a1ac10: phase2 wait, phase3 one accepted+ingested push, phase4 retained-only QUIET, preserved input receipts and proved process/output closure. Localhost Responses/TUI, not external paid inference.
+- [x] Append the unchanged fixed-rubric evaluation: **87/100 at100% coverage**. Prior94.5/100 and64.5/100 records remain unchanged; preparation failures and unknown net-time costs remain explicit.
+- [ ] #28 final disposition: a new parallel qualification lane is preserved, and concurrent selected Codex6e9a7f0d...2025f71 is UPDATE_UNTESTED. Exact owner coordination was refused before model input; current-runtime qualification and the reviewed owner handoff remain pending.
+- [ ] #16 remains open; full-score workflow anchors and total orchestration/net-time observations are unmet.
 
-[Scoped verification and all-finding dispositions](evidence/review-followup-workflow.json). Current evidence is source-only and explicitly leaves installation/native acceptance NOT_RUN. The initial unprovisioned-worktree failures and pre-submission reviewer launch failure are retained; they are not clean passes. Existing #7 qualification remains separately scoped. No Pi, network, CodexForge or unrelated lineage work is included.
+[Scoped verification and every finding disposition](evidence/review-followup-workflow.json). Existing #7 qualification retains its own scope. No Pi, network, authentication, CodexForge or unrelated lineage change was performed. Current runtime/activation work belongs to its existing owner; no approval was copied or widened here.
 
 ---
 

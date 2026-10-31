@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "stage": "SOURCE_FULL_PASS_REVIEWED_PENDING_INSTALLED_ACCEPTANCE",
+  "stage": "INSTALLED_SCOPED_ACCEPTANCE_PASS_CURRENT_RUNTIME_COORDINATION_BLOCKED",
   "status": "PARTIAL",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "originating_task": "NativePeers review/remediation/follow-up workflow (#28, #32, #33, #34)",
@@ -46,7 +46,13 @@
       "tests": 4
     },
     "installed_combined": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "passed": 1144,
+      "skipped": 4,
+      "subtests": 1060,
+      "seconds": 278.1,
+      "source_commit": "1125fa733a8adb2ea5130580e23a00986b50c02a",
+      "scope": "Complete installed NativePeers suite; separate native runtime qualification follows its exact fingerprint."
     },
     "remediated_product_suite": {
       "status": "PASS",
@@ -245,23 +251,37 @@
   ],
   "operation_checks": [
     {
-      "operation": "source-focused-extraction-and-phase-regressions",
-      "parent_context": "isolated worktree; Python3.14.10",
+      "operation": "complete-source-and-installed-suite",
+      "parent_context": "Isolated final source plus protected installed1125fa7",
       "status": "PASS"
     },
     {
-      "operation": "supported-owned-skill-installation",
-      "parent_context": "protected daily installation",
-      "status": "NOT_RUN"
+      "operation": "owned-Claude-Codex-Antigravity-skill-install",
+      "parent_context": "Supported owned installers; three matching copies and zero-operation repeat",
+      "status": "PASS"
     },
     {
-      "operation": "installed-live-owned-Codex-followup",
-      "parent_context": "disposable standalone parent/localhost model fixture",
-      "status": "NOT_RUN"
+      "operation": "installed-live-followup-four-phases",
+      "parent_context": "Disposable actual standalone parent, one owned history, localhost model fixture",
+      "status": "PASS",
+      "provider": "codex",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10"
     },
     {
-      "operation": "physical-UI-capture",
-      "parent_context": "daily interactive session",
+      "operation": "installed-CLI-and-authenticated-MCP-facade-parity",
+      "parent_context": "Actual native-shell caller; official SDK facade, not separate stdio/UI",
+      "status": "PASS"
+    },
+    {
+      "operation": "current-selected-Codex-worker-inbox",
+      "parent_context": "Concurrent external managed selection; no approval or activation by this lane",
+      "status": "BLOCKED",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
+    },
+    {
+      "operation": "external-paid-Codex-inference-and-other-provider-UI",
+      "parent_context": "Outside this bounded fixture/review slice",
       "status": "NOT_RUN"
     }
   ],
@@ -270,10 +290,15 @@
       "operation": "bounded read-only Claude review of selected candidate delta",
       "sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
       "scope": "Native review completed at installed source c4137d9; selected candidate context32681bb; no source/runtime approval transition."
+    },
+    {
+      "operation": "installed live-owned-followup worker/queue/TUI fixture",
+      "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "scope": "Source1125fa7; genuine four-phase localhost fixture; accepted+ingested push, retained-only QUIET, process/output closure. Not qualification of concurrently selected6e9a7f0d runtime."
     }
   ],
   "limits": [
-    "Current source fingerprints describe published candidate source only; they do not qualify installed behavior or update any runtime approval.",
+    "Current fingerprints describe the published Python/integration/test source classes. Every native result retains its exact runtime; current selected6e9a7f0d remains BLOCKED, and no runtime approval was changed.",
     "The existing #7 physical/native qualification retains its own source/runtime scope; only affected regressions and one bounded new follow-up fixture are in scope.",
     "Disposable review accounting cases verify consistency, not model compliance or privileged execution.",
     "Pi, routers, Mac network/security settings and CodexForge are untouched."
@@ -399,5 +424,229 @@
     "bytes": 1253,
     "sha256": "9ced9c8f5a01f106d9e5adf4843021b01e95d2ae42e14c9a3cb4d129ad3ddd56",
     "execution": "NOT_RUN"
+  },
+  "installation": {
+    "status": "PASS",
+    "source_commit": "1125fa733a8adb2ea5130580e23a00986b50c02a",
+    "owned_skills_matched": 3,
+    "repeat_operations": 0,
+    "provider_configuration_and_runtime_approval_bytes": "UNCHANGED at installation",
+    "managed_binary_changed_by_this_lane": false,
+    "backup": "backups/install-1793414263959701000",
+    "recovery": "evidence/scratch/review-followup-20261030/recovery"
+  },
+  "installed_native": {
+    "status": "PASS",
+    "executable": {
+      "path": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000/bin/codex",
+      "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "size": 310007192
+    },
+    "group_id": "9c1ca384-86f3-47c3-bbe5-d30fcd78b074",
+    "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a",
+    "native_worker_id": "01a18fd2-5ed3-7511-a58c-83ddaa23a68f",
+    "tasks": [
+      {
+        "attempts": [
+          {
+            "attempt_index": 0,
+            "cwd": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/review-followup-20261030/workspace-8ac926150826",
+            "model_observed": "gpt-6.1-sol",
+            "model_requested": "gpt-6.1-sol",
+            "native_id": "01a18fd2-5ed3-7511-a58c-83ddaa23a68f",
+            "provider": "codex",
+            "result_artifact_id": "art_03a2ffad-6cd6-4e9c-8378-15bd8efdd59c",
+            "state": "COMPLETED",
+            "task_id": "02799eed-7fd8-4440-a040-11e88620abc6",
+            "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+          }
+        ],
+        "native_turn_id": "01a18fd2-6079-70e1-8315-bc54e8e22d6c",
+        "result_artifact_id": "art_03a2ffad-6cd6-4e9c-8378-15bd8efdd59c",
+        "state": "COMPLETED",
+        "task_id": "02799eed-7fd8-4440-a040-11e88620abc6",
+        "terminal_reason": "null",
+        "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+      },
+      {
+        "attempts": [
+          {
+            "attempt_index": 0,
+            "cwd": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/review-followup-20261030/workspace-8ac926150826",
+            "model_observed": "gpt-6.1-sol",
+            "model_requested": "gpt-6.1-sol",
+            "native_id": "01a18fd2-5ed3-7511-a58c-83ddaa23a68f",
+            "provider": "codex",
+            "result_artifact_id": "art_8a48c10e-7cc4-4f02-b221-101ab6f1a459",
+            "state": "COMPLETED",
+            "task_id": "9aa3e105-9df4-4ed8-b7f1-c95adbd8070e",
+            "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+          }
+        ],
+        "native_turn_id": "01a18fd2-640b-7961-ab2a-81e8ddcc4253",
+        "result_artifact_id": "art_8a48c10e-7cc4-4f02-b221-101ab6f1a459",
+        "state": "COMPLETED",
+        "task_id": "9aa3e105-9df4-4ed8-b7f1-c95adbd8070e",
+        "terminal_reason": "null",
+        "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+      },
+      {
+        "attempts": [
+          {
+            "attempt_index": 0,
+            "cwd": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/review-followup-20261030/workspace-8ac926150826",
+            "model_observed": "gpt-6.1-sol",
+            "model_requested": "gpt-6.1-sol",
+            "native_id": "01a18fd2-5ed3-7511-a58c-83ddaa23a68f",
+            "provider": "codex",
+            "result_artifact_id": "art_1a014b0b-8471-412c-9953-0d1964794dc9",
+            "state": "COMPLETED",
+            "task_id": "e2fe99e7-98d9-4f1a-92a0-8b33d202c8c5",
+            "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+          }
+        ],
+        "native_turn_id": "01a18fd2-668b-7502-8a9b-bfa96391657d",
+        "result_artifact_id": "art_1a014b0b-8471-412c-9953-0d1964794dc9",
+        "state": "COMPLETED",
+        "task_id": "e2fe99e7-98d9-4f1a-92a0-8b33d202c8c5",
+        "terminal_reason": "null",
+        "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+      },
+      {
+        "attempts": [
+          {
+            "attempt_index": 0,
+            "cwd": "/Users/danny/Documents/Tools/NativePeers/evidence/scratch/review-followup-20261030/workspace-8ac926150826",
+            "model_observed": "gpt-6.1-sol",
+            "model_requested": "gpt-6.1-sol",
+            "native_id": "01a18fd2-5ed3-7511-a58c-83ddaa23a68f",
+            "provider": "codex",
+            "result_artifact_id": "art_7d82c0b3-688a-4270-9fa1-e2d19dbc6492",
+            "state": "COMPLETED",
+            "task_id": "7c3137fe-4e41-481d-bd92-858cf3f8c7ed",
+            "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+          }
+        ],
+        "native_turn_id": "01a18fd2-826a-7522-96ef-5a08e992cbaa",
+        "result_artifact_id": "art_7d82c0b3-688a-4270-9fa1-e2d19dbc6492",
+        "state": "COMPLETED",
+        "task_id": "7c3137fe-4e41-481d-bd92-858cf3f8c7ed",
+        "terminal_reason": "null",
+        "worker_id": "e4255688-2f7f-46f1-a380-af3f9964cc6a"
+      }
+    ],
+    "notifications": [
+      {
+        "claimed_generation": 1,
+        "collection_command": "npeer result 9c1ca384-86f3-47c3-bbe5-d30fcd78b074 --json",
+        "completion_generation": 1,
+        "delivery_id": "4d572237-6698-450d-8be8-275ff75137fd",
+        "group_id": "9c1ca384-86f3-47c3-bbe5-d30fcd78b074",
+        "lease_deadline": null,
+        "mode": "wait",
+        "parent_key": "np1_315343f13a3ff4033889a978b5e566b5259bf630ac7fb4e81af973d5eac6a907",
+        "push_configured": false,
+        "state": "UNCLAIMED",
+        "waiter_id": null
+      },
+      {
+        "claimed_generation": 1,
+        "collection_command": "npeer result 9c1ca384-86f3-47c3-bbe5-d30fcd78b074 --json",
+        "completion_generation": 2,
+        "delivery_id": "597f5a13-ccbb-4f2a-9875-51b956c05499",
+        "group_id": "9c1ca384-86f3-47c3-bbe5-d30fcd78b074",
+        "lease_deadline": null,
+        "mode": "wait",
+        "parent_key": "np1_315343f13a3ff4033889a978b5e566b5259bf630ac7fb4e81af973d5eac6a907",
+        "push_configured": false,
+        "state": "NOTIFICATION_UNKNOWN",
+        "waiter_id": "f587a9fd-bde9-40be-a40e-eb6f8f81c21b"
+      },
+      {
+        "claimed_generation": 1,
+        "collection_command": "npeer result 9c1ca384-86f3-47c3-bbe5-d30fcd78b074 --json",
+        "completion_generation": 3,
+        "delivery": {
+          "error": null,
+          "message_id": "4e5ea9dc-11a7-4c67-b57f-abf36e3de467",
+          "state": "ACCEPTED_QUEUED"
+        },
+        "delivery_id": "5c6ee875-6f71-4ca9-9e7d-716e939115b8",
+        "group_id": "9c1ca384-86f3-47c3-bbe5-d30fcd78b074",
+        "lease_deadline": null,
+        "mode": "push",
+        "parent_key": "np1_315343f13a3ff4033889a978b5e566b5259bf630ac7fb4e81af973d5eac6a907",
+        "push_configured": true,
+        "state": "PUSH_ACCEPTED",
+        "waiter_id": null
+      },
+      {
+        "claimed_generation": 1,
+        "collection_command": "npeer result 9c1ca384-86f3-47c3-bbe5-d30fcd78b074 --json",
+        "completion_generation": 4,
+        "delivery": {
+          "error": null,
+          "message_id": "c3c5a569-fca6-45d1-a38d-6605d4b9c4a4",
+          "state": "RETAINED"
+        },
+        "delivery_id": "473a577d-0b26-4c4f-85a5-3c2aec7b85f0",
+        "group_id": "9c1ca384-86f3-47c3-bbe5-d30fcd78b074",
+        "lease_deadline": null,
+        "mode": "push",
+        "parent_key": "np1_315343f13a3ff4033889a978b5e566b5259bf630ac7fb4e81af973d5eac6a907",
+        "push_configured": true,
+        "state": "RETAINED",
+        "waiter_id": null
+      }
+    ],
+    "receipt_stages": {
+      "3": [
+        "ACCEPTED_QUEUED",
+        "INGESTED"
+      ],
+      "4": [
+        "RETAINED"
+      ]
+    },
+    "parent_requests": 4,
+    "parent_native_id": "01a18fd2-58dd-7182-afdd-0f9f981b4379",
+    "source_commit": "1125fa733a8adb2ea5130580e23a00986b50c02a",
+    "scope": "One owned Codex history/four exact tasks, native standalone/TUI and localhost Responses; external paid Codex inference NOT_RUN.",
+    "cleanup": "PASS: all owned process death and output EOF checks",
+    "retention": "Phase4 retained-only; no extra parent model work; original accepted input receipts preserved"
+  },
+  "installed_contract": {
+    "status": "PASS",
+    "scope": "Actual native-shell caller through installed CLI dispatch and authenticated official SDK MCP facade; not a separate MCP stdio/UI session",
+    "rows": [
+      {
+        "task_id": "43f423e9-5389-411e-aee2-3ec39cf8d29f",
+        "findings": 7,
+        "checks": 2,
+        "compact_bytes": 2172,
+        "cli_mcp_parity": true
+      },
+      {
+        "task_id": "82087fa6-df94-4a55-b156-ac1cc0de1b0b",
+        "findings": 5,
+        "checks": 3,
+        "compact_bytes": 2307,
+        "cli_mcp_parity": true
+      }
+    ]
+  },
+  "current_selected_runtime": {
+    "status": "BLOCKED",
+    "compatibility_state": "UPDATE_UNTESTED",
+    "sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+    "reason": "Concurrent external managed selection differs from approved predecessor. Exact coordination message f8fdfef0-b537-43de-824b-d027d90d2325 was definitely refused before native input; no replay or approval/activation change.",
+    "owner_dependency": "New issue28 qualification lane .worktrees/issue28-qualification-01a18fca is preserved; consume its reviewed current-runtime result before final issue28 disposition."
+  },
+  "evaluation": {
+    "id": "np-eval-2026-10-30-nativepeers-review-followup-01a18fab",
+    "score": 87.0,
+    "coverage_percent": 100,
+    "report": "/Users/danny/Documents/Codez/Claude/skills/skills/engineering/np-eval/history/reports/np-eval-2026-10-30-nativepeers-review-followup-01a18fab.md",
+    "scope": "Observed session, unchanged fixed rubric; prior94.5/100 and64.5/100 records preserved. Unknown total orchestration/net-time and preparation failures prevent full-score claims."
   }
 }
