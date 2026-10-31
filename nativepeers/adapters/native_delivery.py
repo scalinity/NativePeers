@@ -54,6 +54,11 @@ async def codex_queue(peer, message, *, journal, before_launch=None):
         if launching:raise
         raise PeerError('ADMISSION_DEFERRED','Queue helper was not started; retry the unchanged client request ID',
                         details={'cause':type(error).__name__}) from error
+    return await _finish_codex_queue(process,peer,runtime)
+
+
+async def _finish_codex_queue(process,peer,runtime):
+    """Queue codec/cleanup, also used by the explicit private qualification probe."""
     try:owner=identity(process.pid).json()
     except ProcessLookupError:owner=None
     try:

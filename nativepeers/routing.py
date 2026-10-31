@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import math
 import time
+from functools import partial
 
 from .adapters.native_delivery import claude_inbox, codex_queue
 from .errors import PeerError, require
@@ -17,7 +18,7 @@ class Router:
         self.journal, self.registry = journal, registry
         from .antigravity import queue_native_hook
         from .grok import queue_native_hook as grok_hook
-        self.adapters = adapters or {"claude-inbox":claude_inbox, "codex-native-queue":codex_queue,
+        self.adapters = adapters or {"claude-inbox":claude_inbox, "codex-native-queue":partial(codex_queue,journal=journal),
                                      "antigravity-native-hook":queue_native_hook,"grok-native-hook":grok_hook}
 
     def outcome(self, message_id):

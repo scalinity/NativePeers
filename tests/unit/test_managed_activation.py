@@ -228,3 +228,10 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(history['peers'],[{k:self.peer[k] for k in ('handle','incarnation_id','owner')}])
         unregistered=dict(self.peer,handle='np1_'+'a'*64)
         with self.assertRaises(PeerError):codex_inbox_runtime(self.j,unregistered)
+
+    async def test_default_router_binds_queue_verification_to_its_journal(self):
+        from nativepeers.routing import Router
+        raw=Router(self.j,Registry(self.j))
+        result=await raw.send(self.caller,self.peer['handle'],'direct router',client_request_id='direct-router')
+        self.assertEqual(result['state'],'ACCEPTED_QUEUED')
+        self.assertEqual((self.root/'launches').read_text(),'old\n')
