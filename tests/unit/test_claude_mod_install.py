@@ -64,6 +64,9 @@ class ClaudeModInstall(unittest.TestCase):
                          ['claude plugin uninstall np@nativepeers-local --scope user', 'claude plugin install np@nativepeers-local --scope user'])
         (copy/'hooks/register.tsx').write_text('new')
         self.assertEqual(self.run_apply(dry_run=True)['operations'], [])
+        __import__('shutil').rmtree(copy)  # A recorded installation whose files are gone is reinstalled.
+        self.assertEqual(self.run_apply(dry_run=True)['operations'],
+                         ['claude plugin uninstall np@nativepeers-local --scope user', 'claude plugin install np@nativepeers-local --scope user'])
 
     def test_dry_run_plans_without_changing_anything(self):
         value = self.run_apply(dry_run=True)

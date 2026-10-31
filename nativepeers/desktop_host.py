@@ -1,11 +1,12 @@
 """Desktop-hosted Claude Code engines as Claude owners (docs/CLAUDE_LINEAGE_MOD.md §6.7).
 
 The Claude desktop app runs its own copy of the Claude Code engine at
-`~/Library/Application Support/Claude/claude-code/<version>/<build>/claude.app/Contents/MacOS/claude`. A copy is a Claude
-owner when its exact resolved path and SHA-256 hold an approval in `compat/runtime.json` under `hosts.claude-desktop`.
-The first SessionStart under an unapproved copy approves it once, on a private snapshot of its app bundle: Anthropic's
-code signature (the CLI's team and identifier) and a version in the supported series. A definite failure is recorded and
-not retried for the same bytes; a check that could not run records nothing. Same-user processes stay out of scope (§10).
+`~/Library/Application Support/Claude/claude-code/<version>/<build>/claude.app/Contents/MacOS/claude`. Every such copy is
+a native boundary; it is a Claude owner only when its exact resolved path and SHA-256 hold an approval in
+`compat/runtime.json` under `hosts.claude-desktop`. An unapproved copy is approved once, by the np bridge rather than the
+short SessionStart hook, on a private snapshot of its app bundle: Anthropic's code signature (the CLI's team and
+identifier) and a version in the supported series. A definite failure is recorded for that path and those bytes; a check
+that could not run records nothing. Same-user processes stay out of scope (§10).
 """
 from __future__ import annotations
 
@@ -24,6 +25,7 @@ from .files import advisory_lock, atomic_json
 
 KEY = 'claude-desktop'
 SERIES, MINIMUM = (2, 1), (2, 1, 309)
+REFUSED_SIGNATURE = (1, 3)  # codesign: verification failed, requirement unsatisfied
 
 
 def base():
@@ -40,6 +42,7 @@ def candidate(executable):
 
 
 def records(journal):
+    """Records keyed by exact resolved executable path; each carries the SHA-256 it was checked with."""
     try:
         value = json.loads((Path(journal.root)/'compat/runtime.json').read_text()).get('hosts', {}).get(KEY, {})
     except (OSError, ValueError, AttributeError):
@@ -48,28 +51,38 @@ def records(journal):
 
 
 def paths(journal):
-    """Approved engine paths whose file keeps the approved size: hook events and caller binding match them by path, as for the CLI."""
+    """Approved engine paths whose file keeps the approved size: frequent hook events and caller binding match these by path."""
     out = set()
-    for record in records(journal).values():
+    for path, record in records(journal).items():
         try:
-            if not record.get('refused') and Path(record['path']).stat().st_size == record['size']:
-                out.add(record['path'])
+            if not record.get('refused') and Path(path).stat().st_size == record['size']:
+                out.add(path)
         except (OSError, KeyError, TypeError, AttributeError):
             continue
     return out
 
 
-def approve_nearest(journal, ancestors, binaries):
-    """At SessionStart: when the nearest native owner is an unapproved desktop engine, check and approve it once."""
-    nearest = next((p for p in ancestors if p['executable'] in binaries or candidate(p['executable'])), None)
-    if not nearest or not candidate(nearest['executable']):
+def approved(journal, executable):
+    """The exact bytes at this path hold an approval (registration checks the hash, not only the size)."""
+    record = records(journal).get(str(executable))
+    if not record or record.get('refused'):
+        return False
+    try:
+        return fingerprint(executable, fresh=True)['sha256'] == record.get('sha256')
+    except OSError:
+        return False
+
+
+def approve(journal, executable):
+    """Check and record an unapproved engine once; None when it is refused or the check could not run."""
+    if not candidate(executable):
         return None
     try:
-        runtime = fingerprint(nearest['executable'], fresh=True)
+        runtime = fingerprint(executable, fresh=True)
     except OSError:
         return None
-    known = records(journal).get(runtime['sha256'])
-    if known:
+    known = records(journal).get(runtime['path'])
+    if known and known.get('sha256') == runtime['sha256']:
         return None if known.get('refused') else known
     return check(journal, runtime)
 
@@ -97,21 +110,27 @@ def check(journal, runtime):
         with bundle_snapshot(journal, runtime) as (bundle, executable):
             # Fixed metadata commands only: no prompt, no stdin, no network and no writes.
             signed = subprocess.run(['/usr/bin/codesign', '--verify', '--strict', '-R=' + requirement, str(bundle)],
-                                    stdin=subprocess.DEVNULL, capture_output=True, timeout=20)
+                                    stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
             shown = subprocess.run(['/usr/bin/sandbox-exec', '-p', READ_ONLY_PROFILE, str(executable), '--version'],
-                                   stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
+                                   stdin=subprocess.DEVNULL, capture_output=True, timeout=5)
         require(fingerprint(runtime['path'], fresh=True) == runtime, 'CAPABILITY_MISMATCH', 'Desktop engine changed during the check',
                 details={'compatibility_state': 'UPDATE_RACED'})
     except (OSError, subprocess.TimeoutExpired, PeerError):
         return None
     observed = (shown.stdout + shown.stderr).decode('utf-8', errors='replace').strip()[:120]
     numbers = version(observed) if shown.returncode == 0 else None
-    refused = ('The desktop engine does not satisfy the vendor code-signature requirement' if signed.returncode
-               else 'The desktop engine version is outside the supported series' if not numbers or numbers[:2] != SERIES or numbers < MINIMUM else None)
+    if signed.returncode in REFUSED_SIGNATURE:
+        refused = 'The desktop engine does not satisfy the vendor code-signature requirement'
+    elif signed.returncode or numbers is None:
+        return None  # An unsuccessful invocation says nothing about the engine: nothing is recorded and a later start retries.
+    elif numbers[:2] != SERIES or numbers < MINIMUM:
+        refused = 'The desktop engine version is outside the supported series'
+    else:
+        refused = None
     record = dict(runtime, version=observed, at=time.time(), **({'refused': refused} if refused else {'checks': ['vendor-signature', 'supported-version']}))
     receipt = Path(journal.root)/'compat/runtime.json'
     with advisory_lock(Path(journal.root)/'locks/runtime.lock'):
         document = json.loads(receipt.read_text()) if receipt.exists() else {'schema_version': 1, 'providers': {}}
-        document.setdefault('hosts', {}).setdefault(KEY, {})[runtime['sha256']] = record
+        document.setdefault('hosts', {}).setdefault(KEY, {})[runtime['path']] = record
         atomic_json(receipt, document)
     return None if refused else record

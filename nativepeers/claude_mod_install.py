@@ -50,9 +50,11 @@ def inspect(executable=None, source=SOURCE):
 
 def stale(plugin, source):
     """The installed copy differs from the checkout's plugin folder; the engine's own type files are not compared."""
-    if not plugin.get('installPath') or not Path(plugin['installPath']).is_dir():
+    if not plugin.get('installPath'):
         return False
     installed = Path(plugin['installPath'])
+    if not installed.is_dir():
+        return True  # A recorded installation whose files are gone is reinstalled.
     def tree(root):
         return {str(p.relative_to(root)): p.read_bytes() for p in root.rglob('*') if p.is_file() and p.relative_to(root).parts[:2] != ('.claude-plugin', 'types')}
     return tree(installed) != tree(Path(source)/PLUGIN)

@@ -17,7 +17,7 @@ from .process import ancestry
 from .registry import Registry
 
 
-def observe(provider, event, journal):
+def observe(provider, event, journal, *, approve_desktop=False):
     if provider=='grok':
         from .grok_hooks import observe as grok_observe
         return grok_observe(journal,event,event.get('hook_event_name'))
@@ -47,11 +47,16 @@ def observe(provider, event, journal):
         require(boundary and boundary['executable']==str(binary),'CALLER_UNBOUND','No direct native provider owner in hook ancestry')
     desktop=set()
     if provider=='claude':
-        # The desktop app's own engine copies are Claude owners once approved by path and SHA-256 (§6.7).
-        from .caller import native_binaries
-        from .desktop_host import approve_nearest, paths
-        if event['hook_event_name']=='SessionStart':approve_nearest(journal,ancestors,{str(p) for p in native_binaries(journal)})
-        desktop=paths(journal)
+        # Every desktop engine copy is a native boundary; it owns a session only once approved by path and SHA-256 (§6.7).
+        # The hook never runs that approval: its timeout is short, and the np bridge approves an engine on first use.
+        from .desktop_host import approve, approved, candidate, paths
+        nearest=next((p for p in ancestors if p['executable']==str(binary) or candidate(p['executable'])),None)
+        if nearest and candidate(nearest['executable']):
+            engine=nearest['executable']
+            if event['hook_event_name']=='SessionStart':ready=approved(journal,engine) or approve_desktop and approve(journal,engine) is not None
+            else:ready=engine in paths(journal)
+            require(ready,'CALLER_UNBOUND','The nearest desktop engine has no approval; the np bridge approves it on first use')
+            desktop={engine}
     owners=[p for p in ancestors if p['executable']==str(binary) or p['executable'] in desktop]
     require(owners,"CALLER_UNBOUND","No exact native provider owner in hook ancestry")
     owner=owners[0]
