@@ -28,7 +28,7 @@ def update_status(provider,expected,actual,document):
             'PROVENANCE_UNVERIFIED':'Inspect the vendor installation and its code signature.',
             'QUALIFICATION_REQUIRED':'Qualify the affected native seams; see docs/RUNTIME_UPDATES.md.'}
     return dict(compatibility_state=state,reason=reason,operations=['worker_turns','inbox'],
-        next_action=('Wait for the CodexForge activation owner to qualify the runtime, then retry the unchanged request ID; inspect npeer doctor --json.'
+        next_action=('Wait for the CodexForge activation owner to qualify the runtime; inspect npeer doctor --json. Retry an ADMISSION_DEFERRED peer message with its unchanged request ID. Failed worker requests stay terminal: inspect the retained result before submitting new work with a new client request ID.'
                      if provider=='codex' and state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED')
                      else action.get(state,'Inspect npeer doctor --json and ask the runtime owner to resolve the named condition.' if provider=='codex'
                                      else f'npeer runtime-check --provider {provider} --apply --json')),
