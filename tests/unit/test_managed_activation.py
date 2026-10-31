@@ -250,6 +250,19 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(codex_inbox_runtime(self.j,second),fingerprint(self.new))
         self.assertEqual(verify(self.j,'codex',self.old,worker_id='w',renew=False),self.prior)
 
+    async def test_refused_verification_reserves_no_budget_and_success_reserves_once(self):
+        ledger=self.root/'budget.json'
+        atomic_json(ledger,dict(active_intervals=[],ceiling={'active_seconds':3600,'submitted_turns':4},reservations=[],reserved_turns=0,consumed_turns=0,outstanding_native_requests=[]))
+        atomic_json(self.j.root/'test-budget.json',{'path':str(ledger)})
+        self.peer=self.register(self.new);self.select(self.new)
+        deferred=await self.send('budget')
+        self.assertEqual(deferred['state'],'ADMISSION_DEFERRED')
+        self.assertEqual(self.j.all("SELECT * FROM events WHERE kind='live-peer-reservation'"),[])
+        self.assertEqual(json.loads(ledger.read_text())['reservations'],[])
+        self.approve();await self.send('budget')
+        events=self.j.all("SELECT * FROM events WHERE kind='live-peer-reservation'")
+        self.assertEqual(len(events),1)
+        before=ledger.read_bytes();await self.send('budget');self.assertEqual(ledger.read_bytes(),before)
 
     async def test_abandoned_unselected_candidate_is_terminal_with_actionable_reason(self):
         self.peer=self.register(self.new)
