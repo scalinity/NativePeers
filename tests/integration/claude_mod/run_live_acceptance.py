@@ -125,13 +125,13 @@ try:
     session.wait_for(r'np:claude[\s\S]*np:|np:antigravity[\s\S]*np:', timeout=60);time.sleep(3);mark('rows');snap('01-fanout-rows')
     # AC5: hold the Claude worker's view through its completion, then follow up while it is still listed.
     open_worker('Claude review');snap('02-view-claude')
-    session.wait_for(r'— NativePeers · claude', timeout=180);mark('claude-done');snap('03-claude-done', 6000)
+    mark('claude-done' if session.wait_for(r'— NativePeers · [Cc]laude', timeout=180) else 'claude-done-timeout');snap('03-claude-done', 6000)
     session.type_line('Now suggest one test name for that easy win.');mark('ac5');time.sleep(5);snap('04-ac5-typed')
-    session.wait_for(r'generations: 1, 2', timeout=150);mark('ac5-done');time.sleep(3);snap('04b-ac5-done', 6000)
+    mark('ac5-done' if session.wait_for(r'Generations: 1, 2', timeout=150) else 'ac5-done-timeout');time.sleep(3);snap('04b-ac5-done', 6000)
     # AC4: a follow-up typed while the Codex worker still runs its sleep.
     open_worker('Codex review');snap('05-view-codex-running')
     session.type_line('Also name the function that has a TODO comment.');mark('ac4');time.sleep(5);snap('06-ac4-typed')
-    session.wait_for(r'generations: 1, 2', timeout=300);mark('ac4-done');time.sleep(4);snap('07-ac4-done', 6000)
+    mark('ac4-done' if session.wait_for(r'Generations: 1, 2', timeout=300) else 'ac4-done-timeout');time.sleep(4);snap('07-ac4-done', 6000)
     to_main();time.sleep(2);snap('09-fanout-band', 2500)
     # AC10 reload with two running sleepers, then AC6 interrupt and Esc-stop through the reloaded module.
     session.type_line('Please launch two sleepers.');mark('sleepers');session.wait_for(r'Sleeper B', timeout=60)
@@ -149,7 +149,7 @@ try:
     marks['bridges_after_stops'] = bridges()
     # AC12 adoption through npeer spawn.
     to_main();session.type_line('Please adopt a worker.');mark('adopt');session.wait_for(r'Adopted worker', timeout=120);time.sleep(5);snap('16-adopted')
-    session.wait_for(r'delivered via NativePeers', timeout=240);mark('adopt-done');time.sleep(10);snap('17-adopted-done', 4000)
+    mark('adopt-done' if session.wait_for(r'Delivered by NativePeers', timeout=240) else 'adopt-done-timeout');time.sleep(10);snap('17-adopted-done', 4000)
     # AC7/AC8: the bridge dies while a mirror-owned worker runs; /np reattach inside the step retry window restores it.
     to_main();session.type_line('Please launch the fault sleeper.');mark('fault');session.wait_for(r'Fault test', timeout=60);wait_index('Fault test', 60);time.sleep(8)
     killed = bridges()
@@ -157,7 +157,7 @@ try:
     mark('bridge-killed');marks['bridge_pids_killed'] = killed;time.sleep(4)
     session.type_line('/np reattach');mark('reattach');time.sleep(8);snap('18-reattach')
     marks['bridges_after_reattach'] = bridges()
-    open_worker('Fault test');session.wait_for(r'— NativePeers · codex|mirror fault', timeout=150);mark('fault-done');time.sleep(6);snap('19-fault-done', 4000)
+    open_worker('Fault test');mark('fault-done' if session.wait_for(r'— NativePeers · [Cc]odex|mirror fault', timeout=150) else 'fault-done-timeout');time.sleep(6);snap('19-fault-done', 4000)
     to_main();time.sleep(3);snap('20-final-band', 2500)
     session.type_line('/cost');time.sleep(4);snap('21-cost', 2500)
 finally:

@@ -196,46 +196,36 @@ export type Summary = {
   resultArtifact?: string; patchArtifact?: string; changes?: { files?: number; added?: number; removed?: number; worktree?: string }
 }
 
-// The final answer the parent reads in the notification (spec 7.5.1).
-// `shown`: the step already streamed the worker's final text, so only the footer
-// follows it; the step's whole answer is still what the parent reads.
+// The final answer the parent reads (spec 7.5.1). People read it too (the desktop app shows a handed-back report as
+// the run's last message), so it closes with a line in words and one handle, the group, for npeer result.
+// `shown`: the step already streamed the worker's final text, so only the closing lines follow it.
 export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[], shown = false,
                             folded: { generation: number; text: string }[] = [], mode?: string): string {
   const d = terminal.data ?? {}
   const status = String(d.status ?? 'completed')
   const body = headTail(String(d.final_text ?? ''), 12288)
+  const handle = s.groupId ?? s.workerId
   const lines: string[] = []
   // Earlier generations of this run were shown as they ended; the notification carries only this message, so it repeats them.
   for (const f of folded) lines.push(`[generation ${f.generation}]`, f.text.trim() || '(no final text)', '')
   if (folded.length) lines.push(`[generation ${terminal.generation}]`)
-  if (body.text.trim() && (!shown || folded.length)) lines.push(body.truncated ? body.text + `\n[… truncated; full text: npeer result ${s.taskId ?? s.workerId} ]` : body.text)
-  if (status === 'interrupted') lines.push('(interrupted — partial result above)')
-  lines.push('')
-  const model = s.modelObserved && s.modelRequested && s.modelObserved !== s.modelRequested
-    ? `${s.modelRequested} (observed ${s.modelObserved})` : s.modelObserved ?? s.modelRequested ?? 'default'
-  lines.push(`— NativePeers · ${s.provider} · ${model}${s.effort ? ' · ' + s.effort : ''}${s.profile ? ' · ' + s.profile : ''} · ${status}${s.elapsedMs !== undefined ? ' in ' + duration(s.elapsedMs) : ''}`)
-  if (d.error?.code) lines.push(`error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`)
-  lines.push([`worker ${s.workerId}`, s.groupId && `group ${s.groupId}`, s.taskId && `task ${s.taskId}`, s.nativeId && `native ${s.nativeId}`].filter(Boolean).join(' · '))
-  const refs = [s.resultArtifact && `result ${s.resultArtifact}`, s.patchArtifact && `patch ${s.patchArtifact}`].filter(Boolean)
-  const changes = s.changes?.files ? `changes: ${s.changes.files} files (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})${s.changes.worktree ? ' in ' + s.changes.worktree : ''}` : ''
-  if (refs.length || changes) lines.push([refs.length ? `artifacts: ${refs.join(' · ')} (npeer artifact-read ID)` : '', changes].filter(Boolean).join(' · '))
-  if (generations.length > 1) lines.push(`generations: ${generations.join(', ')}`)
+  if (body.text.trim() && (!shown || folded.length)) lines.push(body.truncated ? body.text + `\n[… truncated; the full text: npeer result ${handle}]` : body.text)
+  if (status === 'interrupted') lines.push('Interrupted: the text above is a partial result.')
+  lines.push('', closingLine(terminal, s))
+  if (d.error?.code) lines.push(`Error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`.trim())
+  if (s.changes?.files) lines.push(`Changed ${s.changes.files} file${s.changes.files === 1 ? '' : 's'} (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})${s.changes.worktree ? ' in ' + s.changes.worktree : ''}`)
+  if (generations.length > 1) lines.push(`Generations: ${generations.join(', ')}`)
   // A wait-mode route is never pushed: its result stays with NativePeers until asked for.
-  if (owner === 'native') lines.push(mode === 'wait' ? `result retained in NativePeers: npeer result ${s.groupId ?? s.workerId}` : 'delivered via NativePeers notice')
+  lines.push(owner === 'native' && mode === 'wait' ? `Kept in NativePeers: npeer result ${handle}` : owner === 'native' ? `Delivered by NativePeers · npeer result ${handle}` : `Details: npeer result ${handle}`)
   return lines.join('\n')
 }
 
-// The closing line a person reads in the shadow's transcript when the report itself travels by SubagentHandback:
-// names and labels, no ids (the report carries those for the parent).
-export function humanFooter(terminal: Activity, s: Summary): string {
-  const d = terminal.data ?? {}
-  const status = String(d.status ?? 'completed')
+// '— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s'
+export function closingLine(terminal: Activity, s: Summary): string {
+  const status = String(terminal.data?.status ?? 'completed')
   const provider = NAMES[s.provider as NpProvider] ?? s.provider
-  const id = s.modelObserved ?? s.modelRequested, model = id ? ' · ' + modelLabel(id, s.provider as NpProvider) : ''
+  const id = s.modelObserved ?? s.modelRequested
+  const asked = s.modelObserved && s.modelRequested && s.modelObserved !== s.modelRequested ? ` (asked for ${modelLabel(s.modelRequested, s.provider as NpProvider)})` : ''
   const profile = s.profile === 'analysis' ? 'read-only' : s.profile === 'workspace' ? 'can edit' : s.profile
-  const lines = [`— NativePeers · ${provider}${model}${s.effort ? ' · ' + s.effort + ' effort' : ''}${profile ? ' · ' + profile : ''} · ${status}${s.elapsedMs !== undefined ? ' in ' + duration(s.elapsedMs) : ''}`]
-  if (status === 'interrupted') lines.push('Interrupted: the text above is a partial result.')
-  if (d.error?.code) lines.push(`Error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`.trim())
-  if (s.changes?.files) lines.push(`Changed ${s.changes.files} file${s.changes.files === 1 ? '' : 's'} (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})`)
-  return lines.join('\n')
+  return `— NativePeers · ${provider}${id ? ' · ' + modelLabel(id, s.provider as NpProvider) + asked : ''}${s.effort ? ' · ' + s.effort + ' effort' : ''}${profile ? ' · ' + profile : ''} · ${status.replace(/_/g, ' ')}${s.elapsedMs !== undefined ? ' in ' + duration(s.elapsedMs) : ''}`
 }

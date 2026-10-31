@@ -109,27 +109,27 @@ try:
     # AC4/AC7: a follow-up typed while the worker runs folds into the run; its one notification carries both generations.
     session.type_line('Please launch the reviewer.');mark('reviewer')
     open_worker('Codex review');session.type_line('Also name the function that has a TODO comment.');mark('ac4');time.sleep(4);snap('01-ac4-typed')
-    session.wait_for(r'generations: 1, 2', timeout=240);mark('ac4-done');time.sleep(8);snap('02-ac4-done', 6000)
+    mark('ac4-done' if session.wait_for(r'Generations: 1, 2', timeout=240) else 'ac4-done-timeout');time.sleep(8);snap('02-ac4-done', 6000)
     # AC10: reload beside a running worker; the old instance keeps its bridge while a successor serves the new one.
     to_main();session.type_line('Please launch the reload sleeper.');wait_index('Reload sleeper', 60);time.sleep(6)
     mark('bridges_before_reload', bridges())
     with (MOD/'hooks/register.tsx').open('a') as f:f.write('\n// live reload marker\n')
     mark('reload');time.sleep(10);mark('bridges_after_reload', bridges());snap('03-after-reload')
-    open_worker('Reload sleeper');session.wait_for(r'— NativePeers · codex', timeout=120);mark('reload-done');time.sleep(4);snap('04-reload-done', 4000)
+    open_worker('Reload sleeper');mark('reload-done' if session.wait_for(r'— NativePeers · [Cc]odex', timeout=120) else 'reload-done-timeout');time.sleep(4);snap('04-reload-done', 4000)
     mark('bridges_after_reload_done', bridges())
     # AC7: the bridge dies; /np reattach inside the step retry window restarts it and the same shadow carries on.
     to_main();session.type_line('Please launch the quick fault sleeper.');wait_index('Quick fault', 60);time.sleep(8)
     kill_bridges('quick_killed');time.sleep(4)
     session.type_line('/np reattach');mark('quick-reattach');time.sleep(6);snap('05-quick-reattach')
     mark('bridges_after_quick', bridges())
-    open_worker('Quick fault');session.wait_for(r'— NativePeers · codex|mirror fault', timeout=120);mark('quick-done');time.sleep(4);snap('06-quick-done', 4000)
+    open_worker('Quick fault');mark('quick-done' if session.wait_for(r'— NativePeers · [Cc]odex|mirror fault', timeout=120) else 'quick-done-timeout');time.sleep(4);snap('06-quick-done', 4000)
     # AC8: the bridge stays down past the retry window; the shadow fails closed and /np reattach shows the worker again.
     to_main();session.type_line('Please launch the slow fault sleeper.');wait_index('Slow fault', 60);time.sleep(8)
     kill_bridges('slow_killed');time.sleep(30);snap('07-slow-faulted')
     session.type_line('/np reattach');mark('slow-reattach');time.sleep(8);snap('08-slow-reattach')
     mark('bridges_after_slow', bridges())
     # A display-only re-attach is a $.agent.spawn first run: it does not notify (X8), so its footer is read in its view.
-    open_worker('Slow fault');session.wait_for(r'result retained in NativePeers|delivered via NativePeers', timeout=150);mark('slow-done');time.sleep(4);snap('09-slow-done', 4000)
+    open_worker('Slow fault');mark('slow-done' if session.wait_for(r'Kept in NativePeers|Delivered by NativePeers', timeout=150) else 'slow-done-timeout');time.sleep(4);snap('09-slow-done', 4000)
     to_main();time.sleep(3);snap('10-final-band', 2500)
 finally:
     mark('closed');(KEEP/'marks.json').write_text(json.dumps(marks))

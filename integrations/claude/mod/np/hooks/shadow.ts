@@ -6,7 +6,7 @@ import type { NpInput, NpProvider, NpShadow } from '../types'
 import { BridgeError, request, sleep } from './bridge'
 import { NAMES, SENTINEL, shadowModel } from './agents'
 import { HANDBACK_TOOL, followUp, handbackRequired, isBrief, requestId, unforwarded } from './inputs'
-import { MIRROR_TOOL, finalAnswer, headTail, humanFooter, openStep, planBatch, toolResult } from './mirror'
+import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from './mirror'
 import { NONE, getIndex, getMember, setFaults, setMember } from './state'
 import type { Activity, Summary } from './mirror'
 
@@ -253,12 +253,11 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       const folded = await surfaceFolded($, s)
       const final = String(t.data?.final_text ?? '').trim(), shown = final.length > 0 && open.answer.trim().endsWith(final)
       const facts = await summary($, s, t)
-      // The parent's report always carries the worker's final text and the ids; where it travels by SubagentHandback,
-      // the transcript the person reads closes with names instead of ids.
+      // The parent's report always carries the worker's final text. Where it travels by SubagentHandback, the surface
+      // shows that report as the run's last message, so the step writes nothing more.
       const report = finalAnswer(t, facts, owner, s.terminals, false, folded, surfaced?.mode)
-      const text = !needsHandback(s) ? finalAnswer(t, facts, owner, s.terminals, shown, folded, surfaced?.mode)
-        : (shown || !final ? '' : headTail(final, 12288).text + '\n\n') + humanFooter(t, facts)
-      yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
+      const text = needsHandback(s) ? '' : finalAnswer(t, facts, owner, s.terminals, shown, folded, surfaced?.mode)
+      if (text) yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
       Object.assign(s, { phase: 'COMPLETING', inflight: undefined, report, handbacks: undefined })
       const end = ending(e, s, open.answer, report, usage, open.block++)
       await saveShadow($, s)

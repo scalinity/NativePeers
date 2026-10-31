@@ -73,7 +73,7 @@ The person types in an ordinary `claude` session (CLI or the desktop app's Code 
 
 ### 1.2 Drill-down
 
-The person selects a row with the native keys (↓, then Enter) or presses `[Open]` in the band or pane. The main view switches to that agent's transcript. The desktop app has no main view to switch (X17): there, a worker's transcript opens from the app's Background tasks, and `[Open]` is not offered.
+The person selects a row with the native keys (↓, then Enter) or presses `[Open]` in the band or pane. The main view switches to that agent's transcript. The desktop app has no main view to switch (X17): there, pressing a worker in the NativePeers pane shows its conversation, with a field to message it (§7.9), and the band's `[Open]` is not offered.
 
 - **First row:** the brief, labeled as sent by the main agent (T3's "Sent by another agent"), collapsible.
 - **Streaming text:** the worker's assistant text, as markdown.
@@ -155,8 +155,10 @@ Four throwaway mods (`npspike` to `npspike4`; Appendix A) were run headless agai
 | X14 | The review probe's main-loop hook yielded a native **`Agent` tool call** (Path A), and the first completion **did** reach the parent conversation (`queue` record, then `prompt.submit` with origin `task-notification`). The same probe had a hook bug and made real, billed requests; that does not affect this observation. | review probe log |
 | X15 | In a session in **auto mode** (the desktop app's Auto, or `--permission-mode auto`), the engine requires every subagent run to end with a `SubagentHandback({ message })` call: plain text at the end is not delivered. It opens the run with a note row (`session.append` door `note`, `origin.kind:'engine'`), and after a run that ends on plain text it appends `[handback-send-enforce] …` and asks for another step. Seen on 2.1.309 (the desktop app's engine) and 2.1.314. | desktop session `5a5bfe52` shadow transcript; gate G6 capture; `run_handback.py` control on the pre-fix mod |
 | X16 | Only auto mode's classifier may allow `SubagentHandback`: a `tool.check` allow is refused (`Only the auto-mode classifier can allow SubagentHandback: an allow of type 'hook' is not the classifier's verdict`), and an agent type with a `tools` list must name the tool. With no verdict available the engine delivers the report flagged. | `run_handback.py` on 2.1.309 and 2.1.314 |
-| X17 | On the desktop surface `$.ui.view({ agentId })` answers `{ deny: 'no main view here' }`: a worker's transcript there opens from the app's Background tasks. The engine heads a plugin's toasts with the plugin's name. | desktop run, 2026-10-30; terminal captures showing `np: np: interrupt` |
+| X17 | On the desktop surface `$.ui.view({ agentId })` answers `{ deny: 'no main view here' }`; the app's Background tasks show a run's transcript without a field to message it, and hide it once it ends. The engine heads a plugin's toasts with the plugin's name. | desktop run, 2026-10-30; terminal captures showing `np: np: interrupt` |
 | X18 | A background agent gets periodic `agent_summary` side requests made with its own model: for a shadow, the unserved `np-mirror-*` model, which the API answers with an error and no content. They occur only while the agent runs. | `run_handback.py` control: 10 requests during a 90 s hang |
+| X19 | The desktop app shows a run's `SubagentHandback` message as its last message. A shadow makes no model request, so the engine's server-side review of the subagent's work has no verdict: the report arrives flagged ("the server-side auto mode classifier … was unavailable … Please carefully verify the subagent's actions and output before acting on them"), and a parent model may check the result again. | desktop run, 2026-10-30 11:49 PM EDT |
+| X20 | In a fresh home, Claude Code 2.1.314 starts sessions in auto mode by default ("Auto mode is now Claude Code's default permission mode"), so handback runs (X15) are the ordinary case. | `run_pane_conversation.py`, 2026-10-31 |
 
 **Verification cost.** Two runs made billed Claude requests: one deliberate fallthrough in spike 2 ($0.00027), and the review probe with a hook bug ($0.079). Those two are why the tripwire (X13) is mandatory for every harness run.
 
@@ -509,7 +511,7 @@ route for a mirror-owned generation, at terminal:
 - **Lease mechanics.** The bridge holds the lease and renews it every 10 s (TTL 30 s) while mod heartbeats arrive and the Claude owner is alive. `mirror` ownership requires a lease. Display-only attachment uses the same lease, for exclusivity.
 - **No push for mirror-owned generations while leased.** The existing completion-budget reservation and its release semantics apply unchanged.
 - **Path A fallback is retain, never push.** Path A spawns use `completion_mode:"wait"`, and the parent model can still run `npeer result`. A surprise inbox frame would duplicate the Agent notification the parent may already have.
-- **Native-owned generations** (Path B and C initial tasks) are delivered by NativePeers exactly as today. The shadow's final row ends `delivered via NativePeers notice` rather than claiming the delivery.
+- **Native-owned generations** (Path B and C initial tasks) are delivered by NativePeers exactly as today. The shadow's final row ends `Delivered by NativePeers · npeer result <group>` rather than claiming the delivery.
 - **Exclusivity.** A second session attempting to attach is refused with `MIRROR_OWNED`. Read-only viewing in that session's pane stays available.
 
 ### 6.5 Input, interrupt and cancel semantics
@@ -730,7 +732,7 @@ on('turn.step', async function* stepHook($, e, next) { ... }).catch(async functi
 | `input.queued` / `input.accepted` | dim `text` marker, for example `↳ follow-up accepted` | no |
 | `fallback.started` | `text` marker, for example `↳ provider fallback: claude → antigravity gemini-4-argon-high (QUOTA_EXHAUSTED)` | no |
 | `gap` | dim `text`, for example `[N activity events unavailable: <reason>]` | no |
-| `task.terminal` | `POST /v1/mirror/surfacing`, then the final answer `text` (§7.5.1), then `stop{end_turn}`; in a handback run, a footer in words, then `SubagentHandback` carrying the report, then `stop{tool_use}` (§7.5.2) | yes |
+| `task.terminal` | `POST /v1/mirror/surfacing`, then the final answer `text` (§7.5.1), then `stop{end_turn}`; in a handback run, `SubagentHandback` carrying the report, then `stop{tool_use}` (§7.5.2) | yes |
 
 6. **Silence.** If the worker is quiet for 60 s, optionally yield one `thinking` heartbeat (`codex: still working (3m12s)`). Nothing is recorded.
 7. **Generations within one run.** A shadow run ends only when its worker has no task in progress and no accepted-but-unstarted input.
@@ -765,25 +767,27 @@ When detected:
 #### 7.5.1 Final answer (what the parent model reads in the notification)
 
 ```text
-<worker final message — inline up to 12 KiB, then "[… truncated; full text: npeer result <task> ]">
+<worker final message — inline up to 12 KiB, then "[… truncated; the full text: npeer result <group>]">
 
-— NativePeers · codex · gpt-6.1-sol (observed gpt-6.1-sol) · high · analysis · completed in 2m41s
-worker <id> · group <id> · task <id> · native <id>
-artifacts: result <id> · patch <id> (npeer artifact-read ID) · changes: 3 files (+41 −7) in .worktrees/<id>
+— NativePeers · Codex · GPT-6.1 Sol · high effort · read-only · completed in 2m41s
+Changed 3 files (+41 −7) in .worktrees/<id>
+Details: npeer result <group>
 ```
 
+People read this text too (the desktop app shows a handed-back report as the run's last message, X19), so it uses names and labels and one handle: the group, from which `npeer result` names the worker, task, native session and artifacts. When another model answered than the one asked for, the line says `GPT-6.1 Sol (asked for …)`.
+
 **Statuses:**
-- `failed`, `canceled` and `timed_out` replace `completed` and add `error: <CODE> <message>`.
-- `interrupted` adds `partial result above`.
-- **Mirror-owned generation:** the mod posts `/v1/mirror/surfacing` before yielding the final text, and `/v1/mirror/ack` on `turn.complete`.
-- **Native-owned generation:** it posts neither, and the final row ends `delivered via NativePeers notice`.
+- `failed`, `canceled` and `timed_out` replace `completed` and add `Error: <CODE> <message>`.
+- `interrupted` adds `Interrupted: the text above is a partial result.`
+- **Mirror-owned generation:** the mod posts `/v1/mirror/surfacing` before yielding the final text, and `/v1/mirror/ack` on `turn.complete`. The last line reads `Details: npeer result <group>`.
+- **Native-owned generation:** it posts neither, and the last line reads `Delivered by NativePeers · npeer result <group>`, or `Kept in NativePeers: npeer result <group>` for a wait-mode route.
 
 #### 7.5.2 Handback runs (auto mode)
 
 In auto mode only a `SubagentHandback` call reaches the parent (X15). For such a run:
 - **Detection.** The engine's note row (door `note`, `origin.kind:'engine'`, naming `SubagentHandback(`) or its enforcement row marks the shadow `handback`. A note that lands before the shadow's record is held by the module until the first step.
 - **The report** is the §7.5.1 text with the worker's final text always included. It is the call's `message`, kept on the shadow until the run completes.
-- **The transcript** closes with a footer in words, with no ids: `— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s`. The worker's final text precedes it when it was not streamed.
+- **The transcript**: the surface shows the report as the run's last message (X19), so the step writes no closing text of its own.
 - **The call** is left to auto mode's classifier (X16, §7.6). A refused call returns as another step, answered after a one-second pause. After three refused tries the run ends on `end_turn` with `[NativePeers could not hand this report to the main conversation …; npeer result <group>]`, and the engine ends the run: its enforcement is bounded (`run_handback.py --refuse`).
 - **A follow-up** accepted before the handback starts another generation, whose report replaces the kept one. A refused follow-up starts none, so the kept report still ends the run, after the refusal note.
 - **A step after the answer** with no new input is the engine asking for the report again. It hands the kept report back, or ends at once; it never waits on activity from a worker with nothing left to run.
@@ -876,18 +880,18 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
    - **Offers:** `[Attach]` and `[Re-attach]` rows (§7.4 Path C).
    - **Degraded mode** (no shadows): rows open the pane viewer instead.
 5. **Pane `np-lineage`**, titled `NativePeers` (`/np pane`, docked in fullscreen at 110 columns or more, inline otherwise; on the desktop app it opens unfocused beside the conversation when a delegate starts, unless it is already open):
-   - lineage tree in words, `<Provider> · <title> · <Status> · <elapsed>`, including descendants (read-only);
-   - details for the selected worker in words: model and effort (and the requested model when another was observed), access (`Read-only` or `Can edit its own workspace`), output tokens, latest activity. Its ids (worker, group, task, native, generation) are not shown: `[Copy IDs]` copies them;
-   - on the desktop app: the band's summary with `[Stop all]` while delegates run, and `Its transcript is in Background tasks.` in place of `[Open]`;
-   - buttons: Open (where a main view can switch), Attach (a running worker with no live shadow here, as in the band), Interrupt and Stop (a running worker), Copy resume command, Patch preview (`delta-preview`), Copy IDs.
-   - In degraded mode it also renders the worker transcript from activity, as `Markdown` and `Code`.
+   - **Workers:** the lineage tree, including descendants, each a button with its title and a dim `<Provider> · <Status> · <elapsed>` line. On the desktop app it also shows the band's summary, with `[Stop all]` while delegates run. Pressing a worker shows its conversation.
+   - **Conversation** of one worker, on every surface: `[‹ Workers]`, its title and status. Then its details in words: model and effort (and the requested model when another answered), access (`Read-only` or `Can edit its own workspace`), output tokens and latest activity.
+   - **Rows:** the conversation from its activity log, as `Markdown` and `Code`: the task from main, the worker's messages under its name, tool steps (`▸ <title> · exit 0 · 2s` with a short output), follow-ups (`You`, or `Task from main` for the parent's), and how each generation ended. While shown, it follows the log (activation follows a conversation still shown after a reload); the newest 80 rows are kept in `$.state`, one conversation per worker (a follower writes only its own worker's, so showing another never races it), keyed by generation as well as item, since providers reuse item ids across generations.
+   - **Message field:** an `Input` (`Message <Provider>…`; mobile has none) sends a follow-up through `POST /v1/workers/:id/input` (origin `human-claude-view`, mode `queue`). A live worker takes it after its current turn and a released one resumes with it, and its answer appears in the conversation. Its result is delivered natively: where the parent has no inbox (the desktop app), it stays in NativePeers and in this conversation. The message is held as a draft until the bridge answers. A definite refusal, or a bridge that is not running, returns it to the field. An uncertain answer (the request left, the reply did not arrive) offers `[Retry]`, which sends it again under the same request id; the bridge admits it once. Drafts are per worker. A worker takes one message at a time: reserving its slot and clearing the field are one update, refused while its last message is unresolved. A draft a reload left `sending` becomes uncertain at activation, before the bridge starts.
+   - **Buttons:** Interrupt and Stop (a running worker), Attach (a running worker with no live shadow here, as in the band), Patch preview (`delta-preview`), Copy IDs. Ids (worker, group, task, native, generation) are never shown: `[Copy IDs]` copies them. The resume command stays with the band's shadow view and `/np resume-cmd`; while a worker is open for follow-ups it has none, and the toast says to message it from the pane.
 6. **Commands.**
 
    | Command | Does |
    |---|---|
    | `/np` | Status table. |
    | `/np pane` | Open the Lineage pane. |
-   | `/np open <n>` | View that worker (person-initiated). |
+   | `/np open <n>` | View that worker (person-initiated); where the main view cannot switch to it (the desktop app, or an agent Claude Code no longer lists), the pane shows its conversation. |
    | `/np stop [<n>\|all]` | Stop one worker, or all. |
    | `/np attach <n\|all>` / `/np reattach` | Attach unmirrored workers (Path C). |
    | `/np doctor` | Readiness in sentences: `Ready.` or what is not ready, the Claude Code version and where it comes from (the desktop app keeps and updates its own copy), the bridge, providers by name, the fallthrough flag and the npeer path. |
@@ -914,11 +918,17 @@ export type NpShadow = { agentId: string; workerId?: string; spawnError?: string
   cursor: number; inflight?: { from: number; to: number };
   pendingRefs: Record<string, { item: string; kind: string; startSeq: number }>;
   inputs: Array<{ uuid: string; text: string; origin: string; forwarded: boolean; disposition?: string }>;
-  briefConsumed: boolean; fallthrough?: boolean; lastFault?: string }
+  briefConsumed: boolean; fallthrough?: boolean; lastFault?: string; handback?: boolean; report?: string; handbacks?: number }
+// The conversation the pane shows for one worker (§7.9), newest 80 rows.
+export type NpRow = { kind: 'task'|'you'|'text'|'tool'|'note'; text: string; item?: string; status?: string; detail?: string }
+export type NpTranscript = { workerId: string; cursor: number; rows: NpRow[] }
+// A worker's message typed in the pane until the bridge answers (§7.9).
+export type NpDraft = { workerId: string; text: string; requestId: string; state: 'sending'|'refused'|'uncertain'; reason?: string }
 declare module 'claude-code' {
   interface PluginState {
     np: { bridge: NpBridge; lineage: Shaped<NpWorker[]>; shadow: StateFamily<Shaped<NpShadow>>;
-          ui: { bandCollapsed: boolean; paneOpen: boolean; selected?: string } }
+          ui: { bandCollapsed: boolean; paneOpen: boolean; selected?: string; viewing?: string; sent?: number; drafts?: Record<string, NpDraft> };
+          transcript: StateFamily<Shaped<NpTranscript>> }
   }
 }
 ```
