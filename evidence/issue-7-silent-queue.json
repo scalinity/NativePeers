@@ -14,13 +14,12 @@
     },
     "full": {
       "status": "PASS",
-      "tests": 1067,
-      "subtests": 994,
+      "tests": 1071,
+      "subtests": 998,
       "skipped": 4,
-      "seconds": 292.38,
+      "seconds": 339.85,
       "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
-      "private_artifact": "evidence/scratch/issue-7/full-source-combined-final.log",
-      "scope": "Final combined lineage main and issue7 product/probe source"
+      "private_artifact": "evidence/scratch/issue-7/full-source-oracle-final.log"
     },
     "installed_native": {
       "status": "NOT_RUN"
@@ -54,9 +53,14 @@
     },
     "probe_cleanup_regressions": {
       "status": "PASS",
-      "tests": 87,
-      "subtests": 53,
-      "private_artifact": "evidence/scratch/issue-7/probe-termination-cleanup.log"
+      "tests": 91,
+      "subtests": 57,
+      "private_artifact": "evidence/scratch/issue-7/reopen-audit-sequencing-focused-02.log"
+    },
+    "combined_preinstall_tui": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
+      "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
     }
   },
   "operation_checks": [
@@ -127,6 +131,15 @@
       "status": "PASS",
       "scope": "Legacy probe termination and metadata teardown corrections rechecked, no remaining findings.",
       "private_artifact": "evidence/scratch/issue-7/legacy-probe-signal-review-result-03.json"
+    },
+    {
+      "worker_id": "fba9c1b8-16e8-48ef-9013-17b64bb80e6b",
+      "task_id": "9168889c-70e4-4a31-8d4d-0c4c0859f838",
+      "model_requested": "gpt-6.1-sol",
+      "model_observed": "gpt-6.1-sol",
+      "status": "PASS",
+      "scope": "Reopen audit sequencing P2 fixed; exact immutable package-pin variant rechecked.",
+      "private_artifact": "evidence/scratch/issue-7/combined-oracle-recheck-result.json"
     }
   ],
   "private_artifacts": "evidence/scratch/issue-7/",
@@ -135,7 +148,7 @@
     "The separate normal-update package0.166-4a9 is currently selected/approved; it does not include the issue7 native consume extension.",
     "Source and probe failures remain retained separately."
   ],
-  "code_commit": "973ba45fdaa4ffe771996f018c4e687432a16747",
+  "code_commit": "9d44a410765ace004020ef06a9d668dc6a748e31",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -244,7 +257,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "58597655436c0f9dfc1584d468250b37a15dab89846a4d2e0d1fa3929b3ec331",
-  "updated_at": "2026-10-30T19:22:30.362030-04:00",
+  "updated_at": "2026-10-30T20:25:35.858483-04:00",
   "failed_experiments": [
     {
       "status": "FAIL",
@@ -346,6 +359,16 @@
       "subtests": 994,
       "private_artifact": "evidence/scratch/issue-7/full-source-combined-main.log",
       "cause": "Publication history was incorrectly placed inside current status map; moved to source_run_history; publication checks and final full suite pass."
+    },
+    {
+      "status": "PASS",
+      "tests": 1067,
+      "subtests": 994,
+      "skipped": 4,
+      "seconds": 292.38,
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "private_artifact": "evidence/scratch/issue-7/full-source-combined-final.log",
+      "scope": "Final combined lineage main and issue7 product/probe source"
     }
   ]
 }
