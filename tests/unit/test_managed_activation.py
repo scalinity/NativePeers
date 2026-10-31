@@ -272,3 +272,18 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error['details']['compatibility_state'],'RECIPIENT_UNSELECTED')
         self.assertIn('Resume normally',error['details']['next_action'])
         self.assertFalse((self.root/'launches').exists())
+
+    def test_registered_old_caller_remains_nearest_boundary_after_selection(self):
+        from nativepeers.caller import bind_caller
+        from nativepeers.process import ProcessIdentity
+        self.select(self.new)
+        old=self.peer['owner'];outer=dict(old,pid=old['pid']+100,executable=str(self.new),start='outer')
+        environment={'NPEER_BINDING':'','NPEER_BOOTSTRAP':'','CODEX_THREAD_ID':self.native}
+        with patch('nativepeers.caller.matches',return_value=True),patch.dict(os.environ,environment):
+            with patch('nativepeers.caller.ancestry',return_value=[ProcessIdentity(**old),ProcessIdentity(**outer)]):
+                caller=bind_caller(self.j,Registry(self.j),allow_external=False)
+                self.assertEqual(caller.key,self.peer['handle'])
+            inner=dict(old,pid=old['pid']+200,start='unregistered-inner')
+            with patch('nativepeers.caller.ancestry',return_value=[ProcessIdentity(**inner),ProcessIdentity(**old),ProcessIdentity(**outer)]),self.assertRaises(PeerError) as error:
+                bind_caller(self.j,Registry(self.j),allow_external=False)
+            self.assertEqual(error.exception.code,'CALLER_UNBOUND')
