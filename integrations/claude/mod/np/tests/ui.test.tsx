@@ -1,5 +1,6 @@
 import { expect, test } from 'claude-code/testing'
-import { controlTarget, doctorText, headline } from '../hooks/ui'
+import { controlTarget, headline, summary } from '../hooks/ui'
+import { counts } from '../hooks/agents'
 
 const workers = [
   { workerId: 'W1', groupId: 'G1', generation: 1, provider: 'codex', modelRequested: 'gpt-6.1-sol', effort: 'high', title: 'Codebase review', status: 'running', startedAt: 1000, agentId: 'a1' },
@@ -48,41 +49,26 @@ test('the band summarizes delegates and offers Stop all and Open on the terminal
   await ui.unmount()
 })
 
-test('on the desktop app nothing draws above the prompt: the band is left to the engine', async ($, on) => {
-  state(on)
+test('on the desktop app the band is left to the engine while the pane beside the conversation is open', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true })
+  on('ui.panes', () => ({ value: [{ id: 'np-lineage', title: 'NativePeers', isShown: true, isFocused: false, isPlaced: true }] }))
   // This hook stands for the engine's own drawing beneath the mod.
   on('ui.render', ($: any, e: any) => { const { Text } = $.ui.resolve(e);return <Text>engine</Text> })
   const ui = await $.ui.mount({ ...band({}), surface: 'desktop' } as any)
   expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
-  expect(await ui.find({ type: 'Text', text: /⟐ np/ })).toBeFalsy()
+  expect(await ui.find({ type: 'Button', key: 'reopen' })).toBeFalsy()
   await ui.unmount()
 })
 
-const footer = (surface: string, modes: string[] = []) => ({ plugin: 'np', component: 'SessionMode', requestId: 'session-mode', surface, props: { modes } }) as any
-
-test('on the desktop app the footer\'s np entry is a menu: the summary closed, the pane and each conversation open', async ($, on) => {
-  state(on)
-  const opened: any[] = []
-  on('ui.open', ($: any, e: any) => { opened.push(e);return { value: { isPlaced: true } } })
-  const writes: any[] = []
-  on('state.set', ($: any, e: any) => { writes.push(e);return { value: { isSet: true, version: 2 } } })
-  const ui = await $.ui.mount(footer('desktop', ['focus']))
-  const menu: any = await ui.find({ type: 'Select', key: 'np-menu' })
-  const options = (menu?.props?.options ?? menu?.options ?? []).map((o: any) => o.label)
-  expect(options).toEqual(['np · 1 running · 1 done', 'Open NativePeers', 'Easy wins · Grok · Completed', 'Codebase review · Codex · Running'])
-  expect(await ui.find({ type: 'Text', text: /^focus$/ })).toBeTruthy()
-  await $.ui.select({ plugin: 'np', key: 'np-menu', value: 'w:W2' } as any)
-  expect(opened.map(e => e.id)).toEqual(['np-lineage'])
-  expect(writes.some(w => w.key === 'ui' && w.value?.viewing === 'W2' && w.value?.paneOpen === true)).toBe(true)
-  await ui.unmount()
-})
-
-test('the footer is the engine\'s own on the terminal', async ($, on) => {
-  state(on)
-  on('ui.render', ($: any, e: any) => { const { Text } = $.ui.resolve(e);return <Text>engine</Text> })
-  const ui = await $.ui.mount(footer('terminal'))
-  expect(await ui.find({ type: 'Select', key: 'np-menu' })).toBeFalsy()
-  expect(await ui.find({ type: 'Text', text: /^engine$/ })).toBeTruthy()
+test('on the desktop app a closed pane is offered back in one slim line above the prompt', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: false })
+  on('ui.panes', () => ({ value: [] }))
+  const ui = await $.ui.mount({ ...band({}), surface: 'desktop' } as any)
+  expect(await ui.find({ type: 'Text', text: /^np · 1 running · 1 done$/ })).toBeTruthy()
+  const open: any = await ui.find({ type: 'Button', key: 'reopen' })
+  expect(open?.props?.label ?? open?.label).toBe('Open')
+  // Only the way back: no Stop all, Pane or Open rows in this line.
+  for (const key of ['stopall', 'pane', 'open-W1']) expect(await ui.find({ type: 'Button', key })).toBeFalsy()
   await ui.unmount()
 })
 
@@ -204,11 +190,21 @@ test('a worker\'s headline names the model asked for when another answered', () 
   expect(headline({ ...workers[0], modelObserved: 'gpt-6.1-sol' } as any, 61000)).not.toMatch(/asked for/)
 })
 
-test('/np doctor on the desktop app says what the app did with the footer menu', () => {
-  const facts = { version: '2.1.309', minimum: '2.1.309', supported: true, surface: 'desktop', npeer: '/x/npeer', connected: true, state: 'ready' }
-  expect(doctorText(facts)).toMatch(/^Footer menu: the app has not asked for the footer in this session; the status entry carries the summary$/m)
-  expect(doctorText({ ...facts, footer: 'drawn' })).toMatch(/^Footer menu: shown at the right of the prompt footer$/m)
-  expect(doctorText({ ...facts, footer: 'empty' })).toMatch(/^Footer menu: the app asked for the footer before any worker/m)
-  expect(doctorText({ ...facts, footer: 'no-select' })).toMatch(/^Footer menu: the app asked for the footer but offers no menu there/m)
-  expect(doctorText({ ...facts, surface: 'terminal' })).not.toMatch(/Footer menu/)
+test('a delegate summary leaves zero counts out', () => {
+  const ready = { state: 'ready', since: 1 } as any, quiet = { fallthrough: false } as any
+  expect(summary(counts([{ status: 'running' }] as any), ready, quiet)).toBe('1 delegate · 1 running')
+  expect(summary(counts([{ status: 'completed' }, { status: 'failed' }] as any), ready, quiet)).toBe('2 delegates · 1 done · 1 failed')
+})
+
+test('a worker\'s turn is labelled once, and while it runs the newest line above the field says so', async ($, on) => {
+  const talk = { workerId: 'W1', cursor: 9, rows: [
+    { kind: 'task', text: 'List the files.' }, { kind: 'text', text: 'I will look.' }, { kind: 'tool', text: 'ls -A1', status: 'exit 0' },
+    { kind: 'text', text: 'Four entries.' }, { kind: 'note', text: 'Completed.', item: 'end:1:5' }, { kind: 'you', text: 'Folders?', item: 'in:r1' },
+    { kind: 'text', text: 'Checking.' }, { kind: 'tool', text: 'ls -A1p' }] }
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1' }, shadow, talk)
+  const ui = await $.ui.mount(pane('desktop'))
+  expect((await ui.findAll({ type: 'Text', text: /^Codex$/ })).length).toBe(2)
+  expect(await ui.find({ type: 'Text', text: /^Working · 1m00s$/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: /^Now: / })).toBeFalsy()
+  await ui.unmount()
 })
