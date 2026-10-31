@@ -126,6 +126,23 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(row['provider'],'claude');self.assertEqual(row['native_id'],self.native)
         self.assertEqual(row['model_requested'],'sonnet');self.assertIsNone(row['model_observed'])
 
+    async def test_completed_task_without_a_record_reports_unavailable_in_cli_and_mcp(self):
+        task=self.add()
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=NULL WHERE task_id=?',(task,))
+        before=self.j.all('SELECT * FROM completion_routes')
+        with patch('nativepeers.cli.bind_caller',return_value=self.caller):
+            cli=await dispatch(parser().parse_args(['result',task,'--compact','--json']),self.j)
+        mcp=await Core(self.j).tool(self.caller,'task_result',dict(handle=task,compact=True))
+        self.assertEqual(cli,mcp)
+        for view in (cli,self.service.status(self.caller,task,compact=True)):
+            row=view['tasks'][0]
+            self.assertEqual(row['state'],'COMPLETED')
+            self.assertIn('no recorded result artifact',row['unavailable']['reason'])
+            self.assertNotIn('findings',row);self.assertNotIn('checks',row)
+            for field in ('provider','native_id','model_requested','model_observed'):self.assertIsNone(row[field])
+            self.assertLessEqual(len(json.dumps(dict(schema_version=1,ok=True,data=view,error=None,request_id=new_id())).encode()),4096)
+        self.assertEqual(before,self.j.all('SELECT * FROM completion_routes'))
+
     async def test_oversize_retained_identity_uses_an_explicit_bounded_reference(self):
         task=self.add(native_id='猫'*4000,findings=[dict(severity='warning',summary='Inspect full retained finding')])
         value=self.service.result(self.caller,task,compact=True)
