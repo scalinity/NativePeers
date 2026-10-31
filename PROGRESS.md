@@ -275,3 +275,20 @@ Live usage-source implementation and installation are complete at product commit
 Known verification scope: real stdio MCP probe is CALLER_NOT_READY; offline protocol/caller parity passes. Full native inference/messaging/delegation matrix is not reaccepted by quota reads. No model input or budget reset occurred. Worker-history visibility and the separate Pro review remain independent.
 
 Details: docs/LIVE_USAGE_SOURCES.md and evidence/live-usage-sources.json. Private baseline/captures: evidence/private/live-usage/. Backups: backups/live-usage/. No worktree or native worker team was created; regenerable large binary indexes were removed.
+# 2026-10-31: installed workflow improvements (#41–43)
+
+PR #45 is merged and installed at `77f32fb`: safe-path installed imports preserve
+the caller's project, and opt-in compact review context retains exact diff,
+ranges, omissions and granted immutable full recovery. The #43 opt-in cost helper
+is published in `scalinity/skills#2` and promoted to the existing canonical master;
+private evaluation history stays local. All 20 implementation/transition review
+IDs have final dispositions in [the workflow record](evidence/issue-16-workflow.json).
+
+Merged source: 1,178 tests / 1,084 subtests / four skips. Installed CLI/SDK MCP
+qualification passed in unrelated shadow-package and unprovisioned-worktree
+directories with the real native identity preserved. Supported default and
+Antigravity repeats are zero-operation; package, approvals and non-owned settings
+are unchanged. #39 is accepted through its owner's closing record. Independent
+Lineage #51 remains separately owned. #16 stays open for its full-score workflow
+observations; source and installed success do not establish a perfect session.
+

@@ -216,10 +216,10 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/issue-16-workflow",
-    "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+    "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
     "evidence": "evidence/issue-16-workflow.json",
     "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
-    "status": "COMBINED_SOURCE_PASS_INSTALLED_PENDING"
+    "status": "PASS_SCOPED_TRACKER16_OPEN"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
     "branch": "fix/issue-16-workflow",
-    "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
-    "last_verified_publication": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+    "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+    "last_verified_publication": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,13 +305,13 @@
     "branch": "fix/issue-16-workflow",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
-    "verified_remote_code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+    "verified_remote_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+    "verified_remote_code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-16-combined-candidate-checks",
+  "stage": "issue-16-workflow-installed-acceptance",
   "tests_current": {
     "focused": {
       "status": "PASS",
@@ -383,6 +383,13 @@
       "seconds": 261.94,
       "source_commit": "62b20401967767ce43c4ad71f433a081b4bb28d0",
       "scope": "Complete candidate after final #39 diagnostic; Lineage51 later changes only its own integration/docs/records and retains owner checks."
+    },
+    "post_lineage51_coherence": {
+      "status": "PASS",
+      "tests": 24,
+      "subtests": 20,
+      "seconds": 7.67,
+      "scope": "Regenerated candidate pointers plus launcher/context regressions after accepted Lineage51 merge. NP Python/launchers/schema/dependencies byte-identical to full-qualified62b2040; Lineage51 test/desktop limits remain its owner record."
     }
   },
   "transports": {
@@ -391,7 +398,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T02:46:39.218322-04:00",
+  "updated_at": "2026-10-31T02:59:56.439226-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2449,6 +2456,33 @@
         "evidence": "evidence/claude-lineage-desktop-reopen.json",
         "source_map_sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8",
         "status": "PASS_WITH_OPEN_ITEMS"
+      }
+    },
+    {
+      "stage": "issue-16-combined-candidate-checks",
+      "updated_at": "2026-10-31T02:46:39.218322-04:00",
+      "git": {
+        "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+        "last_verified_publication": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-16-workflow",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+        "verified_remote_code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+        "evidence": "evidence/issue-16-workflow.json",
+        "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
+        "status": "COMBINED_SOURCE_PASS_INSTALLED_PENDING"
       }
     }
   ],
