@@ -17,9 +17,11 @@ def readiness(journal, parent_key):
         if kind in ('claude-inbox', 'codex-native-queue'):
             from .compatibility import verify
             provider = peer['peer_key']['provider']
-            executable = Path.home()/('.local/bin/claude' if provider == 'claude'
-                                      else '.local/share/codex-mcp-manager/current/bin/codex')
-            value['runtime'] = verify(journal, provider, executable)
+            if provider=='codex':
+                from .compatibility import codex_inbox_runtime
+                value['runtime']=codex_inbox_runtime(journal,peer)
+                value['runtime_scope']='exact live recipient and queue helper'
+            else:value['runtime'] = verify(journal, provider, Path.home()/'.local/bin/claude')
             if kind == 'claude-inbox':
                 from .adapters.native_delivery import socket_endpoint
                 socket_endpoint(peer)

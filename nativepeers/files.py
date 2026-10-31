@@ -72,9 +72,21 @@ def advisory_lock(path: Path, timeout: float = 5):
 
 @contextlib.asynccontextmanager
 async def async_advisory_lock(path: Path, timeout: float = 5):
-    manager = advisory_lock(path, timeout)
-    await asyncio.to_thread(manager.__enter__)
+    private_directory(path.parent)
+    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     try:
+        info = os.fstat(fd)
+        if info.st_uid != os.getuid() or info.st_mode & 0o077 or not stat.S_ISREG(info.st_mode):
+            raise PermissionError("Unsafe lock file")
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise TimeoutError("Admission lock deadline exceeded") from None
+                await asyncio.sleep(0.01)
         yield
     finally:
-        await asyncio.to_thread(manager.__exit__, None, None, None)
+        os.close(fd)

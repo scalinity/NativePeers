@@ -82,6 +82,14 @@ def native_binaries(journal=None):
             records.extend(value.get('fingerprint',{}) for value in document.get('retained',{}).get('grok',{}).values())
             for record in records:
                 if record.get('path'):binaries[Path(record['path'])]='grok'
+            # Older qualified paths remain native boundaries after current moves.
+            # Caller identity still requires the exact live registration; this grants no execution approval.
+            codex_history=document.get('retained',{}).get('codex',{})
+            records=[document.get('providers',{}).get('codex',{})]
+            records.extend(value.get('fingerprint',{}) for value in codex_history.values())
+            records.extend(peer.get('runtime',{}) for value in codex_history.values() for peer in value.get('peers',[]))
+            for record in records:
+                if record.get('path'):binaries[Path(record['path'])]='codex'
         except (OSError,ValueError,TypeError,AttributeError):
             # Dropping retained paths could let a nested old Grok process borrow
             # an outer provider. Refuse binding while passive diagnostics remain usable.

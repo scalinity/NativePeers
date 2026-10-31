@@ -2,8 +2,10 @@ import asyncio
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from nativepeers.adapters.native_delivery import codex_queue
 from nativepeers.errors import PeerError
@@ -30,9 +32,9 @@ class QueueHelperTests(unittest.IsolatedAsyncioTestCase):
                 executable.write_text('#!/bin/sh\nexit 1\n')
                 executable.chmod(0o755)
                 peer={'home':str(home/'.codex'),'peer_key':{'native_session_id':new_id()}}
-                with patch('nativepeers.adapters.native_delivery.Path.home',return_value=home),patch('nativepeers.adapters.native_delivery.asyncio.create_subprocess_exec',side_effect=harmless_helper),patch('nativepeers.adapters.native_delivery.asyncio.wait_for',side_effect=fast_wait),patch('nativepeers.adapters.native_delivery.QUEUE_STOP_GRACE',.05,create=True):
-                    message={'from':{'kind':'peer','peer_key':'fixture'},'body':{'text':'non-model'},'message_id':new_id(),'exchange_id':new_id()}
-                    task=asyncio.create_task(codex_queue(peer,message))
+                with patch('nativepeers.compatibility.codex_inbox_runtime',return_value={'path':str(executable)}),patch('nativepeers.adapters.native_delivery.Path.home',return_value=home),patch('nativepeers.adapters.native_delivery.asyncio.create_subprocess_exec',side_effect=harmless_helper),patch('nativepeers.adapters.native_delivery.asyncio.wait_for',side_effect=fast_wait),patch('nativepeers.adapters.native_delivery.QUEUE_STOP_GRACE',.05,create=True):
+                    message={'from':{'kind':'peer','peer_key':'fixture'},'body':{'text':'non-model'},'message_id':new_id(),'exchange_id':new_id(),'expires_at':time.time()+60}
+                    task=asyncio.create_task(codex_queue(peer,message,journal=SimpleNamespace(root=home)))
                     readiness=asyncio.create_task(ready.wait())
                     done,_=await asyncio.wait({task,readiness},timeout=3,return_when=asyncio.FIRST_COMPLETED)
                     if task in done:
@@ -66,5 +68,8 @@ class QueueHelperTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_startup_failure_propagates_before_helper_readiness(self):
         with patch('nativepeers.adapters.native_delivery.launch_environment',side_effect=FileNotFoundError('fixture launch failed')):
-            with self.assertRaisesRegex(FileNotFoundError,'fixture launch failed'):
+            with self.assertRaises(PeerError) as error:
                 await asyncio.wait_for(self.exercise(),5)
+            self.assertEqual(error.exception.code,'ADMISSION_DEFERRED')
+            self.assertFalse(error.exception.may_have_received)
+            self.assertEqual(error.exception.details['cause'],'FileNotFoundError')
