@@ -53,7 +53,7 @@ try:
     session.type_line('/np doctor');time.sleep(4);snap('01-doctor', 2500)
     session.type_line(FANOUT);marks['fanout'] = time.time()
     session.wait_for(r'4 delegates', timeout=150);marks['rows'] = time.time();time.sleep(4);snap('02-rows')
-    session.wait_for(r'4 delegates · 0 running', timeout=480);marks['done'] = time.time();time.sleep(6);snap('03-done', 4000)
+    session.wait_for(r'4 delegates(?! · \d+ running)', timeout=480);marks['done'] = time.time();time.sleep(6);snap('03-done', 4000)
     session.type_line('/np');time.sleep(3);snap('04-np', 2500)
     session.type_line('/cost');time.sleep(4);snap('05-cost', 2500)
 finally:

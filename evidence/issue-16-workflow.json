@@ -77,6 +77,15 @@
       "subtests": 1084,
       "skipped": 4,
       "seconds": 281.2
+    },
+    "final_merged_source": {
+      "status": "PASS",
+      "tests": 1178,
+      "subtests": 1084,
+      "skipped": 4,
+      "seconds": 261.94,
+      "source_commit": "62b20401967767ce43c4ad71f433a081b4bb28d0",
+      "scope": "Complete candidate after final #39 diagnostic; Lineage51 later changes only its own integration/docs/records and retains owner checks."
     }
   },
   "operation_checks": [
