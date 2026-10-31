@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "accept/np-eval-20261030",
-    "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
-    "evidence": "evidence/np-eval-acceptance.json",
+    "branch": "fix/issue-7-silent-close",
+    "code_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
+    "evidence": "evidence/issue-7-silent-queue.json",
     "source_map_sha256": "45dd6c105855e33128f30affdd10fda515fe0dafc66f7317dad57c2adf71545f",
-    "status": "SOURCE_PASS_INSTALLED_DELTA_AND_DELIVERY_PENDING"
+    "status": "PARTIAL"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "4146b47bdf381194c1e947ad7a214b052168dc76",
-    "branch": "accept/np-eval-20261030",
-    "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
-    "last_verified_publication": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+    "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+    "branch": "fix/issue-7-silent-close",
+    "code_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
+    "last_verified_publication": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,40 +302,69 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "accept/np-eval-20261030",
+    "branch": "fix/issue-7-silent-close",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
-    "verified_remote_code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+    "verified_remote_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
+    "verified_remote_code_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Evaluation backlog installed acceptance and unavailable compact records",
+  "stage": "issue-7-silent-queue-source",
   "tests_current": {
     "focused": {
       "status": "PASS",
-      "passed": 61,
-      "subtests": 53,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_compact_results.py tests/unit/test_completion_context.py tests/unit/test_selected_context.py tests/unit/test_cli.py tests/contract/test_provider_fallback.py tests/contract/test_phase_admission.py tests/contract/test_mcp_ack_groups.py",
-      "evidence": "evidence/scratch/np-eval-acceptance/focused-source-fixed.txt"
+      "tests": 72,
+      "subtests": 114,
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_notification_policy.py tests/unit/test_notification_guard_hooks.py tests/unit/test_completion_delivery.py tests/unit/test_hook_identity.py tests/unit/test_owned_caller_identity.py tests/unit/test_install.py tests/unit/test_install_home.py tests/unit/test_readiness.py",
+      "private_artifact": "evidence/scratch/issue-7/focused-source-final.log"
     },
-    "regression_red": {
-      "status": "FAIL",
-      "expected": true,
-      "failed": 1,
-      "cause": "COMPLETED with NULL result_artifact_id omitted unavailable and invented empty finding/check counts",
-      "evidence": "evidence/scratch/np-eval-acceptance/missing-record-red.txt"
-    },
-    "full_suite": {
-      "status": "NOT_RUN"
-    },
-    "installed_final_delta": {
-      "status": "NOT_RUN"
-    },
-    "genuine_delayed_controller_visible_tail": {
+    "full": {
       "status": "NOT_RUN",
-      "dependency": "https://github.com/scalinity/NativePeers/issues/7"
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "scope": "Newly merged desktop and selected-context source plus notification fix and reviewed oracles"
+    },
+    "installed_native": {
+      "status": "NOT_RUN"
+    },
+    "standalone_tui": {
+      "status": "NOT_RUN"
+    },
+    "probe_offline": {
+      "status": "PASS",
+      "tests": 24,
+      "subtests": 29,
+      "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
+      "scope": "45 focused guard/probe tests, including24 standalone probe tests;29 subtests in the combined run"
+    },
+    "genuine_worker_probe_offline": {
+      "status": "PASS",
+      "tests": 42,
+      "subtests": 53,
+      "private_artifact": "evidence/scratch/issue-7/genuine-probe-stale-screen-fix.log"
+    },
+    "registered_owner_guard": {
+      "status": "PASS",
+      "tests": 31,
+      "subtests": 30,
+      "private_artifact": "evidence/scratch/issue-7/old-owner-boundary-focused.log"
+    },
+    "legacy_owner_probe_offline": {
+      "status": "PASS",
+      "tests": 45,
+      "private_artifact": "evidence/scratch/issue-7/probe-termination-cleanup.log"
+    },
+    "probe_cleanup_regressions": {
+      "status": "PASS",
+      "tests": 91,
+      "subtests": 57,
+      "private_artifact": "evidence/scratch/issue-7/reopen-audit-sequencing-focused-02.log"
+    },
+    "combined_preinstall_tui": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
+      "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
     }
   },
   "transports": {
@@ -344,7 +373,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T21:04:59.139753-04:00",
+  "updated_at": "2026-10-30T21:08:01.945925-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1673,6 +1702,33 @@
         "evidence": "evidence/issue-7-silent-queue.json",
         "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
         "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Evaluation backlog installed acceptance and unavailable compact records",
+      "updated_at": "2026-10-30T21:04:59.139753-04:00",
+      "git": {
+        "base_commit": "4146b47bdf381194c1e947ad7a214b052168dc76",
+        "branch": "accept/np-eval-20261030",
+        "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+        "last_verified_publication": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "accept/np-eval-20261030",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+        "verified_remote_code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "accept/np-eval-20261030",
+        "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
+        "evidence": "evidence/np-eval-acceptance.json",
+        "source_map_sha256": "45dd6c105855e33128f30affdd10fda515fe0dafc66f7317dad57c2adf71545f",
+        "status": "SOURCE_PASS_INSTALLED_DELTA_AND_DELIVERY_PENDING"
       }
     }
   ],

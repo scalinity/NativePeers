@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
-  "reviewed_commit": "4146b47bdf381194c1e947ad7a214b052168dc76",
-  "publication_branch": "accept/np-eval-20261030",
-  "updated_at": "2026-10-30T21:04:59.139753-04:00",
-  "current_record": "evidence/np-eval-acceptance.json",
+  "code_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
+  "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+  "publication_branch": "fix/issue-7-silent-close",
+  "updated_at": "2026-10-30T21:08:01.945925-04:00",
+  "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
       "files": {
@@ -163,12 +163,12 @@
         "integrations/claude/mod/np/tests/ui.test.tsx": "a288c757f64f04edacce09617462016931ed6a2546596162f8fec4bbb6ae3c54",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "integrations/claude/mod/np/types/index.d.ts": "e0ec78fa56885d8e106bad6f60ebb00b04b4c6b56a2c007a8d41dcc7973827db",
-        "integrations/claude/skills/nativepeers/SKILL.md": "3d25493c739eceadeb7e62420551120a921961ef26c1dc531d8fd6a0f3590757",
+        "integrations/claude/skills/nativepeers/SKILL.md": "06ac428b743793c6cdeaccff87dc583635ae10ba39f1ae24ed724106b8e623d9",
         "integrations/codex/skills/nativepeers/SKILL.md": "3d25493c739eceadeb7e62420551120a921961ef26c1dc531d8fd6a0f3590757",
         "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
       "file_count": 33,
-      "sha256": "2a662be1203a8a403a7c7069e5e7f693aa4eee1c3a275a6c48ae700973fd939b"
+      "sha256": "6489d689cd2a70f8de76a8fc241b4bb269fe7fa7156da7ca5daf255975fa3d99"
     },
     "tests": {
       "files": {
@@ -413,22 +413,15 @@
   },
   "operation_checks": [
     {
-      "provider": "claude",
-      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
-      "operation": "fresh-selected-Codex-parent-installed-Claude-analysis-review",
+      "operation": "policy/hook/installer/identity regressions",
+      "parent_context": "offline temporary journals and mocked native ownership",
       "status": "PASS",
-      "source_head": "4146b47bdf381194c1e947ad7a214b052168dc76",
-      "parent_context": "Codex native 01a18f75-5534-7db3-ae72-bdcf5e4bb667, owner executable SHA256 467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
-      "scope": "Exact complete selected packet; sonnet/claude-sonnet-5-5; analysis without Bash; useful reproduced defect. Skill reinstall and final-delta activation are separate."
+      "evidence": "evidence/scratch/issue-7/focused-source-final.log"
     },
     {
-      "provider": "codex",
-      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
-      "operation": "installed-bound-stdio-MCP-task-result-parity",
-      "status": "PASS",
-      "source_head": "4146b47bdf381194c1e947ad7a214b052168dc76",
-      "parent_context": "Separate installed native-caller facade process authenticated through this actual parent ancestry",
-      "scope": "task_status returned exact native parent; task_result compact data exactly matched installed CLI. CLI 2181 bytes; MCP text 2211 bytes; outer JSON-RPC 2494 bytes. No model submission/notification claims; owned facade exited 0."
+      "operation": "installed queue silent consumption and visible tail",
+      "parent_context": "fresh owned standalone receiver, candidate not activated",
+      "status": "NOT_RUN"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
