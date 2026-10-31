@@ -159,7 +159,7 @@ class Router:
         return dict(self.outcome(message_id), client_request_id=request_id)
 
     def admission_error(self, attempt_id, exception, *, submitted):
-        uncertain = submitted and (not isinstance(exception, PeerError) or exception.may_have_received)
+        uncertain = submitted and not getattr(exception,'definitely_unsubmitted',False) and (not isinstance(exception, PeerError) or exception.may_have_received)
         if uncertain:
             error = exception if isinstance(exception, PeerError) else PeerError('DELIVERY_UNKNOWN', type(exception).__name__, may_have_received=True)
             state = 'DELIVERY_UNKNOWN'

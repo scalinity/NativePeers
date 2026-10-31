@@ -173,3 +173,31 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         other=self.binary('other');other.write_bytes(self.old.read_bytes())
         later=self.register(other)
         with self.assertRaises(PeerError):codex_inbox_runtime(self.j,later)
+
+    async def test_runtime_lock_deadline_is_definite_and_same_id_retry_succeeds(self):
+        with advisory_lock(self.j.root/'locks/runtime.lock'),patch('nativepeers.adapters.native_delivery.QUEUE_LOCK_TIMEOUT',.03):
+            deferred=await self.send('lock-timeout')
+        self.assertEqual(deferred['state'],'ADMISSION_DEFERRED')
+        self.assertFalse(json.loads(deferred['attempt']['error_json'])['may_have_received'])
+        self.assertFalse((self.root/'launches').exists())
+        admitted=await self.send('lock-timeout')
+        self.assertEqual(admitted['message_id'],deferred['message_id'])
+        self.assertEqual(admitted['attempt']['attempt_id'],deferred['attempt']['attempt_id'])
+        self.assertEqual((self.root/'launches').read_text(),'old\n')
+
+    async def test_cancel_during_lock_wait_closes_fd_and_preserves_retry(self):
+        with advisory_lock(self.j.root/'locks/runtime.lock'):
+            task=asyncio.create_task(self.send('cancel-lock'))
+            await asyncio.sleep(.03);task.cancel()
+            with self.assertRaises(asyncio.CancelledError):await task
+        row=self.j.one("SELECT message_id FROM send_requests WHERE client_request_id='cancel-lock'")
+        self.assertEqual(self.core.router.outcome(row['message_id'])['state'],'ADMISSION_DEFERRED')
+        admitted=await asyncio.wait_for(self.send('cancel-lock'),1)
+        self.assertEqual(admitted['state'],'ACCEPTED_QUEUED')
+        self.assertEqual((self.root/'launches').read_text(),'old\n')
+
+    async def test_single_fresh_hash_and_budget_after_verification(self):
+        from nativepeers.compatibility import fingerprint as real_fingerprint
+        with patch('nativepeers.compatibility.fingerprint',wraps=real_fingerprint) as hashed:
+            await self.send('one-hash')
+        self.assertEqual(sum(c.kwargs.get('fresh',False) for c in hashed.call_args_list),1)

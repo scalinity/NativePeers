@@ -67,5 +67,8 @@ class QueueHelperTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_startup_failure_propagates_before_helper_readiness(self):
         with patch('nativepeers.adapters.native_delivery.launch_environment',side_effect=FileNotFoundError('fixture launch failed')):
-            with self.assertRaisesRegex(FileNotFoundError,'fixture launch failed'):
+            with self.assertRaises(PeerError) as error:
                 await asyncio.wait_for(self.exercise(),5)
+            self.assertEqual(error.exception.code,'ADMISSION_DEFERRED')
+            self.assertFalse(error.exception.may_have_received)
+            self.assertEqual(error.exception.details['cause'],'FileNotFoundError')
