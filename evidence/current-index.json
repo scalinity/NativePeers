@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "56f4643a685a08c0664ee2acf16fea56636b872c",
-  "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
-  "publication_branch": "docs/review-followup-acceptance-20261030",
-  "updated_at": "2026-10-30T23:15:03.563269-04:00",
-  "current_record": "evidence/review-followup-workflow.json",
+  "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
+  "reviewed_commit": "d7e6cef",
+  "publication_branch": "fix/lineage-pane-conversation",
+  "updated_at": "2026-10-31T00:42:35.394736-04:00",
+  "current_record": "evidence/claude-lineage-pane-conversation.json",
   "file_classes": {
     "product": {
       "files": {
@@ -143,22 +143,24 @@
         "integrations/claude/mod/np/hooks/bridge.ts": "c1bfaa1e8b356549c7d4ca09c6b7777f912161d1bc68c4d7dbda890aad1ea9c1",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
-        "integrations/claude/mod/np/hooks/mirror.ts": "7314b446500ee3482602a522b0fab7ff22673ce8d06a5bf0c1f848d6eace14e2",
-        "integrations/claude/mod/np/hooks/register.tsx": "84055c5a548c94d667c46cd5474beb63945e403c1e58472c74ae012830215a00",
-        "integrations/claude/mod/np/hooks/shadow.ts": "86e521c0b757f0a5f8f6bdad8a206ca4f853d6da642a5b05f74c4d846852a749",
-        "integrations/claude/mod/np/hooks/state.ts": "d8842d48666213d9810f9fcfe54bbecbe84bce39fe55b4aa023ac74459325fe2",
-        "integrations/claude/mod/np/hooks/ui.tsx": "4cee24d1bebfcd5b382db69bda3458462595c285739a492c3ed70cc7a1b4fc1c",
+        "integrations/claude/mod/np/hooks/mirror.ts": "e817a8fa2123db5f611601dcbe08cf0f8e6cda14debe6f30737ff95f02e937af",
+        "integrations/claude/mod/np/hooks/register.tsx": "9f19ebad7699c1e9f71eae6f3378de47c2272caaf950eeaa6ae51cbc135c1226",
+        "integrations/claude/mod/np/hooks/shadow.ts": "fb0c71ce3f6db403a07be6686bc5f076c025d2c942f0238bef927fd7d03ef9d6",
+        "integrations/claude/mod/np/hooks/state.ts": "7976eb2d6fc64f8000f8ab5699d74629452c9320501d82427a5a74f16d953204",
+        "integrations/claude/mod/np/hooks/transcript.ts": "952e6a9a4ffb5c69eb5bf36fd53cbb0140864f1ec648b2e5f703f61077a706cd",
+        "integrations/claude/mod/np/hooks/ui.tsx": "848215ffdea032eaf34c109e046f22fa95b5275e5bb9c19f5b61c68f6f64e9c1",
         "integrations/claude/mod/np/tests/agents.test.ts": "551f1ff62641ce2d615c98270080f5266899e588fb6833e5060089cf6188c7bc",
-        "integrations/claude/mod/np/tests/planner.test.ts": "cfb2a1c6febded80d34033d110dad57c17b1bc7b9df645f3ac90e0b89cded629",
-        "integrations/claude/mod/np/tests/ui.test.tsx": "de1b357a090fcf7a2f8d77049aee23e662482bd127707f5b3a771e96768944fd",
+        "integrations/claude/mod/np/tests/planner.test.ts": "41f71282a0ef622dfe12c1bbbf36052e9fbd2819f841963dcf44aa10607c9bd4",
+        "integrations/claude/mod/np/tests/transcript.test.ts": "b0257d69716bb752c7b855351f0d1ba21833c9a28d7c17c4f1e341a6943f7df7",
+        "integrations/claude/mod/np/tests/ui.test.tsx": "8a61f4dac905add0b5240666ca29e6e4a1ef217fbc0c559e54ea475e4cb61215",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
-        "integrations/claude/mod/np/types/index.d.ts": "f0fff07c023fc7829576cd38a9fdf247b80217037eba78a06eb69c15644700d2",
+        "integrations/claude/mod/np/types/index.d.ts": "eb030da72df6492d6bf0e6f6a4202a32503b9748092153c542baea09da6efcbb",
         "integrations/claude/skills/nativepeers/SKILL.md": "6129889358034762810da7a0ed330fceaa11ec03617d0dd320407a4005932100",
         "integrations/codex/skills/nativepeers/SKILL.md": "52d9454a032010db898160936e6892cfcbbe6777a675eaa94c53a2d6bf5b5998",
         "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
-      "file_count": 23,
-      "sha256": "cc96b6083c25551a700587d3fdc1b419c9cdc1fb34e7a2040e5d17a0d6fa1c43"
+      "file_count": 25,
+      "sha256": "03885ed61aa365d6b66d570970dc8bc64521df11a91996e5080204e38a15a6d1"
     },
     "tests": {
       "files": {
@@ -240,14 +242,15 @@
         "tests/integration/claude_mod/run_g8.py": "f314d46d2ba502d31534ffd6e667b9f82c075706633451e0c6ab8580b3269f90",
         "tests/integration/claude_mod/run_g9g10.py": "c474336cc96649f46756d332e05c9c3d7890e622e1a577be5f0fe8d8964c0eb0",
         "tests/integration/claude_mod/run_g9g10b.py": "d2e05618a9880ce4cb4c186884b773be5aab8d1f972ba17f76dd6b0f9b5eb457",
-        "tests/integration/claude_mod/run_handback.py": "78404005ba4eddc79b6fb883581cd7091dc8a124740ffb420c30a41a5fc9b775",
-        "tests/integration/claude_mod/run_live_acceptance.py": "c0fe9c876ec2dd242817d42a0cee28ac1e5ee3203cfb4c677a633bcdc0958bdb",
+        "tests/integration/claude_mod/run_handback.py": "c8355eb0a5b6a759d435c8f8351d9d79d5e7bbb54d9e189afd4fd3f9dac4db3e",
+        "tests/integration/claude_mod/run_live_acceptance.py": "ecf14c32d20a0a206c0138d5fad316720445cc8fd5f5136761258e980aa7ba21",
         "tests/integration/claude_mod/run_live_production.py": "d57f377f98dde2f71dc827a695aca9eb4e4117e4b14211b6b852d5413ac15b43",
-        "tests/integration/claude_mod/run_live_recovery.py": "0f5015f5e7c41a74fcb18296262efa6603f8eb009b8e1fa6f31a0286460cf77b",
+        "tests/integration/claude_mod/run_live_recovery.py": "5769620080bdd4edc179de576b22d22e2be631e34765f4bb8557fb94051b2635",
         "tests/integration/claude_mod/run_live_resume.py": "bdb1303b15521dad44183f85e85379f686cb39825d423b9b8a60feebdddab70e",
         "tests/integration/claude_mod/run_live_slice.py": "675fa6bcc890f7130c0ac687a0ae94f47ef462f8a1fdaf16b88dce3d0a417807",
         "tests/integration/claude_mod/run_mod_pty.py": "c3ec9e1bb728c285fd00e63172a01fd97f9d730bb6f79e61638a01cd182ce784",
         "tests/integration/claude_mod/run_modes.py": "049d2ec9a7180cbc933256b095eb608b9f04c7cf3d4a062b9cc8f83c50bd3ee0",
+        "tests/integration/claude_mod/run_pane_conversation.py": "6dcb13066de32d73d9ac5447628b9476c06d3f88f90cd946d10f9e69f7b48a16",
         "tests/integration/claude_mod/run_startup_race.py": "9d6f4e55a6989f544b540d2d0a711ea3b7246e8c4db8d8c15205d1db9e8f8ebe",
         "tests/integration/claude_mod/scenarios/adopt_grok.json": "ae57c7bef298f09e7b1882b6b8d4f6a8ce953a01636e42964048fc9cecca9e37",
         "tests/integration/claude_mod/scenarios/codex_basic.json": "a039390fb8370174eb213e92075b431a4289b4f528114ed24a16888c83da68af",
@@ -402,73 +405,28 @@
         "tests/unit/test_worktrees_and_contracts.py": "5a27c9593b3df25dbd7587e34f01e51461f6d6d54ba40f1590a93c9ab47b3d97",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 239,
-      "sha256": "d7381b94013ffa63b912d67fe2b7fc3d1034d7cc8e1cc6c9760185825e9e121a"
+      "file_count": 240,
+      "sha256": "4db3c9d3148334fcfc9ca3bd8a756088430d34ed613ba7dc765256e0d6508e0c"
     }
   },
   "operation_checks": [
     {
-      "operation": "complete-source-and-installed-suite",
-      "parent_context": "Isolated final source plus protected installed1125fa7",
-      "status": "PASS"
-    },
-    {
-      "operation": "owned-Claude-Codex-Antigravity-skill-install",
-      "parent_context": "Supported owned installers; three matching copies and zero-operation repeat",
-      "status": "PASS"
-    },
-    {
-      "operation": "installed-live-followup-four-phases",
-      "parent_context": "Disposable actual standalone parent, one owned history, localhost model fixture",
-      "status": "PASS",
-      "provider": "codex",
-      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10"
-    },
-    {
-      "operation": "installed-CLI-and-authenticated-MCP-facade-parity",
-      "parent_context": "Actual native-shell caller; official SDK facade, not separate stdio/UI",
-      "status": "PASS"
-    },
-    {
-      "operation": "current-selected-Codex-runtime-approval",
-      "parent_context": "Existing activation owner qualification; passive doctor exact approval match; this lane made no approval/activation change.",
-      "status": "PASS",
-      "provider": "codex",
-      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
-    },
-    {
-      "operation": "external-paid-Codex-inference-and-other-provider-UI",
-      "parent_context": "Outside this bounded fixture/review slice",
-      "status": "NOT_RUN"
-    },
-    {
-      "operation": "current-selected-Codex-live-followup-owner-qualification",
-      "parent_context": "Parallel owned fixture on bb45eb7; parent read-only hash/contract/receipt/native-history/ANSI-through-EOF validation; no new inference.",
-      "status": "PASS",
-      "provider": "codex",
-      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
-    },
-    {
       "provider": "claude",
       "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
-      "operation": "np-handback-harness",
+      "operation": "np-pane-conversation-harness",
       "status": "PASS",
-      "parent_context": "disposable interactive claude 2.1.314 in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input (auto mode's classifier requests refused by the tripwire)",
-      "scope": "One np:codex shadow: the engine's handback note seen, one SubagentHandback call carrying the report with ids, no enforcement row, the parent notified 1.0 s after the worker ended, not stopped by anyone; the pre-fix mod hung under the same run. With --refuse: three refused calls, the shadow's note, the run ended by itself and the parent was notified after 8.0 s.",
-      "source_head": "3be5d68",
-      "attribution": "Existing lineage-owner record, not rerun by workflow lane",
-      "record": "evidence/claude-lineage-desktop-handback.json"
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input (auto mode's classifier requests refused by the tripwire)",
+      "scope": "A finished np:codex worker's conversation opened by /np open in the pane; a message typed in its field reached the replay bridge once as human-claude-view and the worker's follow-up answer appeared in the same conversation. Handback runs on this engine: one call with no closing text outside the report; with --refuse, three tries and the run ended by itself.",
+      "source_head": "02d75c4"
     },
     {
       "provider": "claude",
       "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
-      "operation": "np-handback-harness-desktop-engine",
+      "operation": "np-pane-conversation-harness-desktop-engine",
       "status": "PASS",
-      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The same handback run on the desktop app's own engine: one SubagentHandback call, no enforcement row, the parent notified 1.0 s after the worker ended; the startup race run on this engine started one bridge and reported Bridge: Connected. With --refuse on this engine: three refused calls, the shadow's note, the parent notified after 8.0 s.",
-      "source_head": "3be5d68",
-      "attribution": "Existing lineage-owner record, not rerun by workflow lane",
-      "record": "evidence/claude-lineage-desktop-handback.json"
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same pane conversation run on the desktop app's own engine passed; handback deliver and refuse runs passed with no closing text outside the report.",
+      "source_head": "02d75c4"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
