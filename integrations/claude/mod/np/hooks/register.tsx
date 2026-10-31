@@ -7,7 +7,7 @@ import { BridgeError, connected, connectionGeneration, followLineage, heartbeat,
 import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
-import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, settleInterruptedDrafts, startTranscript } from './state'
+import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, settleInterruptedDrafts } from './state'
 import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
@@ -50,16 +50,16 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
     await setBridge($, { state: 'degraded', reason: `Claude Code ${version} is outside the verified range (minimum 2.1.309)`, since: 0 })
     return
   }
+  // A message whose answer a reload lost becomes uncertain, retried under its own id; this needs no bridge.
+  await settleInterruptedDrafts($)
   place = { cwd, npeer: o.npeerPath || '/Users/danny/.local/bin/npeer' }
   const launched = await startBridge($)
   if (launched && 'reason' in launched) { $.ui.toast(`NativePeers bridge unavailable: ${launched.reason}. Run /np doctor.`);return }
   if (launched) {
     await ready($, launched.hello);void followLineage($)
-    // A conversation still shown after a reload is followed again (module variables, and the loop, started over), and a
-    // message whose answer the reload lost becomes uncertain, retried under its own id.
-    await settleInterruptedDrafts($)
+    // A conversation still shown after a reload is followed again: module variables, and the loop, started over.
     const shown = (await getUi($)).viewing
-    if (shown) { await startTranscript($, shown);void followConversation($, shown) }
+    if (shown) void followConversation($, shown)
   }
   await pruneStore($)
 }

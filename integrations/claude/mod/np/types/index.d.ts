@@ -103,7 +103,7 @@ declare module 'claude-code' {
       shadow: StateFamily<Shaped<NpShadow>>
       shadows: string[]
       ui: NpUi
-      transcript: Shaped<NpTranscript>
+      transcript: StateFamily<Shaped<NpTranscript>>
       faults: NpFaults
     }
   }

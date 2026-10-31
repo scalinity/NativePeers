@@ -7,7 +7,7 @@ import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } f
 import { BridgeError, request, sleep } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
-import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, setTranscript, setUi, startTranscript } from './state'
+import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, reserveDraft, setTranscript, setUi } from './state'
 import { applyActivity } from './transcript'
 import type { NpBridge, NpFaults } from '../types'
 
@@ -120,23 +120,20 @@ const following = new Set<string>()
 // Shows a worker's conversation in the pane and keeps it current while it is shown.
 export async function openConversation($: EngineInterface, workerId: string, focus = false): Promise<void> {
   await setUi($, { paneOpen: true, viewing: workerId })
-  await startTranscript($, workerId)
   if (focus) await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true })
   void followConversation($, workerId)
 }
 
-// Long-polls the worker's activity while its conversation is on screen. Each round reads the conversation shown, so
-// reopening a worker continues from what it holds. Only opening a worker (or activation) starts its conversation: a
-// follower that finds another worker's shown ends. Five failed rounds in a row end it until the person opens the
-// worker or sends to it again.
+// Long-polls the worker's activity while its conversation is on screen, writing only that worker's conversation; a
+// reopened worker continues from what it holds. Five failed rounds in a row end it until the person opens the worker
+// or sends to it again (activation follows a conversation still shown after a reload).
 export async function followConversation($: EngineInterface, workerId: string): Promise<void> {
   if (following.has(workerId)) return
   following.add(workerId)
   try {
     let failures = 0
     while ((await getUi($)).viewing === workerId && failures < 5) {
-      const t = await getTranscript($)
-      if (t.workerId !== workerId) break
+      const t = await getTranscript($, workerId)
       try {
         const batch = await request($, 'GET', `/v1/workers/${workerId}/activity?after=${t.cursor}&wait_ms=20000&max=256`)
         const events = Array.isArray(batch.events) ? batch.events : []
@@ -157,13 +154,12 @@ export async function followConversation($: EngineInterface, workerId: string): 
 export async function sendToWorker($: EngineInterface, w: NpWorker, text: string): Promise<void> {
   if (!text.trim()) return
   // One message per worker at a time: an unresolved one keeps its request id, and the field keeps the new text.
-  const held = (await getUi($)).drafts?.[w.workerId]
-  if (held?.state === 'sending') { $.ui.toast('Your last message is still being sent.');return }
-  if (held?.state === 'uncertain') { $.ui.toast('Your last message may not have arrived: press Retry first.');return }
   const draft: NpDraft = { workerId: w.workerId, text, requestId: `np-pane:${w.workerId}:${await $.clock.now()}`, state: 'sending' }
-  // A new key draws an empty field.
-  await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
-  await putDraft($, draft)
+  if (!(await reserveDraft($, draft))) {
+    const held = (await getUi($)).drafts?.[w.workerId]
+    $.ui.toast(held?.state === 'uncertain' ? 'Your last message may not have arrived: press Retry first.' : 'Your last message is still being sent.')
+    return
+  }
   await deliverDraft($, w, draft)
 }
 
@@ -302,8 +298,8 @@ function conversationRow(R: any, r: NpRow, n: number, previous: NpRow | undefine
 async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: NpUi): Promise<any> {
   const R: any = $.ui.resolve(e)
   const { Box, Text, Button, Input } = R
-  const t = await getTranscript($), now = await $.clock.now()
-  const rows = t.workerId === w.workerId ? t.rows : []
+  const t = await getTranscript($, w.workerId), now = await $.clock.now()
+  const rows = t.rows
   const draft = ui.drafts?.[w.workerId]
   const running = ACTIVE.includes(w.status), name = NAMES[w.provider] ?? w.provider
   // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
@@ -315,7 +311,7 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
       <Text bold>{w.title}</Text>
       <Text dimColor>{name} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
       {details(w).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
-      {rows.length ? null : <Text dimColor>{t.workerId === w.workerId ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
+      {rows.length ? null : <Text dimColor>{t.cursor ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
       {rows.map((r, n) => conversationRow(R, r, n, rows[n - 1], name))}
       {draft?.state === 'sending' ? <Text dimColor>Sending…</Text> : null}
       {draft?.state === 'refused' ? <Text dimColor>Not delivered: {draft.reason ?? 'refused'}.</Text> : null}

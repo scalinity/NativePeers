@@ -25,7 +25,7 @@ function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, pa
       faults: { fallthrough: false },
       ui,
       shadow: e.id === 'a1' ? { shape: 'np-shadow-1', value: held } : undefined,
-      transcript: { shape: 'np-transcript-1', value: conversation },
+      transcript: e.id === 'W1' ? { shape: 'np-transcript-1', value: conversation } : undefined,
     }
     const value = values[e.key]
     return { value: value === undefined ? { value: undefined, version: 0 } : { value, version: 1 } }

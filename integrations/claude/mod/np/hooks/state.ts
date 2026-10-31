@@ -9,7 +9,8 @@ const lineageAtom = atom({ plugin: 'np', key: 'lineage' } as const, [] as NpWork
 const indexAtom = atom({ plugin: 'np', key: 'shadows' } as const, [] as string[])
 const faultsAtom = atom({ plugin: 'np', key: 'faults' } as const, { fallthrough: false } as NpFaults)
 const uiAtom = atom({ plugin: 'np', key: 'ui' } as const, { bandCollapsed: false, paneOpen: false } as NpUi)
-const transcriptAtom = atom({ plugin: 'np', key: 'transcript' } as const, { workerId: '', cursor: 0, rows: [] } as NpTranscript, { shape: 'np-transcript-1' })
+const transcripts = { plugin: 'np', key: 'transcript' } as const
+const NO_TRANSCRIPT: NpTranscript = { workerId: '', cursor: 0, rows: [] }
 const family = { plugin: 'np', key: 'shadow' } as const
 
 export const NONE: NpShadow = { agentId: '', generation: 0, provider: 'codex', title: '', phase: 'DETACHED', deliveryOwner: 'mirror', cursor: 0,
@@ -60,6 +61,17 @@ export async function clearDraft($: EngineInterface, workerId: string, requestId
     return { ...ui, drafts: rest }
   })
 }
+// Takes the worker's single message slot and draws an empty field, in one update; false while its last message is
+// unresolved (sending or uncertain), so two quick sends never both go out.
+export async function reserveDraft($: EngineInterface, draft: NpDraft): Promise<boolean> {
+  let reserved = false
+  await update($, uiAtom, ui => {
+    const held = ui.drafts?.[draft.workerId]
+    reserved = !(held && (held.state === 'sending' || held.state === 'uncertain'))
+    return reserved ? { ...ui, sent: (ui.sent ?? 0) + 1, drafts: { ...(ui.drafts ?? {}), [draft.workerId]: draft } } : ui
+  })
+  return reserved
+}
 // A draft still 'sending' after a reload lost its answer: it may have arrived, so only a retry under its id is safe.
 export async function settleInterruptedDrafts($: EngineInterface): Promise<void> {
   await update($, uiAtom, ui => {
@@ -71,16 +83,13 @@ export async function settleInterruptedDrafts($: EngineInterface): Promise<void>
   })
 }
 
-export async function getTranscript($: EngineInterface): Promise<NpTranscript> { return read($, transcriptAtom) }
-// Only the conversation still shown is written: a follower of a worker no longer viewed leaves the state alone.
-export async function setTranscript($: EngineInterface, value: NpTranscript): Promise<void> {
-  await update($, transcriptAtom, current => current.workerId === value.workerId ? value : current)
+// One conversation per worker: a follower writes only its own worker's, so showing another never races it.
+export async function getTranscript($: EngineInterface, workerId: string): Promise<NpTranscript> {
+  const t = await read($, atom({ ...transcripts, id: workerId }, NO_TRANSCRIPT, { shape: 'np-transcript-1' }))
+  return t.workerId === workerId ? t : { workerId, cursor: 0, rows: [] }
 }
-// Showing another worker starts its conversation empty; showing the same one again keeps what was read.
-export async function startTranscript($: EngineInterface, workerId: string): Promise<NpTranscript> {
-  let out: NpTranscript = { workerId, cursor: 0, rows: [] }
-  await update($, transcriptAtom, current => (out = current.workerId === workerId ? current : { workerId, cursor: 0, rows: [] }))
-  return out
+export async function setTranscript($: EngineInterface, value: NpTranscript): Promise<void> {
+  await update($, atom({ ...transcripts, id: value.workerId }, NO_TRANSCRIPT, { shape: 'np-transcript-1' }), () => value)
 }
 
 export async function getIndex($: EngineInterface): Promise<string[]> { return read($, indexAtom) }
