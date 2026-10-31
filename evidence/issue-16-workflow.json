@@ -257,7 +257,7 @@
     "Initial stale source-pointer failures, oversized definite pre-input recheck refusal, wrong merge guard and parent setup/fixture mistakes are retained with agent attribution. No accepted/uncertain operation was replayed.",
     "Publication excludes private history and local installation/validation records; canonical local main intentionally retains private history ancestry and is not pushed."
   ],
-  "code_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
+  "code_commit": "1654ba2765c117e3c9d1757921843323920382ae",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -294,7 +294,7 @@
     "nativepeers/cleanup.py": "76c2bc590e3678c962bfdd9d0f33d5f3104fa530a9c5de27cd4997daa2d67ab6",
     "nativepeers/cli.py": "4a7b083da3a2b074d71e6db1d3fc63e4bcc2f29e63d3037ef04bc3e3dd6d7d02",
     "nativepeers/compact.py": "5df3d9ce5f2377df3160e8b0a6e93de0ba575b1c027abd554aaa7955874c6a0d",
-    "nativepeers/compatibility.py": "7426b24c316f9b3f42b815a52b22725fe3227971bb36508cd240c4e85d83934b",
+    "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
     "nativepeers/completion_delivery.py": "13959875012275a48ecd428e5e45e9bff306540c1a6782e689424067f40fb6bd",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
     "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
@@ -368,8 +368,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "175a1fec4bb55cd354dbd00d60a44113f0dde9b7e7155f34c5dbec587694f1cd",
-  "updated_at": "2026-10-31T02:25:44.420143-04:00",
+  "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
+  "updated_at": "2026-10-31T02:38:38.268863-04:00",
   "helper_publication": {
     "pr": "https://github.com/scalinity/skills/pull/2",
     "merged": "e05c43fb5c5a6ee1f36acb3d14568896b363e342",
