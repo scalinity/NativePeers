@@ -280,10 +280,23 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         old=self.peer['owner'];outer=dict(old,pid=old['pid']+100,executable=str(self.new),start='outer')
         environment={'NPEER_BINDING':'','NPEER_BOOTSTRAP':'','CODEX_THREAD_ID':self.native}
         with patch('nativepeers.caller.matches',return_value=True),patch.dict(os.environ,environment):
-            with patch('nativepeers.caller.ancestry',return_value=[ProcessIdentity(**old),ProcessIdentity(**outer)]):
-                caller=bind_caller(self.j,Registry(self.j),allow_external=False)
-                self.assertEqual(caller.key,self.peer['handle'])
+            for stage in ('pending','approved','grant-path'):
+                if stage=='approved':self.approve()
+                elif stage=='grant-path':
+                    receipt=self.j.root/'compat/runtime.json';document=json.loads(receipt.read_text())
+                    document['retained']['codex'][self.prior['sha256']]['fingerprint']=fingerprint(self.new)
+                    atomic_json(receipt,document)
+                with self.subTest(stage=stage),patch('nativepeers.caller.ancestry',return_value=[ProcessIdentity(**old),ProcessIdentity(**outer)]):
+                    caller=bind_caller(self.j,Registry(self.j),allow_external=False)
+                    self.assertEqual(caller.key,self.peer['handle'])
             inner=dict(old,pid=old['pid']+200,start='unregistered-inner')
             with patch('nativepeers.caller.ancestry',return_value=[ProcessIdentity(**inner),ProcessIdentity(**old),ProcessIdentity(**outer)]),self.assertRaises(PeerError) as error:
                 bind_caller(self.j,Registry(self.j),allow_external=False)
             self.assertEqual(error.exception.code,'CALLER_UNBOUND')
+
+    def test_malformed_retained_caller_boundary_fails_closed(self):
+        from nativepeers.caller import native_binaries
+        receipt=self.j.root/'compat/runtime.json';document=json.loads(receipt.read_text())
+        document['retained']={'codex':None};atomic_json(receipt,document)
+        with self.assertRaises(PeerError) as error:native_binaries(self.j)
+        self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
