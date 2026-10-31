@@ -53,6 +53,7 @@ class LauncherTests(unittest.TestCase):
                         self.assertFalse(sentinel.exists())
 
     def test_explicit_candidate_module_execution_remains_candidate_bound(self):
-        result=subprocess.run([str(ROOT/'.venv/bin/python'),'-c','import nativepeers; print(nativepeers.__file__)'],cwd=ROOT,env=dict(os.environ,PYTHONPATH=str(ROOT)),capture_output=True,text=True)
+        env=dict(os.environ);env.pop('PYTHONPATH',None)
+        result=subprocess.run([sys.executable,'-c','import nativepeers; print(nativepeers.__file__)'],cwd=ROOT,env=env,capture_output=True,text=True)
         self.assertEqual(result.returncode,0,result.stderr)
         self.assertEqual(Path(result.stdout.strip()),ROOT/'nativepeers/__init__.py')
