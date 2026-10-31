@@ -216,9 +216,9 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/np-eval-backlog",
-    "code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+    "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
     "evidence": "evidence/np-eval-backlog.json",
-    "source_map_sha256": "596ae3fe6594e8e40e14c1c4c2e557990e85d3c1b758ad78dbe084c7b9f85610",
+    "source_map_sha256": "5319fe0f73d28c4a7b8f06190ac14fd4efb5c4247b905d3458f112184bdbc999",
     "status": "PARTIAL"
   },
   "feature_work": {
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "423025446bad41c6613daff4528b42ec0ba8bd02",
     "branch": "fix/np-eval-backlog",
-    "code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
-    "last_verified_publication": "ba2477a4c56599792eff6717a632c61790b4181b",
+    "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+    "last_verified_publication": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,8 +305,8 @@
     "branch": "fix/np-eval-backlog",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
-    "verified_remote_code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+    "verified_remote_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+    "verified_remote_code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -327,16 +327,17 @@
     },
     "full": {
       "status": "PASS",
-      "tests": 1099,
+      "tests": 1100,
       "skipped": 4,
       "subtests": 1048,
-      "seconds": 276.78,
-      "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
-      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-5.txt",
-      "scope": "Final reviewed combined product, launcher, integration and test source; installed acceptance is separate"
+      "seconds": 293.14,
+      "source_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-6.txt",
+      "scope": "Final product source including concurrent compact-membership handling; later publication edits are metadata only"
     },
     "installed_operations": {
-      "status": "NOT_RUN"
+      "status": "BLOCKED",
+      "reason": "Shared root/package/guard transition remains with issue7 owner; backlog operations are not installed in current4b98ea7 root"
     },
     "visible_final_tail": {
       "status": "BLOCKED",
@@ -370,6 +371,12 @@
       "status": "PASS",
       "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
       "scope": "Latest automated review reports no remaining findings; all four prior threads resolved after regressions"
+    },
+    "compact_membership": {
+      "status": "PASS",
+      "tests": 66,
+      "subtests": 45,
+      "private_artifact": "evidence/scratch/np-eval-backlog/compact-membership-check.txt"
     }
   },
   "transports": {
@@ -378,7 +385,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T19:52:31.728778-04:00",
+  "updated_at": "2026-10-30T20:07:55.625747-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1544,6 +1551,33 @@
         "code_commit": "9fae4414e7fd447922526d10c22fde7dce817f04",
         "evidence": "evidence/np-eval-backlog.json",
         "source_map_sha256": "f0780383832233843835279b2dc569c91f7bd3432980731358931a3dce330b2a",
+        "status": "PARTIAL"
+      }
+    },
+    {
+      "stage": "Evaluation backlog source and candidate-native qualification; installed dependency pending",
+      "updated_at": "2026-10-30T19:52:31.728778-04:00",
+      "git": {
+        "base_commit": "423025446bad41c6613daff4528b42ec0ba8bd02",
+        "branch": "fix/np-eval-backlog",
+        "code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+        "last_verified_publication": "ba2477a4c56599792eff6717a632c61790b4181b",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/np-eval-backlog",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+        "verified_remote_code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/np-eval-backlog",
+        "code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+        "evidence": "evidence/np-eval-backlog.json",
+        "source_map_sha256": "596ae3fe6594e8e40e14c1c4c2e557990e85d3c1b758ad78dbe084c7b9f85610",
         "status": "PARTIAL"
       }
     }

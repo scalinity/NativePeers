@@ -28,7 +28,12 @@ def result_view(service, status, policy, handle, *, results=True):
     selected = [t for t in status['tasks'] if t['task_id'] == handle] if handle != status['group_id'] else status['tasks'][-2:]
     rows = []
     for task in selected:
-        worker = next(w for w in status['workers'] if w['worker_id'] == task['worker_id'])
+        worker = next((w for w in status['workers'] if w['worker_id'] == task['worker_id']),None)
+        if worker is None:
+            rows.append(dict(task_id=task['task_id'],phase=phase(policy,task['task_id']),state=task['state'],
+                             result_artifact_id=task['result_artifact_id'],
+                             unavailable='Worker membership changed during this read; inspect this exact task again. No input was replayed.'))
+            continue
         row = dict(task_id=task['task_id'], phase=phase(policy, task['task_id']), state=task['state'],
                    worker_id=worker['worker_id'], provider=worker['provider'], native_id=worker['native_id'],
                    model_requested=clip(worker['model_requested'], 128), model_observed=None,
