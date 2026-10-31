@@ -105,3 +105,41 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(changed);self.assertEqual(value['tasks'][0]['task_id'],task)
         self.assertIn('Worker membership changed',value['tasks'][0]['unavailable'])
         self.assertEqual(value['tasks'][0]['state'],'RUNNING')
+
+    async def test_unavailable_and_absent_terminal_records_do_not_borrow_later_worker_identity(self):
+        earlier=self.add('FAILED',model_observed=None,native_id=None)
+        artifact=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(earlier,))['result_artifact_id']
+        (self.j.root/'artifacts'/artifact).unlink()
+        self.j.db.execute('UPDATE workers SET native_id=?,model_requested=?,model_observed=? WHERE worker_id=?',
+                          ('later-native','later-request','later-model',self.worker))
+        for view in (self.service.result(self.caller,earlier,compact=True),self.service.status(self.caller,earlier,compact=True)):
+            row=view['tasks'][0];self.assertIn('unavailable',row)
+            for field in ('provider','native_id','model_requested','model_observed'):self.assertIsNone(row[field])
+        canceled=self.add('CANCELED')
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=NULL WHERE task_id=?',(canceled,))
+        row=self.service.result(self.caller,canceled,compact=True)['tasks'][0]
+        for field in ('provider','native_id','model_requested','model_observed'):self.assertIsNone(row[field])
+
+    async def test_pending_task_can_still_name_its_live_worker_selection(self):
+        task=self.add('RUNNING')
+        row=self.service.result(self.caller,task,compact=True)['tasks'][0]
+        self.assertEqual(row['provider'],'claude');self.assertEqual(row['native_id'],self.native)
+        self.assertEqual(row['model_requested'],'sonnet');self.assertIsNone(row['model_observed'])
+
+    async def test_oversize_retained_identity_uses_an_explicit_bounded_reference(self):
+        task=self.add(native_id='猫'*4000,findings=[dict(severity='warning',summary='Inspect full retained finding')])
+        value=self.service.result(self.caller,task,compact=True)
+        envelope=dict(schema_version=1,ok=True,data=value,error=None,request_id=new_id())
+        self.assertLessEqual(len(json.dumps(envelope).encode()),4096)
+        row=value['tasks'][0];self.assertTrue(row['details_omitted'])
+        self.assertEqual(row['findings_count'],1);self.assertTrue(row['result_artifact_id'])
+        self.assertEqual(row['state'],'COMPLETED')
+        failed=self.add('FAILED',native_id='猫'*4000,error=dict(code='BUDGET_EXHAUSTED',may_have_received=True))
+        missing=self.add();artifact=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(missing,))['result_artifact_id']
+        (self.j.root/'artifacts'/artifact).unlink()
+        value=self.service.result(self.caller,self.group,compact=True)
+        self.assertLessEqual(len(json.dumps(dict(data=value,ok=True,schema_version=1,error=None,request_id=new_id())).encode()),4096)
+        self.assertEqual(value['tasks'][0]['task_id'],failed)
+        self.assertEqual(value['tasks'][0]['failure']['code'],'BUDGET_EXHAUSTED')
+        self.assertTrue(value['tasks'][0]['failure']['may_have_received'])
+        self.assertTrue(value['tasks'][1]['unavailable'])
