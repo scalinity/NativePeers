@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "stage": "Pane polish on the desktop app: a way back to a closed pane, an unfocused message field, controls apart from the field, follow-ups without the routing envelope, short tool output",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "d1ef0ad",
+  "scope": "The np mod: a one-line band offering the closed pane back on the desktop app (ui.close tracking, reconciled at activation), the conversation's controls moved to a top row and the field alone at the bottom with space above it, no autofocus on the desktop app, follow-up rows stripped of NativePeers' routing envelope, tool output cut to six lines of eighty columns, worker rows marked with ›. The desktop app run needs the person after install.",
+  "finding": {
+    "observed": "Desktop check after PR #44 (Auto, engine 2.1.309), 2026-10-31 12:57-1:00 AM EDT. The message field kept a blue focus ring. Copy IDs sat flush under the field. After the pane was closed nothing offered it back. A follow-up row showed NativePeers' routing envelope (peer key, message, exchange, expiry and envelope hash). An ls -la output filled the narrow pane with wrapped lines.",
+    "cause": "The field took autofocus and the desktop app rings a focused field; InputProps offers no styling, so the ring shows only while the person types once autofocus is gone. The band passed on the desktop app whenever it drew, pane open or not. The row used task.started's input_preview, which is the rendered message the worker receives (presentation.render)."
+  },
+  "tests": {
+    "mod": {
+      "status": "PASS",
+      "passed": 42,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "pane_conversation_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_pane_conversation.py",
+      "result": "opened in the pane, tool row, closing note, the typed message reached the replay bridge once, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+    },
+    "handback_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
+      "result": "deliver: one call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself"
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": { "starts": 1, "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)" }
+    },
+    "full_suite": {
+      "status": "NOT_RUN",
+      "note": "No Python module changed; the last full run (1119 passed, 31 failed, the standing failure set) was on 27bc698."
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-pane-polish-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The pane conversation run with the relaid conversation and its top-row controls, and handback deliver and refuse runs, passed on this engine.",
+      "source_head": "fix/lineage-pane-polish"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-pane-polish-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The pane conversation run passed on the desktop app's own engine.",
+      "source_head": "fix/lineage-pane-polish"
+    }
+  ],
+  "independent_review": {
+    "result": "NOT_RUN",
+    "note": "The lane's 32 worker inputs were spent on the earlier rounds, so this change has tests and probes but no independent review."
+  },
+  "limitations": [
+    "The desktop app rings a focused text field and InputProps offers no styling: the ring shows while the person types.",
+    "The desktop app gives a mod no place in its sidebar; a closed pane comes back through the one-line band or /np pane.",
+    "The desktop app run is verified only by the person after install; harness runs draw the pane on the terminal surface."
+  ]
+}
