@@ -18,7 +18,7 @@ class Core:
         from pathlib import Path
         for provider,kind in [('claude','claude-inbox'),('codex','codex-native-queue'),('grok','grok-native-hook')]:
             adapter=self.router.adapters[kind]
-            async def checked(peer,message,provider=provider,adapter=adapter):
+            async def checked(peer,message,provider=provider,adapter=adapter,*,admission_deadline=None):
                 if provider=='grok':
                     from .grok import executable as selected_grok
                     executable=selected_grok()
@@ -34,7 +34,7 @@ class Core:
                         except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
                         budget.admit(reservation)
                         journal.event(message['message_id'],'live-peer-reservation',{'reservation':reservation,'native_id':peer['peer_key']['native_session_id']})
-                if provider=='codex':return await adapter(peer,message,journal=journal,before_launch=reserve)
+                if provider=='codex':return await adapter(peer,message,journal=journal,before_launch=reserve,admission_deadline=admission_deadline)
                 reserve()
                 return await adapter(peer,message)
             self.router.adapters[kind]=checked

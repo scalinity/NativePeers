@@ -30,7 +30,7 @@ async def stop_queue_writer(process,owner):
             raise PeerError('DELIVERY_UNKNOWN','Queue helper cleanup could not be confirmed; reconcile the owned attempt',may_have_received=True) from None
 
 
-async def codex_queue(peer, message, *, journal, before_launch=None):
+async def codex_queue(peer, message, *, journal, before_launch=None, admission_deadline=None):
     from ..compatibility import codex_inbox_runtime
     launching=False
     try:
@@ -39,7 +39,9 @@ async def codex_queue(peer, message, *, journal, before_launch=None):
         rendered=render(message)
         async with async_advisory_lock(journal.root/'locks/runtime.lock',timeout=QUEUE_LOCK_TIMEOUT):
             runtime=codex_inbox_runtime(journal,peer)
-            require(time.time()<message['expires_at'],'EXPIRED_BEFORE_SUBMISSION','Message expired while waiting for native admission')
+            now=time.time()
+            require(now<message['expires_at'],'EXPIRED_BEFORE_SUBMISSION','Message expired while waiting for native admission')
+            require(admission_deadline is None or now<admission_deadline,'EXPIRED_BEFORE_SUBMISSION','Controller lifetime ended while waiting for native admission')
             if before_launch:before_launch()
             # Cancellation/unknown failure after this point may have created a helper.
             launching=True

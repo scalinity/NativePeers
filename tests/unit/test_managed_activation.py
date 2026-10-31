@@ -169,6 +169,24 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.j.all("SELECT * FROM events WHERE kind='live-peer-reservation'"),[])
         self.assertEqual(json.loads(ledger.read_text())['reservations'],[])
 
+    async def test_runtime_lock_wait_preserves_controller_deadline(self):
+        import time
+        from types import SimpleNamespace
+        from nativepeers.routing import Router
+        for raw in (False,True):
+            with self.subTest(raw_router=raw):
+                offset=0
+                router=Router(self.j,Registry(self.j)) if raw else self.core.router
+                with patch('nativepeers.adapters.native_delivery.time',SimpleNamespace(time=lambda:time.time()+offset)):
+                    lock=advisory_lock(self.j.root/'locks/runtime.lock');lock.__enter__()
+                    task=asyncio.create_task(router.send(self.caller,self.peer['handle'],'deadline',client_request_id='deadline-'+str(raw),expires_seconds=3600,admission_deadline=time.time()+60))
+                    try:
+                        await asyncio.sleep(.03);self.assertFalse(task.done());offset=120
+                    finally:lock.__exit__(None,None,None)
+                    outcome=await task
+                self.assertEqual(outcome['state'],'EXPIRED_BEFORE_SUBMISSION')
+                self.assertFalse((self.root/'launches').exists())
+
     def test_failed_or_interrupted_approval_preserves_whole_receipt_and_selection(self):
         self.select(self.new)
         receipt=self.j.root/'compat/runtime.json';before=receipt.read_bytes()
@@ -313,6 +331,27 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
             with patch('nativepeers.caller.ancestry',return_value=[ProcessIdentity(**inner),ProcessIdentity(**old),ProcessIdentity(**outer)]),self.assertRaises(PeerError) as error:
                 bind_caller(self.j,Registry(self.j),allow_external=False)
             self.assertEqual(error.exception.code,'CALLER_UNBOUND')
+
+    async def test_existing_live_acceptance_caller_guards_codex_and_keeps_claude_signature(self):
+        import importlib.util
+        source=Path(__file__).resolve().parents[1]/'live/final_batch.py'
+        spec=importlib.util.spec_from_file_location('issue39_final_batch',source)
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        ledger=self.root/'evidence/live-budget.json'
+        atomic_json(ledger,dict(active_intervals=[],ceiling={'active_seconds':3600,'submitted_turns':4},reservations=[],reserved_turns=0,consumed_turns=0,outstanding_native_requests=[]))
+        async def claude_only(peer,envelope):
+            self.assertGreater(envelope['expires_at'],envelope['created_at'])
+            return {'stage':'INGESTED','evidence_kind':'non-model-unit-fixture'}
+        with patch.object(module,'ROOT',self.root),patch.object(module,'STATE',self.j.root),patch.object(module,'parents',return_value={'codex':self.peer,'claude':self.peer}),patch.object(module,'claude_inbox',side_effect=claude_only):
+            await module.submit('codex','non-model helper control','guarded codex')
+            self.assertEqual((self.root/'launches').read_text(),'old\n')
+            self.assertEqual(len(json.loads(ledger.read_text())['reservations']),1)
+            before=ledger.read_bytes();self.old.write_text('modified unapproved executable')
+            with self.assertRaises(PeerError):await module.submit('codex','must not launch','refused codex')
+            self.assertEqual(ledger.read_bytes(),before)
+            self.assertEqual((self.root/'launches').read_text(),'old\n')
+            await module.submit('claude','non-model signature control','unchanged claude')
+            self.assertEqual(len(json.loads(ledger.read_text())['reservations']),2)
 
     def test_malformed_retained_caller_boundary_fails_closed(self):
         from nativepeers.caller import native_binaries

@@ -91,7 +91,8 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
                     (group_id,generation,self.caller.key,'push','UNCLAIMED',None,None,new_id(),policy['controller_generation']))
                 group=Group(self.j,group_id)
             core=Core(self.j)
-            async def deliver(peer,message):
+            async def deliver(peer,message,*,admission_deadline=None):
+                self.assertIsNotNone(admission_deadline)
                 if code=='CAPABILITY_MISMATCH':raise PeerError(code,'exact fixture mismatch')
                 return {'stage':'REJECTED' if code=='PROVIDER_POLICY_REFUSED' else 'HELD','evidence_kind':'fixture-policy'}
             core.router.adapters['codex-native-queue']=deliver
@@ -193,7 +194,8 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
             spawned=await Core(self.j).delegation.spawn(self.caller,{'completion_mode':'push','workers':[{'provider':'claude','title':'deferred','task':'fixture'}]})
         self.j.db.execute("UPDATE tasks SET state='COMPLETED'")
         group=Group(self.j,spawned['group_id']);core=Core(self.j);calls=[]
-        async def deferred(peer,message):
+        async def deferred(peer,message,*,admission_deadline=None):
+            self.assertIsNotNone(admission_deadline)
             calls.append(message['message_id'])
             raise PeerError('CAPABILITY_MISMATCH','candidate awaits qualification',details={'compatibility_state':'UPDATE_UNTESTED'})
         core.router.adapters['codex-native-queue']=deferred

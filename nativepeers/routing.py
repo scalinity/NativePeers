@@ -147,7 +147,9 @@ class Router:
                     db.execute("UPDATE attempts SET state='SUBMITTING',error_json=NULL,ended_at=NULL WHERE attempt_id=?", (attempt_id,))
                 submitted = True
                 try:
-                    receipt = await adapter(peer, envelope)
+                    if admission_deadline is not None and attempt['transport']=='codex-native-queue':
+                        receipt = await adapter(peer,envelope,admission_deadline=admission_deadline)
+                    else:receipt = await adapter(peer,envelope)
                     self.record(message_id, attempt_id, receipt, peer)
                 except BaseException as exception:
                     self.admission_error(attempt_id, exception, submitted=True)
