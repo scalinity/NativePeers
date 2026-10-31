@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { controlTarget } from '../hooks/ui'
+import { controlTarget, headline } from '../hooks/ui'
 
 const workers = [
   { workerId: 'W1', groupId: 'G1', generation: 1, provider: 'codex', modelRequested: 'gpt-6.1-sol', effort: 'high', title: 'Codebase review', status: 'running', startedAt: 1000, agentId: 'a1' },
@@ -15,7 +15,7 @@ const conversation = { workerId: 'W1', cursor: 7, rows: [
   { kind: 'you', text: 'Also count them.', item: 'in:r1' },
 ] }
 
-function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, paneOpen: false }, held: Record<string, unknown> = shadow) {
+function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, paneOpen: false }, held: Record<string, unknown> = shadow, talk: unknown = conversation) {
   on('clock.now', () => ({ value: 61000 }))
   on('state.get', ($: any, e: any) => {
     const values: Record<string, unknown> = {
@@ -25,7 +25,7 @@ function state(on: any, ui: Record<string, unknown> = { bandCollapsed: false, pa
       faults: { fallthrough: false },
       ui,
       shadow: e.id === 'a1' ? { shape: 'np-shadow-1', value: held } : undefined,
-      transcript: e.id === 'W1' ? { shape: 'np-transcript-1', value: conversation } : undefined,
+      transcript: e.id === 'W1' ? { shape: 'np-transcript-1', value: talk } : undefined,
     }
     const value = values[e.key]
     return { value: value === undefined ? { value: undefined, version: 0 } : { value, version: 1 } }
@@ -48,9 +48,8 @@ test('the band summarizes delegates and offers Stop all and Open on the terminal
   await ui.unmount()
 })
 
-test('on the desktop app the band is left to the engine while the pane beside the conversation is open', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: true })
-  on('ui.panes', () => ({ value: [{ id: 'np-lineage', title: 'NativePeers', isShown: true, isFocused: false, isPlaced: true }] }))
+test('on the desktop app nothing draws above the prompt: the band is left to the engine', async ($, on) => {
+  state(on)
   // This hook stands for the engine's own drawing beneath the mod.
   on('ui.render', ($: any, e: any) => { const { Text } = $.ui.resolve(e);return <Text>engine</Text> })
   const ui = await $.ui.mount({ ...band({}), surface: 'desktop' } as any)
@@ -59,14 +58,31 @@ test('on the desktop app the band is left to the engine while the pane beside th
   await ui.unmount()
 })
 
-test('on the desktop app a closed pane is offered back in one line above the prompt', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: false })
-  on('ui.panes', () => ({ value: [] }))
-  const ui = await $.ui.mount({ ...band({}), surface: 'desktop' } as any)
-  expect(await ui.find({ type: 'Text', text: /⟐ np · 2 delegates · 1 running · 1 done/ })).toBeTruthy()
-  expect(await ui.find({ type: 'Button', key: 'reopen' })).toBeTruthy()
-  // Only the way back: no Stop all, Pane or Open rows in this line.
-  for (const key of ['stopall', 'pane', 'open-W1']) expect(await ui.find({ type: 'Button', key })).toBeFalsy()
+const footer = (surface: string, modes: string[] = []) => ({ plugin: 'np', component: 'SessionMode', requestId: 'session-mode', surface, props: { modes } }) as any
+
+test('on the desktop app the footer\'s np entry is a menu: the summary closed, the pane and each conversation open', async ($, on) => {
+  state(on)
+  const opened: any[] = []
+  on('ui.open', ($: any, e: any) => { opened.push(e);return { value: { isPlaced: true } } })
+  const writes: any[] = []
+  on('state.set', ($: any, e: any) => { writes.push(e);return { value: { isSet: true, version: 2 } } })
+  const ui = await $.ui.mount(footer('desktop', ['focus']))
+  const menu: any = await ui.find({ type: 'Select', key: 'np-menu' })
+  const options = (menu?.props?.options ?? menu?.options ?? []).map((o: any) => o.label)
+  expect(options).toEqual(['np · 1 running · 1 done', 'Open NativePeers', 'Easy wins · Grok · Completed', 'Codebase review · Codex · Running'])
+  expect(await ui.find({ type: 'Text', text: /^focus$/ })).toBeTruthy()
+  await $.ui.select({ plugin: 'np', key: 'np-menu', value: 'w:W2' } as any)
+  expect(opened.map(e => e.id)).toEqual(['np-lineage'])
+  expect(writes.some(w => w.key === 'ui' && w.value?.viewing === 'W2' && w.value?.paneOpen === true)).toBe(true)
+  await ui.unmount()
+})
+
+test('the footer is the engine\'s own on the terminal', async ($, on) => {
+  state(on)
+  on('ui.render', ($: any, e: any) => { const { Text } = $.ui.resolve(e);return <Text>engine</Text> })
+  const ui = await $.ui.mount(footer('terminal'))
+  expect(await ui.find({ type: 'Select', key: 'np-menu' })).toBeFalsy()
+  expect(await ui.find({ type: 'Text', text: /^engine$/ })).toBeTruthy()
   await ui.unmount()
 })
 
@@ -87,7 +103,7 @@ test('the pane lists workers by title, each opening its conversation; on the des
     const ui = await $.ui.mount(pane(surface))
     for (const key of ['sel-W1', 'sel-W2']) expect(await ui.find({ type: 'Button', key })).toBeTruthy()
     expect(await ui.find({ type: 'Text', text: /Codex · Running · 1m00s/ })).toBeTruthy()
-    expect(await ui.find({ type: 'Text', text: /Press a worker to read its conversation and message it/ })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /Press a worker/ })).toBeFalsy()
     // No ids, no heading repeating the pane's title, no resume command and no pointer elsewhere.
     expect(await ui.find({ type: 'Text', text: /worker W2|group G2|NativePeers lineage|Background tasks/ })).toBeFalsy()
     expect(await ui.find({ type: 'Button', key: 'resume' })).toBeFalsy()
@@ -100,10 +116,17 @@ test('a worker\'s conversation shows what it was asked, said and did, with a fie
   state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 2 })
   for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount(pane(surface))
-    expect(await ui.find({ type: 'Button', key: 'back' })).toBeTruthy()
+    const back: any = await ui.find({ type: 'Button', key: 'back' })
+    expect(back?.props?.label ?? back?.label).toBe('← Workers')
     expect(await ui.find({ type: 'Text', text: /^Codebase review$/ })).toBeTruthy()
-    expect(await ui.find({ type: 'Text', text: /Model: GPT-6.1 Sol, high effort/ })).toBeTruthy()
-    for (const text of [/Task from main/, /▸ ls -A1 · exit 0/, /^Codex$/, /^You$/]) expect(await ui.find({ type: 'Text', text })).toBeTruthy()
+    expect(await ui.find({ type: 'Text', text: /^Codex · GPT-6.1 Sol high · Running · 1m00s$/ })).toBeTruthy()
+    for (const text of [/^Task$/, /^Codex$/, /^You$/]) expect(await ui.find({ type: 'Text', text })).toBeTruthy()
+    // On the desktop app a tool step is one line that opens on its output. The terminal keeps a pane's focus ring by
+    // position, so no button is drawn among the rows there: the step is text with its output beneath.
+    const step: any = await ui.find({ type: 'Button', key: 'tool-1' })
+    expect(step?.props?.label ?? step?.label).toBe(surface === 'desktop' ? '✓ ls -A1 · exit 0  ▸' : undefined)
+    expect(Boolean(await ui.find({ type: 'Text', text: /^✓ ls -A1 · exit 0$/ }))).toBe(surface !== 'desktop')
+    expect(Boolean(await ui.find({ type: 'Code' }))).toBe(surface !== 'desktop')
     const field: any = await ui.find({ type: 'Input', key: 'say-2' })
     expect(field).toBeTruthy()
     // The desktop app rings a focused field: it is not focused there until the person picks it.
@@ -159,4 +182,24 @@ test('a draft belongs to its worker: another worker\'s unresolved message shows 
   expect(await ui.find({ type: 'Button', key: 'p-retry' })).toBeFalsy()
   expect(await ui.find({ type: 'Text', text: /Delivery uncertain|Sending/ })).toBeFalsy()
   await ui.unmount()
+})
+
+test('an opened tool step shows its output, and a long message folds behind Show more', async ($, on) => {
+  const long = Array.from({ length: 30 }, (_, n) => 'line ' + n).join('\n')
+  const talk = { ...conversation, rows: [...conversation.rows, { kind: 'text', text: long, item: 'm:1:m9' }] }
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', expanded: ['W1|0:1'] }, shadow, talk)
+  const ui = await $.ui.mount(pane('desktop'))
+  const out: any = await ui.find({ type: 'Code' })
+  expect(out?.props?.source ?? out?.source).toBe('.git\nREADME.md')
+  const step: any = await ui.find({ type: 'Button', key: 'tool-1' })
+  expect(step?.props?.label ?? step?.label).toBe('✓ ls -A1 · exit 0  ▾')
+  const more: any = await ui.find({ type: 'Button', key: 'more-4' })
+  expect(more?.props?.label ?? more?.label).toBe('Show more')
+  expect(await ui.find({ type: 'Markdown', text: /line 20/ })).toBeFalsy()
+  await ui.unmount()
+})
+
+test('a worker\'s headline names the model asked for when another answered', () => {
+  expect(headline({ ...workers[0], modelObserved: 'gpt-6.1-mini', profile: 'analysis' } as any, 61000)).toMatch(/ \(asked for GPT-6.1 Sol\) · read-only · Running · 1m00s$/)
+  expect(headline({ ...workers[0], modelObserved: 'gpt-6.1-sol' } as any, 61000)).not.toMatch(/asked for/)
 })

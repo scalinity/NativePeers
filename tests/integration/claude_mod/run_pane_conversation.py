@@ -1,8 +1,8 @@
 """Zero-API: a worker's conversation in the NativePeers pane. The scripted parent starts one np:codex agent over the
 replay bridge. Once Claude Code has dropped the finished agent (about 30 s after it ends), /np open 1 shows the
 conversation in the pane, and a message typed in its field reaches the worker, which answers in the same
-conversation. Expect the worker's tool and closing note, the person's message and the worker's follow-up answer on
-screen, and the replay bridge to receive the message once, as a person's follow-up. Sessions start in auto mode, so the
+conversation. Expect the worker's tool step (✓ and its command) and closing mark, the person's message and the
+worker's follow-up answer on screen, no toast about the send, and the replay bridge to receive the message once, as a person's follow-up. Sessions start in auto mode, so the
 driver stands in for the classifier's approval of the scripted Agent call, and the classifier's own requests are
 refused by the tripwire; a request naming a shadow's model must never occur. Usage: run_pane_conversation.py [MOD_FOLDER]"""
 import json, os, re, sys, tempfile, time
@@ -29,8 +29,9 @@ try:
     inputs = [r for r in replay if r.get('kind') == 'input']
     result = {
         'opened_in_pane': opened,
-        'tool_row': '▸ pytest -q' in screen,
-        'closing_note': 'Completed.' in screen,
+        'tool_row': bool(re.search(r'✓ pytest -q', screen)),
+        'closing_note': '✓ Completed' in screen,
+        'no_send_toast': not re.search(r'Sent to Codex|picking the conversation back up', screen),
         'input_reached_worker_once': len(inputs) == 1 and (inputs[0].get('body') or {}).get('origin') == 'human-claude-view',
         # The docked pane sits behind a │ border.
         'you_row': bool(re.search(r'(^|[\s│])You\s*$', screen, re.M)) and 'Also count them' in screen,

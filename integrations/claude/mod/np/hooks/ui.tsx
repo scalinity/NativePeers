@@ -7,8 +7,8 @@ import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } f
 import { BridgeError, request, sleep } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
-import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, reserveDraft, setTranscript, setUi } from './state'
-import { applyActivity, excerpt } from './transcript'
+import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, reserveDraft, setTranscript, setUi, toggleExpanded } from './state'
+import { applyActivity, clampMessage, excerpt } from './transcript'
 import type { NpBridge, NpFaults } from '../types'
 
 export const PANE_ID = 'np-lineage'
@@ -27,14 +27,14 @@ export function summary(c: ReturnType<typeof counts>, bridge: NpBridge, faults: 
     : bridge.state !== 'ready' ? ` · bridge ${bridge.state} — /np doctor` : '')
 }
 
-// The selected worker in words; its ids are one press away (Copy IDs), not on screen.
-export function details(w: NpWorker): string[] {
-  const asked = w.modelRequested && w.modelObserved && w.modelObserved !== w.modelRequested ? ` (asked for ${modelLabel(w.modelRequested, w.provider)})` : ''
-  const access = w.profile === 'analysis' ? 'Read-only' : w.profile === 'workspace' ? 'Can edit its own workspace' : w.profile
+// A worker in one line of words: provider, model and effort, access, status, time and output. Its ids are one press
+// away (Copy IDs), not on screen.
+export function headline(w: NpWorker, now: number): string {
   const id = w.modelObserved ?? w.modelRequested
-  return [`Model: ${id ? modelLabel(id, w.provider) : 'the provider\'s default'}${w.effort ? `, ${w.effort} effort` : ''}${asked}`,
-    access ? `Access: ${access}` : '', w.outputTokens ? `Output: ${w.outputTokens} tokens` : '', w.latest ? `Latest: ${w.latest}` : '',
-    w.mirrorOwner === 'other' ? 'Shown in another Claude session.' : ''].filter(Boolean)
+  const asked = w.modelObserved && w.modelRequested && w.modelObserved !== w.modelRequested ? ` (asked for ${modelLabel(w.modelRequested, w.provider)})` : ''
+  const access = w.profile === 'analysis' ? 'read-only' : w.profile === 'workspace' ? 'can edit its own workspace' : w.profile
+  return [NAMES[w.provider] ?? w.provider, id ? modelLabel(id, w.provider) + (w.effort ? ' ' + w.effort : '') + asked : '', access ?? '', statusLabel(w.status),
+    elapsed(w, now), w.outputTokens ? `${w.outputTokens} tokens` : ''].filter(Boolean).join(' · ')
 }
 
 function elapsed(w: NpWorker, now: number): string {
@@ -127,6 +127,12 @@ export async function openConversation($: EngineInterface, workerId: string, foc
   await setUi($, { paneOpen: true, viewing: workerId })
   if (focus) await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true })
   void followConversation($, workerId)
+  await scrollToEnd($)
+}
+
+// Keeps the newest row and the message field in view. A pane not drawn answers { deny }, which leaves nothing to do.
+async function scrollToEnd($: EngineInterface): Promise<void> {
+  try { await $.ui.scroll({ in: PANE_ID, to: 'end' } as any) } catch { /* nothing to scroll */ }
 }
 
 // Long-polls the worker's activity while its conversation is on screen, writing only that worker's conversation; a
@@ -142,7 +148,7 @@ export async function followConversation($: EngineInterface, workerId: string): 
       try {
         const batch = await request($, 'GET', `/v1/workers/${workerId}/activity?after=${t.cursor}&wait_ms=20000&max=256`)
         const events = Array.isArray(batch.events) ? batch.events : []
-        if (events.length) await setTranscript($, applyActivity(t, events))
+        if (events.length) { await setTranscript($, applyActivity(t, events));await scrollToEnd($) }
         failures = 0
       } catch {
         failures += 1;await sleep($, 2000)
@@ -158,13 +164,11 @@ export async function followConversation($: EngineInterface, workerId: string): 
 // until the bridge answers.
 export async function sendToWorker($: EngineInterface, w: NpWorker, text: string): Promise<void> {
   if (!text.trim()) return
-  // One message per worker at a time: an unresolved one keeps its request id, and the field keeps the new text.
+  // One message per worker at a time: an unresolved one keeps its request id, its note above the field says why, and
+  // the field keeps the new text.
   const draft: NpDraft = { workerId: w.workerId, text, requestId: `np-pane:${w.workerId}:${await $.clock.now()}`, state: 'sending' }
-  if (!(await reserveDraft($, draft))) {
-    const held = (await getUi($)).drafts?.[w.workerId]
-    $.ui.toast(held?.state === 'uncertain' ? 'Your last message may not have arrived: press Retry first.' : 'Your last message is still being sent.')
-    return
-  }
+  if (!(await reserveDraft($, draft))) return
+  await scrollToEnd($)
   await deliverDraft($, w, draft)
 }
 
@@ -177,18 +181,16 @@ export async function retryDraft($: EngineInterface, w: NpWorker): Promise<void>
   await deliverDraft($, w, draft)
 }
 
+// The conversation itself shows a message's fate (the You row, or the note above the field): no toast.
 async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Promise<void> {
-  const name = NAMES[w.provider] ?? w.provider
   try {
     const r = await request($, 'POST', `/v1/workers/${w.workerId}/input`, { client_request_id: draft.requestId, text: draft.text, origin: 'human-claude-view', mode: 'queue' })
     if (r.disposition === 'refused') {
       await putDraft($, { ...draft, state: 'refused', reason: String(r.reason ?? 'refused') }, draft.requestId)
       await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
-      $.ui.toast(`Not delivered: ${r.reason ?? 'refused'}. Your message is back in the field.`)
       return
     }
     await clearDraft($, w.workerId, draft.requestId)
-    $.ui.toast(r.disposition === 'resumed' ? `Sent. ${name} is picking the conversation back up.` : `Sent to ${name}.`)
     void followConversation($, w.workerId)
   } catch (error) {
     // A request that left may have been admitted: only a retry under the same id is safe. One that never left returns
@@ -196,28 +198,42 @@ async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Pr
     const uncertain = !(error instanceof BridgeError) || ['BRIDGE_UNREACHABLE', 'PROTOCOL_ERROR', 'DELIVERY_UNKNOWN', 'SUBMITTED_UNCONFIRMED'].includes(error.code)
     await putDraft($, { ...draft, state: uncertain ? 'uncertain' : 'refused', reason: reason(error) }, draft.requestId)
     if (!uncertain) await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
-    $.ui.toast(uncertain ? `Delivery uncertain: ${reason(error)}. Retry sends the same message once.` : `Not delivered: ${reason(error)}. Your message is back in the field.`)
   }
 }
 
-// The desktop app draws no band (band: auto): its pane beside the conversation carries the same summary. While that pane
-// is closed, one line offers it back, since the app gives a mod no place of its own in its sidebar.
-async function reopenBand($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
-  const workers = await getLineage($), ui = await getUi($)
-  // ui.paneOpen changes on open and close, so this draws again; the panes listing is the truth.
-  if (!workers.length || e.props.hasSurvey || (ui?.paneOpen && await paneShown($))) return next(e)
-  const bridge = await getBridge($), faults = await getFaults($)
-  const { Box, Text, Button } = $.ui.resolve(e)
+// On the desktop app the np entry at the right of the prompt footer is a menu, as the model picker is: closed, it reads
+// the delegates' summary; open, it offers the NativePeers pane and each worker's conversation. Nothing draws above the
+// prompt there (band: auto).
+export async function renderNpMenu($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
+  if (e.surface !== 'desktop') return next(e)
+  const workers = await getLineage($)
+  const { Box, Text, Select } = $.ui.resolve(e) as any
+  if (!workers.length || !Select) return next(e)
+  const modes: readonly string[] = Array.isArray(e.props.modes) ? e.props.modes : []
+  const options = [{ value: 'np', label: 'np · ' + (statusSummary(workers) ?? '') }, { value: 'pane', label: 'Open NativePeers' },
+    ...workers.slice().reverse().map(w => ({ value: 'w:' + w.workerId, label: `${w.title} · ${NAMES[w.provider] ?? w.provider} · ${statusLabel(w.status)}` }))]
   return (
     <Box flexDirection="row" columnGap="sm" alignItems="center">
-      <Box flexShrink={1}><Text dimColor wrap="truncate-end">⟐ np · {summary(counts(workers.filter(w => !w.parentWorkerId)), bridge, faults)}</Text></Box>
-      <Button key="reopen" label="NativePeers" onPress={() => openPane($)} />
+      {modes.length ? <Text dimColor>{modes.join(' & ')}</Text> : null}
+      <Select key="np-menu" value="np" options={options} onSelect={(value: string) => npMenuPick($, value)} />
     </Box>
   )
 }
 
+export async function npMenuPick($: EngineInterface, value: string): Promise<void> {
+  if (value === 'pane') await openPane($)
+  else if (value.startsWith('w:')) await openConversation($, value.slice(2), true)
+}
+
+// A running worker's time moves only when the pane draws again: while one runs and the pane shows, it draws each second.
+export async function tickRunning($: EngineInterface): Promise<void> {
+  if (!(await getLineage($)).some(w => ACTIVE.includes(w.status))) return
+  if (await paneShown($)) await setUi($, { tick: await $.clock.now() })
+}
+
 export async function renderBand($: EngineInterface, e: any, next: (e: any) => any, always = false): Promise<any> {
-  if (e.surface === 'desktop' && !always) return reopenBand($, e, next)
+  // The desktop app draws no band (band: auto): the footer's np menu and the pane beside the conversation carry it.
+  if (e.surface === 'desktop' && !always) return next(e)
   const bridge = await getBridge($), workers = await getLineage($), index = await getIndex($), faults = await getFaults($)
   const ui = await getUi($)
   const viewed = e.props.view?.agentId as string | undefined
@@ -273,7 +289,7 @@ export async function renderBand($: EngineInterface, e: any, next: (e: any) => a
   )
 }
 
-// The pane lists this session's workers; pressing one shows its conversation. On the desktop app (band: auto) it
+// The pane lists this session's workers, each a button opening its conversation. On the desktop app (band: auto) it
 // also carries the band's summary.
 export async function renderPane($: EngineInterface, e: any, next: (e: any) => any, carriesBand = false): Promise<any> {
   const workers = await getLineage($), ui = await getUi($)
@@ -287,41 +303,63 @@ export async function renderPane($: EngineInterface, e: any, next: (e: any) => a
   const depth = (w: NpWorker): number => { let d = 0, cur: NpWorker | undefined = w;while (cur?.parentWorkerId && d < 6) { cur = workers.find(x => x.workerId === cur!.parentWorkerId);d++ }return d }
   return (
     <Box flexDirection="column">
-      {band ? <Text dimColor>{summary(c, bridge, faults)}</Text> : null}
-      {band && c.running ? <Box flexDirection="row"><Button key="stopall" label="Stop all" onPress={() => stopAll($)} /></Box> : null}
+      {band ? (
+        <Box flexDirection="row" flexWrap="wrap" columnGap="sm" rowGap="xs" alignItems="center">
+          <Text size="footnote" dimColor>{summary(c, bridge, faults)}</Text>
+          {c.running ? <Button key="stopall" label="Stop all" onPress={() => stopAll($)} /> : null}
+        </Box>
+      ) : null}
       {workers.length ? null : <Text dimColor>No workers in this session yet.</Text>}
       {workers.map(w => (
-        <Box key={'tree-' + w.workerId} flexDirection="column">
-          <Button key={'sel-' + w.workerId} plain label={'  '.repeat(depth(w)) + w.title + ' ›'} onPress={() => openConversation($, w.workerId)} />
-          <Text dimColor>{'  '.repeat(depth(w))}{NAMES[w.provider] ?? w.provider} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
+        <Box key={'tree-' + w.workerId} flexDirection="column" marginTop="md" marginLeft={depth(w) ? 'lg' : 0} rowGap="xs">
+          <Box flexDirection="row"><Button key={'sel-' + w.workerId} label={w.title} onPress={() => openConversation($, w.workerId)} /></Box>
+          <Text size="footnote" dimColor>{NAMES[w.provider] ?? w.provider} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
         </Box>
       ))}
-      {workers.length ? <Text dimColor>Press a worker to read its conversation and message it.</Text> : null}
     </Box>
   )
 }
 
-// One row of a conversation. The provider's name heads a run of its messages.
-function conversationRow(R: any, r: NpRow, n: number, previous: NpRow | undefined, name: string): any {
-  const { Box, Text, Code, Markdown } = R
-  const body = (text: string) => Markdown ? <Markdown text={text} /> : <Text>{text}</Text>
-  if (r.kind === 'task' || r.kind === 'you') return (
-    <Box key={'row-' + n} flexDirection="column"><Text bold>{r.kind === 'you' ? 'You' : 'Task from main'}</Text>{body(r.text)}</Box>)
-  if (r.kind === 'text') return (
-    <Box key={'row-' + n} flexDirection="column">{previous?.kind === 'text' ? null : <Text bold>{name}</Text>}{body(r.text)}</Box>)
-  if (r.kind === 'tool') {
-    const out = r.detail ? excerpt(r.detail) : undefined
+// One row of a conversation, styled as the app's own transcript: a small label over each speaker's turn and tool steps
+// as one line each (✓ done, ✗ failed, ◌ running). With folds (the desktop app) long messages fold behind Show more and a
+// step opens on its output. The terminal keeps a pane's focus ring by position, so a button drawn above the field as
+// rows arrive would take it from the field: there every row is text and a step's output shows beneath it.
+function conversationRow($: EngineInterface, R: any, w: NpWorker, r: NpRow, n: number, previous: NpRow | undefined, name: string, expanded: readonly string[], folds: boolean): any {
+  const { Box, Text, Code, Markdown, Button } = R
+  const key = `${w.workerId}|${r.item ?? `${r.gen ?? 0}:${n}`}`
+  const open = expanded.includes(key) || !folds
+  const label = (text: string) => <Text size="footnote" dimColor>{text}</Text>
+  if (r.kind === 'task' || r.kind === 'you' || r.kind === 'text') {
+    const heading = r.kind === 'you' ? 'You' : r.kind === 'task' ? 'Task' : previous?.kind === 'text' ? '' : name
+    const shown = folds ? clampMessage(r.text, open) : { text: r.text, clamped: false }
     return (
-      <Box key={'row-' + n} flexDirection="column">
-        <Text dimColor>▸ {r.text}{r.status ? ' · ' + r.status : ''}</Text>
-        {out && Code ? <Code source={out.text} /> : null}
-        {out?.more ? <Text dimColor>… {out.more} more line{out.more === 1 ? '' : 's'}</Text> : null}
-      </Box>)
+      <Box key={'row-' + n} flexDirection="column" rowGap="xs">
+        {heading ? label(heading) : null}
+        {Markdown ? <Markdown text={shown.text} /> : <Text>{shown.text}</Text>}
+        {shown.clamped ? <Box flexDirection="row"><Button key={'more-' + n} plain label={open ? 'Show less' : 'Show more'} onPress={() => toggleExpanded($, key)} /></Box> : null}
+      </Box>
+    )
   }
-  return <Text key={'row-' + n} dimColor>{r.text}</Text>
+  if (r.kind === 'tool') {
+    const failed = r.status !== undefined && !/^(exit 0|ok)\b/.test(r.status)
+    const line = `${r.status === undefined ? '◌' : failed ? '✗' : '✓'} ${r.text}${r.status ? ' · ' + r.status : ''}`
+    const out = r.detail ? excerpt(r.detail, folds ? 12 : 6) : undefined
+    return (
+      <Box key={'row-' + n} flexDirection="column" rowGap="xs">
+        {out && folds ? <Box flexDirection="row"><Button key={'tool-' + n} plain label={line + (open ? '  ▾' : '  ▸')} onPress={() => toggleExpanded($, key)} /></Box>
+          : <Text dimColor>{line}</Text>}
+        {open && out && Code ? <Code source={out.text} /> : null}
+        {open && out?.more ? label(`… ${out.more} more line${out.more === 1 ? '' : 's'}`) : null}
+      </Box>
+    )
+  }
+  // How a generation ended (task.terminal) reads as a quiet mark; other notes as they are.
+  const end = r.item?.startsWith('end:') ? (/^Completed/.test(r.text) ? '✓ Completed' : /^(Interrupted|Canceled)/.test(r.text) ? '◼ ' + r.text : '✗ ' + r.text) : r.text
+  return <Box key={'row-' + n} flexDirection="column">{label(end)}</Box>
 }
 
-// A worker's conversation in the pane: what it was asked, what it said and did, and a field to message it.
+// A worker's conversation in the pane: its controls at the top, what it was asked, said and did, and a field to
+// message it at the bottom, kept in view.
 async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: NpUi): Promise<any> {
   const R: any = $.ui.resolve(e)
   const { Box, Text, Button, Input } = R
@@ -332,36 +370,37 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
   // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
   const attachable = running && w.mirrorOwner !== 'other' && (!w.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, w.agentId)).phase))
   const target = controlTarget(w, w.agentId ? await loadShadow($, w.agentId) : undefined)
-  // The controls sit at the top, the field alone at the bottom. The desktop app rings a focused field, so it is not
-  // focused there until the person picks it; elsewhere it takes the keyboard when the pane does.
+  // The desktop app rings a focused field, so it is not focused there until the person picks it; elsewhere it takes
+  // the keyboard when the pane does.
   const focus = e.surface === 'desktop' ? {} : { autoFocus: true as const }
+  const expanded = ui.expanded ?? []
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" flexWrap="wrap" columnGap="sm" rowGap="xs">
-        <Button key="back" label="‹ Workers" onPress={() => setUi($, { viewing: undefined })} />
+        <Button key="back" label="← Workers" onPress={() => setUi($, { viewing: undefined })} />
         {running ? <Button key="p-interrupt" label="Interrupt" onPress={() => interruptWorker($, target)} /> : null}
         {running ? <Button key="p-stop" label="Stop" onPress={() => stopWorker($, target)} /> : null}
         {attachable ? <Button key={'attach:' + w.workerId} label="Attach" onPress={() => undefined} /> : null}
         <Button key="p-ids" label="Copy IDs" onPress={(p: { surface: string }) => copyIds($, w, p.surface)} />
       </Box>
-      <Box flexDirection="column" marginTop="sm">
-        <Text bold>{w.title}</Text>
-        <Text dimColor>{name} · {statusLabel(w.status)}{w.startedAt ? ' · ' + elapsed(w, now) : ''}</Text>
-        {details(w).map((line, n) => <Text key={'detail-' + n} dimColor>{line}</Text>)}
+      <Box flexDirection="column" marginTop="md" rowGap="xs">
+        <Text size="heading" weight="semibold">{w.title}</Text>
+        <Text size="footnote" dimColor>{headline(w, now)}</Text>
+        {running && w.latest ? <Text size="footnote" dimColor>Now: {w.latest}</Text> : null}
       </Box>
-      <Box flexDirection="column" marginTop="sm" rowGap="xs">
+      <Box flexDirection="column" marginTop="md" rowGap="md">
         {rows.length ? null : <Text dimColor>{t.cursor ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
-        {rows.map((r, n) => conversationRow(R, r, n, rows[n - 1], name))}
+        {rows.map((r, n) => conversationRow($, R, w, r, n, rows[n - 1], name, expanded, e.surface === 'desktop'))}
       </Box>
-      {draft?.state === 'sending' ? <Box marginTop="sm"><Text dimColor>Sending…</Text></Box> : null}
-      {draft?.state === 'refused' ? <Box marginTop="sm"><Text dimColor>Not delivered: {draft.reason ?? 'refused'}.</Text></Box> : null}
+      {draft?.state === 'sending' ? <Box marginTop="md"><Text size="footnote" dimColor>Sending…</Text></Box> : null}
+      {draft?.state === 'refused' ? <Box marginTop="md"><Text size="footnote" dimColor>Not delivered: {draft.reason ?? 'refused'}. Your message is back in the field.</Text></Box> : null}
       {draft?.state === 'uncertain' ? (
-        <Box flexDirection="row" columnGap="sm" alignItems="center" marginTop="sm">
-          <Box flexShrink={1}><Text dimColor>Delivery uncertain: {draft.reason ?? 'no answer'}.</Text></Box>
+        <Box flexDirection="row" columnGap="sm" alignItems="center" marginTop="md">
+          <Box flexShrink={1}><Text size="footnote" dimColor>Delivery uncertain: {draft.reason ?? 'no answer'}.</Text></Box>
           <Button key="p-retry" label="Retry" onPress={() => retryDraft($, w)} />
         </Box>) : null}
       {Input ? (
-        <Box marginTop="md">
+        <Box marginTop="md" marginBottom="lg">
           <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="send" {...focus}
             value={draft?.state === 'refused' ? draft.text : undefined} onSubmit={(value: string) => sendToWorker($, w, value)} />
         </Box>) : null}
@@ -403,8 +442,9 @@ export async function renderSpinner($: EngineInterface, e: any, next: (e: any) =
   return next({ ...e, props: { ...e.props, message: `${TAGS[s.provider]}: ${s.latest}`.slice(0, 120) } })
 }
 
+// On the desktop app the footer's np menu carries this summary (renderNpMenu).
 export async function statusLine($: EngineInterface): Promise<void> {
-  $.ui.status(statusSummary(await getLineage($)))
+  $.ui.status((await $.session.surface()) === 'desktop' ? undefined : statusSummary(await getLineage($)))
 }
 
 export async function statusText($: EngineInterface): Promise<string> {

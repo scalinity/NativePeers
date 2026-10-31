@@ -7,8 +7,8 @@ import { BridgeError, connected, connectionGeneration, followLineage, heartbeat,
 import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
-import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, setUi, settleInterruptedDrafts } from './state'
-import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, paneShown, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
+import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, settleInterruptedDrafts } from './state'
+import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, renderNpMenu, tickRunning, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'
@@ -60,8 +60,6 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
     // A conversation still shown after a reload is followed again: module variables, and the loop, started over.
     const shown = (await getUi($)).viewing
     if (shown) void followConversation($, shown)
-    // A reload closes panes without running hooks: the pane's recorded state follows what is actually shown.
-    await setUi($, { paneOpen: await paneShown($) })
   }
   await pruneStore($)
 }
@@ -89,6 +87,7 @@ async function ready($: EngineInterface, hello: any): Promise<void> {
     inputSchema: { type: 'object', properties: { provider: { type: 'string', enum: [...PROVIDERS] } } } })
   $.clock.every(15000, () => heartbeat($))
   $.clock.every(5000, () => statusLine($))
+  $.clock.every(1000, () => tickRunning($))
 }
 
 async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>, o: Options): Promise<any> {
@@ -363,12 +362,8 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => o.band === 'off' ? next(e) : renderBand($, e, next, o.band === 'always'))
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e, next) => renderPane($, e, next, o.band !== 'always' && o.band !== 'off'))
-  // A closed pane is offered back above the prompt on the desktop app (ui.tsx reopenBand).
-  on('ui.close', async ($, e, next) => {
-    const r = await next(e)
-    if (e.id === PANE_ID) await setUi($, { paneOpen: false })
-    return r
-  }).catch(($, e, next) => next(e))
+  // On the desktop app the footer's np entry is a menu opening the pane and each worker's conversation.
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => o.band === 'always' || o.band === 'off' ? next(e) : renderNpMenu($, e, next))
   on('ui.render', { component: 'ToolUse', props: { tool: MIRROR_TOOL } }, async ($, e, next) => renderToolUse($, e, next))
   on('ui.render', { component: 'UserMessage', props: { origin: { kind: 'coordinator' } } }, async ($, e, next) => renderUserMessage($, e, next))
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => renderSpinner($, e, next))
