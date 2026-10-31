@@ -100,14 +100,32 @@ class WorkerReportTests(unittest.TestCase):
         items=[dict(item,summary=f'F{i:03}: Suggestion') for i in range(1,22)]
         findings,checks,limits=extract(self.review(items))
         self.assertEqual(findings,[]);self.assertIn('Invalid findings list; provider final text retained.',limits)
+        findings,checks,limits=extract(self.review(items,items[:20]))
+        self.assertEqual(len(findings),20)
+        self.assertTrue(any('correspondence incomplete' in line for line in limits))
 
     def test_generic_optional_reports_remain_optional(self):
         from nativepeers.worker_report import report_incomplete
         for value in ({},{'findings':[dict(severity='info',summary='ordinary implementation observation')]},{'tests_run':[]}):
             findings,checks,limits=extract(self.report(value));self.assertEqual(limits,[])
+        for prefix in ('Ordinary implementation answer.\n','## Code Review implementation notes\n'):
+            text=prefix+self.report({'findings':[dict(severity='info',summary='F003: timeout default is now push-aware')]})
+            findings,checks,limits=extract(text);self.assertEqual(len(findings),1);self.assertEqual(limits,[])
+            self.assertFalse(report_incomplete(text,limits))
         limits=extract('Ordinary implementation answer.')[2]
         self.assertFalse(report_incomplete('Ordinary implementation answer.',limits))
         self.assertTrue(report_incomplete('## Code Review: missing appendix',limits))
+
+    def test_quoted_headers_and_appendices_do_not_hide_a_real_review(self):
+        item=dict(severity='critical',summary='F001: Contract patch',file='contract.md',line=1)
+        quoted='````markdown\n## Code Review: quoted example\n```nativepeers-result\n{"findings":[],"tests_run":[]}\n```\n````\n'
+        valid=quoted+self.review([item])
+        valid=valid.replace('### 🟡 Warnings',quoted+'### 🟡 Warnings')
+        findings,checks,limits=extract(valid)
+        self.assertEqual(limits,[]);self.assertEqual(findings[0]['summary'],item['summary'])
+        self.assertIn('No structured worker report supplied',extract(quoted)[2][0])
+        from nativepeers.worker_report import report_incomplete
+        self.assertFalse(report_incomplete(quoted,extract(quoted)[2]))
 
     def test_correspondence_rejects_missing_extra_duplicate_and_recategorized_ids(self):
         item=dict(severity='info',summary='F001: Useful suggestion',file='fixture.py',line=3)

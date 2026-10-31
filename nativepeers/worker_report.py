@@ -22,30 +22,43 @@ CHECK={'type':'object','required':['command','outcome'],'additionalProperties':F
 REPORT_LIMITATION_PREFIXES=('No structured worker','Malformed structured worker','Invalid findings','Invalid tests_run','Review correspondence incomplete')
 
 
-def is_review(text,findings=()):
-    return bool(re.search(r'(?mi)^#{1,3} Code Review\b',text) or any(re.match(r'^F\d{3,}:\s',item['summary']) for item in findings))
+def report_parts(text):
+    """Separate prose and top-level appendices; quoted contracts stay code."""
+    prose=[];reports=[];fence=None;captured=None
+    for line in text.splitlines(keepends=True):
+        marker=re.match(r'^[ \t]*(`{3,}|~{3,})([^\r\n]*)',line)
+        if fence:
+            if marker and marker[1][0]==fence[0] and len(marker[1])>=len(fence) and not marker[2].strip():
+                if captured is not None:reports[-1]=''.join(captured)
+                fence=None;captured=None
+            elif captured is not None:captured.append(line)
+        elif marker:
+            fence=marker[1]
+            if marker[2].strip()=='nativepeers-result':reports.append(None);captured=[]
+        else:prose.append(line)
+    return ''.join(prose),reports
+
+
+def is_review(text):
+    return bool(re.search(r'(?mi)^#{1,3} Code Review:',text) or re.search(r'(?m)^### .*\b(?:Critical Issues \(Must Fix\)|Warnings \(Should Fix\)|Suggestions \(Consider\))\s*$',text)
+                or re.search(r'(?m)^\d+\. \*\*\[F\d{3,}\] ',text))
 
 
 def report_incomplete(text,limitations):
     # An absent optional appendix is ordinary for non-review implementation work.
-    supplied='```nativepeers-result' in text or is_review(text)
+    prose,reports=report_parts(text)
+    supplied=bool(reports) or is_review(prose)
     return supplied and any(str(item).startswith(REPORT_LIMITATION_PREFIXES) for item in limitations)
 
 
 def review_correspondence(text,findings):
     """Check the opted-in readable review contract, without inventing findings."""
+    text,_=report_parts(text)
     header=re.search(r'(?m)^## Code Review:',text)
-    if not header and not is_review(text,findings):return []
+    if not header and not is_review(text):return []
     headings={'Critical Issues (Must Fix)':'critical','Warnings (Should Fix)':'warning','Suggestions (Consider)':'info'}
-    readable=[];seen=set();severity=None;invalid=not bool(header);fence=None
+    readable=[];seen=set();severity=None;invalid=not bool(header)
     for line in (text[header.start():] if header else text).splitlines():
-        marker=re.match(r'^\s*(`{3,}|~{3,})',line)
-        if marker:
-            value=marker[1]
-            if fence is None:fence=value
-            elif value[0]==fence[0] and len(value)>=len(fence):fence=None
-            continue
-        if fence:continue
         if line.startswith('### '):
             severity=next((value for title,value in headings.items() if line.endswith(title)),None)
             if severity:seen.add(severity)
@@ -70,24 +83,23 @@ def review_correspondence(text,findings):
 
 def extract(text):
     findings=[];checks=[];limitations=[]
-    marker='```nativepeers-result\n'
-    if marker not in text:
+    prose,reports=report_parts(text)
+    if not reports:
         return findings,checks,['No structured worker report supplied; provider final text retained.']
-    parts=text.split(marker)
-    raw=parts[-1].split('```',1)[0]
+    raw=reports[0]
     try:
-        if len(parts)!=2 or '```' not in parts[-1]:raise ValueError('ambiguous or unclosed report')
+        if len(reports)!=1 or raw is None:raise ValueError('ambiguous or unclosed report')
         if len(raw.encode())>16384:raise ValueError('oversize')
         value=json.loads(raw)
         if not isinstance(value,dict) or set(value)-{'findings','tests_run'}:raise ValueError('invalid report')
     except (ValueError,TypeError,RecursionError):
         return findings,checks,['Malformed structured worker report; provider final text retained.']
     for field,schema,output in [('findings',FINDING,findings),('tests_run',CHECK,checks)]:
-        items=value.get(field,None if is_review(parts[0]) else [])
+        items=value.get(field,None if is_review(prose) else [])
         if not isinstance(items,list) or len(items)>20:
             limitations.append('Invalid '+field+' list; provider final text retained.');continue
         for item in items:
             if valid(item,schema):output.append(dict(item,source='worker-reported',independently_verified=False))
             else:limitations.append('Invalid '+field+' entry; provider final text retained.')
-    limitations.extend(review_correspondence(parts[0].strip(),findings))
+    limitations.extend(review_correspondence(prose,findings))
     return findings,checks,limitations
