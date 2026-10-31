@@ -73,9 +73,11 @@ def verify(journal,provider,executable,*,worker_id=None,peer=None,renew=True):
                 'CAPABILITY_MISMATCH','The worker\'s verified executable no longer matches its pinned runtime')
     retained=document.get('retained',{}).get(provider,{}).get(actual['sha256'],{})
     old_allowed=bool(pinned and not retained.get('revoked') and worker_id in retained.get('workers',[])
-                     and all(retained.get('fingerprint',{}).get(k)==actual[k] for k in ('path','sha256','size')))
-    peer_allowed=bool(peer_grant and peer_grant in retained.get('peers',[])
-                      and all(retained.get('fingerprint',{}).get(k)==actual[k] for k in ('path','sha256','size')))
+                     and all(retained.get('fingerprint',{}).get(k)==actual[k] for k in ('sha256','size')))
+    peer_allowed=bool(peer_grant and any(
+        all(grant.get(k)==peer_grant[k] for k in ('handle','incarnation_id','owner'))
+        and all(grant.get('runtime',retained.get('fingerprint',{})).get(k)==actual[k] for k in ('path','sha256','size'))
+        for grant in retained.get('peers',[])))
     current_allowed=actual['sha256']==expected['sha256']
     if peer_grant:current_allowed=all(expected.get(k)==actual[k] for k in ('path','sha256','size'))
     approved=not retained.get('revoked') and (current_allowed or old_allowed or peer_allowed)
@@ -112,6 +114,9 @@ def codex_inbox_runtime(journal,peer):
                 elif actual['sha256'] in retained:
                     state='RECIPIENT_NOT_RETAINED'
                     details['next_action']='Ask the runtime owner to retain this exact qualified live recipient or resume on the approved runtime.'
+            if state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED') and actual!=details['selected_runtime']:
+                state='RECIPIENT_UNSELECTED'
+                details['next_action']='Resume normally on an approved runtime or ask the runtime owner to qualify this exact build; no helper was started.'
             details['compatibility_state']=state
             if state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED'):
                 details['next_action']='Wait for the exact recipient runtime to be qualified, then retry the unchanged request ID; inspect npeer doctor --json.'
@@ -136,7 +141,7 @@ def _codex_peer_grants(journal,runtime):
         if peer['transport'].get('kind')!='codex-native-queue' or peer['owner'].get('executable')!=runtime.get('path'):continue
         try:Registry(journal).verify(peer['handle'],peer['incarnation_id'])
         except PeerError:continue
-        peers.append({k:peer[k] for k in ('handle','incarnation_id','owner')})
+        peers.append(dict({k:peer[k] for k in ('handle','incarnation_id','owner')},runtime={k:runtime[k] for k in ('path','sha256','size')}))
     if peers:
         try:actual=fingerprint(Path(runtime['path']),fresh=True)
         except OSError:return []
@@ -197,7 +202,8 @@ def update_verified(journal,replacements,*,initialize=False,expected=None,select
                     if all(pinned.get(k)==old.get(k) for k in ('path','sha256','size')):workers.append(row['worker_id'])
                 history=document.setdefault('retained',{}).setdefault(provider,{})
                 prior=history.get(old['sha256'],{})
-                peers=list(prior.get('peers',[]))
+                peers=[dict(grant,runtime=grant.get('runtime',{k:prior['fingerprint'][k] for k in ('path','sha256','size')}))
+                       for grant in prior.get('peers',[])]
                 if provider=='codex':
                     for grant in _codex_peer_grants(journal,old):
                         if grant not in peers:peers.append(grant)

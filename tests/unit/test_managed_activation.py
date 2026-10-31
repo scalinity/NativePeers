@@ -87,7 +87,7 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_definite_refusal_retries_original_identity_once_after_approval(self):
         # This live recipient itself runs the candidate, which is not approved yet.
-        self.peer=self.register(self.new)
+        self.peer=self.register(self.new);self.select(self.new)
         first=await self.send()
         self.assertEqual(first['state'],'ADMISSION_DEFERRED')
         self.assertFalse((self.root/'launches').exists())
@@ -100,7 +100,7 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         await self.send();self.assertEqual((self.root/'launches').read_text(),'new\n')
 
     async def test_deferred_expiry_and_replacement_never_submit(self):
-        self.peer=self.register(self.new)
+        self.peer=self.register(self.new);self.select(self.new)
         first=await self.send(expires_seconds=.01)
         await asyncio.sleep(.02)
         self.select(self.new);self.approve()
@@ -108,7 +108,7 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(expired['state'],'EXPIRED_BEFORE_SUBMISSION')
         self.assertEqual(expired['message_id'],first['message_id'])
         self.peer=self.register(self.old)
-        pending=self.binary('pending');self.peer=self.register(pending)
+        pending=self.binary('pending');self.peer=self.register(pending);self.select(pending)
         deferred=await self.send('replaced')
         self.register(self.new)
         rebound=await self.send('replaced')
@@ -225,7 +225,7 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.select(self.new)
         with patch('nativepeers.registry.matches',side_effect=lambda o:o['pid']!=100001):self.approve()
         history=json.loads((self.j.root/'compat/runtime.json').read_text())['retained']['codex'][self.prior['sha256']]
-        self.assertEqual(history['peers'],[{k:self.peer[k] for k in ('handle','incarnation_id','owner')}])
+        self.assertEqual(history['peers'],[dict({k:self.peer[k] for k in ('handle','incarnation_id','owner')},runtime=self.prior)])
         unregistered=dict(self.peer,handle='np1_'+'a'*64)
         with self.assertRaises(PeerError):codex_inbox_runtime(self.j,unregistered)
 
@@ -235,3 +235,27 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         result=await raw.send(self.caller,self.peer['handle'],'direct router',client_request_id='direct-router')
         self.assertEqual(result['state'],'ACCEPTED_QUEUED')
         self.assertEqual((self.root/'launches').read_text(),'old\n')
+
+    def test_multiple_same_bytes_relocations_preserve_peer_and_worker_pins(self):
+        from nativepeers.files import canonical
+        self.j.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',('g','p','{}','COMPLETED','{}'))
+        lease={'verified_runtime':self.prior}
+        self.j.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',('w','g',None,'codex','n','r','m','m',None,str(self.root),None,'RELEASED_RESUMABLE',1,canonical(lease).decode()))
+        self.new.write_bytes(self.old.read_bytes());self.select(self.new);self.approve()
+        owner=dict(identity(os.getpid()).json(),pid=200000,executable=str(self.new))
+        second=Registry(self.j).register('codex',self.root/'.codex',new_id(),'second path',owner,self.root,{'kind':'codex-native-queue'})
+        third=self.binary('third');self.select(third)
+        update_verified(self.j,{'codex':fingerprint(third)},expected={'codex':fingerprint(self.new)},selected={'codex':self.current/'bin/codex'})
+        self.assertEqual(codex_inbox_runtime(self.j,self.peer),self.prior)
+        self.assertEqual(codex_inbox_runtime(self.j,second),fingerprint(self.new))
+        self.assertEqual(verify(self.j,'codex',self.old,worker_id='w',renew=False),self.prior)
+
+
+    async def test_abandoned_unselected_candidate_is_terminal_with_actionable_reason(self):
+        self.peer=self.register(self.new)
+        refused=await self.send('abandoned')
+        self.assertEqual(refused['state'],'CAPABILITY_MISMATCH')
+        error=json.loads(refused['attempt']['error_json'])
+        self.assertEqual(error['details']['compatibility_state'],'RECIPIENT_UNSELECTED')
+        self.assertIn('Resume normally',error['details']['next_action'])
+        self.assertFalse((self.root/'launches').exists())
