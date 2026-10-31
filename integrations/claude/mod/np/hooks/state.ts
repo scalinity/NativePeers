@@ -2,13 +2,14 @@
 // validator resolves a read or update target only to an atom of the same file.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
-import type { NpBridge, NpFaults, NpShadow, NpWorker } from '../types'
+import type { NpBridge, NpFaults, NpShadow, NpTranscript, NpUi, NpWorker } from '../types'
 
 const bridgeAtom = atom({ plugin: 'np', key: 'bridge' } as const, { state: 'off', since: 0 } as NpBridge)
 const lineageAtom = atom({ plugin: 'np', key: 'lineage' } as const, [] as NpWorker[], { shape: 'np-lineage-1' })
 const indexAtom = atom({ plugin: 'np', key: 'shadows' } as const, [] as string[])
 const faultsAtom = atom({ plugin: 'np', key: 'faults' } as const, { fallthrough: false } as NpFaults)
-const uiAtom = atom({ plugin: 'np', key: 'ui' } as const, { bandCollapsed: false, paneOpen: false } as { bandCollapsed: boolean; paneOpen: boolean; selected?: string })
+const uiAtom = atom({ plugin: 'np', key: 'ui' } as const, { bandCollapsed: false, paneOpen: false } as NpUi)
+const transcriptAtom = atom({ plugin: 'np', key: 'transcript' } as const, { workerId: '', cursor: 0, rows: [] } as NpTranscript, { shape: 'np-transcript-1' })
 const family = { plugin: 'np', key: 'shadow' } as const
 
 export const NONE: NpShadow = { agentId: '', generation: 0, provider: 'codex', title: '', phase: 'DETACHED', deliveryOwner: 'mirror', cursor: 0,
@@ -43,8 +44,20 @@ export async function getFaults($: EngineInterface): Promise<NpFaults> { return 
 export async function setFaults($: EngineInterface, value: NpFaults): Promise<void> { await update($, faultsAtom, () => value) }
 
 export async function getUi($: EngineInterface) { return read($, uiAtom) }
-export async function setUi($: EngineInterface, change: { paneOpen?: boolean; selected?: string; bandCollapsed?: boolean }): Promise<void> {
+export async function setUi($: EngineInterface, change: Partial<NpUi>): Promise<void> {
   await update($, uiAtom, ui => ({ ...ui, ...change }))
+}
+
+export async function getTranscript($: EngineInterface): Promise<NpTranscript> { return read($, transcriptAtom) }
+// Only the conversation still shown is written: a follower of a worker no longer viewed leaves the state alone.
+export async function setTranscript($: EngineInterface, value: NpTranscript): Promise<void> {
+  await update($, transcriptAtom, current => current.workerId === value.workerId ? value : current)
+}
+// Showing another worker starts its conversation empty; showing the same one again keeps what was read.
+export async function startTranscript($: EngineInterface, workerId: string): Promise<NpTranscript> {
+  let out: NpTranscript = { workerId, cursor: 0, rows: [] }
+  await update($, transcriptAtom, current => (out = current.workerId === workerId ? current : { workerId, cursor: 0, rows: [] }))
+  return out
 }
 
 export async function getIndex($: EngineInterface): Promise<string[]> { return read($, indexAtom) }

@@ -115,14 +115,14 @@ try:
     mark('bridges_before_reload', bridges())
     with (MOD/'hooks/register.tsx').open('a') as f:f.write('\n// live reload marker\n')
     mark('reload');time.sleep(10);mark('bridges_after_reload', bridges());snap('03-after-reload')
-    open_worker('Reload sleeper');session.wait_for(r'— NativePeers · codex', timeout=120);mark('reload-done');time.sleep(4);snap('04-reload-done', 4000)
+    open_worker('Reload sleeper');session.wait_for(r'— NativePeers · [Cc]odex', timeout=120);mark('reload-done');time.sleep(4);snap('04-reload-done', 4000)
     mark('bridges_after_reload_done', bridges())
     # AC7: the bridge dies; /np reattach inside the step retry window restarts it and the same shadow carries on.
     to_main();session.type_line('Please launch the quick fault sleeper.');wait_index('Quick fault', 60);time.sleep(8)
     kill_bridges('quick_killed');time.sleep(4)
     session.type_line('/np reattach');mark('quick-reattach');time.sleep(6);snap('05-quick-reattach')
     mark('bridges_after_quick', bridges())
-    open_worker('Quick fault');session.wait_for(r'— NativePeers · codex|mirror fault', timeout=120);mark('quick-done');time.sleep(4);snap('06-quick-done', 4000)
+    open_worker('Quick fault');session.wait_for(r'— NativePeers · [Cc]odex|mirror fault', timeout=120);mark('quick-done');time.sleep(4);snap('06-quick-done', 4000)
     # AC8: the bridge stays down past the retry window; the shadow fails closed and /np reattach shows the worker again.
     to_main();session.type_line('Please launch the slow fault sleeper.');wait_index('Slow fault', 60);time.sleep(8)
     kill_bridges('slow_killed');time.sleep(30);snap('07-slow-faulted')

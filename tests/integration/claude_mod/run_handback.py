@@ -56,7 +56,9 @@ try:
     result = {
         'handback_note_seen': any(r.get('type') == 'user' and any('SubagentHandback(' in t for t in texts(r)) for r in shadow),
         'handback_calls': len(handbacks),
-        'report_has_final_text_and_ids': '— NativePeers · codex' in report and 'worker ' in report and 'group ' in report,
+        'report_has_final_text_and_ids': '— NativePeers · Codex' in report and 'npeer result ' in report,
+        # The surface shows the handed-back report as the run's last message: the shadow writes no closing text of its own.
+        'closing_text_outside_report': sum(1 for r in shadow if r.get('type') == 'assistant' for b in (r['message'].get('content') or []) if isinstance(b, dict) and b.get('type') == 'text' and '— NativePeers' in b.get('text', '')),
         'handback_results': [str(t)[:300] for t in refusals][:2],
         'refusal_note': any('could not hand this report' in t for r in shadow if r.get('type') == 'assistant' for t in texts(r)),
         'enforcement_rows': sum(1 for r in shadow if any('handback-send-enforce' in t for t in texts(r))),
@@ -66,7 +68,8 @@ try:
         'shadow_model_requests': len([h for h in s.model_hits() if str(h.get('model', '')).startswith('np-mirror')]),
         'classifier_requests_refused': len([h for h in s.model_hits() if not str(h.get('model', '')).startswith('np-mirror')]),
     }
-    common = result['handback_note_seen'] and result['report_has_final_text_and_ids'] and notified is not None and not result['stopped_by_user'] and result['shadow_model_requests'] == 0
+    common = (result['handback_note_seen'] and result['report_has_final_text_and_ids'] and notified is not None and not result['stopped_by_user']
+              and result['shadow_model_requests'] == 0 and result['closing_text_outside_report'] == 0)
     result['pass'] = common and (result['handback_calls'] == 3 and result['refusal_note'] if REFUSE else result['handback_calls'] == 1 and result['enforcement_rows'] == 0)
     result['mode'] = 'refuse' if REFUSE else 'deliver'
     print(json.dumps(result))

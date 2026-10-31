@@ -157,7 +157,7 @@ try:
     mark('bridge-killed');marks['bridge_pids_killed'] = killed;time.sleep(4)
     session.type_line('/np reattach');mark('reattach');time.sleep(8);snap('18-reattach')
     marks['bridges_after_reattach'] = bridges()
-    open_worker('Fault test');session.wait_for(r'— NativePeers · codex|mirror fault', timeout=150);mark('fault-done');time.sleep(6);snap('19-fault-done', 4000)
+    open_worker('Fault test');session.wait_for(r'— NativePeers · [Cc]odex|mirror fault', timeout=150);mark('fault-done');time.sleep(6);snap('19-fault-done', 4000)
     to_main();time.sleep(3);snap('20-final-band', 2500)
     session.type_line('/cost');time.sleep(4);snap('21-cost', 2500)
 finally:

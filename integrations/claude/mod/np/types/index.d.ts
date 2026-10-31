@@ -85,6 +85,12 @@ export type NpShadow = {
 
 export type NpFaults = { fallthrough: boolean; reason?: string; at?: number }
 
+// The conversation the pane shows for one worker, built from its activity log.
+export type NpRow = { kind: 'task' | 'you' | 'text' | 'tool' | 'note'; text: string; item?: string; status?: string; detail?: string }
+export type NpTranscript = { workerId: string; cursor: number; rows: NpRow[] }
+
+export type NpUi = { bandCollapsed: boolean; paneOpen: boolean; selected?: string; viewing?: string; sent?: number }
+
 declare module 'claude-code' {
   interface PluginState {
     np: {
@@ -92,7 +98,8 @@ declare module 'claude-code' {
       lineage: Shaped<NpWorker[]>
       shadow: StateFamily<Shaped<NpShadow>>
       shadows: string[]
-      ui: { bandCollapsed: boolean; paneOpen: boolean; selected?: string }
+      ui: NpUi
+      transcript: Shaped<NpTranscript>
       faults: NpFaults
     }
   }

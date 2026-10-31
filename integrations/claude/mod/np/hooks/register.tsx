@@ -8,7 +8,7 @@ import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
 import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state'
-import { PANE_ID, copyResume, doctorText, interruptWorker, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
+import { PANE_ID, copyResume, doctorText, interruptWorker, openConversation, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'
@@ -20,7 +20,7 @@ const SECTION = [
   'Call mcp__np__catalog once before choosing exact models and efforts; never guess a model id.',
   'Briefs must be self-contained: the worker sees only the brief, not this conversation.',
   'Workers run in the background: for fan-out, issue the Agent calls together, end your turn, and let the notifications arrive; do not poll.',
-  'Follow up with SendMessage to the agent; results carry NativePeers ids for `npeer result` and `npeer artifact-read`.',
+  'Follow up with SendMessage to the agent; results name the NativePeers group for `npeer result`.',
 ].join('\n')
 
 type Options = { followupMode?: string; showReasoning?: string; mirrorOutputBytes?: number; band?: string; adoption?: string; npeerPath?: string; allowFromClaudeSubagents?: boolean; notifyOnCompletion?: string }
@@ -196,10 +196,12 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
   if (verb === 'pane') { await openPane($);return { text: 'Opened the NativePeers pane.' } }
   if (verb === 'doctor') return { text: await doctor($, o, surface, await ensureBridge($)) }
   if (verb === 'open') {
-    const w = pick(arg);if (!w?.agentId) return { text: 'no mirrored worker ' + arg }
-    const denied = await openView($, w.agentId, true)
-    return { text: !denied ? `viewing ${w.title}` : `${w.title} cannot be opened: ${denied}` +
-      (['completed', 'failed', 'canceled', 'interrupted', 'timed_out'].includes(w.status) ? `. Claude Code drops a finished agent about 30 s after it ends; /np pane shows it, and the parent can still follow up with SendMessage` : '') }
+    const w = pick(arg);if (!w) return { text: 'No worker ' + arg + '.' }
+    // The main view switches to the agent where the surface draws one and Claude Code still lists it (it drops a
+    // finished agent about 30 s after it ends); otherwise the pane shows the conversation.
+    if (w.agentId && !(await openView($, w.agentId, true))) return { text: `Viewing ${w.title}.` }
+    await openConversation($, w.workerId, true)
+    return { text: `Opened ${w.title} in the NativePeers pane.` }
   }
   if (verb === 'stop' && arg === 'all') return { text: `stopping ${await stopAll($)} group(s)` }
   if (verb === 'stop' || verb === 'interrupt' || verb === 'resume-cmd') {
