@@ -1,3 +1,32 @@
+# Issue 7: installed silent queue consumption — 2026-10-30
+
+The final response remains the last chat entry while late NativePeers frames drain. Managed Codex consumes exact policy-suppressed plain-text queue items before turn startup, model work, hook/history rows or work footers. Its exact registered-owner receiving guard also survives a change of managed selection. Ordinary human input, active delivery, expiry, exchange/phase cutoffs, retained results and original accepted receipts are preserved.
+
+Source/runtime qualification used NativePeers `77564c6e7791300423f812bafe0b55c30bd8a2e3` and CodexForge `611bca3650ebddf2f10fb8a5ccf8a7d476d51dc2`. Final installed checks finished at **9:17:49 PM EDT**. Selected executable: `/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000/bin/codex`; SHA-256 `467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10`. [Public scoped record](../evidence/issue-7-silent-queue.json).
+
+| Check | Result |
+|---|---|
+| Complete installed NativePeers suite | PASS: 1117 tests / 1056 subtests, 4 skips, 292.91 seconds |
+| Fresh standalone TUI | PASS: 22 warm and 22 cold mixed frames (34 progress, 10 completion); drain, reopen, exact-session resume, raw terminal chat/status audit and permitted controls |
+| Genuine native workers | PASS: OPEN push produces the expected request; QUIET retention and accepted-before-close suppression produce zero later parent requests |
+| Receipts and retained bodies | PASS: original accepted receipts stay unchanged; suppression is separate, with no ingestion claim; bodies/results remain readable |
+| Registered owner after selection change | PASS: exact legacy owner guard filters the late frame and preserves legitimate control; old CLI block rendering remains outside the silent UI guarantee |
+| Installed hooks and package | PASS: four enabled/trusted owned Codex hooks, supported reinstall and zero-operation repeat, required CodexForge smoke, current doctor and quota metadata |
+| Independent Codex review | PASS: required findings fixed and bounded rechecks report no findings |
+| External paid-model / other-provider UI / physical capture | NOT_RUN; localhost fixtures are used, external traffic is NOT_INSTRUMENTED |
+
+Raw ANSI, terminal cells, private journals, fixture histories, commands, cwd, exit codes and fingerprints stay under `evidence/scratch/issue-7/installed-1793408968597610000/`. Failed attempts retain their original outcomes and changed-hypothesis notes. The earlier private app-server blocking checks below are historical seam checks.
+
+The verified predecessor `/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793403884248020000` and older qualified rollback lineage are retained. Check the guarded runtime-and-approval rollback before applying it:
+
+```sh
+/Users/danny/Documents/Tools/NativePeers/.venv/bin/python /Users/danny/Documents/Tools/CodexForge/artifacts/plugin-toggle/rollback.py --record /Users/danny/Documents/Tools/CodexForge/artifacts/quiet-close-issue-7/activation-current.json --check
+```
+
+Omitting `--check` deliberately restores the recorded predecessor only while the current selection, fingerprints and approval still match. It preserves other approvals and leases. Existing CLI processes retain their loaded executable; a normal exact-session resume uses the selected package without erasing history.
+
+---
+
 # Routine CLI update verification — source PR (2026-10-26)
 
 The issue-4 source workflow passes **102 focused tests / 88 subtests** and **792 complete-suite tests / 742 subtests**, with four macOS skips for Linux `/proc` exit-between-stat-and-exe schedules. The frozen complete run at `22195967ba8d70d87876420215140195b6c73269` took 262.26 seconds on Python 3.14.9. Its product/test tree is `68fc83a98911b7c03b764a29db8b7bb1863ef751`. The final publication-head rerun and complete raw output are retained separately and reported in the PR. [Source-only record](../evidence/runtime-approvals-issue-4.json) · [Update workflow and support envelope](RUNTIME_UPDATES.md).

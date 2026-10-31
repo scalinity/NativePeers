@@ -2,7 +2,7 @@
 
 Installation and uninstall pin each hook merge to the configuration hash captured before reading it. A concurrent edit causes `OWNERSHIP_CONFLICT`; reconcile the newer file before retrying. Reinstall updates an installed skill only when it still matches the recorded installed hash or already matches the desired content. Local skill edits are preserved and reported as conflicts.
 
-The installed project is `/Users/danny/Documents/Tools/NativePeers`. Its shell entrypoints select the pinned project virtual environment and module path. There is no permanent service or provider executable replacement.
+The installed project is `/Users/danny/Documents/Tools/NativePeers`. Its shell entrypoints select the pinned project virtual environment and module path. There is no permanent service or provider executable replacement. Codex silent queue consumption requires the qualified managed CLI and all four trusted owned hooks; reinstall does not reload an already-running executable. See [current qualification and rollback](VERIFICATION.md).
 
 The activation lock follows the installed `~/.local/bin/codex-mcp` manager link, so a project rename does not select a stale manager directory. Qualification and managed activation share that supported lock; runtime receipt changes also take the NativePeers runtime lock and compare the selected provider's previous approval.
 
@@ -17,8 +17,8 @@ Installation uses an own lock plus the existing CodexMCP manager's supported upd
 | Path | Owned change |
 |---|---|
 | `~/.local/bin/npeer` | Link to this project's `bin/npeer` |
-| `~/.claude/settings.json` | NativePeers SessionStart/SessionEnd handlers and a Bash PreToolUse capability refresh |
-| `~/.codex/hooks.json` | NativePeers SessionStart/SessionEnd command handlers |
+| `~/.claude/settings.json` | NativePeers SessionStart/SessionEnd/UserPromptSubmit handlers and a Bash PreToolUse capability refresh |
+| `~/.codex/hooks.json` | NativePeers SessionStart/SessionEnd/UserPromptSubmit/QueuedInput command handlers |
 | `~/.codex/config.toml` | Native trust hashes for those exact owned handlers |
 | `~/.claude/skills/nativepeers/SKILL.md` | Claude CLI integration instructions |
 | `~/.agents/skills/nativepeers/SKILL.md` | Codex integration instructions |

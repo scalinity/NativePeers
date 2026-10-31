@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "34f6ae71e9b9b59d541a7b1e0f3c23679ae24d10",
+  "code_commit": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
   "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
   "publication_branch": "fix/issue-7-silent-close",
-  "updated_at": "2026-10-30T21:08:01.945925-04:00",
+  "updated_at": "2026-10-30T21:19:49.399050-04:00",
   "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
@@ -413,15 +413,36 @@
   },
   "operation_checks": [
     {
-      "operation": "policy/hook/installer/identity regressions",
-      "parent_context": "offline temporary journals and mocked native ownership",
+      "provider": "codex",
+      "operation": "silent-queue-tui",
+      "parent_context": "Fresh normally registered standalone TUI, warm/cold exact resume",
       "status": "PASS",
-      "evidence": "evidence/scratch/issue-7/focused-source-final.log"
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/standalone-tui/qualification.json"
     },
     {
-      "operation": "installed queue silent consumption and visible tail",
-      "parent_context": "fresh owned standalone receiver, candidate not activated",
-      "status": "NOT_RUN"
+      "provider": "codex",
+      "operation": "controller-push",
+      "parent_context": "Three fresh standalone parents and native Codex workers",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/genuine-workers/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "registered-owner-after-selection",
+      "parent_context": "Already running exact owner; selected package changed",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/legacy-transition-05/qualification.json"
+    },
+    {
+      "provider": "codex",
+      "operation": "installed-hooks-package",
+      "parent_context": "Regular installed launcher, exact global hook trust, normal package smoke",
+      "status": "PASS",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "private_artifact": "evidence/scratch/issue-7/installed-1793408968597610000/qualification.json"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
