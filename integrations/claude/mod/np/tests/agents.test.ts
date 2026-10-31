@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { agentSpec, describe, modelLabel, parseHeader, shadowModel, startedSince, statusFor, statusLabel, statusSummary, titleFrom, workerSpec } from '../hooks/agents'
+import { agentSpec, describe, modelLabel, parseHeader, shadowModel, startedSince, statusLabel, statusSummary, titleFrom, workerSpec } from '../hooks/agents'
 import { followUp, handbackRequired, provenance, stripFraming } from '../hooks/inputs'
 
 test('a shadow type has only the mirror tool and SubagentHandback, an unserved model and an explicit permission mode', () => {
@@ -89,12 +89,6 @@ test('the status line counts what delegates are doing and stays until there are 
   expect(statusLabel('completed')).toBe('Completed')
 })
 
-test('on the desktop app the status entry carries the summary until the app has drawn the footer menu', () => {
-  const ws = [{ workerId: 'W1', status: 'running' }, { workerId: 'W2', status: 'completed' }] as any
-  for (const seen of [undefined, 'empty', 'no-select'] as const) expect(statusFor('desktop', ws, seen)).toBe('1 running · 1 done')
-  expect(statusFor('desktop', ws, 'drawn')).toBe(undefined)
-  expect(statusFor('terminal', ws, 'drawn')).toBe('1 running · 1 done')
-})
 
 test('a worker counts as started once, when it is first seen running, however it was started', () => {
   const seen = new Set<string>()

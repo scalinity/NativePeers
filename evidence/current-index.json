@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "44dea522c1cb3c4ce5ee363b56b4b8be4a87b251",
-  "reviewed_commit": "9844b21",
-  "publication_branch": "fix/issue39-retry-guidance",
-  "updated_at": "2026-10-31T02:31:49.693255-04:00",
-  "current_record": "evidence/issue-39-managed-activation.json",
+  "code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+  "reviewed_commit": "8957af4",
+  "publication_branch": "fix/lineage-desktop-reopen",
+  "updated_at": "2026-10-31T02:41:38.472262-04:00",
+  "current_record": "evidence/claude-lineage-desktop-reopen.json",
   "file_classes": {
     "product": {
       "files": {
@@ -139,20 +139,20 @@
         "integrations/claude/mod/.claude-plugin/marketplace.json": "ee35af957b34f5c589a14c41445930023e4933ef7b741381df7c79f026322122",
         "integrations/claude/mod/np/.claude-plugin/plugin.json": "d76d723ce6dc874ede14a0b80aa4e282244c2803298f4d56bab6079a656576f0",
         "integrations/claude/mod/np/.gitignore": "41713a4a3d0bab754c7478395d7a4861b3c685cbfa5d0bde780a2692556cd299",
-        "integrations/claude/mod/np/hooks/agents.ts": "fc95de267b71dd6cbf7b006b76acd43304cc61b09b16b6a1ce4345074a4b4bd2",
-        "integrations/claude/mod/np/hooks/bridge.ts": "2bdf39650ac2f19b5167ddcefc5f8511830511777152539c14d632a370f08a37",
+        "integrations/claude/mod/np/hooks/agents.ts": "3d049eb17cb830c9f42a48fd75f78781be45198695fbab2bb39e62d19444d6f8",
+        "integrations/claude/mod/np/hooks/bridge.ts": "c628238857f4e8d08a6957dba21fbe1179a1e70d28ca8cfc0b447deea37948e5",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
         "integrations/claude/mod/np/hooks/mirror.ts": "94d776965e4bdc2ae6583385db33f1129d12a07ecbf0e315d8821446bcbe13b2",
-        "integrations/claude/mod/np/hooks/register.tsx": "8b5530462d8b41099e1d638404e1641ad9eccd6f515505f28d4f489f5ee217a8",
+        "integrations/claude/mod/np/hooks/register.tsx": "74c2485a0474636e88f3a7fe7a03941cd193dfdcf64b2822ee5bccbb25f01b54",
         "integrations/claude/mod/np/hooks/shadow.ts": "fb0c71ce3f6db403a07be6686bc5f076c025d2c942f0238bef927fd7d03ef9d6",
         "integrations/claude/mod/np/hooks/state.ts": "66395eb53c95422476da2a9b4273683eefe72f6c844c7080023cdb2bb59c31a7",
         "integrations/claude/mod/np/hooks/transcript.ts": "60831235dc021b3c6c015e41be825319501300ea03430dfd145d9e23ea343589",
-        "integrations/claude/mod/np/hooks/ui.tsx": "0a2190eb30903b42c477325ac219914a02e9d2b08a0b569c608ab354748d1b49",
-        "integrations/claude/mod/np/tests/agents.test.ts": "549ab5dd1bb0931a3f00f81fb18c87cbf0b3dcc7f9fce485f9c451699fe562f5",
+        "integrations/claude/mod/np/hooks/ui.tsx": "ed2d0f280308aab18ad2e2aa64ba70b4397070e764d514830bb74e1e1f5ae1ce",
+        "integrations/claude/mod/np/tests/agents.test.ts": "1b105097d75799525452b0ca551902b450472c15204c8fc41650780139a57843",
         "integrations/claude/mod/np/tests/planner.test.ts": "41f71282a0ef622dfe12c1bbbf36052e9fbd2819f841963dcf44aa10607c9bd4",
         "integrations/claude/mod/np/tests/transcript.test.ts": "2330355b8592a683a68bac380ff48c8aaee355e10d783a0a5f6b40143b999862",
-        "integrations/claude/mod/np/tests/ui.test.tsx": "3597f89dfb27b03f31e86f4fc56355a5fbf9c29ae6c776e186663cf21ca3b7f5",
+        "integrations/claude/mod/np/tests/ui.test.tsx": "c957b0609b7d1fa04313f25a4c0dea3cf1ad8b5bb4ad1d33e1e430739d23e50f",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "integrations/claude/mod/np/types/index.d.ts": "c29246274098f6fea557445dc23d8d176f879066e4f89b11e9bb468d3560c691",
         "integrations/claude/skills/nativepeers/SKILL.md": "6129889358034762810da7a0ed330fceaa11ec03617d0dd320407a4005932100",
@@ -160,7 +160,7 @@
         "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
       "file_count": 25,
-      "sha256": "c42938818729de39c5aef224326a8dc62f2ccca012347720c95b8b7a39844bf1"
+      "sha256": "e35cf3eda7272932a5bdba34505af7b5e8275ee6e31d7b3ba168edbfce266e6b"
     },
     "tests": {
       "files": {
@@ -244,7 +244,7 @@
         "tests/integration/claude_mod/run_g9g10b.py": "d2e05618a9880ce4cb4c186884b773be5aab8d1f972ba17f76dd6b0f9b5eb457",
         "tests/integration/claude_mod/run_handback.py": "c8355eb0a5b6a759d435c8f8351d9d79d5e7bbb54d9e189afd4fd3f9dac4db3e",
         "tests/integration/claude_mod/run_live_acceptance.py": "ecf14c32d20a0a206c0138d5fad316720445cc8fd5f5136761258e980aa7ba21",
-        "tests/integration/claude_mod/run_live_production.py": "d57f377f98dde2f71dc827a695aca9eb4e4117e4b14211b6b852d5413ac15b43",
+        "tests/integration/claude_mod/run_live_production.py": "fb5249a8802e69bee7b3352d7d5689291c0daa4b9ffbe5ac020c9ce98202b68b",
         "tests/integration/claude_mod/run_live_recovery.py": "5769620080bdd4edc179de576b22d22e2be631e34765f4bb8557fb94051b2635",
         "tests/integration/claude_mod/run_live_resume.py": "bdb1303b15521dad44183f85e85379f686cb39825d423b9b8a60feebdddab70e",
         "tests/integration/claude_mod/run_live_slice.py": "675fa6bcc890f7130c0ac687a0ae94f47ef462f8a1fdaf16b88dce3d0a417807",
@@ -407,10 +407,28 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 241,
-      "sha256": "07e3d01a0146d3fdac1219550ad01ea76d0b3b92c1790ae13e324e30da467c4e"
+      "sha256": "e2b17f36d3125a7a261fe05e5c825c74a457d9bfb2b8487c6404d0dd57c79fc5"
     }
   },
   "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-desktop-reopen-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "Pane conversation, handback deliver and refuse, and startup race runs passed on this engine. Harness runs draw the terminal surface; the desktop reopen line is covered by the test kit and the person's desktop run.",
+      "source_head": "7929a60"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-desktop-reopen-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same runs passed on the desktop app's own engine, drawing the terminal surface.",
+      "source_head": "7929a60"
+    },
     {
       "operation": "managed activation inbox and worker boundary",
       "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",

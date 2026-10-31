@@ -3,9 +3,9 @@
 // pane's Input where the surface has one.
 import type { EngineInterface } from 'claude-code'
 import type { NpDraft, NpRow, NpShadow, NpUi, NpWorker } from '../types'
-import { ACTIVE, NAMES, TAGS, counts, modelLabel, noteFooter, startedSince, statusFor, statusLabel, statusSummary, type Footer } from './agents'
+import { ACTIVE, NAMES, TAGS, counts, modelLabel, startedSince, statusLabel, statusSummary } from './agents'
 import { BridgeError, request, sleep } from './bridge'
-import { duration } from './mirror'
+import { commandOf, duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
 import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, reserveDraft, setTranscript, setUi, toggleExpanded } from './state'
 import { applyActivity, clampMessage, excerpt } from './transcript'
@@ -21,7 +21,8 @@ function reason(error: unknown): string {
 
 // '2 delegates · 1 running · 1 done', with the bridge's state when it is not ready.
 export function summary(c: ReturnType<typeof counts>, bridge: NpBridge, faults: NpFaults): string {
-  const head = `${c.total} delegate${c.total === 1 ? '' : 's'} · ${c.running} running · ${c.done} done${c.stopped ? ` · ${c.stopped} stopped` : ''}${c.failed ? ` · ${c.failed} failed` : ''}`
+  const head = [`${c.total} delegate${c.total === 1 ? '' : 's'}`, c.running && `${c.running} running`, c.done && `${c.done} done`, c.stopped && `${c.stopped} stopped`,
+    c.failed && `${c.failed} failed`].filter(Boolean).join(' · ')
   // The reason itself is /np doctor's: a raw error does not fit beside the buttons.
   return head + (faults.fallthrough ? ' · agent types off — /np doctor' : bridge.state === 'starting' ? ' · bridge starting'
     : bridge.state !== 'ready' ? ` · bridge ${bridge.state} — /np doctor` : '')
@@ -72,7 +73,7 @@ export async function paneBeside($: EngineInterface): Promise<void> {
 // NativePeers' instructions delegates.
 const started = new Set<string>()
 export async function workerStarted($: EngineInterface, opensPane: boolean): Promise<void> {
-  if (startedSince(started, await getLineage($)).length && opensPane && (await $.session.surface()) === 'desktop') await paneBeside($)
+  if (startedSince(started, await getLineage($)).length && opensPane && (await $.session.surfaces()).includes('desktop')) await paneBeside($)
 }
 
 export async function paneShown($: EngineInterface): Promise<boolean> {
@@ -209,30 +210,20 @@ async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Pr
   }
 }
 
-// On the desktop app the np entry at the right of the prompt footer is a menu, as the model picker is: closed, it reads
-// the delegates' summary; open, it offers the NativePeers pane and each worker's conversation. Nothing draws above the
-// prompt there (band: auto). What the app asked for is noted for /np doctor and the status entry (statusFor).
-export async function renderNpMenu($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
-  if (e.surface !== 'desktop') return next(e)
-  const workers = await getLineage($)
-  const { Box, Text, Select } = $.ui.resolve(e) as any
-  if (!Select) { noteFooter('no-select');return next(e) }
-  if (!workers.length) { noteFooter('empty');return next(e) }
-  noteFooter('drawn')
-  const modes: readonly string[] = Array.isArray(e.props.modes) ? e.props.modes : []
-  const options = [{ value: 'np', label: 'np · ' + (statusSummary(workers) ?? '') }, { value: 'pane', label: 'Open NativePeers' },
-    ...workers.slice().reverse().map(w => ({ value: 'w:' + w.workerId, label: `${w.title} · ${NAMES[w.provider] ?? w.provider} · ${statusLabel(w.status)}` }))]
+// The desktop app draws no band (band: auto): the pane beside the conversation carries it. While that pane is closed one
+// slim line offers it back. It is the only pressable place outside the pane the app draws for a mod: its footer paints
+// neither a mod's SessionMode tree nor a pressable status entry.
+async function reopenLine($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
+  const workers = await getLineage($), ui = await getUi($)
+  // ui.paneOpen changes on open and close, so this draws again; the panes listing is the truth.
+  if (!workers.length || e.props.hasSurvey || (ui?.paneOpen && await paneShown($))) return next(e)
+  const { Box, Text, Button } = $.ui.resolve(e)
   return (
     <Box flexDirection="row" columnGap="sm" alignItems="center">
-      {modes.length ? <Text dimColor>{modes.join(' & ')}</Text> : null}
-      <Select key="np-menu" value="np" options={options} onSelect={(value: string) => npMenuPick($, value)} />
+      <Box flexShrink={1} flexGrow={1}><Text dimColor wrap="truncate-end">np · {statusSummary(workers)}</Text></Box>
+      <Button key="reopen" label="Open" onPress={() => openPane($)} />
     </Box>
   )
-}
-
-export async function npMenuPick($: EngineInterface, value: string): Promise<void> {
-  if (value === 'pane') await openPane($)
-  else if (value.startsWith('w:')) await openConversation($, value.slice(2), true)
 }
 
 // A running worker's time moves only when the pane draws again: while one runs and the pane shows, it draws each second.
@@ -242,8 +233,7 @@ export async function tickRunning($: EngineInterface): Promise<void> {
 }
 
 export async function renderBand($: EngineInterface, e: any, next: (e: any) => any, always = false): Promise<any> {
-  // The desktop app draws no band (band: auto): the footer's np menu and the pane beside the conversation carry it.
-  if (e.surface === 'desktop' && !always) return next(e)
+  if (e.surface === 'desktop' && !always) return reopenLine($, e, next)
   const bridge = await getBridge($), workers = await getLineage($), index = await getIndex($), faults = await getFaults($)
   const ui = await getUi($)
   const viewed = e.props.view?.agentId as string | undefined
@@ -339,8 +329,11 @@ function conversationRow($: EngineInterface, R: any, w: NpWorker, r: NpRow, n: n
   const key = `${w.workerId}|${r.item ?? `${r.gen ?? 0}:${n}`}`
   const open = expanded.includes(key) || !folds
   const label = (text: string) => <Text size="footnote" dimColor>{text}</Text>
+  // A worker's turn is labelled once: its messages, steps and file notes after the first continue it.
+  const continues = previous !== undefined && (previous.kind === 'text' || previous.kind === 'tool' || (previous.kind === 'note' && !previous.item?.startsWith('end:')))
+  const turn = (r.kind === 'text' || r.kind === 'tool') && !continues ? name : ''
   if (r.kind === 'task' || r.kind === 'you' || r.kind === 'text') {
-    const heading = r.kind === 'you' ? 'You' : r.kind === 'task' ? 'Task' : previous?.kind === 'text' ? '' : name
+    const heading = r.kind === 'you' ? 'You' : r.kind === 'task' ? 'Task' : turn
     const shown = folds ? clampMessage(r.text, open) : { text: r.text, clamped: false }
     return (
       <Box key={'row-' + n} flexDirection="column" rowGap="xs">
@@ -356,6 +349,7 @@ function conversationRow($: EngineInterface, R: any, w: NpWorker, r: NpRow, n: n
     const out = r.detail ? excerpt(r.detail, folds ? 12 : 6) : undefined
     return (
       <Box key={'row-' + n} flexDirection="column" rowGap="xs">
+        {turn ? label(turn) : null}
         {out && folds ? <Box flexDirection="row"><Button key={'tool-' + n} plain label={line + (open ? '  ▾' : '  ▸')} onPress={() => toggleExpanded($, key)} /></Box>
           : <Text dimColor>{line}</Text>}
         {open && out && Code ? <Code source={out.text} /> : null}
@@ -396,12 +390,13 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
       <Box flexDirection="column" marginTop="md" rowGap="xs">
         <Text size="heading" weight="semibold">{w.title}</Text>
         <Text size="footnote" dimColor>{headline(w, now)}</Text>
-        {running && w.latest ? <Text size="footnote" dimColor>Now: {w.latest}</Text> : null}
       </Box>
       <Box flexDirection="column" marginTop="md" rowGap="md">
         {rows.length ? null : <Text dimColor>{t.cursor ? 'No activity yet.' : 'Loading the conversation…'}</Text>}
         {rows.map((r, n) => conversationRow($, R, w, r, n, rows[n - 1], name, expanded, e.surface === 'desktop'))}
       </Box>
+      {/* Where the person reads and types: the top of a long conversation is out of view. */}
+      {running ? <Box marginTop="md"><Text size="footnote" dimColor>Working · {elapsed(w, now)}{w.latest ? ' · ' + commandOf(w.latest) : ''}</Text></Box> : null}
       {draft?.state === 'sending' ? <Box marginTop="md"><Text size="footnote" dimColor>Sending…</Text></Box> : null}
       {draft?.state === 'refused' ? <Box marginTop="md"><Text size="footnote" dimColor>Not delivered: {draft.reason ?? 'refused'}. Your message is back in the field.</Text></Box> : null}
       {draft?.state === 'uncertain' ? (
@@ -411,7 +406,7 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
         </Box>) : null}
       {Input ? (
         <Box marginTop="md" marginBottom="lg">
-          <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="send" {...focus}
+          <Input key={'say-' + (ui.sent ?? 0)} placeholder={`Message ${name}…`} submitLabel="Send" {...focus}
             value={draft?.state === 'refused' ? draft.text : undefined} onSubmit={(value: string) => sendToWorker($, w, value)} />
         </Box>) : null}
     </Box>
@@ -453,7 +448,7 @@ export async function renderSpinner($: EngineInterface, e: any, next: (e: any) =
 }
 
 export async function statusLine($: EngineInterface): Promise<void> {
-  $.ui.status(statusFor(await $.session.surface(), await getLineage($)))
+  $.ui.status(statusSummary(await getLineage($)))
 }
 
 export async function statusText($: EngineInterface): Promise<string> {
@@ -470,15 +465,8 @@ export async function statusText($: EngineInterface): Promise<string> {
 export type DoctorFacts = {
   version: string; minimum: string; supported: boolean; surface: string; npeer: string; connected: boolean; state: string; reason?: string; restarted?: string
   hello?: { protocol?: number; providers?: string[]; schema?: string }; helloError?: string; fallthrough?: { cleared: boolean; reason?: string }
-  footer?: Footer
 }
 
-const FOOTER: Record<Footer | 'none', string> = {
-  drawn: 'shown at the right of the prompt footer',
-  empty: 'the app asked for the footer before any worker; the menu appears with the first',
-  'no-select': 'the app asked for the footer but offers no menu there; the status entry carries the summary',
-  none: 'the app has not asked for the footer in this session; the status entry carries the summary',
-}
 
 // /np doctor in sentences; Claude Code puts "np: " before the first line. The desktop app keeps its own copy of
 // Claude Code and updates it itself, so the doctor says where its version comes from.
@@ -494,7 +482,6 @@ export function doctorText(f: DoctorFacts): string {
   if (f.helloError) lines.push(`Bridge error: ${f.helloError}`)
   if (f.fallthrough) lines.push(f.fallthrough.cleared ? `Fallthrough cleared (it was: ${f.fallthrough.reason ?? 'unknown'}). np agent types are offered again.`
     : `Fallthrough: ${f.fallthrough.reason ?? 'detected'}. np agent types stay off until the bridge is ready.`)
-  if (f.surface === 'desktop') lines.push(`Footer menu: ${FOOTER[f.footer ?? 'none']}`)
   lines.push(`npeer: ${f.npeer}`)
   return lines.join('\n')
 }
