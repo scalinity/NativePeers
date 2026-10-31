@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+  "code_commit": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
   "reviewed_commit": "e4cbf57",
   "publication_branch": "fix/managed-activation-delivery",
-  "updated_at": "2026-10-31T01:33:17.227518-04:00",
+  "updated_at": "2026-10-31T01:38:31.657396-04:00",
   "current_record": "evidence/issue-39-managed-activation.json",
   "file_classes": {
     "product": {
@@ -28,7 +28,7 @@
         "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
         "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
         "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
-        "nativepeers/adapters/native_delivery.py": "f2565fedab6f41297052a3dcbbd66448da52547f1ad0a004444f36c379e9e18d",
+        "nativepeers/adapters/native_delivery.py": "56ae95de5b6e67931c01bd5b8163554dbad7a0fc6dc1fa006ef719e76fc75aeb",
         "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
         "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
         "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
@@ -46,7 +46,7 @@
         "nativepeers/compatibility.py": "7426b24c316f9b3f42b815a52b22725fe3227971bb36508cd240c4e85d83934b",
         "nativepeers/completion_delivery.py": "13959875012275a48ecd428e5e45e9bff306540c1a6782e689424067f40fb6bd",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
-        "nativepeers/core.py": "45250cb060555064b9bdbe4937abdc7881b642b5b7b55f6181d92b7f3778e3e8",
+        "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
         "nativepeers/delegation.py": "1fa5069cdc709a0291b7a2f54c0718a5a4b52a81813cef6ea332b0f9abd9ea38",
         "nativepeers/desktop_host.py": "d31795ce8509b7ad43813ae1f450c19240940a592aad7b70d24806cfce3317e3",
         "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
@@ -80,7 +80,7 @@
         "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
         "nativepeers/recovery.py": "ce2b4d83e93581c084e9812b80607eaf3301a34f5304400889db71c207ea2033",
         "nativepeers/registry.py": "76bd8005f7a203332ad5abbcc61f8e2fcbebae0b374944ea5d30c4d75fd89b99",
-        "nativepeers/routing.py": "8eedce8a11569e0bc47d4cbed9d40488f6c598c2d0fb6b3375c7a8d3439db95c",
+        "nativepeers/routing.py": "6e99290eb1f8b05a3f2eb3d45cad1851052df967f284a08d64dd64d41310a8b2",
         "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
         "nativepeers/selected_context.py": "d1109c8ba00684dc03beee89a6588b7cd61df9151a76c1381cb3499f75934cc3",
         "nativepeers/supervisor.py": "b788b40d0e0f7404bb2c69724848ae4e9edfb7537288118f616962c217209d0e",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "5d2dc7979fceb8aeedef150ef1590b464a03db6232904365741a8bafba362d6d"
+      "sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede"
     },
     "launchers": {
       "files": {
@@ -279,7 +279,7 @@
         "tests/live/antigravity_paths.py": "90dacd710a38eb126b084d5cc0c053910ef2511b92b2e366a2ed517c68d5ec73",
         "tests/live/collect.py": "a089b07fec40e27af1e311ccafbab4485f2d32f04a0efa8135c67ccd2a99c34c",
         "tests/live/collect_antigravity.py": "d80dd4c0d6b8bc8b2f882861948beae47b2106b961b44a64f21f5752931644d8",
-        "tests/live/final_batch.py": "5cfabfbd4eaafccef00727fb1eef9ba2be79fdb2178e6818dbbcbf53316de648",
+        "tests/live/final_batch.py": "72c75e232cfcd897779465f2cccd28b29a27a6f2b4f88ae76d0922d5ef017ac8",
         "tests/live/final_evidence.py": "7ff783e1534902bdfdc11190e2adc640c5ba31faef7bbe7dc3411208d70de550",
         "tests/live/flash_fallback.py": "aaef707b72c6e86cacc0e51e86e6ef83b33adcb8ca4756f3262687aa83d4d64d",
         "tests/live/launch_final_claude.py": "6ce36079285844718cfc327597bbed5b9a026694520fe624e733580c006602fe",
@@ -332,7 +332,7 @@
         "tests/unit/test_compact_results.py": "188d0b919f01f9a80f888f7c1b4fd80e52e6c63c9e40c0df7fe2007aec762e2a",
         "tests/unit/test_compatibility_receipts.py": "50b3c76f04b057c347146da9e01ea5431f4784c14fdfbefeb9b3b4289e7e4bd8",
         "tests/unit/test_completion_context.py": "dcae6135efda27dc832057c9a5a8b0741b1e1332dbe456f54e43785ee3296040",
-        "tests/unit/test_completion_delivery.py": "f6daa4bb0e0f4e6dfe57fcf4c287cb961b47fb2e97d09e3b42efd5c83de80f7b",
+        "tests/unit/test_completion_delivery.py": "509dfd693a61d89ce6a5dffa126386f94111a23849e28c60890f7e8f2683c70e",
         "tests/unit/test_delegation.py": "7d6a0bdb644a49d556e4dba511e4d172c441724fe9db1a9ae88302713b0377bd",
         "tests/unit/test_delegation_diagnostics.py": "4bf5509db53ab9cee9234df82d5325838ab15a880d721a77bb89d25af1cd9b1e",
         "tests/unit/test_delivery_envelopes.py": "5956afa44b8389943d4ee736e58e200462e742cb1e1a941584c7bf059fe3ac56",
@@ -357,7 +357,7 @@
         "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
         "tests/unit/test_live_followup_probe.py": "a8c0521c7f88e3cdd205447d1267c924b6d4ec9937a5a82cf12e757f7276518f",
-        "tests/unit/test_managed_activation.py": "92cdddea5e73d70a166fecd483ca93f3b2d9b65105f9c3eb6b5a95b9b2687707",
+        "tests/unit/test_managed_activation.py": "9d59b84540a23d8d5eb986b6a49f9633da5552e4a3e2dc2c7bcbd022d59c76c1",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
         "tests/unit/test_native_delivery.py": "b51c7b8a3d9a4870d69afbacb0b47991851cb4df530e31fb69cd3ab4f2cadde2",
@@ -407,7 +407,7 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 241,
-      "sha256": "9a0eb94a77c1736d1078ab9827203bd562057b1f86d73f306f4f355b8364e1ff"
+      "sha256": "79dab955fbec016bb1f31d8786ea6d1fe948c6a7ebddee9fdd4701e756f0f7c8"
     }
   },
   "operation_checks": [

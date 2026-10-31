@@ -216,9 +216,9 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/managed-activation-delivery",
-    "code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+    "code_commit": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
     "evidence": "evidence/issue-39-managed-activation.json",
-    "source_map_sha256": "5d2dc7979fceb8aeedef150ef1590b464a03db6232904365741a8bafba362d6d",
+    "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
     "status": "PENDING"
   },
   "feature_work": {
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "e4cbf57",
     "branch": "fix/managed-activation-delivery",
-    "code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
-    "last_verified_publication": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+    "code_commit": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
+    "last_verified_publication": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,13 +305,13 @@
     "branch": "fix/managed-activation-delivery",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
-    "verified_remote_code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+    "verified_remote_commit": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
+    "verified_remote_code_commit": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "SOURCE_REVIEW_PASS_INSTALLED_NATIVE_PENDING",
+  "stage": "FINAL_GITHUB_CALLER_RECHECK_PENDING",
   "tests_current": {
     "focused_runtime": {
       "status": "PASS",
@@ -458,6 +458,14 @@
       "seconds": 1.33,
       "source_commit": "bb4a918",
       "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_native_delivery.py"
+    },
+    "github_affected_contracts": {
+      "status": "PASS",
+      "passed": 107,
+      "subtests": 34,
+      "seconds": 8.3,
+      "source_commit": "9844b21",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_native_delivery.py tests/unit/test_completion_delivery.py tests/unit/test_notification_policy.py tests/contract/test_phase_admission.py tests/contract/test_supervisor.py tests/contract/test_notifications.py"
     }
   },
   "transports": {
@@ -466,7 +474,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T01:33:17.227518-04:00",
+  "updated_at": "2026-10-31T01:38:31.657396-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2224,6 +2232,33 @@
       "current_review": {
         "branch": "fix/managed-activation-delivery",
         "code_commit": "e4cbf578533e0ed7c4bc38cb008311c06b53e9bb",
+        "evidence": "evidence/issue-39-managed-activation.json",
+        "source_map_sha256": "5d2dc7979fceb8aeedef150ef1590b464a03db6232904365741a8bafba362d6d",
+        "status": "PENDING"
+      }
+    },
+    {
+      "stage": "SOURCE_REVIEW_PASS_INSTALLED_NATIVE_PENDING",
+      "updated_at": "2026-10-31T01:33:17.227518-04:00",
+      "git": {
+        "base_commit": "e4cbf57",
+        "branch": "fix/managed-activation-delivery",
+        "code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+        "last_verified_publication": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/managed-activation-delivery",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+        "verified_remote_code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/managed-activation-delivery",
+        "code_commit": "bb4a9188d563cd3e6093308a3458090ae22afec8",
         "evidence": "evidence/issue-39-managed-activation.json",
         "source_map_sha256": "5d2dc7979fceb8aeedef150ef1590b464a03db6232904365741a8bafba362d6d",
         "status": "PENDING"
