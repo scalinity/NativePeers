@@ -38,11 +38,15 @@ def result_view(service, status, policy, handle, *, results=True):
                    worker_id=worker['worker_id'], provider=worker['provider'], native_id=worker['native_id'],
                    model_requested=clip(worker['model_requested'], 128), model_observed=None,
                    result_artifact_id=task['result_artifact_id'])
+        if task['result_artifact_id'] or task['state'] in {'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}:
+            # A live worker can already belong to a later resume or fallback.
+            # Historical identity is unknown until its own artifact is read.
+            row.update(provider=None, native_id=None, model_requested=None, model_observed=None)
         if results:
             try:
                 rendered = service._render_result(dict(status, tasks=[task]), policy, task['task_id'])['results']
                 record = rendered[0] if rendered else {}
-                if record:
+                if record and task['result_artifact_id']:
                     # Completed attribution belongs to this immutable task, not a
                     # later resume/fallback observation on its mutable worker row.
                     identity=record.get('worker') or {}
@@ -75,6 +79,13 @@ def result_view(service, status, policy, handle, *, results=True):
             if row.get('failure'):
                 row['failure'] = {k:v for k,v in row['failure'].items() if k in ('code', 'may_have_received')}
                 row['failure']['details_omitted'] = True
+    if len(json.dumps(value).encode()) > 3400:
+        value['tasks'] = [dict(task_id=row['task_id'], phase=row['phase'], state=row['state'],
+                              result_artifact_id=row['result_artifact_id'], details_omitted=True,
+                              findings_count=(row.get('findings') or {}).get('count'),
+                              checks_count=(row.get('checks') or {}).get('count'),
+                              failure_present=bool(row.get('failure')))
+                          for row in rows]
     return value
 
 
