@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "originating_task": "NativePeers #39 managed activation delivery",
-  "stage": "FINAL_GITHUB_CALLER_RECHECK_PENDING",
+  "stage": "SOURCE_REVIEW_PASS_INSTALLED_NATIVE_PENDING",
   "status": "PENDING",
-  "reviewed_commit": "e4cbf57",
+  "reviewed_commit": "9844b21",
   "design": "Exact registered recipient runtime and queue helper; selected runtime remains mandatory for new workers. Definitely unsubmitted runtime failures reuse immutable admission; quiet retention and accepted/uncertain attempts remain inert.",
   "tests": {
     "focused_runtime": {
@@ -134,15 +134,15 @@
     },
     "final_runtime_complete": {
       "status": "PASS",
-      "passed": 1167,
+      "passed": 1169,
       "skipped": 4,
-      "subtests": 1066,
-      "seconds": 256.63,
+      "subtests": 1068,
+      "seconds": 255.91,
       "exit_code": 0,
-      "source_commit": "a6ab94f320847ceaa3c86ba38f81e3c141558b95",
+      "source_commit": "7465c9ad7b2152d647ac01b5c2e759f2a921b732",
       "command": ".venv/bin/python -m pytest -q",
       "cwd": "/Users/danny/Documents/Tools/NativePeers/.worktrees/issue-39",
-      "scope": "Final reviewed runtime e4cbf57; F401 changes only this regression test and is separately checked. Runtime source equality verified."
+      "scope": "Exact final reviewed runtime9844b21; no source edits during this complete run."
     },
     "expiry_clock_and_budget": {
       "status": "PASS",
@@ -181,7 +181,7 @@
     "Installed/native acceptance pending. Existing Python processes may retain imported modules. Tracker #16 remains open. Setup totals and net time savings unknown."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "9844b2187001ac62c1d8e4bc763d2a7765897cd5",
+  "code_commit": "7465c9ad7b2152d647ac01b5c2e759f2a921b732",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -293,7 +293,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
-  "updated_at": "2026-10-31T01:38:31.657396-04:00",
+  "updated_at": "2026-10-31T01:43:17.884886-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
@@ -444,19 +444,19 @@
       ],
       [
         "G001",
-        "fixed pending substantive recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "9844b21",
         "GitHub4430668277: P003 expiry already fixed; controller deadline now forwarded through rawRouter/Core and rechecked before budget/helper; actual before/after regression"
       ],
       [
         "G002",
-        "fixed pending substantive recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "9844b21",
         "GitHub4430668280: existing live acceptance helper passes journal and expiry, reserves Codex budget only after verification; real helper regression keeps Claude signature"
       ]
     ],
     "final_recheck_task": "cf120e6e-64c6-495e-bb0f-9e02c0fe04d1",
-    "status": "SIXTH_TARGETED_GITHUB_FINDINGS_RECHECK_PENDING",
+    "status": "ACCEPTED_SIX_NATIVE_PHASES_ALL_FINDINGS_DISPOSED",
     "reviewer_tests": "NOT_RUN; independent analysis/read-only findings, parent execution separately attributed",
     "second_task": "35b864f1-c7e0-4253-a4eb-46be3dea23a6",
     "second_result": "Fixed source accepted; F101-F106 remained on the proposed driver/last edge cases.",
@@ -468,9 +468,12 @@
       230178,
       125028,
       58492,
-      41533
+      41533,
+      60964
     ],
-    "logical_inputs": 5
+    "logical_inputs": 6,
+    "sixth_task": "cf120e6e-64c6-495e-bb0f-9e02c0fe04d1",
+    "reviewer_release": "Generation6 captured process/pipe closure: CLOSED, provider_exited true, output_eof true, owned process DEAD; resume-command --explain launched false."
   },
   "concurrent_base": "46ad3ba8039bf20f3faf9035b7572ea72b2698a8",
   "scoped_predecessors": [
