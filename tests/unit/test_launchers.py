@@ -12,6 +12,15 @@ INSTALLED = '/Users/danny/Documents/Tools/NativePeers'
 
 
 class LauncherTests(unittest.TestCase):
+    def test_owned_antigravity_resume_and_mcp_routes_also_exclude_cwd(self):
+        from nativepeers.antigravity_install import desired
+        home=Path('/fixture-home')
+        config=desired(home)[home/'.gemini/config/mcp_config.json'][2]
+        self.assertEqual(config['args'][:3],['-P','-m','nativepeers.mcp_server'])
+        self.assertEqual(config['env']['PYTHONPATH'],str(ROOT))
+        self.assertIn('/.venv/bin/python" -P -m nativepeers.antigravity resolve-name',
+                      (ROOT/'integrations/zsh/gemini.zsh').read_text())
+
     def test_all_owned_shell_entrypoints_ignore_cwd_packages_and_keep_selection(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder).resolve()
