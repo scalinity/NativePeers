@@ -110,6 +110,7 @@ class NativeBackend:
         self.session, self.sessions = session, [session]
         self.runtimes, self.manifest = dict(runtimes or {}), manifest
         self.inflight, self.agents, self.locks, self.catalog_cache, self.socket, self.times, self.backfills = {}, {}, {}, None, None, {}, {}
+        self.recorded = False
         self.changed, self.revision = asyncio.Event(), 0
 
     # --- identity and scope
@@ -184,6 +185,7 @@ class NativeBackend:
     def record_manifest(self, socket=None):
         self.socket = socket or self.socket
         if self.manifest:
+            self.recorded = True
             atomic_json(Path(self.manifest), dict(process=identity(os.getpid()).json(), socket=str(self.socket), peer=self.current, peers=list(self.peers),
                                                   claude_sessions=self.sessions, protocol=1, started_at=time.time()))
 
@@ -699,7 +701,7 @@ def run(args):
     from .bridge import Bridge, PROTOCOL, socket_path
     from .journal import Journal
     from .registry import Registry
-    journal = manifest = None
+    journal = manifest = backend = None
     try:
         require(args.protocol == PROTOCOL, 'PROTOCOL_ERROR', f'Bridge protocol {args.protocol} is not supported; this NativePeers speaks {PROTOCOL}')
         journal = Journal()
@@ -709,7 +711,7 @@ def run(args):
         socket = claim_free(socket_path(args.claude_session))
         manifest = manifest_path(journal, socket)
         backend = NativeBackend(journal, peer, args.claude_session, runtimes=runtimes(journal), manifest=manifest)
-        backend.record_manifest(socket)
+        backend.socket = socket
         async def serve():
             bridge = Bridge(backend, socket)
             asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, bridge.stop, 'terminated')
@@ -720,5 +722,6 @@ def run(args):
         print(json.dumps(dict(ready=False, error=error.json()), separators=(',', ':')), flush=True)
         return None
     finally:
-        if manifest:manifest.unlink(missing_ok=True)
+        # Only a manifest this bridge wrote is removed: another bridge may hold the same path.
+        if manifest and backend and backend.recorded:manifest.unlink(missing_ok=True)
         if journal:journal.close()

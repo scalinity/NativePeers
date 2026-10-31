@@ -14,9 +14,15 @@ export class BridgeError extends Error {
 // The token lives only in module memory: never in $.state, $.store or a log.
 let connection: { socket: string; token: string; generation: number } | undefined
 let launches = 0
+let launching = 0
 
 export function connected(): boolean {
   return connection !== undefined
+}
+
+// A bridge is starting: it is connected only once its ready line arrives.
+export function starting(): boolean {
+  return launching > 0
 }
 
 export async function request($: EngineInterface, method: 'GET' | 'POST', path: string, body?: unknown): Promise<any> {
@@ -57,6 +63,11 @@ async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; 
 // child lives as long as `pump` reads it: the engine kills it when the module
 // unloads or reloads.
 export async function launch($: EngineInterface, session: string, cwd: string, npeer: string): Promise<{ hello: any } | { reason: string }> {
+  launching += 1
+  try { return await start($, session, cwd, npeer) } finally { launching -= 1 }
+}
+
+async function start($: EngineInterface, session: string, cwd: string, npeer: string): Promise<{ hello: any } | { reason: string }> {
   const generation = ++launches
   await setBridge($, { state: 'starting', since: await $.clock.now() })
   const child = $.process.spawn({ argv: [npeer, 'bridge', '--claude-session', session, '--protocol', '1', '--json'], cwd })
@@ -81,7 +92,8 @@ export async function launch($: EngineInterface, session: string, cwd: string, n
     void child.return(undefined as never)
     // A refusal arrives as {"ready":false,"error":{...}} on stdout; stderr holds anything else.
     const reason = (ready?.error?.code ? `${ready.error.code}: ${ready.error.message ?? ''}` : err.trim().split('\n').pop() || 'no ready line').slice(0, 300)
-    await setBridge($, { state: 'down', reason, since: await $.clock.now() })
+    // A bridge already connected keeps the state it set: one failed start does not mark it down.
+    if (!connection) await setBridge($, { state: 'down', reason, since: await $.clock.now() })
     return { reason }
   }
   connection = { socket: ready.socket, token: ready.token, generation }
@@ -89,6 +101,12 @@ export async function launch($: EngineInterface, session: string, cwd: string, n
   await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: ready.socket, since: await $.clock.now() })
   void pump($, child, generation, ready.socket)
   return { hello }
+}
+
+// /np doctor's exact answer: a hook that read the state while a start was still in flight could have
+// left it stale, so a live connection restores the ready state its own start set.
+export async function restoreReady($: EngineInterface, hello: any): Promise<void> {
+  if (connection) await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: connection.socket, since: await $.clock.now() })
 }
 
 export async function heartbeat($: EngineInterface): Promise<void> {

@@ -121,6 +121,9 @@ class Bridge:
         claim_socket(self.path)
         server = await asyncio.start_unix_server(self.connection, path=str(self.path), limit=MAX_HEAD)
         os.chmod(self.path, 0o600)
+        # Recorded only once this bridge holds the socket: one that lost the socket never touches the holder's record.
+        record = getattr(self.backend, 'record_manifest', None)
+        if record:record(self.path)
         ready = dict(ready=True, socket=str(self.path), token=self.token, protocol=PROTOCOL, **self.backend.hello())
         self.out.write(json.dumps(ready, separators=(',', ':'))+'\n');self.out.flush()
         watch = asyncio.create_task(self.watchdog())

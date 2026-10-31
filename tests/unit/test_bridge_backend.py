@@ -488,6 +488,18 @@ class TakeoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(path.exists())  # A closed listener leaves its file behind: stale, so reclaimed.
         self.assertEqual(claim_free(path), path);self.assertFalse(path.exists())
 
+    async def test_a_bridge_that_loses_the_socket_never_records_over_the_holders_manifest(self):
+        import socket as sockets
+        path = socket_path('session-2', root=self.root)
+        holder = sockets.socket(sockets.AF_UNIX);holder.bind(str(path));holder.listen()
+        recorded = []
+        backend = type('Backend', (), {'record_manifest': lambda _, p: recorded.append(p), 'hello': lambda _: {}})()
+        try:
+            with self.assertRaises(PeerError) as error:await Bridge(backend, path, out=io.StringIO()).run()
+        finally:
+            holder.close()
+        self.assertEqual((error.exception.code, recorded), ('BRIDGE_RUNNING', []))
+
     async def test_a_bridge_started_supervisor_is_reparented_and_a_cli_one_stays_a_child(self):
         from nativepeers import delegation
         fake = self.root / 'python';fake.write_text('#!/bin/sh\nsleep 0.3\nprintf \'{"ppid": %s}\' "$PPID" > "$NPEER_HOME/groups/$4/ppid.json"\n'
