@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/issue-7-silent-close",
-    "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
-    "evidence": "evidence/issue-7-silent-queue.json",
-    "source_map_sha256": "4c14325cc7488a8de179c567d56bb65c3f1f3f10768f6228d6e87ae5aa7923d8",
-    "status": "PASS"
+    "branch": "fix/review-followup-20261030",
+    "code_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
+    "evidence": "evidence/review-followup-workflow.json",
+    "source_map_sha256": "781bde0775ae91882fc7d7e8890ad0cafc92ed90fd4f0bc849fe3a6b9f2035d5",
+    "status": "PARTIAL"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
-    "branch": "fix/issue-7-silent-close",
-    "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
-    "last_verified_publication": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+    "base_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
+    "branch": "fix/review-followup-20261030",
+    "code_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
+    "last_verified_publication": "b356d022e289db6514c20bfc9cddbb05a0161119",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,110 +302,52 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/issue-7-silent-close",
+    "branch": "fix/review-followup-20261030",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
-    "verified_remote_code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+    "verified_remote_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
+    "verified_remote_code_commit": "b356d022e289db6514c20bfc9cddbb05a0161119",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-7-installed-silent-queue",
+  "stage": "SOURCE_REMEDIATED_PENDING_FINAL_REVIEW_AND_INSTALLED_ACCEPTANCE",
   "tests_current": {
-    "focused": {
-      "status": "PASS",
-      "tests": 72,
-      "subtests": 114,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_notification_policy.py tests/unit/test_notification_guard_hooks.py tests/unit/test_completion_delivery.py tests/unit/test_hook_identity.py tests/unit/test_owned_caller_identity.py tests/unit/test_install.py tests/unit/test_install_home.py tests/unit/test_readiness.py",
-      "private_artifact": "evidence/scratch/issue-7/focused-source-final.log"
-    },
-    "full": {
-      "status": "PASS",
-      "tests": 1119,
-      "subtests": 1056,
+    "initial_complete_suite": {
+      "status": "FAIL",
+      "passed": 1107,
+      "failed": 22,
       "skipped": 4,
-      "seconds": 362.71,
-      "exit_code": 0,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
-      "cwd": "/Users/danny/Documents/Tools/NativePeers",
-      "source_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/full-nativepeers.log"
+      "subtests": 1060,
+      "reason": "Missing worktree .venv caused20 process fixtures to fail; two unchanged predecessor fingerprint assertions detect candidate drift."
     },
-    "installed_native": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/qualification.json",
-      "scope": "Exact selected package, supported reinstall, four trusted hooks, mandatory package smoke, doctor and quota metadata"
+    "provisioned_failed_checks": {
+      "status": "PARTIAL",
+      "passed": 20,
+      "failed": 2,
+      "reason": "All20 environment failures pass after linking the existing project .venv; source verification fingerprints intentionally remain predecessor-scoped."
     },
-    "standalone_tui": {
+    "review_contract_and_remediation": {
       "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/standalone-tui/qualification.json",
-      "scope": "Normally registered standalone native TUI: 44 mixed fixture frames, 22 warm and 22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit."
+      "tests": 27,
+      "subtests": 40
+    },
+    "delivery_boundary_remediation": {
+      "status": "PASS",
+      "tests": 86,
+      "subtests": 34
+    },
+    "ownership_guidance": {
+      "status": "PASS",
+      "tests": 33,
+      "subtests": 20
     },
     "probe_offline": {
       "status": "PASS",
-      "tests": 24,
-      "subtests": 29,
-      "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
-      "scope": "24 standalone probe regressions; the original combined guard/probe run recorded 45 tests and 29 subtests."
+      "tests": 2
     },
-    "genuine_worker_probe_offline": {
-      "status": "PASS",
-      "tests": 42,
-      "subtests": 53,
-      "private_artifact": "evidence/scratch/issue-7/genuine-probe-stale-screen-fix.log"
-    },
-    "registered_owner_guard": {
-      "status": "PASS",
-      "tests": 31,
-      "subtests": 30,
-      "private_artifact": "evidence/scratch/issue-7/old-owner-boundary-focused.log"
-    },
-    "legacy_owner_probe_offline": {
-      "status": "PASS",
-      "tests": 45,
-      "private_artifact": "evidence/scratch/issue-7/probe-termination-cleanup.log"
-    },
-    "probe_cleanup_regressions": {
-      "status": "PASS",
-      "tests": 91,
-      "subtests": 57,
-      "private_artifact": "evidence/scratch/issue-7/reopen-audit-sequencing-focused-02.log"
-    },
-    "combined_preinstall_tui": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
-      "scope": "Historical selected 763301510afa preinstall run: 44 mixed frames, warm/cold exact resume and reviewed reopen/history repaint oracle. Installed checks are recorded separately under installed_native and standalone_tui."
-    },
-    "genuine_worker_push": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/genuine-workers/qualification.json",
-      "scope": "Three actual Codex worker/controller phases: OPEN delivery, QUIET pre-submission retention, accepted-before-close original completion silent consumption"
-    },
-    "registered_owner_transition": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/legacy-transition-05/qualification.json",
-      "scope": "Registered old owner retains exact receiving guard after distinct managed package selection and approval; zero suppressed model requests, retained original body/receipt and legitimate control. Legacy block UI not silent qualification"
-    },
-    "installer": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/install-preservation-final/install-02.json",
-      "repeat_operations": 0,
-      "scope": "Preserved local Claude notes through reviewed exact-file reconciliation; non-owned settings semantically unchanged"
-    },
-    "external_paid_model": {
-      "status": "NOT_RUN",
-      "scope": "Localhost fixtures qualify native routing and UI; external network traffic is NOT_INSTRUMENTED"
-    },
-    "guarded_rollback": {
-      "status": "PASS",
-      "private_artifact": "/Users/danny/Documents/Tools/CodexForge/artifacts/quiet-close-issue-7/rollback-check-final.json",
-      "scope": "Check-only; no selection/approval writes"
-    },
-    "host_preservation": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/install-preservation-final/host-after.json",
-      "scope": "Protected authentication, shell and provider files unchanged except owned hook/trust updates; non-owned configuration semantic hashes unchanged"
+    "installed_combined": {
+      "status": "NOT_RUN"
     }
   },
   "transports": {
@@ -414,7 +356,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T21:34:35.900457-04:00",
+  "updated_at": "2026-10-30T22:18:03.917559-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1851,6 +1793,33 @@
         "evidence": "evidence/claude-lineage-startup-race.json",
         "source_map_sha256": "4c14325cc7488a8de179c567d56bb65c3f1f3f10768f6228d6e87ae5aa7923d8",
         "status": "PASS_WITH_OPEN_ITEMS"
+      }
+    },
+    {
+      "stage": "issue-7-installed-silent-queue",
+      "updated_at": "2026-10-30T21:34:35.900457-04:00",
+      "git": {
+        "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+        "branch": "fix/issue-7-silent-close",
+        "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+        "last_verified_publication": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-7-silent-close",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+        "verified_remote_code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-7-silent-close",
+        "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+        "evidence": "evidence/issue-7-silent-queue.json",
+        "source_map_sha256": "4c14325cc7488a8de179c567d56bb65c3f1f3f10768f6228d6e87ae5aa7923d8",
+        "status": "PASS"
       }
     }
   ],
