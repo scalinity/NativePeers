@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
-  "reviewed_commit": "4b98ea7ec9defa2ddc18fbdeccf63821d76e9e1c",
-  "publication_branch": "fix/lineage-desktop-host",
-  "updated_at": "2026-10-30T20:17:09.214964-04:00",
-  "current_record": "evidence/claude-lineage-desktop.json",
+  "code_commit": "f30b7704a0481560e30e03d934c31aba67d20c91",
+  "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+  "publication_branch": "fix/issue-7-silent-close",
+  "updated_at": "2026-10-30T20:57:42.894636-04:00",
+  "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
       "files": {
@@ -300,12 +300,12 @@
         "tests/probes/claude_runtime_verify.py": "02edbd7aa3f5a66bb378e00c3cf59e932fd84d011bae96539c1a3cea13d44b2b",
         "tests/probes/cleanup_owned.py": "e7001d0d5c2e5bf1eaab8a5cf238ad0aa789edcba56249cbdfe487b8d1328e76",
         "tests/probes/launch.py": "55f6a261237b9ac8a5474c0a0a76b8fa2ec06af3f6401868b1a13ca2b44b446e",
-        "tests/probes/legacy_owner_guard.py": "da3215ac9a6a2d6c01e54bebe7c4a0defbd84219c5dcdabf8b1976c2d605aa27",
+        "tests/probes/legacy_owner_guard.py": "683fb3d5d67e346d6860559967d466a6ac98511be6e9e089995183cbf4a19ab5",
         "tests/probes/notification_guard.py": "8a6d160ba9af4540adec1d9bbd2818592f0cee9675a54c408ba050fc319fd925",
         "tests/probes/passive_native.py": "eba1da5be14f08aaa6f028bb73d11ca276a2db56d47679408639df1266aef1fe",
         "tests/probes/publish_current.py": "e6b72c8740f8a6bb4c533d5a175ece2e6c1b085222ee582e875be11e7a914e37",
-        "tests/probes/quiet_close_tui.py": "1a92bd74c7684596935a44bda71e23aa837ff8ddb1e7c7df7932c6b44da64b07",
-        "tests/probes/quiet_close_worker.py": "d4f86814fb47d586fb8086d652d29756a0b0148ddb2ff3b96fc6dcd7eb1c432a",
+        "tests/probes/quiet_close_tui.py": "53d18dafdb49ab97bddcd534db246e40a3a30ca6bd39767ba4db16259472b08f",
+        "tests/probes/quiet_close_worker.py": "fadbbcca8da3e379fee4024ceef5eb1bc4813f4b1df9f763030ba858588a0da3",
         "tests/probes/read_performance.py": "418d39a10abd1651de2e02237b59d91b2f071f2ab303512b1c33f31c9504cd9b",
         "tests/probes/seams.py": "287a4f899d2c0bcae219a4948ebf3d7528869e24b6239edd9db876502399b97f",
         "tests/probes/settle_queues.py": "b8778eafb679e107f1c6eee3af892b3485e1102b1d184d303d29467ff82e1049",
@@ -357,7 +357,7 @@
         "tests/unit/test_install_home.py": "f7ad753a0f9d0f54693f94813a476b96a205fadfb515431c4a77dc1597ecbdfa",
         "tests/unit/test_interrupt_and_steer.py": "169dae4cfa211839d87fc12e91e486775a922d464b1bc924f319997af32d06e3",
         "tests/unit/test_isolated_copy.py": "317c2d00e9d8299e28d029268b164bfc17acb0fc0c2e792dc8333f027e1edced",
-        "tests/unit/test_legacy_owner_guard_probe.py": "2884dae52f8f14b2c2fe0ae14b8dd9ac689f5b8bee6694f1e67108aac6f6e83d",
+        "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
@@ -371,7 +371,7 @@
         "tests/unit/test_owned_caller_identity.py": "aa8a619371bd04c92b8161c0e0167fe45df8a2f449092f7da6543241b247216c",
         "tests/unit/test_process.py": "0ff58a74a48d49f263a2d02d599f66104d90c8d70e5c55a7e49bba086d1d30f2",
         "tests/unit/test_provider_errors.py": "bd7e2628d964fa2a45f4d2988f304b4e3381984f253ce0d40c95a38cbe43cf54",
-        "tests/unit/test_quiet_close_tui_probe.py": "8d2c937548ac71c8c2aa8919d6c08cc3bfa9397a2860258f7e4fb8bf16d27ca5",
+        "tests/unit/test_quiet_close_tui_probe.py": "78a7a446fe1a8686c3e9758cab953b5aac09ab0f9ab675e47b9aaec601d567c5",
         "tests/unit/test_quiet_close_worker_probe.py": "21cf66937b1bfdeec0735187fdb4f62191ed8026b1c03a1aa8887c2a25f7c25c",
         "tests/unit/test_readiness.py": "6dbbd6f87cb653e89b641e071a0eb06ec2a6ac2d8bc590990d1f5f275cb9b2f0",
         "tests/unit/test_readonly_artifacts.py": "ad5ad979d5b9ad208595319b2340049f528ef47e96dc0c0d4c1a86d92eb2f3aa",
@@ -408,18 +408,20 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 234,
-      "sha256": "b6e2ec7694c2e6f2ad20ee05d6b6af0d27ce6e6c9fe61fd611eeda0b179239a8"
+      "sha256": "28ab96bdfc7806f9b53c191be15696cd96c28166542435761d13ab9da8049d7d"
     }
   },
   "operation_checks": [
     {
-      "provider": "claude",
-      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
-      "operation": "desktop-host-first-use-approval",
+      "operation": "policy/hook/installer/identity regressions",
+      "parent_context": "offline temporary journals and mocked native ownership",
       "status": "PASS",
-      "parent_context": "scratch state root; the installed Claude desktop engine 2.1.309; no model input",
-      "scope": "Bridge-side first-use approval on a scratch state root: private bundle copy, codesign requirement (team Q6L2SF6YDW, identifier com.anthropic.claude-code) and sandboxed --version passed in 2.37 s; the exact-hash approval check the hook uses took 0.10 s; no temporary copy left",
-      "source_head": "c7a5d4d"
+      "evidence": "evidence/scratch/issue-7/focused-source-final.log"
+    },
+    {
+      "operation": "installed queue silent consumption and visible tail",
+      "parent_context": "fresh owned standalone receiver, candidate not activated",
+      "status": "NOT_RUN"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
