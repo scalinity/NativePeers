@@ -216,10 +216,10 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/issue-16-workflow",
-    "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+    "code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
     "evidence": "evidence/issue-16-workflow.json",
-    "source_map_sha256": "b79155145c4f49d453b39cd11b6b8b25e3172ddbbf608d452b2baed1c89f288f",
-    "status": "SOURCE_REVIEW_IN_PROGRESS"
+    "source_map_sha256": "953cbc3fa0c67d4db3fe50567c9854f3c846f8ddc1fc577d73683acef85a014e",
+    "status": "REVIEWED_SOURCE_INSTALL_PENDING"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
     "branch": "fix/issue-16-workflow",
-    "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
-    "last_verified_publication": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+    "code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
+    "last_verified_publication": "b5209d0c5405c3605dfc4232231326815a79d623",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,13 +305,13 @@
     "branch": "fix/issue-16-workflow",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
-    "verified_remote_code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+    "verified_remote_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
+    "verified_remote_code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-16-workflow-source-review",
+  "stage": "issue-16-workflow-reviewed-source",
   "tests_current": {
     "focused": {
       "status": "PASS",
@@ -331,6 +331,39 @@
       "subtests": 1076,
       "seconds": 278.32,
       "failures": "Generated publication pointers still described predecessor source; assertions are unchanged. Functional tests passed. Final source qualification remains pending."
+    },
+    "publication_coherence": {
+      "status": "PASS",
+      "tests": 3,
+      "scope": "Regenerated from pushed a33c8fd; original two failures preserved. Assertions unchanged."
+    },
+    "remediation_context": {
+      "status": "PASS",
+      "tests": 18,
+      "subtests": 10
+    },
+    "remediation_launcher_antigravity": {
+      "status": "PASS",
+      "tests": 23,
+      "subtests": 31
+    },
+    "helper": {
+      "status": "PASS",
+      "tests": 24,
+      "scope": "Source-only public bundle and canonical master; history preserved"
+    },
+    "complete_source": {
+      "status": "PASS",
+      "tests": 1152,
+      "subtests": 1076,
+      "skipped": 4,
+      "seconds": 270.77,
+      "scope": "Candidate source b5209d0 with regenerated source pointers; exact Python3.14.10/candidate import checked"
+    },
+    "facade_contract_after_fixes": {
+      "status": "PASS",
+      "tests": 12,
+      "subtests": 19
     }
   },
   "transports": {
@@ -339,7 +372,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T01:01:38.811562-04:00",
+  "updated_at": "2026-10-31T01:35:27.209607-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2019,6 +2052,33 @@
         "evidence": "evidence/claude-lineage-pane-conversation.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PASS_WITH_OPEN_ITEMS"
+      }
+    },
+    {
+      "stage": "issue-16-workflow-source-review",
+      "updated_at": "2026-10-31T01:01:38.811562-04:00",
+      "git": {
+        "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "last_verified_publication": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-16-workflow",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "verified_remote_code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "evidence": "evidence/issue-16-workflow.json",
+        "source_map_sha256": "b79155145c4f49d453b39cd11b6b8b25e3172ddbbf608d452b2baed1c89f288f",
+        "status": "SOURCE_REVIEW_IN_PROGRESS"
       }
     }
   ],

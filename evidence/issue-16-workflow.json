@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "stage": "issue-16-workflow-source-review",
-  "status": "SOURCE_REVIEW_IN_PROGRESS",
+  "stage": "issue-16-workflow-reviewed-source",
+  "status": "REVIEWED_SOURCE_INSTALL_PENDING",
   "reviewed_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
   "originating_task": "NativePeers remaining workflow improvements and issue16 acceptance",
   "issues": [
@@ -39,22 +39,57 @@
       "status": "PASS",
       "tests": 3,
       "scope": "Regenerated from pushed a33c8fd; original two failures preserved. Assertions unchanged."
+    },
+    "remediation_context": {
+      "status": "PASS",
+      "tests": 18,
+      "subtests": 10
+    },
+    "remediation_launcher_antigravity": {
+      "status": "PASS",
+      "tests": 23,
+      "subtests": 31
+    },
+    "helper": {
+      "status": "PASS",
+      "tests": 24,
+      "scope": "Source-only public bundle and canonical master; history preserved"
+    },
+    "complete_source": {
+      "status": "PASS",
+      "tests": 1152,
+      "subtests": 1076,
+      "skipped": 4,
+      "seconds": 270.77,
+      "scope": "Candidate source b5209d0 with regenerated source pointers; exact Python3.14.10/candidate import checked"
+    },
+    "facade_contract_after_fixes": {
+      "status": "PASS",
+      "tests": 12,
+      "subtests": 19
     }
   },
   "operation_checks": [
     {
-      "operation": "candidate focused launcher/context and budget/facade checks",
-      "parent_context": "Verified native Codex author, isolated source worktree",
+      "operation": "complete candidate source suite and coherence",
+      "parent_context": "Verified Codex author in isolated candidate; no installed source claim",
       "status": "PASS"
     },
     {
-      "operation": "complete candidate suite before pointer regeneration",
-      "parent_context": "Isolated candidate source",
-      "status": "FAIL"
+      "operation": "actual different-vendor native implementation review and complete parent address",
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "parent_context": "Codex native01a19047; Claude history9ca07faf; analysis/inherit-read-only",
+      "status": "PASS"
     },
     {
-      "operation": "supported install and affected native routes",
-      "parent_context": "Physical installed source and current qualified runtime",
+      "operation": "canonical np-eval helper source promotion and Codex alias execution",
+      "parent_context": "Existing shared master preserved with byte-identical history; other harness interactive invocation NOT_RUN",
+      "status": "PASS"
+    },
+    {
+      "operation": "supported NativePeers install and affected installed/native routes",
+      "parent_context": "Waiting for #39 owner reviewed source/native transition interval release",
       "status": "NOT_RUN"
     }
   ],
@@ -68,18 +103,144 @@
     "coverage": "Exact same selected paths/base/head/diff. Primary omits source outside explicit ranges and uses separately granted immutable full recovery. Not token/billing/time/storage savings."
   },
   "review": {
-    "status": "RUNNING",
+    "status": "COMPLETE",
     "group_id": "02a89860-16f9-4750-ab88-dfd75bf00d7b",
     "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
     "worker_id": "4e41abe4-501c-48be-99e9-962cf43c355a",
-    "requested": "Claude sonnet/high, analysis/inherit-read-only; no Bash"
+    "requested": "Claude sonnet/high, analysis/inherit-read-only; no Bash",
+    "recheck_task": "dec406ef-4e98-424a-bdf9-b613a521b264",
+    "observed_model": "claude-sonnet-5-5",
+    "native_rounds": [
+      23,
+      24,
+      8
+    ],
+    "assistant_events": 35,
+    "seconds": [
+      259.8882040977478,
+      140.6880497932434,
+      29.592434883117676
+    ],
+    "tools": "Read/Glob/Grep and scoped NativePeers facade; no Bash",
+    "findings": {
+      "F001": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "warning",
+        "summary": "F001: Ledger rows containing U+2028/U+2029/U+0085 split under splitlines() and make the ledger unreadable",
+        "status": "fixed and parent verified",
+        "commit": "skills 7314e90",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "helper Unicode separator regression and 7 helper checks"
+      },
+      "F002": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "warning",
+        "summary": "F002: Worker dedupe keyed on task_id alone refuses later phases or attempts of the same task",
+        "status": "fixed and parent verified",
+        "commit": "skills 560034e",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "fallback/phase dedupe regression and 8 helper checks",
+        "scope_note": "NativePeers follow-ups use distinct task IDs. Same-task fallback attempts need distinct attempt_index measurement keys; no invented follow-up transport bug."
+      },
+      "F003": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "warning",
+        "summary": "F003: --excluded placed after the ledger is swallowed by argparse REMAINDER and records a spurious failed command",
+        "status": "fixed and parent verified",
+        "commit": "skills 84253d9",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "excluded CLI argv tests for both positions and 9 helper checks"
+      },
+      "F004": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "warning",
+        "summary": "F004: gemini.zsh resolve-name and the Antigravity MCP config still run python -m nativepeers.* without -P",
+        "status": "fixed and parent verified",
+        "commit": "NativePeers b3f079f and 7b45795",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "23 launcher/Antigravity tests,31 subtests after corrected shortcut patch; initial failed patch assertion retained"
+      },
+      "F005": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "info",
+        "summary": "F005: Candidate-import test uses python -c with PYTHONPATH, passes regardless of the change and requires ROOT/.venv",
+        "status": "fixed and parent verified",
+        "commit": "NativePeers e31537a",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "3 launcher tests/10 subtests, no injected PYTHONPATH or candidate venv dependency in explicit import check"
+      },
+      "F006": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "info",
+        "summary": "F006: Only spawn enforces review primary to recovery pairing; peer send does not",
+        "status": "fixed and parent verified",
+        "commit": "NativePeers a4c7c79",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "37 selected-context/routing tests,28 subtests; rejected primary-only send records no request/delivery"
+      },
+      "F007": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "info",
+        "summary": "F007: omitted_versions counts the duplicate base of unchanged files and excerpt sha256 is the whole-file digest",
+        "status": "fixed and parent verified",
+        "commit": "NativePeers b5209d0",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "18 selected-context tests,10 subtests; whole-file/excerpt SHA and zero omissions for fully included unchanged caller"
+      },
+      "F008": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "info",
+        "summary": "F008: effort events with null durations yield a false 0 for observed_parent_effort_seconds",
+        "status": "fixed and parent verified",
+        "commit": "skills 68d78fb",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "10 helper tests; null effort and labelled partial coverage"
+      },
+      "F009": {
+        "task_id": "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+        "severity": "info",
+        "summary": "F009: observation_window_seconds is computed at summary time so regenerated summaries change",
+        "status": "fixed and parent verified",
+        "commit": "skills 1b2983f",
+        "independent_recheck": "dec406ef-4e98-424a-bdf9-b613a521b264: fixed",
+        "parent_check": "23 complete helper/evaluator tests; stable recorded window across repeated summaries"
+      },
+      "F101": {
+        "task_id": "dec406ef-4e98-424a-bdf9-b613a521b264",
+        "severity": "info",
+        "summary": "F101: capture.md names a phase_id field the owned result does not expose (completion_phase) and attempt_index absence (None) vs 0 would double-count a re-import",
+        "status": "fixed and parent verified",
+        "commit": "skills 85c9c61",
+        "parent_check": "24 complete evaluator/capture tests from private and public sources; public tree and ancestry exclusions verified",
+        "independent_recheck": "74d732a6-1805-4883-b3c7-a8d47481d4f6: fixed, no findings"
+      },
+      "F102": {
+        "task_id": "dec406ef-4e98-424a-bdf9-b613a521b264",
+        "severity": "info",
+        "summary": "F102: public-package example commands use /Users/danny/.local/bin/npeer; confirm installations.json is excluded from the publish tree",
+        "status": "fixed and parent verified",
+        "commit": "skills ad7541b",
+        "parent_check": "24 complete evaluator/capture tests from private and public sources; public tree and ancestry exclusions verified",
+        "independent_recheck": "74d732a6-1805-4883-b3c7-a8d47481d4f6: fixed, no findings"
+      }
+    },
+    "accounting": "Complete immutable report recovered and nine readable/structured IDs reconciled locally; original worker limitations retained.",
+    "tasks": [
+      "5226ffa4-b4af-4795-9c45-b70c2cedd0f0",
+      "dec406ef-4e98-424a-bdf9-b613a521b264",
+      "74d732a6-1805-4883-b3c7-a8d47481d4f6"
+    ],
+    "final_findings": [],
+    "final_report_complete": true
   },
   "limits": [
-    "Issue39 implementation and activation remain with their owner; no approval/selection change by this lane.",
-    "Private histories/captures are not published. Historical evidence retains its original source/runtime scope.",
-    "Review/address and installed/native acceptance are pending; this record is source progress, not final acceptance."
+    "All11 independent actionable IDs are fixed and parent verified; the final native check is a genuine no-findings report with complete correspondence. Reviewer tests remain not_run.",
+    "NativePeers physical source/install are held during the #39 owner interval. Lineage PR46 and all other owned worktrees are preserved.",
+    "Three real review inputs used one native Claude history,55 reported native turns and430.1686888 seconds of worker durations. Captured CLI command intervals are a subset; parent thinking/active effort, billing and wire bytes are unknown.",
+    "Initial stale source-pointer failures, oversized definite pre-input recheck refusal, wrong merge guard and parent setup/fixture mistakes are retained with agent attribution. No accepted/uncertain operation was replayed.",
+    "Publication excludes private history and local installation/validation records; canonical local main intentionally retains private history ancestry and is not pushed."
   ],
-  "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+  "code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -103,7 +264,7 @@
     "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
     "nativepeers/adapters/native_delivery.py": "ddf0c98da889814e2eaed66d18dc77d7a6ae3051001cb666d8d02ef610f39ee3",
     "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
-    "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
+    "nativepeers/antigravity_install.py": "6a565ad9d3403c839992e72631d431ae357b8f047ddc980a7bc2aa59e93bc291",
     "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
     "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
     "nativepeers/bridge_backend.py": "9272dd2145f68acdbaed890963fdb6e7e262685829d70f8e99ccbc059a9096f3",
@@ -153,9 +314,9 @@
     "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
     "nativepeers/recovery.py": "ce2b4d83e93581c084e9812b80607eaf3301a34f5304400889db71c207ea2033",
     "nativepeers/registry.py": "76bd8005f7a203332ad5abbcc61f8e2fcbebae0b374944ea5d30c4d75fd89b99",
-    "nativepeers/routing.py": "11039bbf734ae5c948a9dc990028545e70f5017c091e779bfd3a2b1e8587cecd",
+    "nativepeers/routing.py": "331a9bafd5f2e379ef00fd909cd819feb06774c26939a162bc25fec6b7e020bf",
     "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
-    "nativepeers/selected_context.py": "becbeba91f19462319959fe0e1b7be3dd6e04c94ee663662f3b2f3b087222e0b",
+    "nativepeers/selected_context.py": "cdf63b792f8d6eec90343155c24cc53df504feb2bfd804e51334f458588c25b0",
     "nativepeers/supervisor.py": "83b28d6f6af85ec8481990e9c08753bc2d9b8e9b7d27ac4646c92196c72d0a57",
     "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
     "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
@@ -190,6 +351,14 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "b79155145c4f49d453b39cd11b6b8b25e3172ddbbf608d452b2baed1c89f288f",
-  "updated_at": "2026-10-31T01:01:38.811562-04:00"
+  "source_map_sha256": "953cbc3fa0c67d4db3fe50567c9854f3c846f8ddc1fc577d73683acef85a014e",
+  "updated_at": "2026-10-31T01:35:27.209607-04:00",
+  "helper_publication": {
+    "pr": "https://github.com/scalinity/skills/pull/2",
+    "merged": "e05c43fb5c5a6ee1f36acb3d14568896b363e342",
+    "public_source": "ad7541b12ef9570c3ff65dea4e7abe2b0ca5ab7b",
+    "private_history_ancestor": false,
+    "canonical_source": "bc89789f7b25026e71ce4c70181795a39e2e0cc6",
+    "history_hashes_preserved": true
+  }
 }
