@@ -3,7 +3,7 @@
 // pane's Input where the surface has one.
 import type { EngineInterface } from 'claude-code'
 import type { NpDraft, NpRow, NpShadow, NpUi, NpWorker } from '../types'
-import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } from './agents'
+import { ACTIVE, NAMES, TAGS, counts, modelLabel, noteFooter, startedSince, statusFor, statusLabel, statusSummary, type Footer } from './agents'
 import { BridgeError, request, sleep } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
@@ -65,6 +65,14 @@ export async function paneBeside($: EngineInterface): Promise<void> {
   if (await paneShown($)) return
   await $.ui.open({ id: PANE_ID, title: PANE_TITLE })
   await setUi($, { paneOpen: true })
+}
+
+// The pane opens beside the conversation (opensPane: the desktop app under band: auto) when a worker this session has not
+// seen starts running, however it was started: an np agent, or npeer spawn from a shell, as a session following
+// NativePeers' instructions delegates.
+const started = new Set<string>()
+export async function workerStarted($: EngineInterface, opensPane: boolean): Promise<void> {
+  if (startedSince(started, await getLineage($)).length && opensPane && (await $.session.surface()) === 'desktop') await paneBeside($)
 }
 
 export async function paneShown($: EngineInterface): Promise<boolean> {
@@ -203,12 +211,14 @@ async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Pr
 
 // On the desktop app the np entry at the right of the prompt footer is a menu, as the model picker is: closed, it reads
 // the delegates' summary; open, it offers the NativePeers pane and each worker's conversation. Nothing draws above the
-// prompt there (band: auto).
+// prompt there (band: auto). What the app asked for is noted for /np doctor and the status entry (statusFor).
 export async function renderNpMenu($: EngineInterface, e: any, next: (e: any) => any): Promise<any> {
   if (e.surface !== 'desktop') return next(e)
   const workers = await getLineage($)
   const { Box, Text, Select } = $.ui.resolve(e) as any
-  if (!workers.length || !Select) return next(e)
+  if (!Select) { noteFooter('no-select');return next(e) }
+  if (!workers.length) { noteFooter('empty');return next(e) }
+  noteFooter('drawn')
   const modes: readonly string[] = Array.isArray(e.props.modes) ? e.props.modes : []
   const options = [{ value: 'np', label: 'np · ' + (statusSummary(workers) ?? '') }, { value: 'pane', label: 'Open NativePeers' },
     ...workers.slice().reverse().map(w => ({ value: 'w:' + w.workerId, label: `${w.title} · ${NAMES[w.provider] ?? w.provider} · ${statusLabel(w.status)}` }))]
@@ -442,9 +452,8 @@ export async function renderSpinner($: EngineInterface, e: any, next: (e: any) =
   return next({ ...e, props: { ...e.props, message: `${TAGS[s.provider]}: ${s.latest}`.slice(0, 120) } })
 }
 
-// On the desktop app the footer's np menu carries this summary (renderNpMenu).
 export async function statusLine($: EngineInterface): Promise<void> {
-  $.ui.status((await $.session.surface()) === 'desktop' ? undefined : statusSummary(await getLineage($)))
+  $.ui.status(statusFor(await $.session.surface(), await getLineage($)))
 }
 
 export async function statusText($: EngineInterface): Promise<string> {
@@ -461,6 +470,14 @@ export async function statusText($: EngineInterface): Promise<string> {
 export type DoctorFacts = {
   version: string; minimum: string; supported: boolean; surface: string; npeer: string; connected: boolean; state: string; reason?: string; restarted?: string
   hello?: { protocol?: number; providers?: string[]; schema?: string }; helloError?: string; fallthrough?: { cleared: boolean; reason?: string }
+  footer?: Footer
+}
+
+const FOOTER: Record<Footer | 'none', string> = {
+  drawn: 'shown at the right of the prompt footer',
+  empty: 'the app asked for the footer before any worker; the menu appears with the first',
+  'no-select': 'the app asked for the footer but offers no menu there; the status entry carries the summary',
+  none: 'the app has not asked for the footer in this session; the status entry carries the summary',
 }
 
 // /np doctor in sentences; Claude Code puts "np: " before the first line. The desktop app keeps its own copy of
@@ -477,6 +494,7 @@ export function doctorText(f: DoctorFacts): string {
   if (f.helloError) lines.push(`Bridge error: ${f.helloError}`)
   if (f.fallthrough) lines.push(f.fallthrough.cleared ? `Fallthrough cleared (it was: ${f.fallthrough.reason ?? 'unknown'}). np agent types are offered again.`
     : `Fallthrough: ${f.fallthrough.reason ?? 'detected'}. np agent types stay off until the bridge is ready.`)
+  if (f.surface === 'desktop') lines.push(`Footer menu: ${FOOTER[f.footer ?? 'none']}`)
   lines.push(`npeer: ${f.npeer}`)
   return lines.join('\n')
 }
