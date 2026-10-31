@@ -359,3 +359,16 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         document['retained']={'codex':None};atomic_json(receipt,document)
         with self.assertRaises(PeerError) as error:native_binaries(self.j)
         self.assertEqual(error.exception.code,'CAPABILITY_MISMATCH')
+
+    async def test_refusal_guidance_distinguishes_peer_retry_from_terminal_worker(self):
+        self.select(self.new)
+        with self.assertRaises(PeerError) as error:verify(self.j,'codex',self.new,renew=False)
+        action=error.exception.details['next_action']
+        self.assertIn('Failed worker requests stay terminal',action)
+        self.assertIn('new client request ID',action)
+        self.assertNotIn('--apply',action)
+        self.peer=self.register(self.new)
+        deferred=await self.send('guidance')
+        detail=json.loads(deferred['attempt']['error_json'])['details']
+        self.assertEqual(deferred['state'],'ADMISSION_DEFERRED')
+        self.assertIn('retry the unchanged request ID',detail['next_action'])

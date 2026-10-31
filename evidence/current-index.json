@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
-  "reviewed_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
-  "publication_branch": "fix/issue-16-workflow",
-  "updated_at": "2026-10-31T02:25:44.420143-04:00",
-  "current_record": "evidence/issue-16-workflow.json",
+  "code_commit": "44dea522c1cb3c4ce5ee363b56b4b8be4a87b251",
+  "reviewed_commit": "9844b21",
+  "publication_branch": "fix/issue39-retry-guidance",
+  "updated_at": "2026-10-31T02:31:49.693255-04:00",
+  "current_record": "evidence/issue-39-managed-activation.json",
   "file_classes": {
     "product": {
       "files": {
@@ -30,7 +30,7 @@
         "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
         "nativepeers/adapters/native_delivery.py": "56ae95de5b6e67931c01bd5b8163554dbad7a0fc6dc1fa006ef719e76fc75aeb",
         "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
-        "nativepeers/antigravity_install.py": "6a565ad9d3403c839992e72631d431ae357b8f047ddc980a7bc2aa59e93bc291",
+        "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
         "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
         "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
         "nativepeers/bridge_backend.py": "9272dd2145f68acdbaed890963fdb6e7e262685829d70f8e99ccbc059a9096f3",
@@ -41,9 +41,9 @@
         "nativepeers/claude_mod_install.py": "ccab3cfd4abe468c45d79a93690d23a3ca87cabafa1e6c795e7a11c5d2501f67",
         "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
         "nativepeers/cleanup.py": "76c2bc590e3678c962bfdd9d0f33d5f3104fa530a9c5de27cd4997daa2d67ab6",
-        "nativepeers/cli.py": "4a7b083da3a2b074d71e6db1d3fc63e4bcc2f29e63d3037ef04bc3e3dd6d7d02",
+        "nativepeers/cli.py": "846ace3e231d781a9f295f677ec79df741775d2898ce940bf455a3841ad3a5c8",
         "nativepeers/compact.py": "5df3d9ce5f2377df3160e8b0a6e93de0ba575b1c027abd554aaa7955874c6a0d",
-        "nativepeers/compatibility.py": "7426b24c316f9b3f42b815a52b22725fe3227971bb36508cd240c4e85d83934b",
+        "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
         "nativepeers/completion_delivery.py": "13959875012275a48ecd428e5e45e9bff306540c1a6782e689424067f40fb6bd",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
         "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
@@ -62,7 +62,7 @@
         "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
         "nativepeers/journal.py": "44f284c9aad07c416ce6efd4ef5c94134ab9b5b3a21543f61716c9d08bf99be6",
         "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
-        "nativepeers/mcp_server.py": "1e9f71388057ef03bec0ff84de29968993c91950b5aff38644194d2103d76f2b",
+        "nativepeers/mcp_server.py": "70cb9d1de1e265eaffb3f89e68b902a420ebc81700dbf6804a7aed343d263b29",
         "nativepeers/mirror.py": "b3713d90a12171c58f4f800ffc62a26eb113b299189e11f6517b44c490b27ff3",
         "nativepeers/models.py": "de17e04d5eda71a961b40b5123ba1a1642483f22cefc38cd0d6a0d6ff7f80adb",
         "nativepeers/notification_policy.py": "f61af4495fea105d2ae2db74546e34945058a9823c565274f01c9c5992cefca5",
@@ -80,9 +80,9 @@
         "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
         "nativepeers/recovery.py": "ce2b4d83e93581c084e9812b80607eaf3301a34f5304400889db71c207ea2033",
         "nativepeers/registry.py": "76bd8005f7a203332ad5abbcc61f8e2fcbebae0b374944ea5d30c4d75fd89b99",
-        "nativepeers/routing.py": "4b6a7268d7dc519ad2fbd9c742f36becb06ca39464cf6c43067c7ef214bb2d40",
+        "nativepeers/routing.py": "6e99290eb1f8b05a3f2eb3d45cad1851052df967f284a08d64dd64d41310a8b2",
         "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
-        "nativepeers/selected_context.py": "cdf63b792f8d6eec90343155c24cc53df504feb2bfd804e51334f458588c25b0",
+        "nativepeers/selected_context.py": "d1109c8ba00684dc03beee89a6588b7cd61df9151a76c1381cb3499f75934cc3",
         "nativepeers/supervisor.py": "b788b40d0e0f7404bb2c69724848ae4e9edfb7537288118f616962c217209d0e",
         "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
         "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
@@ -118,18 +118,18 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "175a1fec4bb55cd354dbd00d60a44113f0dde9b7e7155f34c5dbec587694f1cd"
+      "sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8"
     },
     "launchers": {
       "files": {
-        "bin/npeer": "a18b31c16042ccf97052d43c0d5f4221614a1ac947b48fea0a424b7c92240bb7",
-        "bin/npeer-antigravity-hook": "87cb79c8beb98fc596abf37433bae72d84bab867d6b9da98cb1d3809da95579c",
-        "bin/npeer-grok-hook": "45f4e5022cae9a1577e271ea15dd0bdd83db2ecc2ad9b0c47569f555123554da",
-        "bin/npeer-hook": "6fafce010abc0f9d85b353faa576af35b55e5d4468a93efe2369e055d9f682dd",
-        "bin/npeer-usage-statusline": "ea468f9262bbd7090aa32ea6a8544ee81aa7e054de95594a707b23abca779c5b"
+        "bin/npeer": "4e3bf1a01439ff2254e47096315d3f0ae8fffcffd84340f6c6b18877d8feeea8",
+        "bin/npeer-antigravity-hook": "1c358441296a8b68a42394c9d8491d8014e85c5eb9339db1b577e1f1dbbcfdce",
+        "bin/npeer-grok-hook": "297fed2b14f543147dbb0575a624b09e35720717931480604648fad508576140",
+        "bin/npeer-hook": "2a7871bc399a2d2467c6c704ef13da5932987d5d02b7836bda6088822e810ea2",
+        "bin/npeer-usage-statusline": "8c42ca79f70938dfbf62fe5e905160084f0a675ca8c9a2b6c83b41dbb7c15f39"
       },
       "file_count": 5,
-      "sha256": "b4193d455540ee0d91601e89379347389328d08c7fca6de94cb64d28864928f7"
+      "sha256": "ce0a34fc78d4d1b714cb83d720fedeae91e504c8c3836e76214909807ee72884"
     },
     "integrations": {
       "files": {
@@ -139,28 +139,28 @@
         "integrations/claude/mod/.claude-plugin/marketplace.json": "ee35af957b34f5c589a14c41445930023e4933ef7b741381df7c79f026322122",
         "integrations/claude/mod/np/.claude-plugin/plugin.json": "d76d723ce6dc874ede14a0b80aa4e282244c2803298f4d56bab6079a656576f0",
         "integrations/claude/mod/np/.gitignore": "41713a4a3d0bab754c7478395d7a4861b3c685cbfa5d0bde780a2692556cd299",
-        "integrations/claude/mod/np/hooks/agents.ts": "89d3f13d64b8c7b480e78edc8191f6580e4d74b2f2f61072ff0c4c7e80065d27",
-        "integrations/claude/mod/np/hooks/bridge.ts": "c1bfaa1e8b356549c7d4ca09c6b7777f912161d1bc68c4d7dbda890aad1ea9c1",
+        "integrations/claude/mod/np/hooks/agents.ts": "fc95de267b71dd6cbf7b006b76acd43304cc61b09b16b6a1ce4345074a4b4bd2",
+        "integrations/claude/mod/np/hooks/bridge.ts": "2bdf39650ac2f19b5167ddcefc5f8511830511777152539c14d632a370f08a37",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
-        "integrations/claude/mod/np/hooks/mirror.ts": "e817a8fa2123db5f611601dcbe08cf0f8e6cda14debe6f30737ff95f02e937af",
-        "integrations/claude/mod/np/hooks/register.tsx": "49baf1eab693ae006f1330a9a698ff3a26213fc50ab7cefce2630ff8fcbf5cbd",
+        "integrations/claude/mod/np/hooks/mirror.ts": "94d776965e4bdc2ae6583385db33f1129d12a07ecbf0e315d8821446bcbe13b2",
+        "integrations/claude/mod/np/hooks/register.tsx": "8b5530462d8b41099e1d638404e1641ad9eccd6f515505f28d4f489f5ee217a8",
         "integrations/claude/mod/np/hooks/shadow.ts": "fb0c71ce3f6db403a07be6686bc5f076c025d2c942f0238bef927fd7d03ef9d6",
-        "integrations/claude/mod/np/hooks/state.ts": "7976eb2d6fc64f8000f8ab5699d74629452c9320501d82427a5a74f16d953204",
-        "integrations/claude/mod/np/hooks/transcript.ts": "5d4c789615ee14d59bffbb9cc3f864044dfd437409c8f9e274c7ef7f2872b0c8",
-        "integrations/claude/mod/np/hooks/ui.tsx": "ef73aff31b7e67b1ca0a809143e396a7ec3db5c16cd0b51ed6a4c5bdfba6f987",
-        "integrations/claude/mod/np/tests/agents.test.ts": "551f1ff62641ce2d615c98270080f5266899e588fb6833e5060089cf6188c7bc",
+        "integrations/claude/mod/np/hooks/state.ts": "66395eb53c95422476da2a9b4273683eefe72f6c844c7080023cdb2bb59c31a7",
+        "integrations/claude/mod/np/hooks/transcript.ts": "60831235dc021b3c6c015e41be825319501300ea03430dfd145d9e23ea343589",
+        "integrations/claude/mod/np/hooks/ui.tsx": "0a2190eb30903b42c477325ac219914a02e9d2b08a0b569c608ab354748d1b49",
+        "integrations/claude/mod/np/tests/agents.test.ts": "549ab5dd1bb0931a3f00f81fb18c87cbf0b3dcc7f9fce485f9c451699fe562f5",
         "integrations/claude/mod/np/tests/planner.test.ts": "41f71282a0ef622dfe12c1bbbf36052e9fbd2819f841963dcf44aa10607c9bd4",
-        "integrations/claude/mod/np/tests/transcript.test.ts": "a4d598b2cdf6bf7bf8f9d73afaa5e712a3ddcf1fd75ff39050ebd7c81e633020",
-        "integrations/claude/mod/np/tests/ui.test.tsx": "e3be8c8f0bd1df7e436d4000ee5325d09c1d41ff8653ce338bfd23114e0750f3",
+        "integrations/claude/mod/np/tests/transcript.test.ts": "2330355b8592a683a68bac380ff48c8aaee355e10d783a0a5f6b40143b999862",
+        "integrations/claude/mod/np/tests/ui.test.tsx": "3597f89dfb27b03f31e86f4fc56355a5fbf9c29ae6c776e186663cf21ca3b7f5",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
-        "integrations/claude/mod/np/types/index.d.ts": "eb030da72df6492d6bf0e6f6a4202a32503b9748092153c542baea09da6efcbb",
-        "integrations/claude/skills/nativepeers/SKILL.md": "44dff14c0278f051ce9226f69fe327ca2d1f86fb0022b02bec14b8fd8e8f5205",
-        "integrations/codex/skills/nativepeers/SKILL.md": "9d9b885a50209c56e2ec9fa17b94c8cf0bfe59ae341f8f3ff63871fedb00c958",
-        "integrations/zsh/gemini.zsh": "25947321b1a6603681efcc7a58b68aad1c169357ca8ac77d324c49cc785e9bc5"
+        "integrations/claude/mod/np/types/index.d.ts": "c29246274098f6fea557445dc23d8d176f879066e4f89b11e9bb468d3560c691",
+        "integrations/claude/skills/nativepeers/SKILL.md": "6129889358034762810da7a0ed330fceaa11ec03617d0dd320407a4005932100",
+        "integrations/codex/skills/nativepeers/SKILL.md": "52d9454a032010db898160936e6892cfcbbe6777a675eaa94c53a2d6bf5b5998",
+        "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
       "file_count": 25,
-      "sha256": "c544b9c852d35070a66497eff34993046f00a1c43d72755fc28d5f4e84d39cd7"
+      "sha256": "c42938818729de39c5aef224326a8dc62f2ccca012347720c95b8b7a39844bf1"
     },
     "tests": {
       "files": {
@@ -250,7 +250,7 @@
         "tests/integration/claude_mod/run_live_slice.py": "675fa6bcc890f7130c0ac687a0ae94f47ef462f8a1fdaf16b88dce3d0a417807",
         "tests/integration/claude_mod/run_mod_pty.py": "c3ec9e1bb728c285fd00e63172a01fd97f9d730bb6f79e61638a01cd182ce784",
         "tests/integration/claude_mod/run_modes.py": "049d2ec9a7180cbc933256b095eb608b9f04c7cf3d4a062b9cc8f83c50bd3ee0",
-        "tests/integration/claude_mod/run_pane_conversation.py": "6dcb13066de32d73d9ac5447628b9476c06d3f88f90cd946d10f9e69f7b48a16",
+        "tests/integration/claude_mod/run_pane_conversation.py": "a5d912effce7d44c84495d6bd78dbfe3091def71a24d66f6e733ab17003db576",
         "tests/integration/claude_mod/run_startup_race.py": "9d6f4e55a6989f544b540d2d0a711ea3b7246e8c4db8d8c15205d1db9e8f8ebe",
         "tests/integration/claude_mod/scenarios/adopt_grok.json": "ae57c7bef298f09e7b1882b6b8d4f6a8ce953a01636e42964048fc9cecca9e37",
         "tests/integration/claude_mod/scenarios/codex_basic.json": "a039390fb8370174eb213e92075b431a4289b4f528114ed24a16888c83da68af",
@@ -354,11 +354,10 @@
         "tests/unit/test_install_home.py": "f7ad753a0f9d0f54693f94813a476b96a205fadfb515431c4a77dc1597ecbdfa",
         "tests/unit/test_interrupt_and_steer.py": "169dae4cfa211839d87fc12e91e486775a922d464b1bc924f319997af32d06e3",
         "tests/unit/test_isolated_copy.py": "317c2d00e9d8299e28d029268b164bfc17acb0fc0c2e792dc8333f027e1edced",
-        "tests/unit/test_launchers.py": "06b916d6fdabe1f27843970a01f3a46bddb46e601244baf57a8e49df08500f92",
         "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
         "tests/unit/test_live_followup_probe.py": "a8c0521c7f88e3cdd205447d1267c924b6d4ec9937a5a82cf12e757f7276518f",
-        "tests/unit/test_managed_activation.py": "9d59b84540a23d8d5eb986b6a49f9633da5552e4a3e2dc2c7bcbd022d59c76c1",
+        "tests/unit/test_managed_activation.py": "a5e6ebe5818824ea58704f68076d73f0a538da0eee9584e5bedaaf3b0ffe68bb",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
         "tests/unit/test_native_delivery.py": "b51c7b8a3d9a4870d69afbacb0b47991851cb4df530e31fb69cd3ab4f2cadde2",
@@ -385,7 +384,7 @@
         "tests/unit/test_routing.py": "9fceb768781f94fe4e2163942774f991c6b235683af6453c3e8ae9bac57e712e",
         "tests/unit/test_runtime_initialization.py": "5d80859721558b9e9a5a81fc91bbd3e019c3d68689d4b88889d7ca9500412e7a",
         "tests/unit/test_runtime_updates.py": "8008694ac924dfe5ebac8e211728777e52df889468178c92ff8ab341e9c97046",
-        "tests/unit/test_selected_context.py": "53f2c75df567ebf384cf29939fe8b0fdb1b664f8c00cc7ca98d0f82c3828018c",
+        "tests/unit/test_selected_context.py": "52ba9a27954b90217d88c08604b9466ab037b95c0f5d82dbd33c2a4e89280578",
         "tests/unit/test_spawn_check.py": "ba7332618fc6e2ed5a9f05d0f7cdd3a5fb68a49957ffbdfc9724a757244c455e",
         "tests/unit/test_spawn_policy.py": "b67eb7e04b01ef6edb50a91789ac371d53ab397dbc4bfcde44e340d8644c5e82",
         "tests/unit/test_usage.py": "a71c89de019e4c8fd603c3de78de2bde36660c8619523370e2378c10c0618b7d",
@@ -407,39 +406,17 @@
         "tests/unit/test_worktrees_and_contracts.py": "5a27c9593b3df25dbd7587e34f01e51461f6d6d54ba40f1590a93c9ab47b3d97",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 242,
-      "sha256": "1a74db0304fbe24560d8af2c246d8502830d32bcf1d98ab920dfedce2128125c"
+      "file_count": 241,
+      "sha256": "07e3d01a0146d3fdac1219550ad01ea76d0b3b92c1790ae13e324e30da467c4e"
     }
   },
   "operation_checks": [
     {
-      "operation": "complete candidate source suite and coherence",
-      "parent_context": "Verified Codex author in isolated candidate; no installed source claim",
-      "status": "PASS",
-      "source_commit": "b5209d0c5405c3605dfc4232231326815a79d623"
-    },
-    {
-      "operation": "actual different-vendor native implementation review and complete parent address",
-      "provider": "claude",
-      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
-      "parent_context": "Codex native01a19047; Claude history9ca07faf; analysis/inherit-read-only",
+      "operation": "managed activation inbox and worker boundary",
+      "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
       "status": "PASS"
-    },
-    {
-      "operation": "canonical np-eval helper source promotion and Codex alias execution",
-      "parent_context": "Existing shared master preserved with byte-identical history; other harness interactive invocation NOT_RUN",
-      "status": "PASS"
-    },
-    {
-      "operation": "supported NativePeers install and affected installed/native routes",
-      "parent_context": "Waiting for #39 owner reviewed source/native transition interval release",
-      "status": "NOT_RUN"
-    },
-    {
-      "operation": "combined candidate full offline suite",
-      "parent_context": "Isolated candidate b14603f; no live-state journal or vendor inference",
-      "source_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
-      "status": "NOT_RUN"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

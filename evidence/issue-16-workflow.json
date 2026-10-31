@@ -252,7 +252,7 @@
   },
   "limits": [
     "All11 independent actionable IDs are fixed and parent verified; the final native check is a genuine no-findings report with complete correspondence. Reviewer tests remain not_run.",
-    "NativePeers physical source/install are held during the #39 owner interval. Lineage PR46 and all other owned worktrees are preserved.",
+    "Issue39 owner publicly released the shared interval after installed native qualification; its record retains exact source/runtime coverage. Lineage work remains owned separately.",
     "Three real review inputs used one native Claude history,55 reported native turns and430.1686888 seconds of worker durations. Captured CLI command intervals are a subset; parent thinking/active effort, billing and wire bytes are unknown.",
     "Initial stale source-pointer failures, oversized definite pre-input recheck refusal, wrong merge guard and parent setup/fixture mistakes are retained with agent attribution. No accepted/uncertain operation was replayed.",
     "Publication excludes private history and local installation/validation records; canonical local main intentionally retains private history ancestry and is not pushed."
@@ -377,5 +377,13 @@
     "private_history_ancestor": false,
     "canonical_source": "bc89789f7b25026e71ce4c70181795a39e2e0cc6",
     "history_hashes_preserved": true
+  },
+  "owner39_acceptance": {
+    "status": "PASS",
+    "issue_state": "CLOSED",
+    "release_comment": "https://github.com/scalinity/NativePeers/issues/39#issuecomment-6540144142",
+    "record": "evidence/issue-39-managed-activation.json",
+    "source_commit": "8957af49b99e501799bddc00418457fd6dbb35d3",
+    "scope": "Owner-reviewed installed localhost interval, exact retained executables, CLI/MCP status and quiet/follow-up native history. No physical screen or external network instrumentation."
   }
 }

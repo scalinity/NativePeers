@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
-import { MAX_ROWS, applyActivity, bodyOf, excerpt } from '../hooks/transcript'
-import type { Activity } from '../hooks/mirror'
+import { MAX_ROWS, applyActivity, bodyOf, clampMessage, excerpt } from '../hooks/transcript'
+import { commandOf, type Activity } from '../hooks/mirror'
 
 const ev = (seq: number, kind: string, data: any = {}, item: string | null = null, generation = 1): Activity => ({ seq, kind, data, item, generation, task_id: 'T' + generation })
 const empty = { workerId: 'W1', cursor: 0, rows: [] }
@@ -91,4 +91,24 @@ test('tool output in the pane is an excerpt: its first lines, each cut to a widt
   expect(out.text.split('\n')[0]?.length).toBe(80)
   expect(out.more).toBe(4)
   expect(excerpt('one\ntwo').more).toBe(0)
+})
+
+const CONTRACT = '\n\nNativePeers contract: work only on this focused task; do not contact other agents.'
+
+test('a follow-up loses the contract the worker receives after it, and a tool reads as its command, not its shell wrapper', () => {
+  expect(bodyOf(ENVELOPE + CONTRACT)).toBe('test; reply with "passed"')
+  expect(commandOf("/bin/zsh -lc 'git status --short'")).toBe('git status --short')
+  expect(commandOf("bash -c 'echo '\\''hi'\\'''")).toBe("echo 'hi'")
+  expect(commandOf('ls -A1')).toBe('ls -A1')
+  const t = applyActivity(empty, [ev(1, 'tool.started', { kind: 'exec', title: "/bin/zsh -lc 'rg -n foo'" }, 'c1')])
+  expect(t.rows[0]?.text).toBe('rg -n foo')
+})
+
+test('a long message is folded to its first lines, and how a generation ended is marked as such', () => {
+  const long = Array.from({ length: 30 }, (_, n) => 'line ' + n).join('\n')
+  expect(clampMessage(long, false)).toEqual({ text: Array.from({ length: 14 }, (_, n) => 'line ' + n).join('\n') + ' …', clamped: true })
+  expect(clampMessage(long, true)).toEqual({ text: long, clamped: true })
+  expect(clampMessage('short', false)).toEqual({ text: 'short', clamped: false })
+  const t = applyActivity(empty, [ev(3, 'task.terminal', { status: 'completed', final_text: '' })])
+  expect(t.rows[0]).toMatchObject({ kind: 'note', text: 'Completed.', item: 'end:1:3' })
 })

@@ -2,13 +2,13 @@
 // mod's own files, the only places $ may be passed (the validator, X12).
 import type { EngineInterface, Register, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpProvider, NpWorker } from '../types'
-import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
+import { PROVIDERS, adoptionBrief, agentSpec, describe, footerSeen, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
 import { BridgeError, connected, connectionGeneration, followLineage, heartbeat, launch, request, restoreReady, shutdown, sleep, starting } from './bridge'
 import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
-import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, setUi, settleInterruptedDrafts } from './state'
-import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, paneShown, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
+import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, settleInterruptedDrafts } from './state'
+import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, renderNpMenu, tickRunning, workerStarted, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'
@@ -30,6 +30,7 @@ let inert = false
 let rebind = false
 let place: { cwd: string; npeer: string } | undefined
 let timers = false
+let paneOnStart = false
 const offered = new Set<string>()
 
 function atLeast(version: string, minimum: number[]): boolean {
@@ -45,6 +46,7 @@ async function workerMode($: EngineInterface): Promise<boolean> {
 async function activate($: EngineInterface, cwd: string, o: Options): Promise<void> {
   if (activated || inert) return
   activated = true
+  paneOnStart = o.band !== 'always' && o.band !== 'off'
   const version = (await $.session.version()).version
   if (!atLeast(version, MIN_ENGINE) || !version.startsWith('2.')) {
     await setBridge($, { state: 'degraded', reason: `Claude Code ${version} is outside the verified range (minimum 2.1.309)`, since: 0 })
@@ -60,8 +62,6 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
     // A conversation still shown after a reload is followed again: module variables, and the loop, started over.
     const shown = (await getUi($)).viewing
     if (shown) void followConversation($, shown)
-    // A reload closes panes without running hooks: the pane's recorded state follows what is actually shown.
-    await setUi($, { paneOpen: await paneShown($) })
   }
   await pruneStore($)
 }
@@ -89,6 +89,8 @@ async function ready($: EngineInterface, hello: any): Promise<void> {
     inputSchema: { type: 'object', properties: { provider: { type: 'string', enum: [...PROVIDERS] } } } })
   $.clock.every(15000, () => heartbeat($))
   $.clock.every(5000, () => statusLine($))
+  $.clock.every(1000, () => tickRunning($))
+  $.clock.every(1000, () => workerStarted($, paneOnStart))
 }
 
 async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>, o: Options): Promise<any> {
@@ -125,8 +127,6 @@ async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>,
     s.spawnError = `${error instanceof BridgeError ? error.code : 'BRIDGE_ERROR'}: ${String((error as Error).message).slice(0, 400)}`
     await saveShadow($, s)
   }
-  // The desktop app shows the band's content in the pane beside the conversation instead of above the prompt.
-  if (o.band !== 'always' && o.band !== 'off' && (await $.session.surface()) === 'desktop') await paneBeside($)
   return r
 }
 
@@ -237,7 +237,7 @@ async function doctor($: EngineInterface, o: Options, surface: string, restarted
   // The module's own connection is the truth: a state read here may predate a start another hook just finished.
   const live = connected(), generation = connectionGeneration()
   const facts: Parameters<typeof doctorText>[0] = { version, minimum: MIN_ENGINE.join('.'), supported: atLeast(version, MIN_ENGINE) && version.startsWith('2.'), surface,
-    npeer: o.npeerPath || '/Users/danny/.local/bin/npeer', connected: live, state: bridge.state, reason: bridge.reason, restarted }
+    npeer: o.npeerPath || '/Users/danny/.local/bin/npeer', connected: live, state: bridge.state, reason: bridge.reason, restarted, footer: footerSeen() }
   if (live) {
     try {
       const hello = await request($, 'GET', '/v1/hello')
@@ -363,12 +363,8 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => o.band === 'off' ? next(e) : renderBand($, e, next, o.band === 'always'))
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e, next) => renderPane($, e, next, o.band !== 'always' && o.band !== 'off'))
-  // A closed pane is offered back above the prompt on the desktop app (ui.tsx reopenBand).
-  on('ui.close', async ($, e, next) => {
-    const r = await next(e)
-    if (e.id === PANE_ID) await setUi($, { paneOpen: false })
-    return r
-  }).catch(($, e, next) => next(e))
+  // On the desktop app the footer's np entry is a menu opening the pane and each worker's conversation.
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => o.band === 'always' || o.band === 'off' ? next(e) : renderNpMenu($, e, next))
   on('ui.render', { component: 'ToolUse', props: { tool: MIRROR_TOOL } }, async ($, e, next) => renderToolUse($, e, next))
   on('ui.render', { component: 'UserMessage', props: { origin: { kind: 'coordinator' } } }, async ($, e, next) => renderUserMessage($, e, next))
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => renderSpinner($, e, next))

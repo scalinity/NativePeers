@@ -27,6 +27,26 @@ export function statusSummary(workers: readonly NpWorker[]): string | undefined 
   if (!c.total) return undefined
   return [c.running && `${c.running} running`, c.done && `${c.done} done`, c.failed && `${c.failed} failed`, c.stopped && `${c.stopped} stopped`].filter(Boolean).join(' · ')
 }
+
+// Whether the desktop app asked for the footer's np entry in this session, and what it was given (module memory: a
+// reload starts over). /np doctor reports it.
+export type Footer = 'drawn' | 'empty' | 'no-select'
+let footer: Footer | undefined
+export function noteFooter(seen: Footer): void { if (footer !== 'drawn') footer = seen }
+export function footerSeen(): Footer | undefined { return footer }
+
+// The status entry's text. On the desktop app the footer's np menu carries the summary once the app has drawn it there;
+// until then, and on every other surface, the status entry does.
+export function statusFor(surface: string | null, workers: readonly NpWorker[], seen: Footer | undefined = footer): string | undefined {
+  return surface === 'desktop' && seen === 'drawn' ? undefined : statusSummary(workers)
+}
+// The workers that started running since `seen`, which this adds them to. Workers already finished (a resumed
+// session's) are not counted.
+export function startedSince(seen: Set<string>, workers: readonly NpWorker[]): NpWorker[] {
+  const fresh = workers.filter(w => ACTIVE.includes(w.status) && !seen.has(w.workerId))
+  for (const w of fresh) seen.add(w.workerId)
+  return fresh
+}
 export const SENTINEL = 'NativePeers mirror unavailable'
 export const SHADOW_PROMPT =
   `You are a display placeholder for an external NativePeers worker. Reply exactly: "${SENTINEL} — run /np doctor." Do nothing else.`
