@@ -3,6 +3,10 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import io
+import json
+import sys
+from unittest.mock import patch
 
 PATH=Path(__file__).resolve().parents[1]/'probes/live_followup.py'
 spec=importlib.util.spec_from_file_location('live_followup_probe',PATH)
@@ -10,6 +14,16 @@ probe=importlib.util.module_from_spec(spec);spec.loader.exec_module(probe)
 
 
 class FollowupProbeTests(unittest.TestCase):
+    def test_candidate_source_refusal_records_blocked_without_native_launch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);run=root/'blocked';run.mkdir()
+            with patch.object(sys,'argv',['probe','--nativepeers-root',str(root),'--run',str(run)]), \
+                 patch.object(probe.base,'prepare_run',return_value=run), \
+                 patch.object(probe.base,'select_codex') as select,patch('sys.stdout',new_callable=io.StringIO):
+                self.assertEqual(probe.main(),2)
+            select.assert_not_called()
+            self.assertEqual(json.loads((run/'qualification.json').read_text())['status'],'BLOCKED')
+
     def test_worker_phases_use_one_exact_wire_model_and_effort(self):
         with tempfile.TemporaryDirectory() as directory:
             model=object.__new__(probe.Model);model.run=Path(directory);model.token='fixture';model.parent_requests=0

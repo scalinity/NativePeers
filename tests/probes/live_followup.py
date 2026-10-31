@@ -146,10 +146,11 @@ def run_fixture(source,run,binary,approval,resources,report):
 def main():
     if len(sys.argv)>1 and sys.argv[1]=='_helper':helper(*sys.argv[2:]);return 0
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--nativepeers-root',required=True);parser.add_argument('--run',required=True);args=parser.parse_args()
-    source=Path(args.nativepeers_root).resolve(strict=True);sys.path.insert(0,str(source))
-    if source!=Path('/Users/danny/Documents/Tools/NativePeers'):raise base.Blocked('Probe requires the reviewed installed source; no candidate activation')
+    source=Path(args.nativepeers_root).resolve(strict=True)
     run=base.prepare_run(args.run,source);resources=[];report=dict(status='RUNNING',started_at=base.eastern(),probe_sha256=base.digest(__file__))
     try:
+        if source!=Path('/Users/danny/Documents/Tools/NativePeers'):raise base.Blocked('Probe requires the reviewed installed source; no candidate activation')
+        sys.path.insert(0,str(source))
         from nativepeers.compatibility import fingerprint
         binary,selection=base.select_codex(None);actual=fingerprint(binary,fresh=True);receipt=Path.home()/'.local/state/nativepeers/compat/runtime.json';prior=base.digest(receipt)
         approval=q.approved_record(receipt,actual);report.update(executable=actual,selection=selection)
@@ -161,7 +162,7 @@ def main():
     finally:
         for phase in range(1,5):(run/f'release-{phase}').touch()
         (run/'exit').touch();q.stop_resources(resources,report);report['finished_at']=base.eastern();base.save(run/'qualification.json',report)
-    print(json.dumps(dict(status=report['status'],report=str(run/'qualification.json'))));return 0 if report['status']=='PASS' else 1
+    print(json.dumps(dict(status=report['status'],report=str(run/'qualification.json'))));return {'PASS':0,'BLOCKED':2}.get(report['status'],1)
 
 
 if __name__=='__main__':raise SystemExit(main())
