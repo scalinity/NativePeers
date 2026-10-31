@@ -14,7 +14,7 @@ export class BridgeError extends Error {
 // The token lives only in module memory: never in $.state, $.store or a log.
 let connection: { socket: string; token: string; generation: number } | undefined
 let launches = 0
-let launching = 0
+let launching = false
 
 export function connected(): boolean {
   return connection !== undefined
@@ -22,7 +22,11 @@ export function connected(): boolean {
 
 // A bridge is starting: it is connected only once its ready line arrives.
 export function starting(): boolean {
-  return launching > 0
+  return launching
+}
+
+export function connectionGeneration(): number | undefined {
+  return connection?.generation
 }
 
 export async function request($: EngineInterface, method: 'GET' | 'POST', path: string, body?: unknown): Promise<any> {
@@ -62,9 +66,13 @@ async function pump($: EngineInterface, child: AsyncGenerator<{ stream: string; 
 // Starts `npeer bridge` for this session and reads its one ready line. The
 // child lives as long as `pump` reads it: the engine kills it when the module
 // unloads or reloads.
-export async function launch($: EngineInterface, session: string, cwd: string, npeer: string): Promise<{ hello: any } | { reason: string }> {
-  launching += 1
-  try { return await start($, session, cwd, npeer) } finally { launching -= 1 }
+// One start at a time. The slot is taken before the first await, the session id's included (callers pass
+// it unawaited), so a second caller (a /np command arriving while activation starts the bridge, as the
+// desktop's first message does) is told it is busy.
+export async function launch($: EngineInterface, session: Promise<string>, cwd: string, npeer: string): Promise<{ hello: any } | { reason: string } | { busy: true }> {
+  if (launching) return { busy: true }
+  launching = true
+  try { return await start($, await session, cwd, npeer) } finally { launching = false }
 }
 
 async function start($: EngineInterface, session: string, cwd: string, npeer: string): Promise<{ hello: any } | { reason: string }> {
@@ -92,8 +100,10 @@ async function start($: EngineInterface, session: string, cwd: string, npeer: st
     void child.return(undefined as never)
     // A refusal arrives as {"ready":false,"error":{...}} on stdout; stderr holds anything else.
     const reason = (ready?.error?.code ? `${ready.error.code}: ${ready.error.message ?? ''}` : err.trim().split('\n').pop() || 'no ready line').slice(0, 300)
-    // A bridge already connected keeps the state it set: one failed start does not mark it down.
-    if (!connection) await setBridge($, { state: 'down', reason, since: await $.clock.now() })
+    // A bridge already connected keeps the state it set: a failed start never marks it down. The check
+    // follows the last await before the write, so no connection can appear between them.
+    const since = await $.clock.now()
+    if (!connection) await setBridge($, { state: 'down', reason, since })
     return { reason }
   }
   connection = { socket: ready.socket, token: ready.token, generation }
@@ -105,8 +115,11 @@ async function start($: EngineInterface, session: string, cwd: string, npeer: st
 
 // /np doctor's exact answer: a hook that read the state while a start was still in flight could have
 // left it stale, so a live connection restores the ready state its own start set.
-export async function restoreReady($: EngineInterface, hello: any): Promise<void> {
-  if (connection) await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: connection.socket, since: await $.clock.now() })
+export async function restoreReady($: EngineInterface, hello: any, generation: number | undefined): Promise<void> {
+  const since = await $.clock.now()
+  // Only the connection that answered the hello, and only while it is still the live one.
+  if (connection && connection.generation === generation)
+    await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: connection.socket, since })
 }
 
 export async function heartbeat($: EngineInterface): Promise<void> {

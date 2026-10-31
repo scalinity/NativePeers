@@ -1,0 +1,2 @@
+# tsc output: the engine loads the TypeScript sources
+*.js

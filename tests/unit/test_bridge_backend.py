@@ -500,6 +500,15 @@ class TakeoverTests(unittest.IsolatedAsyncioTestCase):
             holder.close()
         self.assertEqual((error.exception.code, recorded), ('BRIDGE_RUNNING', []))
 
+    def test_a_closing_bridge_removes_only_a_manifest_that_still_names_it(self):
+        from nativepeers.bridge_backend import NativeBackend
+        manifest = self.root / 'bridges' / 'b-x.json';manifest.parent.mkdir()
+        backend = NativeBackend.__new__(NativeBackend);backend.manifest = manifest
+        manifest.write_text(json.dumps({'process': dict(identity(os.getpid()).json(), pid=1)}))
+        backend.release_manifest();self.assertTrue(manifest.exists())  # A successor's record stays.
+        manifest.write_text(json.dumps({'process': identity(os.getpid()).json()}))
+        backend.release_manifest();self.assertFalse(manifest.exists())
+
     async def test_a_bridge_started_supervisor_is_reparented_and_a_cli_one_stays_a_child(self):
         from nativepeers import delegation
         fake = self.root / 'python';fake.write_text('#!/bin/sh\nsleep 0.3\nprintf \'{"ppid": %s}\' "$PPID" > "$NPEER_HOME/groups/$4/ppid.json"\n'

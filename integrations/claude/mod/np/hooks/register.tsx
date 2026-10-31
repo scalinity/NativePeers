@@ -3,7 +3,7 @@
 import type { EngineInterface, Register, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpProvider, NpWorker } from '../types'
 import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
-import { BridgeError, connected, followLineage, heartbeat, launch, request, restoreReady, shutdown, sleep, starting } from './bridge'
+import { BridgeError, connected, connectionGeneration, followLineage, heartbeat, launch, request, restoreReady, shutdown, sleep, starting } from './bridge'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
 import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state'
@@ -50,11 +50,19 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
     return
   }
   place = { cwd, npeer: o.npeerPath || '/Users/danny/.local/bin/npeer' }
-  const launched = await launch($, await $.session.id(), cwd, place.npeer)
-  if ('reason' in launched) { $.ui.toast(`np: NativePeers bridge unavailable — ${launched.reason}; /np doctor`);return }
-  await ready($, launched.hello)
-  void followLineage($)
+  const launched = await startBridge($)
+  if (launched && 'reason' in launched) { $.ui.toast(`np: NativePeers bridge unavailable — ${launched.reason}; /np doctor`);return }
+  if (launched) { await ready($, launched.hello);void followLineage($) }
   await pruneStore($)
+}
+
+// The one bridge start. launch() takes its slot before any await; a caller that finds a start in flight
+// waits for it through $ sleeps, and undefined means that start connected and registered the session.
+async function startBridge($: EngineInterface): Promise<{ hello: any } | { reason: string } | undefined> {
+  const launched = await launch($, $.session.id(), place!.cwd, place!.npeer)
+  if (!('busy' in launched)) return launched
+  for (let n = 0;starting() && n < 60;n++) await sleep($, 250)
+  return connected() ? undefined : { reason: starting() ? 'a bridge start is still in progress' : 'the bridge start in progress failed; run /np doctor' }
 }
 
 // Runs on every bridge start: the first registers the tools and timers, and each
@@ -113,11 +121,11 @@ async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>,
 // Starts the bridge again after it exited; leases it held stay valid for their
 // TTL, so a restarted bridge for the same session picks them up.
 async function ensureBridge($: EngineInterface): Promise<string> {
+  if (!place || connected()) return ''
   // In the desktop app the first message starts the session, so this command can arrive while
-  // activation still starts the bridge: wait for that start instead of racing it with a second one.
-  for (let n = 0;starting() && n < 60;n++) await sleep($, 250)
-  if (connected() || starting() || !place) return ''
-  const launched = await launch($, await $.session.id(), place.cwd, place.npeer)
+  // activation still starts the bridge: startBridge waits for that start instead of racing it.
+  const launched = await startBridge($)
+  if (!launched) return ''
   if ('reason' in launched) return `bridge restart failed: ${launched.reason}`
   await ready($, launched.hello)
   void followLineage($)
@@ -213,13 +221,13 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
 async function doctor($: EngineInterface, o: Options): Promise<string> {
   const version = await $.session.version(), bridge = await getBridge($), faults = await getFaults($)
   // The module's own connection is the truth: a state read here may predate a start another hook just finished.
-  const live = connected()
+  const live = connected(), generation = connectionGeneration()
   const lines = [`engine: Claude Code ${version.version} (minimum ${MIN_ENGINE.join('.')})`, `npeer: ${o.npeerPath || '/Users/danny/.local/bin/npeer'}`,
     live ? 'bridge: ready' : `bridge: ${bridge.state}${bridge.reason ? ' — ' + bridge.reason : ''}`]
   if (live) {
     try {
       const hello = await request($, 'GET', '/v1/hello')
-      if (bridge.state !== 'ready') await restoreReady($, hello)
+      if (bridge.state !== 'ready') await restoreReady($, hello, generation)
       lines.push(`peer: ${hello.peer} · protocol ${hello.protocol} · providers ${(hello.providers ?? []).join(', ')}`, `activity schema: ${hello.capabilities?.activity_schema ?? '?'}`)
       if (faults.fallthrough) { await setFaults($, { fallthrough: false });lines.push(`fallthrough: cleared (was: ${faults.reason ?? 'unknown'}); np agent types are offered again`) }
     } catch (error) { lines.push('hello failed: ' + String(error).slice(0, 200)) }

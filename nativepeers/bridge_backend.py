@@ -110,7 +110,6 @@ class NativeBackend:
         self.session, self.sessions = session, [session]
         self.runtimes, self.manifest = dict(runtimes or {}), manifest
         self.inflight, self.agents, self.locks, self.catalog_cache, self.socket, self.times, self.backfills = {}, {}, {}, None, None, {}, {}
-        self.recorded = False
         self.changed, self.revision = asyncio.Event(), 0
 
     # --- identity and scope
@@ -180,12 +179,19 @@ class NativeBackend:
         # Leases are left to their TTL so a reloaded mod (and a restarted bridge for this session) can take them up again.
         # A spawn already handed to spawn_many finishes: abandoning it could strand a reserved group without its supervisor.
         if self.inflight:await asyncio.wait(list(self.inflight.values()), timeout=30)
-        if self.manifest:Path(self.manifest).unlink(missing_ok=True)
+        self.release_manifest()
+
+    def release_manifest(self):
+        """Remove the manifest only while it still names this bridge process: after this bridge closed its socket, a
+        successor for the same session may hold the path and its record (a close can wait 30 s for a spawn)."""
+        if not self.manifest:return
+        try:value = json.loads(Path(self.manifest).read_text())
+        except (OSError, ValueError):return
+        if value.get('process') == identity(os.getpid()).json():Path(self.manifest).unlink(missing_ok=True)
 
     def record_manifest(self, socket=None):
         self.socket = socket or self.socket
         if self.manifest:
-            self.recorded = True
             atomic_json(Path(self.manifest), dict(process=identity(os.getpid()).json(), socket=str(self.socket), peer=self.current, peers=list(self.peers),
                                                   claude_sessions=self.sessions, protocol=1, started_at=time.time()))
 
@@ -722,6 +728,6 @@ def run(args):
         print(json.dumps(dict(ready=False, error=error.json()), separators=(',', ':')), flush=True)
         return None
     finally:
-        # Only a manifest this bridge wrote is removed: another bridge may hold the same path.
-        if manifest and backend and backend.recorded:manifest.unlink(missing_ok=True)
+        # Only a manifest naming this bridge is removed: another bridge may hold the same path.
+        if backend:backend.release_manifest()
         if journal:journal.close()
