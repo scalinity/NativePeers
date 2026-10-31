@@ -7,7 +7,7 @@ import { BridgeError, connected, connectionGeneration, followLineage, heartbeat,
 import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
-import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage } from './state'
+import { getBridge, getFaults, getLineage, getUi, setBridge, setFaults, setLineage, settleInterruptedDrafts, startTranscript } from './state'
 import { PANE_ID, copyResume, doctorText, followConversation, interruptWorker, openConversation, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
@@ -55,9 +55,11 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
   if (launched && 'reason' in launched) { $.ui.toast(`NativePeers bridge unavailable: ${launched.reason}. Run /np doctor.`);return }
   if (launched) {
     await ready($, launched.hello);void followLineage($)
-    // A conversation still shown after a reload is followed again: module variables, and the loop, started over.
+    // A conversation still shown after a reload is followed again (module variables, and the loop, started over), and a
+    // message whose answer the reload lost becomes uncertain, retried under its own id.
+    await settleInterruptedDrafts($)
     const shown = (await getUi($)).viewing
-    if (shown) void followConversation($, shown)
+    if (shown) { await startTranscript($, shown);void followConversation($, shown) }
   }
   await pruneStore($)
 }

@@ -883,7 +883,7 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
    - **Workers:** the lineage tree, including descendants, each a button with its title and a dim `<Provider> · <Status> · <elapsed>` line. On the desktop app it also shows the band's summary, with `[Stop all]` while delegates run. Pressing a worker shows its conversation.
    - **Conversation** of one worker, on every surface: `[‹ Workers]`, its title and status. Then its details in words: model and effort (and the requested model when another answered), access (`Read-only` or `Can edit its own workspace`), output tokens and latest activity.
    - **Rows:** the conversation from its activity log, as `Markdown` and `Code`: the task from main, the worker's messages under its name, tool steps (`▸ <title> · exit 0 · 2s` with a short output), follow-ups (`You`, or `Task from main` for the parent's), and how each generation ended. While shown, it follows the log (activation follows a conversation still shown after a reload); the newest 80 rows are kept in `$.state`, keyed by generation as well as item, since providers reuse item ids across generations.
-   - **Message field:** an `Input` (`Message <Provider>…`; mobile has none) sends a follow-up through `POST /v1/workers/:id/input` (origin `human-claude-view`, mode `queue`). A live worker takes it after its current turn and a released one resumes with it, and its answer appears in the conversation. Its result is delivered natively: where the parent has no inbox (the desktop app), it stays in NativePeers and in this conversation. The message is held as a draft until the bridge answers. A definite refusal, or a bridge that is not running, returns it to the field. An uncertain answer (the request left, the reply did not arrive) offers `[Retry]`, which sends it again under the same request id; the bridge admits it once.
+   - **Message field:** an `Input` (`Message <Provider>…`; mobile has none) sends a follow-up through `POST /v1/workers/:id/input` (origin `human-claude-view`, mode `queue`). A live worker takes it after its current turn and a released one resumes with it, and its answer appears in the conversation. Its result is delivered natively: where the parent has no inbox (the desktop app), it stays in NativePeers and in this conversation. The message is held as a draft until the bridge answers. A definite refusal, or a bridge that is not running, returns it to the field. An uncertain answer (the request left, the reply did not arrive) offers `[Retry]`, which sends it again under the same request id; the bridge admits it once. Drafts are per worker; a worker takes one message at a time while its last one is unresolved, and a draft a reload left `sending` becomes uncertain.
    - **Buttons:** Interrupt and Stop (a running worker), Attach (a running worker with no live shadow here, as in the band), Patch preview (`delta-preview`), Copy IDs. Ids (worker, group, task, native, generation) are never shown: `[Copy IDs]` copies them. The resume command stays with the band's shadow view and `/np resume-cmd`; while a worker is open for follow-ups it has none, and the toast says to message it from the pane.
 6. **Commands.**
 
@@ -922,10 +922,12 @@ export type NpShadow = { agentId: string; workerId?: string; spawnError?: string
 // The conversation the pane shows for one worker (§7.9), newest 80 rows.
 export type NpRow = { kind: 'task'|'you'|'text'|'tool'|'note'; text: string; item?: string; status?: string; detail?: string }
 export type NpTranscript = { workerId: string; cursor: number; rows: NpRow[] }
+// A worker's message typed in the pane until the bridge answers (§7.9).
+export type NpDraft = { workerId: string; text: string; requestId: string; state: 'sending'|'refused'|'uncertain'; reason?: string }
 declare module 'claude-code' {
   interface PluginState {
     np: { bridge: NpBridge; lineage: Shaped<NpWorker[]>; shadow: StateFamily<Shaped<NpShadow>>;
-          ui: { bandCollapsed: boolean; paneOpen: boolean; selected?: string; viewing?: string; sent?: number };
+          ui: { bandCollapsed: boolean; paneOpen: boolean; selected?: string; viewing?: string; sent?: number; drafts?: Record<string, NpDraft> };
           transcript: Shaped<NpTranscript> }
   }
 }

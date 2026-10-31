@@ -122,7 +122,7 @@ test('the pane\'s worker controls name the lineage row\'s worker while its shado
 })
 
 test('a refused message returns to the field, and an uncertain one offers Retry', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, draft: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'refused', reason: 'TARGET_OFFLINE' } })
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, drafts: { W1: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'refused', reason: 'TARGET_OFFLINE' } } })
   const refused = await $.ui.mount(pane('desktop'))
   expect((await refused.find({ type: 'Input', key: 'say-3' }) as any)?.props?.value ?? (await refused.find({ type: 'Input', key: 'say-3' }) as any)?.value).toBe('Also count them')
   expect(await refused.find({ type: 'Text', text: /Not delivered: TARGET_OFFLINE/ })).toBeTruthy()
@@ -131,9 +131,17 @@ test('a refused message returns to the field, and an uncertain one offers Retry'
 })
 
 test('an uncertain message offers Retry under its own request', async ($, on) => {
-  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, draft: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'uncertain', reason: 'socket closed' } })
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 3, drafts: { W1: { workerId: 'W1', text: 'Also count them', requestId: 'np-pane:W1:1', state: 'uncertain', reason: 'socket closed' } } })
   const ui = await $.ui.mount(pane('desktop'))
   expect(await ui.find({ type: 'Button', key: 'p-retry' })).toBeTruthy()
   expect(await ui.find({ type: 'Text', text: /Delivery uncertain: socket closed/ })).toBeTruthy()
+  await ui.unmount()
+})
+
+test('a draft belongs to its worker: another worker\'s unresolved message shows nothing here', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true, viewing: 'W1', sent: 1, drafts: { W2: { workerId: 'W2', text: 'Elsewhere', requestId: 'np-pane:W2:1', state: 'uncertain' } } })
+  const ui = await $.ui.mount(pane('desktop'))
+  expect(await ui.find({ type: 'Button', key: 'p-retry' })).toBeFalsy()
+  expect(await ui.find({ type: 'Text', text: /Delivery uncertain|Sending/ })).toBeFalsy()
   await ui.unmount()
 })

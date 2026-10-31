@@ -7,7 +7,7 @@ import { ACTIVE, NAMES, TAGS, counts, modelLabel, statusLabel, statusSummary } f
 import { BridgeError, request, sleep } from './bridge'
 import { duration } from './mirror'
 import { loadShadow, newShadow } from './shadow'
-import { getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, setTranscript, setUi, startTranscript } from './state'
+import { clearDraft, getBridge, getFaults, getIndex, getLineage, getMember, getTranscript, getUi, putDraft, setTranscript, setUi, startTranscript } from './state'
 import { applyActivity } from './transcript'
 import type { NpBridge, NpFaults } from '../types'
 
@@ -126,16 +126,17 @@ export async function openConversation($: EngineInterface, workerId: string, foc
 }
 
 // Long-polls the worker's activity while its conversation is on screen. Each round reads the conversation shown, so
-// reopening a worker continues from what it holds and a worker no longer shown is never written. Five failed rounds
-// in a row end it until the person opens the worker or sends to it again (activation restarts it after a reload).
+// reopening a worker continues from what it holds. Only opening a worker (or activation) starts its conversation: a
+// follower that finds another worker's shown ends. Five failed rounds in a row end it until the person opens the
+// worker or sends to it again.
 export async function followConversation($: EngineInterface, workerId: string): Promise<void> {
   if (following.has(workerId)) return
   following.add(workerId)
   try {
     let failures = 0
     while ((await getUi($)).viewing === workerId && failures < 5) {
-      let t = await getTranscript($)
-      if (t.workerId !== workerId) t = await startTranscript($, workerId)
+      const t = await getTranscript($)
+      if (t.workerId !== workerId) break
       try {
         const batch = await request($, 'GET', `/v1/workers/${workerId}/activity?after=${t.cursor}&wait_ms=20000&max=256`)
         const events = Array.isArray(batch.events) ? batch.events : []
@@ -155,16 +156,24 @@ export async function followConversation($: EngineInterface, workerId: string): 
 // until the bridge answers.
 export async function sendToWorker($: EngineInterface, w: NpWorker, text: string): Promise<void> {
   if (!text.trim()) return
+  // One message per worker at a time: an unresolved one keeps its request id, and the field keeps the new text.
+  const held = (await getUi($)).drafts?.[w.workerId]
+  if (held?.state === 'sending') { $.ui.toast('Your last message is still being sent.');return }
+  if (held?.state === 'uncertain') { $.ui.toast('Your last message may not have arrived: press Retry first.');return }
   const draft: NpDraft = { workerId: w.workerId, text, requestId: `np-pane:${w.workerId}:${await $.clock.now()}`, state: 'sending' }
   // A new key draws an empty field.
-  await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1, draft })
+  await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
+  await putDraft($, draft)
   await deliverDraft($, w, draft)
 }
 
 // Sends an uncertain draft again under its own request id: the bridge admits it once.
 export async function retryDraft($: EngineInterface, w: NpWorker): Promise<void> {
-  const draft = (await getUi($)).draft
-  if (draft && draft.workerId === w.workerId) await deliverDraft($, w, { ...draft, state: 'sending' })
+  const held = (await getUi($)).drafts?.[w.workerId]
+  if (held?.state !== 'uncertain') return
+  const draft: NpDraft = { ...held, state: 'sending' }
+  await putDraft($, draft, held.requestId)
+  await deliverDraft($, w, draft)
 }
 
 async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Promise<void> {
@@ -172,18 +181,20 @@ async function deliverDraft($: EngineInterface, w: NpWorker, draft: NpDraft): Pr
   try {
     const r = await request($, 'POST', `/v1/workers/${w.workerId}/input`, { client_request_id: draft.requestId, text: draft.text, origin: 'human-claude-view', mode: 'queue' })
     if (r.disposition === 'refused') {
-      await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1, draft: { ...draft, state: 'refused', reason: String(r.reason ?? 'refused') } })
+      await putDraft($, { ...draft, state: 'refused', reason: String(r.reason ?? 'refused') }, draft.requestId)
+      await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
       $.ui.toast(`Not delivered: ${r.reason ?? 'refused'}. Your message is back in the field.`)
       return
     }
-    await setUi($, { draft: undefined })
+    await clearDraft($, w.workerId, draft.requestId)
     $.ui.toast(r.disposition === 'resumed' ? `Sent. ${name} is picking the conversation back up.` : `Sent to ${name}.`)
     void followConversation($, w.workerId)
   } catch (error) {
     // A request that left may have been admitted: only a retry under the same id is safe. One that never left returns
     // to the field.
     const uncertain = !(error instanceof BridgeError) || ['BRIDGE_UNREACHABLE', 'PROTOCOL_ERROR', 'DELIVERY_UNKNOWN', 'SUBMITTED_UNCONFIRMED'].includes(error.code)
-    await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1, draft: { ...draft, state: uncertain ? 'uncertain' : 'refused', reason: reason(error) } })
+    await putDraft($, { ...draft, state: uncertain ? 'uncertain' : 'refused', reason: reason(error) }, draft.requestId)
+    if (!uncertain) await setUi($, { sent: ((await getUi($)).sent ?? 0) + 1 })
     $.ui.toast(uncertain ? `Delivery uncertain: ${reason(error)}. Retry sends the same message once.` : `Not delivered: ${reason(error)}. Your message is back in the field.`)
   }
 }
@@ -293,7 +304,7 @@ async function renderConversation($: EngineInterface, e: any, w: NpWorker, ui: N
   const { Box, Text, Button, Input } = R
   const t = await getTranscript($), now = await $.clock.now()
   const rows = t.workerId === w.workerId ? t.rows : []
-  const draft = ui.draft?.workerId === w.workerId ? ui.draft : undefined
+  const draft = ui.drafts?.[w.workerId]
   const running = ACTIVE.includes(w.status), name = NAMES[w.provider] ?? w.provider
   // As in the band: a running worker with no live shadow here (none, or one that faulted or ended) can be attached.
   const attachable = running && w.mirrorOwner !== 'other' && (!w.agentId || ['FAULTED', 'DETACHED', 'COMPLETED'].includes((await getMember($, w.agentId)).phase))

@@ -2,7 +2,7 @@
 // validator resolves a read or update target only to an atom of the same file.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
-import type { NpBridge, NpFaults, NpShadow, NpTranscript, NpUi, NpWorker } from '../types'
+import type { NpBridge, NpDraft, NpFaults, NpShadow, NpTranscript, NpUi, NpWorker } from '../types'
 
 const bridgeAtom = atom({ plugin: 'np', key: 'bridge' } as const, { state: 'off', since: 0 } as NpBridge)
 const lineageAtom = atom({ plugin: 'np', key: 'lineage' } as const, [] as NpWorker[], { shape: 'np-lineage-1' })
@@ -46,6 +46,29 @@ export async function setFaults($: EngineInterface, value: NpFaults): Promise<vo
 export async function getUi($: EngineInterface) { return read($, uiAtom) }
 export async function setUi($: EngineInterface, change: Partial<NpUi>): Promise<void> {
   await update($, uiAtom, ui => ({ ...ui, ...change }))
+}
+
+// A worker's unsent message. A settling answer touches only the draft of its own request: a newer one stays.
+export async function putDraft($: EngineInterface, draft: NpDraft, onlyIf?: string): Promise<void> {
+  await update($, uiAtom, ui => onlyIf !== undefined && ui.drafts?.[draft.workerId]?.requestId !== onlyIf ? ui
+    : { ...ui, drafts: { ...(ui.drafts ?? {}), [draft.workerId]: draft } })
+}
+export async function clearDraft($: EngineInterface, workerId: string, requestId: string): Promise<void> {
+  await update($, uiAtom, ui => {
+    if (ui.drafts?.[workerId]?.requestId !== requestId) return ui
+    const { [workerId]: _sent, ...rest } = ui.drafts
+    return { ...ui, drafts: rest }
+  })
+}
+// A draft still 'sending' after a reload lost its answer: it may have arrived, so only a retry under its id is safe.
+export async function settleInterruptedDrafts($: EngineInterface): Promise<void> {
+  await update($, uiAtom, ui => {
+    const held = Object.values(ui.drafts ?? {})
+    if (!held.some(d => d.state === 'sending')) return ui
+    const drafts: Record<string, NpDraft> = {}
+    for (const d of held) drafts[d.workerId] = d.state === 'sending' ? { ...d, state: 'uncertain', reason: 'a reload interrupted it' } : d
+    return { ...ui, drafts }
+  })
 }
 
 export async function getTranscript($: EngineInterface): Promise<NpTranscript> { return read($, transcriptAtom) }
