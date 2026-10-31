@@ -166,7 +166,7 @@ class Router:
         elif isinstance(exception, PeerError):
             error = exception
             state = exception.code
-            if exception.code=='CAPABILITY_MISMATCH':
+            if exception.code=='CAPABILITY_MISMATCH' and (exception.details or {}).get('compatibility_state') in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED'):
                 attempt=self.journal.one('SELECT transport FROM attempts WHERE attempt_id=?',(attempt_id,))
                 if attempt and attempt['transport']=='codex-native-queue':
                     state='ADMISSION_DEFERRED'

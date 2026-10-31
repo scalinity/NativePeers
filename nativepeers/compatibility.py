@@ -29,8 +29,10 @@ def update_status(provider,expected,actual,document):
             'QUALIFICATION_REQUIRED':'Qualify the affected native seams; see docs/RUNTIME_UPDATES.md.'}
     return dict(compatibility_state=state,reason=reason,operations=['worker_turns','inbox'],
         next_action=('Wait for the CodexForge activation owner to qualify the runtime, then retry the unchanged request ID; inspect npeer doctor --json.'
-                     if provider=='codex' else action.get(state,f'npeer runtime-check --provider {provider} --apply --json')),
-        selected_runtime=actual, approved_runtime=expected)
+                     if provider=='codex' and state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED')
+                     else action.get(state,'Inspect npeer doctor --json and ask the runtime owner to resolve the named condition.' if provider=='codex'
+                                     else f'npeer runtime-check --provider {provider} --apply --json')),
+        actual_runtime=actual, approved_runtime=expected)
 
 
 def fingerprint(path,*,fresh=False):
@@ -55,10 +57,12 @@ def verify(journal,provider,executable,*,worker_id=None,peer=None,renew=True):
     if peer is not None:
         from .registry import Registry
         require(provider=='codex' and worker_id is None and peer['transport']['kind']=='codex-native-queue',
-                'CAPABILITY_MISMATCH','Recipient runtime approval is only for interactive Codex inbox delivery')
+                'CAPABILITY_MISMATCH','Recipient runtime approval is only for interactive Codex inbox delivery',
+                details={'compatibility_state':'RECIPIENT_MISMATCH','next_action':'Resolve the live interactive recipient again.'})
         current=Registry(journal).verify(peer['handle'],peer['incarnation_id'])
         require(current['owner']==peer['owner'] and actual['path']==peer['owner']['executable'],
-                'CAPABILITY_MISMATCH','Recipient executable no longer matches its verified owner')
+                'CAPABILITY_MISMATCH','Recipient executable no longer matches its verified owner',
+                details={'compatibility_state':'RECIPIENT_MISMATCH','next_action':'Resolve the live recipient again; do not reuse an altered owner.'})
         peer_grant={k:peer[k] for k in ('handle','incarnation_id','owner')}
     pinned=None
     if worker_id:
@@ -92,16 +96,79 @@ def codex_inbox_runtime(journal,peer):
     except PeerError as error:
         if error.code=='CAPABILITY_MISMATCH':
             details=dict(error.details or {})
-            details['recipient_runtime']=details.get('selected_runtime')
+            actual=details.pop('actual_runtime',None)
+            details['recipient_runtime']=actual
             try:details['selected_runtime']=fingerprint(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex')
             except OSError:details['selected_runtime']=None
-            details['next_action']='Wait for the exact recipient runtime to be qualified or restored, then retry the unchanged request ID; inspect npeer doctor --json.'
+            state=details.get('compatibility_state','CHECK_UNAVAILABLE')
+            if state=='UPDATE_UNTESTED' and actual:
+                expected=details.get('approved_runtime') or {}
+                document=json.loads((journal.root/'compat/runtime.json').read_text())
+                retained=document.get('retained',{}).get('codex',{})
+                known=[expected]+[v.get('fingerprint',{}) for v in retained.values()]
+                if any(v.get('path')==actual['path'] and v.get('sha256')!=actual['sha256'] for v in known):
+                    state='EXECUTABLE_CHANGED'
+                    details['next_action']='Ask the runtime owner to restore the exact qualified executable; no helper was started.'
+                elif actual['sha256'] in retained:
+                    state='RECIPIENT_NOT_RETAINED'
+                    details['next_action']='Ask the runtime owner to retain this exact qualified live recipient or resume on the approved runtime.'
+            details['compatibility_state']=state
+            if state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED'):
+                details['next_action']='Wait for the exact recipient runtime to be qualified, then retry the unchanged request ID; inspect npeer doctor --json.'
+            elif 'next_action' not in details:
+                details['next_action']='Inspect npeer doctor --json and ask the runtime owner to resolve the recipient runtime condition.'
             error.details=details
         raise
     except OSError as error:
+        missing=isinstance(error,FileNotFoundError)
         raise PeerError('CAPABILITY_MISMATCH','Recipient executable is unavailable; no queue helper was launched',
-                        details={'compatibility_state':'EXECUTABLE_NOT_FOUND',
-                                 'next_action':'Restore the qualified recipient runtime, then retry the unchanged request ID.'}) from error
+                        details={'compatibility_state':'EXECUTABLE_NOT_FOUND' if missing else 'CHECK_UNAVAILABLE',
+                                 'next_action':'Ask the runtime owner to restore the qualified recipient executable.' if missing
+                                               else 'Inspect access to the recipient executable with npeer doctor --json.',
+                                 'recipient_executable':peer['owner']['executable']}) from error
+
+
+def _codex_peer_grants(journal,runtime):
+    from .registry import Registry
+    peers=[]
+    for row in journal.all("SELECT descriptor_json FROM peer_instances WHERE provider='codex' AND status='live'"):
+        peer=json.loads(row['descriptor_json'])
+        if peer['transport'].get('kind')!='codex-native-queue' or peer['owner'].get('executable')!=runtime.get('path'):continue
+        try:Registry(journal).verify(peer['handle'],peer['incarnation_id'])
+        except PeerError:continue
+        peers.append({k:peer[k] for k in ('handle','incarnation_id','owner')})
+    if peers:
+        try:actual=fingerprint(Path(runtime['path']),fresh=True)
+        except OSError:return []
+        if any(actual[k]!=runtime.get(k) for k in ('path','sha256','size')):return []
+    return peers
+
+
+def retain_codex_recipients(journal,*,apply=False,expected=None):
+    """Explicit install migration for live recipients of existing retained approvals."""
+    receipt=journal.root/'compat/runtime.json'
+    with advisory_lock(journal.root/'locks/runtime.lock'):
+        document=json.loads(receipt.read_text())
+        current=document['providers']['codex'];retained=document.get('retained',{}).get('codex',{})
+        baseline={'approval':current,'retained':retained}
+        require(not apply or expected is not None,'PROTOCOL_ERROR','Apply the inspected recipient-retention plan with its expected state')
+        require(expected is None or expected==baseline,'CAPABILITY_MISMATCH','Codex approval or retained state changed before recipient retention')
+        selected=fingerprint(Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',fresh=True)
+        require(all(current.get(k)==selected[k] for k in ('path','sha256','size')),
+                'CAPABILITY_MISMATCH','Selected runtime changed before recipient retention')
+        additions=[]
+        for digest,entry in retained.items():
+            runtime=entry.get('fingerprint',{})
+            if entry.get('revoked') or runtime.get('sha256')!=digest:continue
+            grants=[p for p in _codex_peer_grants(journal,runtime) if p not in entry.get('peers',[])]
+            if grants:additions.append({'sha256':digest,'peers':grants})
+        # Keep the dry-run guard independent of the mutations returned below.
+        baseline=json.loads(json.dumps(baseline))
+        if apply and additions:
+            for item in additions:
+                retained[item['sha256']].setdefault('peers',[]).extend(item['peers'])
+            atomic_json(receipt,document)
+        return {'applied':apply,'expected':baseline,'additions':additions,'selected_runtime':selected}
 
 
 def update_verified(journal,replacements,*,initialize=False,expected=None,selected=None):
@@ -132,16 +199,8 @@ def update_verified(journal,replacements,*,initialize=False,expected=None,select
                 prior=history.get(old['sha256'],{})
                 peers=list(prior.get('peers',[]))
                 if provider=='codex':
-                    from .registry import Registry
-                    for row in journal.all("SELECT descriptor_json FROM peer_instances WHERE provider='codex' AND status='live'"):
-                        peer=json.loads(row['descriptor_json'])
-                        if peer['transport'].get('kind')!='codex-native-queue':continue
-                        try:
-                            Registry(journal).verify(peer['handle'],peer['incarnation_id'])
-                            runtime=fingerprint(Path(peer['owner']['executable']),fresh=True)
-                        except (OSError,PeerError):continue
-                        grant={k:peer[k] for k in ('handle','incarnation_id','owner')}
-                        if all(runtime[k]==old.get(k) for k in ('path','sha256','size')) and grant not in peers:peers.append(grant)
+                    for grant in _codex_peer_grants(journal,old):
+                        if grant not in peers:peers.append(grant)
                 history[old['sha256']]={'fingerprint':old,'workers':sorted(set(workers+prior.get('workers',[]))),
                                        'peers':peers,'revoked':prior.get('revoked',False)}
             document['providers'][provider]=actual

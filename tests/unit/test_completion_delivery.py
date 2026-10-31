@@ -97,9 +97,9 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
             with patch('nativepeers.core.Core',return_value=core):await group.notify(generation)
         status=Core(self.j).delegation.status(self.caller,group_id)
         routes=status['notifications']
-        self.assertEqual([r['state'] for r in routes],['UNCLAIMED','RETAINED','HELD'])
-        self.assertEqual([r['delivery']['state'] for r in routes],['ADMISSION_DEFERRED','REJECTED','HELD'])
-        self.assertEqual(routes[0]['delivery']['error']['details']['cause']['message'],'exact fixture mismatch')
+        self.assertEqual([r['state'] for r in routes],['RETAINED','RETAINED','HELD'])
+        self.assertEqual([r['delivery']['state'] for r in routes],['CAPABILITY_MISMATCH','REJECTED','HELD'])
+        self.assertEqual(routes[0]['delivery']['error']['message'],'exact fixture mismatch')
         self.assertEqual(routes[1]['delivery']['error']['code'],'PROVIDER_POLICY_REFUSED')
         result=Core(self.j).delegation.result(self.caller,group_id)
         self.assertEqual(result['notifications'],routes); self.assertTrue(result['results'])
@@ -186,3 +186,20 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
         with patch('nativepeers.compatibility.verify',return_value={'sha256':'fixture'}):
             route=readiness(self.j,peer['handle'])
         self.assertEqual(route['state'],'NEXT_INVOCATION');self.assertFalse(route['ready'])
+
+    async def test_activation_deferred_completion_retries_at_bounded_interval_only(self):
+        with patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock):
+            spawned=await Core(self.j).delegation.spawn(self.caller,{'completion_mode':'push','workers':[{'provider':'claude','title':'deferred','task':'fixture'}]})
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED'")
+        group=Group(self.j,spawned['group_id']);core=Core(self.j);calls=[]
+        async def deferred(peer,message):
+            calls.append(message['message_id'])
+            raise PeerError('CAPABILITY_MISMATCH','candidate awaits qualification',details={'compatibility_state':'UPDATE_UNTESTED'})
+        core.router.adapters['codex-native-queue']=deferred
+        with patch('nativepeers.core.Core',return_value=core):
+            await group.notify();await group.notify()
+            self.assertEqual(len(calls),1)
+            self.j.db.execute('UPDATE attempts SET ended_at=ended_at-16')
+            await group.notify()
+        self.assertEqual(calls,[calls[0],calls[0]])
+        self.assertEqual(self.j.one('SELECT COUNT(*) n FROM attempts')['n'],1)

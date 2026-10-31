@@ -107,8 +107,8 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         expired=await self.send(expires_seconds=.01)
         self.assertEqual(expired['state'],'EXPIRED_BEFORE_SUBMISSION')
         self.assertEqual(expired['message_id'],first['message_id'])
-        self.old.write_text('unapproved replacement')
         self.peer=self.register(self.old)
+        pending=self.binary('pending');self.peer=self.register(pending)
         deferred=await self.send('replaced')
         self.register(self.new)
         rebound=await self.send('replaced')
@@ -132,11 +132,11 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
     async def test_revoked_modified_missing_runtime_never_falls_back(self):
         self.select(self.new);self.approve()
         revoke(self.j,'codex',self.prior['sha256'])
-        self.assertEqual((await self.send('revoked'))['state'],'ADMISSION_DEFERRED')
+        self.assertEqual((await self.send('revoked'))['state'],'CAPABILITY_MISMATCH')
         self.old.write_text('modified')
-        self.assertEqual((await self.send('modified'))['state'],'ADMISSION_DEFERRED')
+        self.assertEqual((await self.send('modified'))['state'],'CAPABILITY_MISMATCH')
         self.old.unlink()
-        self.assertEqual((await self.send('missing'))['state'],'ADMISSION_DEFERRED')
+        self.assertEqual((await self.send('missing'))['state'],'CAPABILITY_MISMATCH')
         self.assertFalse((self.root/'launches').exists())
 
     async def test_runtime_lock_contention_revalidates_before_launch(self):
@@ -146,7 +146,7 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.sleep(.04);self.assertFalse(task.done())
             self.old.write_text('changed while waiting')
         finally:lock.__exit__(None,None,None)
-        self.assertEqual((await task)['state'],'ADMISSION_DEFERRED')
+        self.assertEqual((await task)['state'],'CAPABILITY_MISMATCH')
         self.assertFalse((self.root/'launches').exists())
 
     def test_failed_or_interrupted_approval_preserves_whole_receipt_and_selection(self):
@@ -201,3 +201,19 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         with patch('nativepeers.compatibility.fingerprint',wraps=real_fingerprint) as hashed:
             await self.send('one-hash')
         self.assertEqual(sum(c.kwargs.get('fresh',False) for c in hashed.call_args_list),1)
+
+    def test_explicit_migration_retains_only_live_known_predecessors_and_is_guarded(self):
+        from nativepeers.compatibility import retain_codex_recipients
+        self.select(self.new);self.approve()
+        receipt=self.j.root/'compat/runtime.json';doc=json.loads(receipt.read_text())
+        doc['retained']['codex'][self.prior['sha256']].pop('peers')
+        atomic_json(receipt,doc);before=receipt.read_bytes()
+        plan=retain_codex_recipients(self.j)
+        self.assertEqual(receipt.read_bytes(),before)
+        self.assertEqual(plan['additions'][0]['peers'][0]['incarnation_id'],self.peer['incarnation_id'])
+        retain_codex_recipients(self.j,apply=True,expected=plan['expected'])
+        self.assertEqual(codex_inbox_runtime(self.j,self.peer),self.prior)
+        self.assertEqual(retain_codex_recipients(self.j)['additions'],[])
+        with self.assertRaises(PeerError):retain_codex_recipients(self.j,apply=True,expected=plan['expected'])
+        revoke(self.j,'codex',self.prior['sha256'])
+        self.assertEqual(retain_codex_recipients(self.j)['additions'],[])
