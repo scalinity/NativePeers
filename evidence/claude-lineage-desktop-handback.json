@@ -1,0 +1,147 @@
+{
+  "schema_version": 1,
+  "stage": "np shadows end with SubagentHandback in auto mode; humanized desktop surfaces (pane beside the conversation, doctor, status line, toasts)",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "df3df5a",
+  "scope": "The np mod: handback detection, report and retries in the shadow engine; tool.check leaving SubagentHandback to auto mode's classifier; the shadow agent type's tool list; on the desktop surface the pane carrying the band's summary and no Open; the pane, doctor, status line and toasts in sentences; short mirror refs and title-first mirror inputs. The desktop app run needs the person after install.",
+  "finding": {
+    "observed": "Desktop check (session 5a5bfe52, engine 2.1.309, Auto): the np:codex shadow answered with plain text at 9:35:32 PM EDT; the engine appended [handback-send-enforce] and asked for another step; the mirror waited for activity from a finished worker until the person pressed Stop at 9:43:04 PM EDT. The parent received the result only through the stop. The band's Open answered 'np: np: no main view here'; the pane showed raw worker, group, task and native ids; the status line kept '1 running' after the worker finished.",
+    "cause": "In auto mode the engine delivers a subagent's result only through SubagentHandback (spec X15), and only its classifier may allow that call (X16). The desktop draws no main view (X17), and the engine heads toasts with the plugin name.",
+    "evidence": "desktop session 5a5bfe52 shadow transcript and meta (stoppedByUser true); NativePeers journal: worker 562bddc7 has one task and no forwarded input, so the enforcement text never reached the worker"
+  },
+  "tests": {
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1094,
+      "failed": 31,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Run on 873dbf8 (from df3df5a). No failure that the last merged lineage run lacked, by test id; one evidence-pointer check from that run now passes. The rest are failures shared with main plus the evidence-pointer check that publication regenerates. cea937b changes no Python file."
+    },
+    "mod": {
+      "status": "PASS",
+      "passed": 30,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "handback_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_handback.py",
+      "result": {
+        "handback_calls": 1,
+        "handback_result": "Report delivered to your caller.",
+        "enforcement_rows": 0,
+        "notified_after_s": 1.0,
+        "stopped_by_user": false,
+        "shadow_model_requests": 0
+      },
+      "control": "The same run on the pre-fix mod (df3df5a): no SubagentHandback call, one enforcement row, the parent not notified within 90 s, and 10 agent_summary side requests naming the shadow's model during the hang (X18).",
+      "refuse_mode": {
+        "status": "PASS",
+        "command": "tests/integration/claude_mod/run_handback.py --refuse",
+        "result": {
+          "handback_calls": 3,
+          "refusal_note": true,
+          "enforcement_rows": 3,
+          "notified_after_s": 8.0,
+          "stopped_by_user": false
+        },
+        "note": "Every SubagentHandback refused by the harness driver's tool.check (a deny stands in for a classifier refusal): after three tries the shadow's note ended the step and the engine ended the run."
+      }
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
+      }
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-handback-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input (auto mode's classifier requests refused by the tripwire)",
+      "scope": "One np:codex shadow: the engine's handback note seen, one SubagentHandback call carrying the report with ids, no enforcement row, the parent notified 1.0 s after the worker ended, not stopped by anyone; the pre-fix mod hung under the same run. With --refuse: three refused calls, the shadow's note, the run ended by itself and the parent was notified after 8.0 s.",
+      "source_head": "3be5d68"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-handback-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same handback run on the desktop app's own engine: one SubagentHandback call, no enforcement row, the parent notified 1.0 s after the worker ended; the startup race run on this engine started one bridge and reported Bridge: Connected. With --refuse on this engine: three refused calls, the shadow's note, the parent notified after 8.0 s.",
+      "source_head": "3be5d68"
+    }
+  ],
+  "limitations": [
+    "The desktop app run is verified only by the person after install.",
+    "Harness runs answer auto mode's classifier with a refusal, so the engine delivers the report flagged; a desktop session's classifier gives a real verdict, which the harness does not exercise.",
+    "The desktop app keeps and updates its own Claude Code copy (2.1.309 at the time of the run; the terminal CLI was 2.1.314); NativePeers approves a new desktop engine on first use but does not update the app.",
+    "During a long worker run the engine's agent_summary side requests name the shadow's unserved model and fail without content (X18).",
+    "The desktop composer shows \"/np isn't a command here.\" for /np; the command still runs.",
+    "The pane's Interrupt, Stop, Copy resume command and Patch preview buttons named in spec 7.9 are not built; the band's shadow view carries Interrupt, Stop and Resume cmd on the terminal."
+  ],
+  "independent_review": {
+    "reviewer": "codex gpt-6.1-sol xhigh, NativePeers analysis worker (read-only)",
+    "note": "The reviewer read source and traced sequences in memory; it ran no test suite or harness.",
+    "rounds": [
+      {
+        "reviewed": "873dbf8",
+        "worker": "group 46deb1e7-636d-4dea-9c29-a6f5d06361e9, task 620ff5fe-dc22-45dd-bfc0-77968135634b",
+        "native": "01a18fc7-79d8-74e0-925a-d78f4df1c88a",
+        "result_artifact": "art_8ac232a2-ff6d-4e4e-90d7-002def19aee5",
+        "findings": [
+          {
+            "severity": "P1",
+            "summary": "After three refused handbacks the note ends on end_turn, which the engine would answer with another enforcement step, without end.",
+            "disposition": "NOT REPRODUCED: run_handback.py --refuse shows the engine ends the run after the note (three tries, parent notified after 8.0 s). The probe now checks it; spec 7.5.2 says so."
+          },
+          {
+            "severity": "P2",
+            "summary": "captureRow saved a whole older copy of the shadow when recording the handback note, which could undo the step's newer phase and report.",
+            "disposition": "FIXED in cea937b: the note stays in the module set; the step persists it."
+          },
+          {
+            "severity": "P2",
+            "summary": "A follow-up captured during the retry pause was overwritten and the old report handed back.",
+            "disposition": "FIXED in cea937b: the retry reconciles with current inputs after the pause and forwards a new one."
+          },
+          {
+            "severity": "P2",
+            "summary": "A refused follow-up cleared the kept report, after which the step polled a finished worker.",
+            "disposition": "FIXED in cea937b: the report clears only when the bridge accepts an input; a run whose follow-ups were all refused ends with the kept report."
+          },
+          {
+            "severity": "P2",
+            "summary": "With the band gone on the desktop app, the pane lacked Attach for a running worker whose shadow faulted.",
+            "disposition": "FIXED in cea937b: the pane uses the band's Attach rule and adds Interrupt, Stop and Resume cmd. Test: a running worker whose shadow faulted is offered Attach in the pane."
+          },
+          {
+            "severity": "P3",
+            "summary": "band: always on the desktop app showed the band's Open, which cannot work there.",
+            "disposition": "FIXED in cea937b: the band's Open is not offered on the desktop surface."
+          }
+        ]
+      },
+      {
+        "reviewed": "cea937b",
+        "task": "8853a48a-d9dd-4e01-b897-6f45b5371a09",
+        "result_artifact": "art_15a1023d-cdda-4ed3-a61d-3111609a9bfe",
+        "result": "The five fixes resolve the reported sequences; the P1 is withdrawn (the refusal probe disproves its premise, and no other unbounded sequence was found).",
+        "findings": [
+          {
+            "severity": "P2",
+            "summary": "The pane's Interrupt, Stop and Resume cmd used a shadow still binding, which has no workerId, so the requests named no worker.",
+            "disposition": "FIXED in 3be5d68: controlTarget takes the worker from the lineage row. Test: the pane's worker controls name the lineage row's worker while its shadow is still binding."
+          }
+        ]
+      }
+    ]
+  }
+}
