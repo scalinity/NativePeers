@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/np-eval-unavailable-attribution",
-    "code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
-    "evidence": "evidence/np-eval-compact-followup.json",
+    "branch": "fix/issue-7-silent-close",
+    "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "evidence": "evidence/issue-7-silent-queue.json",
     "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
-    "status": "SOURCE_AND_SCOPED_NATIVE_PASS_INSTALLED_COMPACT_PENDING"
+    "status": "PARTIAL"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
-    "branch": "fix/np-eval-unavailable-attribution",
-    "code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
-    "last_verified_publication": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+    "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+    "branch": "fix/issue-7-silent-close",
+    "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "last_verified_publication": "1047400c99a31deb1485a9068f64d324e6cf550a",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,57 +302,69 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/np-eval-unavailable-attribution",
+    "branch": "fix/issue-7-silent-close",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
-    "verified_remote_code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+    "verified_remote_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "verified_remote_code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Compact historical attribution and bounded fallback follow-up",
+  "stage": "issue-7-silent-queue-source",
   "tests_current": {
     "focused": {
       "status": "PASS",
-      "passed": 47,
-      "subtests": 49,
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_compact_results.py tests/unit/test_completion_context.py tests/unit/test_cli.py tests/contract/test_provider_fallback.py tests/contract/test_phase_admission.py tests/contract/test_mcp_ack_groups.py",
-      "code_commit": "bf3f49b95b28ab2288ed1a47dc7eca19765c9462"
+      "tests": 72,
+      "subtests": 114,
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_notification_policy.py tests/unit/test_notification_guard_hooks.py tests/unit/test_completion_delivery.py tests/unit/test_hook_identity.py tests/unit/test_owned_caller_identity.py tests/unit/test_install.py tests/unit/test_install_home.py tests/unit/test_readiness.py",
+      "private_artifact": "evidence/scratch/issue-7/focused-source-final.log"
     },
-    "compile": {
+    "full": {
+      "status": "NOT_RUN",
+      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
+      "scope": "Newly merged desktop and selected-context source plus notification fix and reviewed oracles"
+    },
+    "installed_native": {
+      "status": "NOT_RUN"
+    },
+    "standalone_tui": {
+      "status": "NOT_RUN"
+    },
+    "probe_offline": {
       "status": "PASS",
-      "command": ".venv/bin/python -m compileall -q nativepeers/compact.py tests/unit/test_compact_results.py"
+      "tests": 24,
+      "subtests": 29,
+      "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
+      "scope": "45 focused guard/probe tests, including24 standalone probe tests;29 subtests in the combined run"
     },
-    "historical_backlog_full": {
+    "genuine_worker_probe_offline": {
       "status": "PASS",
-      "passed": 1100,
-      "subtests": 1048,
-      "skipped": 4,
-      "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
-      "scope": "Historical exact source, before desktop host merge and this follow-up. Not a current full-suite claim."
+      "tests": 42,
+      "subtests": 53,
+      "private_artifact": "evidence/scratch/issue-7/genuine-probe-stale-screen-fix.log"
     },
-    "full_suite_before_final_reference_flags": {
-      "status": "FAIL",
-      "passed": 1111,
-      "failed": 1,
-      "subtests": 1052,
-      "skipped": 4,
-      "code_commit": "bf3f49b95b28ab2288ed1a47dc7eca19765c9462",
-      "command": ".venv/bin/python -m pytest -q tests --tb=short",
-      "failure": "test_operation_index_separates_file_classes_and_native_check_scope: operation_checks was empty in the first generated index. Regenerated only after real native checks completed; focused recheck follows. Final reference-flag delta is verified separately."
-    },
-    "final_reference_flags": {
+    "registered_owner_guard": {
       "status": "PASS",
-      "passed": 47,
-      "subtests": 49,
-      "scope": "Compact reference flags plus CLI/MCP/fallback/phase tests. Final optional missing-code guard was subsequently checked with the fresh compact/coherence run."
+      "tests": 31,
+      "subtests": 30,
+      "private_artifact": "evidence/scratch/issue-7/old-owner-boundary-focused.log"
     },
-    "final_coherence_and_compact": {
+    "legacy_owner_probe_offline": {
       "status": "PASS",
-      "passed": 11,
-      "code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py tests/unit/test_compact_results.py --tb=short"
+      "tests": 45,
+      "private_artifact": "evidence/scratch/issue-7/probe-termination-cleanup.log"
+    },
+    "probe_cleanup_regressions": {
+      "status": "PASS",
+      "tests": 91,
+      "subtests": 57,
+      "private_artifact": "evidence/scratch/issue-7/reopen-audit-sequencing-focused-02.log"
+    },
+    "combined_preinstall_tui": {
+      "status": "PASS",
+      "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
+      "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
     }
   },
   "transports": {
@@ -361,7 +373,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T20:44:00.484976-04:00",
+  "updated_at": "2026-10-30T20:58:33.011518-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1636,6 +1648,33 @@
         "evidence": "evidence/np-eval-compact-followup.json",
         "source_map_sha256": "da95e26d2f54ae3c47e81393d1ad6797884c1dc598828e11c4cfee80fbd44515",
         "status": "SOURCE_PASS_NATIVE_IN_PROGRESS"
+      }
+    },
+    {
+      "stage": "Compact historical attribution and bounded fallback follow-up",
+      "updated_at": "2026-10-30T20:44:00.484976-04:00",
+      "git": {
+        "base_commit": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+        "branch": "fix/np-eval-unavailable-attribution",
+        "code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+        "last_verified_publication": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/np-eval-unavailable-attribution",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+        "verified_remote_code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/np-eval-unavailable-attribution",
+        "code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+        "evidence": "evidence/np-eval-compact-followup.json",
+        "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
+        "status": "SOURCE_AND_SCOPED_NATIVE_PASS_INSTALLED_COMPACT_PENDING"
       }
     }
   ],

@@ -102,7 +102,7 @@ def observe_accepted(config, spawned, who):
             raise TimeoutError("Real controller did not reach native queue admission during the held parent tool")
     outcome = base.product_cli(config, "status", row["message_id"])
     env = base.private_env(run / "codex-home", run / "peer-state", run, Path(config["source"]))
-    rpc = base.Metadata(Path(config["binary"]), run / "workspace", env, run, "helper-accepted-queue")
+    rpc = base.Metadata(Path(config["binary"]), Path(config["cwd"]), env, run, "helper-accepted-queue")
     try:
         rpc.start()
         queue = rpc.call("thread/queue/list", {"threadId": who["native_session_id"], "limit": 100})
@@ -260,7 +260,7 @@ def prepare(source, run, binary, approval, model, resources, report):
     from nativepeers.compatibility import update_verified
     from nativepeers.install import Installer
     from nativepeers.journal import Journal
-    home, state, cwd = run / "codex-home", run / "peer-state", run / "workspace"
+    home, state, cwd = run / "codex-home", run / "peer-state", run.parent / ("workspace-" + model.token)
     for path in (home, cwd, run / "tmp"):
         path.mkdir(mode=0o700)
     env = base.private_env(home, state, run, source)
@@ -321,12 +321,15 @@ def phase_run(source, run, binary, approval, phase, report, resources):
     model.thread = threading.Thread(target=model.serve_forever, daemon=True)
     model.thread.start()
     cwd, env, state, rpc = prepare(source, run, binary, approval, model, resources, report)
-    config = {"run": str(run), "source": str(source), "binary": str(binary)}
+    config = {"run": str(run), "source": str(source), "binary": str(binary), "cwd": str(cwd)}
     base.save(run / "config.json", config)
     base.save(run / "spawn.json", spawn_spec(phase, token))
     marker, done, final = "QCW_BOOT_" + token, run / "ready.json", "QCW_PARENT_FINAL_" + token
     model.plan(marker, shlex.join([sys.executable, str(Path(__file__).resolve()), "_helper", str(run / "config.json"), phase, str(done)]), done, final)
-    tui = base.Tui([str(binary), "--no-daemon", marker], cwd, env, run, "parent", pyte)
+    # The scripted parent uses the canonical localhost model's direct shell
+    # interface. Workers keep the explicit real native model in spawn_spec.
+    tui = base.Tui([str(binary), "--no-daemon", "--model", "fixture", "--name",
+                    f"Issue 7 worker parent {token}", marker], cwd, env, run, "parent", pyte)
     tracker = Detached(state)
     resources.extend([tui, tracker])
     def until(predicate, seconds=90):

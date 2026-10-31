@@ -285,7 +285,9 @@ class Family:
                 self.process.poll()
                 # A dead leader never stops inspection/signaling of retained children.
                 self.capture(force=True)
-                if all(owned_status(r) == "DEAD" for r in self.members.values()):
+                # macOS can stop exposing identity while the child is still
+                # exiting. Reap the owned leader before reporting its death.
+                if self.process.poll() is not None and all(owned_status(r) == "DEAD" for r in self.members.values()):
                     break
                 time.sleep(.05)
         states = [{"owner": r, "state": owned_status(r)} for r in self.members.values()]
@@ -1056,11 +1058,19 @@ set = {{ {", ".join(json.dumps(k) + " = " + json.dumps(v) for k, v in shell_env.
     warm_policy = json.loads((run / "close-warm-policy.json").read_text())
     if opened["state"] != "OPEN" or opened["message_cutoff"] != warm_policy["message_cutoff"]:
         raise RuntimeError("Explicit reopen lost the warm cutoff")
+    # Reopening is an intentional native input with its own permitted response.
+    # Audit subsequent silence against that response, retaining the earlier raw tail.
+    quiet_final[0] = report["commands"][-1]["final"]
     receiver.audit = audit_quiet
+    audit_quiet(receiver.frames[-1])
+    pump_until(lambda: native_tail(run / "receiver-home", native_id, quiet_final[0]) is not None,
+               "explicit reopen native completion")
     before = model.count()
     dwell(args.drain_seconds)
     if model.count() != before:
         raise RuntimeError("Explicit reopen generated unsolicited model work")
+    save(run / "reopen-native-tail.json", require_native_silence(run / "receiver-home", native_id, quiet_final[0],
+                                                                 [row["body"] for row in all_rows]))
     queue_empty("explicit-reopen")
     verify_originals("warm-after-reopen", warm_rows)
 
@@ -1135,7 +1145,18 @@ set = {{ {", ".join(json.dumps(k) + " = " + json.dumps(v) for k, v in shell_env.
     receiver = Tui([str(binary), "--no-daemon", "resume", native_id], cwd, environments["receiver"], run, "receiver-resume", pyte)
     tuis.append(receiver)
     resources.append(("tui", receiver))
-    receiver.audit = audit_quiet
+    resume_final_seen = [False]
+    def audit_resume_history(frame):
+        # Saved history is painted incrementally. Earlier historical footers are
+        # outside the cold final's boundary; bodies remain audited from frame one.
+        audit_body(frame)
+        if cold_final in "\n".join(frame.get("chat_tail", []) + frame["lines"]):
+            if not resume_final_seen[0]:
+                report["cold_resume_final_first_frame"] = {"at": frame["at"], "offset": frame["offset"]}
+            resume_final_seen[0] = True
+        if resume_final_seen[0]:
+            audit_quiet(frame)
+    receiver.audit = audit_resume_history
     monitor = Journal(state, read_only=True)
     try:
         pump_until(lambda: len(suppressed(monitor, cold_rows)) == 22, "original cold queue items suppressed on exact-UUID native resume")

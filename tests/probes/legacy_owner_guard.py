@@ -24,7 +24,8 @@ normally and sends exactly one five-second progress frame, then is stopped.
 
 ready-for-selection.json announces the frozen birth and original queued receipt.
 The receiver resumes only after expiry AND actual managed selection plus actual
-nonrevoked production approval match --target-sha256. The frozen interval is
+nonrevoked production approval match --target-sha256. --target-package also pins
+a distinct immutable package path, including a byte-identical executable rebuild. The frozen interval is
 bounded by --wait-seconds (at most 1,200); expiry of that budget kills only the
 freshly birth-verified owned receiver, never resumes an unqualified executable.
 
@@ -110,14 +111,16 @@ def production_selection(base):
             "approval_sha256": hashlib.sha256(raw).hexdigest(), "approval": approved, "revoked": False}
 
 
-def target_selection(base, target, initial):
+def target_selection(base, target, initial, target_package=None):
     binary, _ = base.select_codex(None)
     if str(binary) == initial["executable"]["path"]:
         # Immutable package selection has not moved; avoid repeatedly hashing the old package for 20 minutes.
         raise Blocked("Still waiting for the parent to change managed selection")
     selected = production_selection(base)
-    if selected["executable"]["sha256"] == initial["executable"]["sha256"]:
-        raise Blocked("Still waiting for the parent to change managed selection")
+    if selected["executable"]["sha256"] == initial["executable"]["sha256"] and target_package is None:
+        raise Blocked("Byte-identical transitions require an explicit target package")
+    if target_package is not None and Path(selected["executable"]["path"]) != Path(target_package).resolve() / "bin/codex":
+        raise Blocked("Managed current is not the explicit target package")
     if selected["executable"]["sha256"] != target:
         raise Blocked("Managed current is not the requested target SHA-256")
     return selected
@@ -258,8 +261,14 @@ def run_probe(args, base, source, run, report, resources):
     initial = production_selection(base)
     report["initial_selection"] = initial
     binary = Path(initial["executable"]["path"])
-    if initial["executable"]["sha256"] == args.target_sha256:
-        raise Blocked("--target-sha256 must differ from the initially approved managed executable")
+    if initial["executable"]["sha256"] == args.target_sha256 and not args.target_package:
+        raise Blocked("Byte-identical transitions require --target-package at a different immutable path")
+    if args.target_package:
+        target = Path(args.target_package).resolve(strict=True) / "bin/codex"
+        if str(target) == initial["executable"]["path"] or base.digest(target) != args.target_sha256:
+            raise Blocked("Target package must be distinct and match --target-sha256")
+        report["target_package"] = str(target.parent.parent)
+        report["transition_scope"] = "Actual managed package path and approval change; executable bytes may be identical"
     sys.path.insert(0, str(source))
     from nativepeers.install import Installer
     from nativepeers.journal import Journal
@@ -486,7 +495,7 @@ set = {{ {", ".join(json.dumps(k) + " = " + json.dumps(v) for k, v in shell_env.
         def target_ready():
             nonlocal selected
             try:
-                selected = target_selection(base, args.target_sha256, initial)
+                selected = target_selection(base, args.target_sha256, initial, args.target_package)
             except (Blocked, base.Blocked, OSError) as error:
                 report["selection_wait_last_blocked"] = repr(error)
                 return False
@@ -511,7 +520,7 @@ set = {{ {", ".join(json.dumps(k) + " = " + json.dumps(v) for k, v in shell_env.
         inspect_original("before-resume", False)
         frozen_frames = len(receiver.frames)
         # Hash/approval are re-read after the final metadata check, immediately before SIGCONT.
-        report["resume_selection"] = target_selection(base, args.target_sha256, initial)
+        report["resume_selection"] = target_selection(base, args.target_sha256, initial, args.target_package)
         check(report, "resume only the exact live receiver birth", owned_status(receiver.birth) == "LIVE"
               and signal_captured(receiver.birth, signal.SIGCONT))
         receiver.signals.append({"owner": receiver.birth, "signal": "SIGCONT", "sent": True})
@@ -568,7 +577,7 @@ set = {{ {", ".join(json.dumps(k) + " = " + json.dumps(v) for k, v in shell_env.
     inspect_original("after-human-control", True)
     check(report, "queue remains empty after human control", not read_queue("after-human-control"))
     check(report, "no private runtime approval was created or copied", not (state / "compat/runtime.json").exists())
-    report["final_selection"] = target_selection(base, args.target_sha256, initial)
+    report["final_selection"] = target_selection(base, args.target_sha256, initial, args.target_package)
     check(report, "planned sources and old executable remain unchanged", source_matches(base, source, planned)
           and all(base.digest(source / p) == h for p, h in hashes.items() if p not in planned)
           and base.digest(driver) == report["base_probe"]["sha256"]
@@ -591,7 +600,8 @@ def parser():
     result.add_argument("--base-probe", help="Explicit canonical TUI driver; defaults to source root tests/probes/quiet_close_tui.py")
     result.add_argument("--target-source-record", help="Required for live run: JSON source map expected after normal activation")
     result.add_argument("--run", required=True, help="Fresh absolute git-ignored directory inside the source root")
-    result.add_argument("--target-sha256", required=True, help="Exact NEW executable SHA-256; parent activates and approves normally")
+    result.add_argument("--target-sha256", required=True, help="Exact target executable SHA-256; parent activates and approves normally")
+    result.add_argument("--target-package", help="Exact distinct managed package; required when executable bytes are unchanged")
     result.add_argument("--wait-seconds", type=float, default=1200, help="Maximum frozen interval, 5 through 1200 seconds (default: 1200)")
     result.add_argument("--drain-seconds", type=float, default=8, help="Observation after suppression, 5 through 30 seconds (default: 8)")
     return result
