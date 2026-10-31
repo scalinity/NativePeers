@@ -216,9 +216,9 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/managed-activation-delivery",
-    "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+    "code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
     "evidence": "evidence/issue-39-managed-activation.json",
-    "source_map_sha256": "937e945abcb448ca71019e916752b67e4244e65b811d13a24072c15aa1743f48",
+    "source_map_sha256": "913ba3db5ad8e67b49ca9df5a69bfd4440553daedb35030d12acfa14f692a85c",
     "status": "PENDING"
   },
   "feature_work": {
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "d7e6cef4e6649909a4e5f47d8bf7e456f1c620f3",
     "branch": "fix/managed-activation-delivery",
-    "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-    "last_verified_publication": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+    "code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+    "last_verified_publication": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,13 +305,13 @@
     "branch": "fix/managed-activation-delivery",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
-    "verified_remote_code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+    "verified_remote_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
+    "verified_remote_code_commit": "82f8369ff703b9ead49f9f2c8ae83dcb707016ae",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "SOURCE_PUBLISHED_REVIEW_PENDING_INSTALLED_NOT_RUN",
+  "stage": "REMEDIATION_PUBLISHED_FINAL_REVIEW_PENDING_INSTALLED_NOT_RUN",
   "tests_current": {
     "focused_runtime": {
       "status": "PASS",
@@ -347,6 +347,34 @@
     },
     "installed_native": {
       "status": "NOT_RUN"
+    },
+    "remediation_runtime": {
+      "status": "PASS",
+      "tests": 96,
+      "subtests": 35,
+      "scope": "F001-F004 runtime/notification state and retry contracts"
+    },
+    "readiness_and_grants": {
+      "status": "PASS",
+      "tests": 31,
+      "subtests": 9
+    },
+    "raw_router_and_qualification_codec": {
+      "status": "PASS",
+      "tests": 63,
+      "subtests": 60
+    },
+    "pre_remediation_complete": {
+      "status": "PASS",
+      "passed": 1153,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 275.62,
+      "scope": "Before substantive review remediation; not transferred to final source."
+    },
+    "remediation_full_in_flight": {
+      "status": "NOT_RUN",
+      "scope": "Run began before final P001 edits and cannot establish an exact final full-suite pass."
     }
   },
   "transports": {
@@ -355,7 +383,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T00:20:00.067955-04:00",
+  "updated_at": "2026-10-31T00:39:51.835925-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2008,6 +2036,33 @@
         "evidence": "evidence/review-followup-workflow.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PASS_WITH_TRACKER_OPEN"
+      }
+    },
+    {
+      "stage": "SOURCE_PUBLISHED_REVIEW_PENDING_INSTALLED_NOT_RUN",
+      "updated_at": "2026-10-31T00:20:00.067955-04:00",
+      "git": {
+        "base_commit": "d7e6cef4e6649909a4e5f47d8bf7e456f1c620f3",
+        "branch": "fix/managed-activation-delivery",
+        "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+        "last_verified_publication": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/managed-activation-delivery",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+        "verified_remote_code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/managed-activation-delivery",
+        "code_commit": "0b4e3b23041372849775fb42b79c30f17f7bc10d",
+        "evidence": "evidence/issue-39-managed-activation.json",
+        "source_map_sha256": "937e945abcb448ca71019e916752b67e4244e65b811d13a24072c15aa1743f48",
+        "status": "PENDING"
       }
     }
   ],
