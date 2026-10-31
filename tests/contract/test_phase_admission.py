@@ -152,7 +152,7 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
             sent=await self.core.router.send(self.caller,self.target,'followup '+str(index),expect_reply=requested,client_request_id='mode-'+str(index))
             linked=sent['followup'];self.assertEqual(linked['completion_mode'],expected)
             self.assertEqual(linked['group_id'],self.gid);self.assertEqual(linked['completion_phase'],index+2)
-            self.assertIn(linked['task_id'],linked['wait_command']);self.assertIn('--on-timeout retain',linked['next_action'])
+            self.assertIn(linked['task_id'],linked['wait_command']);self.assertIn('--on-timeout '+('push' if expected=='push' else 'retain'),linked['next_action'])
             task=linked['task_id']
             record=dict(task_id=task,group_id=self.gid,status='completed',summary='Exact followup '+str(index),worker=dict(title='fixture',provider='codex',native_session_id='fixture'),findings=[])
             artifact=Artifacts(self.j).put(canonical(record),self.caller.key,media_type='application/json')
@@ -249,3 +249,20 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
         retry=await self.resume();self.assertEqual(retry['task_id'],frames[0]['task_id'])
         self.assertEqual(retry['state'],'QUEUED');self.assertEqual(len(frames),1)
         self.assertEqual(self.j.one('SELECT state FROM workers WHERE worker_id=?',(self.released,))['state'],'RESERVED')
+
+    async def test_push_followup_bare_and_advertised_wait_timeouts_preserve_push(self):
+        class Reader:
+            async def read(self,n):await asyncio.Future()
+        sent=await self.core.router.send(self.caller,self.target,'push requested in wait group',expect_reply=True,client_request_id='push-wait')
+        linked=sent['followup'];phase=linked['completion_phase'];task=linked['task_id']
+        for args in ({},{'on_timeout':'push'}):
+            result=await self.group.wait(dict(caller_key=self.caller.key,handle=task,timeout_ms=1,**args),Reader())
+            self.assertEqual(result['notification_disposition'],'push')
+            route=self.j.one('SELECT state,mode FROM completion_routes WHERE completion_generation=?',(phase,))
+            self.assertEqual(route,dict(state='UNCLAIMED',mode='push'))
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(task,))
+        deliver=AsyncMock(return_value=dict(state='ACCEPTED_QUEUED',message_id=new_id()))
+        with patch('nativepeers.core.Core') as core:
+            core.return_value.router.send=deliver
+            await self.group.notify(phase);await self.group.notify(phase)
+        deliver.assert_awaited_once()

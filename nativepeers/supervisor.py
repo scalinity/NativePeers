@@ -514,7 +514,13 @@ class Group:
     async def wait(self,payload,reader):
         require(payload.get('caller_key')==self.row['parent_key'],'APPROVAL_BLOCKED','Wait requires the owning parent')
         timeout=payload.get('timeout_ms',WAIT_MAX_MS)/1000;require(0<timeout<=WAIT_MAX_MS/1000,'PROTOCOL_ERROR','Wait exceeds 30 seconds')
-        mode=payload.get('on_timeout') or ('push' if self.policy['completion_mode']=='push' else 'retain')
+        mode=payload.get('on_timeout')
+        if mode is None:
+            # A request-reply follow-up may be push even in a wait-mode group.
+            # A bare task wait must retain that exact phase's chosen fallback.
+            generations=wait_generations(self.id,self.policy,payload['handle'])
+            route=self.journal.one('SELECT mode FROM completion_routes WHERE group_id=? AND completion_generation=?',(self.id,generations[0])) if payload['handle']!=self.id and len(generations)==1 else None
+            mode='push' if (route['mode'] if route else self.policy['completion_mode'])=='push' else 'retain'
         require(mode in ('push','retain'),'PROTOCOL_ERROR','Unknown wait fallback')
         waiter=new_id();deadline=time.monotonic()+timeout;output=False
         disconnected=asyncio.create_task(reader.read(1))

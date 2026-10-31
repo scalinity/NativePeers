@@ -92,7 +92,8 @@ def followup(journal,message_id):
     policy=json.loads(row['policy_json'])
     phase=next((int(n) for n,ids in policy.get('phases',{}).items() if row['task_id'] in ids),None)
     route=journal.one('SELECT mode,state FROM completion_routes WHERE group_id=? AND completion_generation=?',(row['group_id'],phase))
-    wait='npeer wait '+row['task_id']+' --timeout-ms 30000 --on-timeout retain --json'
+    fallback='push' if route and route['mode']=='push' else 'retain'
+    wait='npeer wait '+row['task_id']+' --timeout-ms 30000 --on-timeout '+fallback+' --json'
     result='npeer result '+row['task_id']+' --json'
     return dict(group_id=row['group_id'],task_id=row['task_id'],completion_phase=phase,
                 completion_mode=route['mode'] if route else None,notification_state=route['state'] if route else 'MISSING',
