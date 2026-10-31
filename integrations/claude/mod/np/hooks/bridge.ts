@@ -4,7 +4,7 @@
 // own 10 s budget (gate X11).
 import type { EngineInterface } from 'claude-code'
 import type { NpWorker } from '../types'
-import { bridgeExited, setBridge, setLineage } from './state'
+import { bridgeExited, bridgeFailed, bridgeRestored, setBridge, setLineage } from './state'
 
 export class BridgeError extends Error {
   code: string
@@ -100,10 +100,8 @@ async function start($: EngineInterface, session: string, cwd: string, npeer: st
     void child.return(undefined as never)
     // A refusal arrives as {"ready":false,"error":{...}} on stdout; stderr holds anything else.
     const reason = (ready?.error?.code ? `${ready.error.code}: ${ready.error.message ?? ''}` : err.trim().split('\n').pop() || 'no ready line').slice(0, 300)
-    // A bridge already connected keeps the state it set: a failed start never marks it down. The check
-    // follows the last await before the write, so no connection can appear between them.
-    const since = await $.clock.now()
-    if (!connection) await setBridge($, { state: 'down', reason, since })
+    // A connected bridge keeps the state it set: a failed start never marks it down (judged in the updater).
+    if (!connection) await bridgeFailed($, { state: 'down', reason, since: await $.clock.now() })
     return { reason }
   }
   connection = { socket: ready.socket, token: ready.token, generation }
@@ -116,10 +114,11 @@ async function start($: EngineInterface, session: string, cwd: string, npeer: st
 // /np doctor's exact answer: a hook that read the state while a start was still in flight could have
 // left it stale, so a live connection restores the ready state its own start set.
 export async function restoreReady($: EngineInterface, hello: any, generation: number | undefined): Promise<void> {
-  const since = await $.clock.now()
-  // Only the connection that answered the hello, and only while it is still the live one.
-  if (connection && connection.generation === generation)
-    await setBridge($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket: connection.socket, since })
+  const socket = connection?.socket
+  if (!socket || connection?.generation !== generation) return
+  // Only the connection that answered the hello, while it is still the live one: judged in the updater on every retry.
+  await bridgeRestored($, { state: 'ready', peer: hello.peer, version: hello.version, steer: hello.capabilities?.steer ?? {}, socket, since: await $.clock.now() },
+    () => connection !== undefined && connection.generation === generation)
 }
 
 export async function heartbeat($: EngineInterface): Promise<void> {

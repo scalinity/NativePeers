@@ -500,14 +500,15 @@ class TakeoverTests(unittest.IsolatedAsyncioTestCase):
             holder.close()
         self.assertEqual((error.exception.code, recorded), ('BRIDGE_RUNNING', []))
 
-    def test_a_closing_bridge_removes_only_a_manifest_that_still_names_it(self):
+    def test_each_bridge_process_keeps_its_own_manifest_and_records_nothing_once_released(self):
         from nativepeers.bridge_backend import NativeBackend
-        manifest = self.root / 'bridges' / 'b-x.json';manifest.parent.mkdir()
-        backend = NativeBackend.__new__(NativeBackend);backend.manifest = manifest
-        manifest.write_text(json.dumps({'process': dict(identity(os.getpid()).json(), pid=1)}))
-        backend.release_manifest();self.assertTrue(manifest.exists())  # A successor's record stays.
-        manifest.write_text(json.dumps({'process': identity(os.getpid()).json()}))
-        backend.release_manifest();self.assertFalse(manifest.exists())
+        j = Journal(self.root / 'state');self.addCleanup(j.close)
+        own = manifest_path(j, self.root / 'b-x.sock');self.assertEqual(own.name, f'b-x.{os.getpid()}.json')
+        successor = own.with_name('b-x.1.json');successor.write_text('{}')
+        backend = NativeBackend.__new__(NativeBackend);backend.manifest, backend.released, backend.socket = own, False, None
+        own.write_text('{}');backend.release_manifest()
+        self.assertFalse(own.exists());self.assertTrue(successor.exists())
+        backend.record_manifest(self.root / 'b-x.sock');self.assertFalse(own.exists())  # A late rebind after release writes nothing.
 
     async def test_a_bridge_started_supervisor_is_reparented_and_a_cli_one_stays_a_child(self):
         from nativepeers import delegation

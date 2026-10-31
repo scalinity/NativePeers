@@ -16,6 +16,16 @@ export const NONE: NpShadow = { agentId: '', generation: 0, provider: 'codex', t
 
 export async function getBridge($: EngineInterface): Promise<NpBridge> { return read($, bridgeAtom) }
 export async function setBridge($: EngineInterface, value: NpBridge): Promise<void> { await update($, bridgeAtom, () => value) }
+// Shared by every module instance of this session (a hot reload overlaps two), so each rule is judged inside
+// the updater, which update() runs again on every retry.
+// A failed start never replaces a ready state: another start, here or in the other module, connected.
+export async function bridgeFailed($: EngineInterface, value: NpBridge): Promise<void> {
+  await update($, bridgeAtom, current => current.state === 'ready' ? current : value)
+}
+// /np doctor's restore: only over a state that is not ready, and only while the restoring connection lives.
+export async function bridgeRestored($: EngineInterface, value: NpBridge, live: () => boolean): Promise<void> {
+  await update($, bridgeAtom, current => current.state !== 'ready' && live() ? value : current)
+}
 export async function bridgeExited($: EngineInterface, socket: string, value: NpBridge): Promise<void> {
   await update($, bridgeAtom, current => current.socket === socket ? value : current)
 }

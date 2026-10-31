@@ -110,6 +110,7 @@ class NativeBackend:
         self.session, self.sessions = session, [session]
         self.runtimes, self.manifest = dict(runtimes or {}), manifest
         self.inflight, self.agents, self.locks, self.catalog_cache, self.socket, self.times, self.backfills = {}, {}, {}, None, None, {}, {}
+        self.released = False
         self.changed, self.revision = asyncio.Event(), 0
 
     # --- identity and scope
@@ -182,16 +183,13 @@ class NativeBackend:
         self.release_manifest()
 
     def release_manifest(self):
-        """Remove the manifest only while it still names this bridge process: after this bridge closed its socket, a
-        successor for the same session may hold the path and its record (a close can wait 30 s for a spawn)."""
-        if not self.manifest:return
-        try:value = json.loads(Path(self.manifest).read_text())
-        except (OSError, ValueError):return
-        if value.get('process') == identity(os.getpid()).json():Path(self.manifest).unlink(missing_ok=True)
+        """Remove this bridge's own manifest; a request accepted before the socket closed records nothing after this."""
+        self.released = True
+        if self.manifest:Path(self.manifest).unlink(missing_ok=True)
 
     def record_manifest(self, socket=None):
         self.socket = socket or self.socket
-        if self.manifest:
+        if self.manifest and not self.released:
             atomic_json(Path(self.manifest), dict(process=identity(os.getpid()).json(), socket=str(self.socket), peer=self.current, peers=list(self.peers),
                                                   claude_sessions=self.sessions, protocol=1, started_at=time.time()))
 
@@ -688,7 +686,9 @@ def claim_free(socket):
 
 
 def manifest_path(journal, socket):
-    return private_directory(Path(journal.root) / 'bridges') / (Path(socket).stem + '.json')
+    """One manifest file per bridge process: successive bridges for one session's socket never share a record, so none
+    can rewrite or remove another's."""
+    return private_directory(Path(journal.root) / 'bridges') / f'{Path(socket).stem}.{os.getpid()}.json'
 
 
 def live_bridges(journal):
