@@ -150,14 +150,24 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse((self.root/'launches').exists())
 
     async def test_runtime_lock_wait_cannot_submit_after_original_expiry(self):
-        lock=advisory_lock(self.j.root/'locks/runtime.lock');lock.__enter__()
-        task=asyncio.create_task(self.send(expires_seconds=.01))
-        try:
-            await asyncio.sleep(.03);self.assertFalse(task.done())
-        finally:lock.__exit__(None,None,None)
-        outcome=await task
+        import time
+        from types import SimpleNamespace
+        ledger=self.root/'budget.json'
+        atomic_json(ledger,dict(active_intervals=[],ceiling={'active_seconds':3600,'submitted_turns':4},reservations=[],reserved_turns=0,consumed_turns=0,outstanding_native_requests=[]))
+        atomic_json(self.j.root/'test-budget.json',{'path':str(ledger)})
+        offset=0
+        # Advance only the adapter clock while admission waits; the router has a full minute.
+        with patch('nativepeers.adapters.native_delivery.time',SimpleNamespace(time=lambda:time.time()+offset)):
+            lock=advisory_lock(self.j.root/'locks/runtime.lock');lock.__enter__()
+            task=asyncio.create_task(self.send(expires_seconds=60))
+            try:
+                await asyncio.sleep(.03);self.assertFalse(task.done());offset=120
+            finally:lock.__exit__(None,None,None)
+            outcome=await task
         self.assertEqual(outcome['state'],'EXPIRED_BEFORE_SUBMISSION')
         self.assertFalse((self.root/'launches').exists())
+        self.assertEqual(self.j.all("SELECT * FROM events WHERE kind='live-peer-reservation'"),[])
+        self.assertEqual(json.loads(ledger.read_text())['reservations'],[])
 
     def test_failed_or_interrupted_approval_preserves_whole_receipt_and_selection(self):
         self.select(self.new)
