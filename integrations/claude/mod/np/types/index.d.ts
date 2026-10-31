@@ -75,6 +75,12 @@ export type NpShadow = {
   nativeGeneration?: number
   usageCumulative?: number
   waits: number
+  // The engine requires this run to end with a SubagentHandback call (sessions in auto mode).
+  handback?: boolean
+  // The report the parent reads, kept until the run completes: an enforcement step hands it back again.
+  report?: string
+  // SubagentHandback calls made for the current report: a refused call is not repeated without end.
+  handbacks?: number
 }
 
 export type NpFaults = { fallthrough: boolean; reason?: string; at?: number }

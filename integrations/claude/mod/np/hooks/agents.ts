@@ -1,8 +1,32 @@
 // Agent specs, the np header grammar and labels. Pure: no $ here.
-import type { NpProvider } from '../types'
+import type { NpProvider, NpWorker } from '../types'
+import { HANDBACK_TOOL } from './inputs'
 
 export const PROVIDERS: readonly NpProvider[] = ['codex', 'claude', 'antigravity', 'grok']
 export const TAGS: Record<NpProvider, string> = { codex: 'cx', claude: 'cl', antigravity: 'ag', grok: 'gk' }
+export const NAMES: Record<NpProvider, string> = { codex: 'Codex', claude: 'Claude', antigravity: 'Antigravity', grok: 'Grok' }
+
+export const ACTIVE = ['queued', 'starting', 'running', 'waiting']
+
+export function counts(workers: readonly NpWorker[]) {
+  return { total: workers.length, running: workers.filter(w => ACTIVE.includes(w.status)).length,
+    done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out'].includes(w.status)).length,
+    stopped: workers.filter(w => ['canceled', 'interrupted'].includes(w.status)).length }
+}
+
+// 'timed_out' -> 'Timed out'
+export function statusLabel(status: string): string {
+  const words = status.replace(/_/g, ' ')
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+// The status line: what this session's delegates are doing, kept until there are none (an empty text is not
+// cleared on every surface, so a finished run reads "1 done" rather than a stale "1 running").
+export function statusSummary(workers: readonly NpWorker[]): string | undefined {
+  const c = counts(workers.filter(w => !w.parentWorkerId))
+  if (!c.total) return undefined
+  return [c.running && `${c.running} running`, c.done && `${c.done} done`, c.failed && `${c.failed} failed`, c.stopped && `${c.stopped} stopped`].filter(Boolean).join(' · ')
+}
 export const SENTINEL = 'NativePeers mirror unavailable'
 export const SHADOW_PROMPT =
   `You are a display placeholder for an external NativePeers worker. Reply exactly: "${SENTINEL} — run /np doctor." Do nothing else.`
@@ -32,7 +56,9 @@ export function agentSpec(provider: NpProvider) {
       'Start the prompt with an optional ```np {"model","effort","profile","title"}``` JSON header (call mcp__np__catalog once for exact models), ' +
       'then a brief that stands alone: the worker sees only the brief. Results arrive as a background-agent notification; follow up with SendMessage.',
     prompt: SHADOW_PROMPT,
-    tools: ['mcp__np__mirror'],
+    // SubagentHandback ends a run where the engine requires it (auto mode); auto mode's classifier decides each call,
+    // and tool.check refuses it to a shadow holding no report.
+    tools: ['mcp__np__mirror', HANDBACK_TOOL],
     model: shadowModel(provider),
     effort: 'low',
     omitClaudeMd: true as const,

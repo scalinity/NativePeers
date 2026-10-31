@@ -4,10 +4,11 @@ import type { EngineInterface, Register, TurnStepInput, TurnStepResult } from 'c
 import type { NpProvider, NpWorker } from '../types'
 import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
 import { BridgeError, connected, connectionGeneration, followLineage, heartbeat, launch, request, restoreReady, shutdown, sleep, starting } from './bridge'
+import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
 import { captureRow, completeShadow, faultShadow, loadShadow, mirrorCall, newShadow, pruneStore, saveShadow, stepShadow } from './shadow'
 import { getBridge, getFaults, getLineage, setBridge, setFaults, setLineage } from './state'
-import { PANE_ID, copyResume, interruptWorker, openPane, openView, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
+import { PANE_ID, copyResume, doctorText, interruptWorker, openPane, openView, paneBeside, renderBand, renderPane, renderSpinner, renderToolUse, renderUserMessage, statusLine, statusText, stopAll, stopWorker } from './ui'
 
 const MIN_ENGINE = [2, 1, 309]
 const CATALOG = 'mcp__np__catalog'
@@ -51,7 +52,7 @@ async function activate($: EngineInterface, cwd: string, o: Options): Promise<vo
   }
   place = { cwd, npeer: o.npeerPath || '/Users/danny/.local/bin/npeer' }
   const launched = await startBridge($)
-  if (launched && 'reason' in launched) { $.ui.toast(`np: NativePeers bridge unavailable — ${launched.reason}; /np doctor`);return }
+  if (launched && 'reason' in launched) { $.ui.toast(`NativePeers bridge unavailable: ${launched.reason}. Run /np doctor.`);return }
   if (launched) { await ready($, launched.hello);void followLineage($) }
   await pruneStore($)
 }
@@ -115,6 +116,8 @@ async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>,
     s.spawnError = `${error instanceof BridgeError ? error.code : 'BRIDGE_ERROR'}: ${String((error as Error).message).slice(0, 400)}`
     await saveShadow($, s)
   }
+  // The desktop app shows the band's content in the pane beside the conversation instead of above the prompt.
+  if (o.band !== 'always' && o.band !== 'off' && (await $.session.surface()) === 'desktop') await paneBeside($)
   return r
 }
 
@@ -126,10 +129,10 @@ async function ensureBridge($: EngineInterface): Promise<string> {
   // activation still starts the bridge: startBridge waits for that start instead of racing it.
   const launched = await startBridge($)
   if (!launched) return ''
-  if ('reason' in launched) return `bridge restart failed: ${launched.reason}`
+  if ('reason' in launched) return `Bridge restart failed: ${launched.reason}.`
   await ready($, launched.hello)
   void followLineage($)
-  return 'bridge restarted'
+  return 'Bridge restarted.'
 }
 
 async function rebindSession($: EngineInterface): Promise<void> {
@@ -190,8 +193,8 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
   const pick = (n: string) => workers[Number(n) - 1]
   if (!verb) return { text: await statusText($) }
   // Claude Code prefixes a command's text with the plugin's name.
-  if (verb === 'pane') { await openPane($);return { text: 'lineage pane opened' } }
-  if (verb === 'doctor') { const restarted = await ensureBridge($);return { text: (restarted ? restarted + '\n' : '') + await doctor($, o) } }
+  if (verb === 'pane') { await openPane($);return { text: 'Opened the NativePeers pane.' } }
+  if (verb === 'doctor') return { text: await doctor($, o, surface, await ensureBridge($)) }
   if (verb === 'open') {
     const w = pick(arg);if (!w?.agentId) return { text: 'no mirrored worker ' + arg }
     const denied = await openView($, w.agentId, true)
@@ -208,7 +211,7 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
   }
   if (verb === 'attach' || verb === 'reattach') {
     const restarted = await ensureBridge($)
-    if (restarted.startsWith('bridge restart failed')) return { text: restarted }
+    if (restarted.startsWith('Bridge restart failed')) return { text: restarted }
     const active = workers.filter(w => ['queued', 'starting', 'running', 'waiting'].includes(w.status) && w.mirrorOwner !== 'other')
     const chosen = verb === 'reattach' ? active : arg === 'all' ? active.filter(w => !w.agentId) : [pick(arg)].filter(Boolean) as NpWorker[]
     const out: string[] = []
@@ -218,21 +221,21 @@ async function command($: EngineInterface, args: string, o: Options, surface: st
   return { text: 'unknown subcommand. Try /np, /np pane, /np open N, /np stop N|all, /np interrupt N, /np attach N|all, /np reattach, /np doctor, /np resume-cmd N' }
 }
 
-async function doctor($: EngineInterface, o: Options): Promise<string> {
-  const version = await $.session.version(), bridge = await getBridge($), faults = await getFaults($)
+async function doctor($: EngineInterface, o: Options, surface: string, restarted: string): Promise<string> {
+  const version = (await $.session.version()).version, bridge = await getBridge($), faults = await getFaults($)
   // The module's own connection is the truth: a state read here may predate a start another hook just finished.
   const live = connected(), generation = connectionGeneration()
-  const lines = [`engine: Claude Code ${version.version} (minimum ${MIN_ENGINE.join('.')})`, `npeer: ${o.npeerPath || '/Users/danny/.local/bin/npeer'}`,
-    live ? 'bridge: ready' : `bridge: ${bridge.state}${bridge.reason ? ' — ' + bridge.reason : ''}`]
+  const facts: Parameters<typeof doctorText>[0] = { version, minimum: MIN_ENGINE.join('.'), supported: atLeast(version, MIN_ENGINE) && version.startsWith('2.'), surface,
+    npeer: o.npeerPath || '/Users/danny/.local/bin/npeer', connected: live, state: bridge.state, reason: bridge.reason, restarted }
   if (live) {
     try {
       const hello = await request($, 'GET', '/v1/hello')
       if (bridge.state !== 'ready') await restoreReady($, hello, generation)
-      lines.push(`peer: ${hello.peer} · protocol ${hello.protocol} · providers ${(hello.providers ?? []).join(', ')}`, `activity schema: ${hello.capabilities?.activity_schema ?? '?'}`)
-      if (faults.fallthrough) { await setFaults($, { fallthrough: false });lines.push(`fallthrough: cleared (was: ${faults.reason ?? 'unknown'}); np agent types are offered again`) }
-    } catch (error) { lines.push('hello failed: ' + String(error).slice(0, 200)) }
-  } else if (faults.fallthrough) lines.push(`fallthrough: ${faults.reason ?? 'detected'}; stays off until the bridge is ready`)
-  return lines.join('\n')
+      facts.hello = { protocol: hello.protocol, providers: hello.providers ?? [], schema: hello.capabilities?.activity_schema }
+      if (faults.fallthrough) { await setFaults($, { fallthrough: false });facts.fallthrough = { cleared: true, reason: faults.reason } }
+    } catch (error) { facts.helloError = String(error).slice(0, 200) }
+  } else if (faults.fallthrough) facts.fallthrough = { cleared: false, reason: faults.reason }
+  return doctorText(facts)
 }
 
 export const register: Register = (on, options) => {
@@ -299,7 +302,7 @@ export const register: Register = (on, options) => {
     const text = `\n[NativePeers mirror fault: ${kind}. The worker is unaffected; /np reattach or /np doctor.]`
     yield { kind: 'text', index: 0, text };yield { kind: 'stop', stopReason: 'end_turn', usage: null }
     void faultShadow($, e.agentId, kind)
-    $.ui.toast('np: mirror fault (' + kind + '); the worker keeps running')
+    $.ui.toast(`Mirror fault (${kind}). The worker keeps running.`)
     return { turnId: e.turnId, index: e.index, answer: text, toolUses: [], stopReason: 'end_turn', usage: null }
   })
 
@@ -313,8 +316,13 @@ export const register: Register = (on, options) => {
 
   on('tool.check', async ($, e, next) => {
     const s = e.agentId ? await loadShadow($, e.agentId) : undefined
-    if (s) return e.tool === MIRROR_TOOL && s.pendingRefs[String((e.input as any)?.ref)] ? { decision: 'allow' as const, reason: 'NativePeers mirror replay' }
-      : { decision: 'deny' as const, reason: 'NativePeers shadows have no tools but the mirror' }
+    if (s) {
+      if (e.tool === MIRROR_TOOL && s.pendingRefs[String((e.input as any)?.ref)]) return { decision: 'allow' as const, reason: 'NativePeers mirror replay' }
+      // A run the engine ends with SubagentHandback: only auto mode's classifier may allow that call (it vets what reaches
+      // the parent), so a shadow holding its report leaves the verdict to it.
+      if (e.tool === HANDBACK_TOOL && s.report !== undefined) return next(e)
+      return { decision: 'deny' as const, reason: 'NativePeers shadows have no tools but the mirror' }
+    }
     if (e.tool === MIRROR_TOOL) return { decision: 'deny' as const, reason: 'Internal NativePeers display tool' }
     return next(e)
   }).catch(($, e, next) => e.tool === MIRROR_TOOL ? { decision: 'deny' as const } : next(e))
@@ -338,12 +346,12 @@ export const register: Register = (on, options) => {
   on('ui.press', async ($, e, next) => {
     if (e.plugin !== 'np' || !e.element.startsWith('attach:')) return next(e)
     const w = (await getLineage($)).find(x => x.workerId === e.element.slice(7))
-    if (w) $.ui.toast('np: ' + await attachWorker($, w, 'ui.press', true))
+    if (w) $.ui.toast(await attachWorker($, w, 'ui.press', true))
     return { element: e.element }
   })
 
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => o.band === 'off' ? next(e) : renderBand($, e, next))
-  on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e, next) => renderPane($, e, next))
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => o.band === 'off' ? next(e) : renderBand($, e, next, o.band === 'always'))
+  on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e, next) => renderPane($, e, next, o.band !== 'always' && o.band !== 'off'))
   on('ui.render', { component: 'ToolUse', props: { tool: MIRROR_TOOL } }, async ($, e, next) => renderToolUse($, e, next))
   on('ui.render', { component: 'UserMessage', props: { origin: { kind: 'coordinator' } } }, async ($, e, next) => renderUserMessage($, e, next))
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => renderSpinner($, e, next))
