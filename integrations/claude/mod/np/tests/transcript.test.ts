@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MAX_ROWS, applyActivity } from '../hooks/transcript'
+import { MAX_ROWS, applyActivity, bodyOf, excerpt } from '../hooks/transcript'
 import type { Activity } from '../hooks/mirror'
 
 const ev = (seq: number, kind: string, data: any = {}, item: string | null = null, generation = 1): Activity => ({ seq, kind, data, item, generation, task_id: 'T' + generation })
@@ -72,4 +72,23 @@ test('a malformed event becomes a note and the conversation moves on', () => {
     { seq: 3, kind: 'message.completed', generation: 1, data: { get text() { throw new Error('bad') } } } as any, ev(4, 'message.completed', { text: 'still here' }, 'm9')])
   expect(t.cursor).toBe(4)
   expect(t.rows.map(r => r.text)).toEqual(['Plan:\n✓ step', 'An activity event could not be shown here.', 'still here'])
+})
+
+const ENVELOPE = 'NativePeers · Message\n\ntest; reply with "passed"\n\n— NativePeers references —\nFrom: np1_cf4c\nMessage: 178da578\nExchange: 34b9b65f\nEnvelope: v1 / 7f4c20fa'
+
+test('a follow-up shows what was written, without the routing envelope the worker receives', () => {
+  expect(bodyOf(ENVELOPE)).toBe('test; reply with "passed"')
+  expect(bodyOf('plain text')).toBe('plain text')
+  // A preview cut before the references still loses the heading.
+  expect(bodyOf('NativePeers · Reply\n\nshort answer, cut off')).toBe('short answer, cut off')
+  const t = applyActivity(empty, [ev(1, 'task.started', { client_request_id: 'r1', origin: 'human-claude-view', input_preview: ENVELOPE }, null, 2)])
+  expect(t.rows).toEqual([{ kind: 'you', text: 'test; reply with "passed"', item: 'in:r1', gen: 2 }])
+})
+
+test('tool output in the pane is an excerpt: its first lines, each cut to a width, and a count of the rest', () => {
+  const out = excerpt(Array.from({ length: 10 }, (_, n) => 'line ' + n + (n === 0 ? ' ' + 'x'.repeat(100) : '')).join('\n'))
+  expect(out.text.split('\n').length).toBe(6)
+  expect(out.text.split('\n')[0]?.length).toBe(80)
+  expect(out.more).toBe(4)
+  expect(excerpt('one\ntwo').more).toBe(0)
 })

@@ -48,13 +48,25 @@ test('the band summarizes delegates and offers Stop all and Open on the terminal
   await ui.unmount()
 })
 
-test('on the desktop app the band is left to the engine: the pane beside the conversation carries it', async ($, on) => {
-  state(on)
+test('on the desktop app the band is left to the engine while the pane beside the conversation is open', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: true })
+  on('ui.panes', () => ({ value: [{ id: 'np-lineage', title: 'NativePeers', isShown: true, isFocused: false, isPlaced: true }] }))
   // This hook stands for the engine's own drawing beneath the mod.
   on('ui.render', ($: any, e: any) => { const { Text } = $.ui.resolve(e);return <Text>engine</Text> })
   const ui = await $.ui.mount({ ...band({}), surface: 'desktop' } as any)
   expect((await ui.find({ type: 'Text', text: /engine/ }))?.text).toBe('engine')
   expect(await ui.find({ type: 'Text', text: /⟐ np/ })).toBeFalsy()
+  await ui.unmount()
+})
+
+test('on the desktop app a closed pane is offered back in one line above the prompt', async ($, on) => {
+  state(on, { bandCollapsed: false, paneOpen: false })
+  on('ui.panes', () => ({ value: [] }))
+  const ui = await $.ui.mount({ ...band({}), surface: 'desktop' } as any)
+  expect(await ui.find({ type: 'Text', text: /⟐ np · 2 delegates · 1 running · 1 done/ })).toBeTruthy()
+  expect(await ui.find({ type: 'Button', key: 'reopen' })).toBeTruthy()
+  // Only the way back: no Stop all, Pane or Open rows in this line.
+  for (const key of ['stopall', 'pane', 'open-W1']) expect(await ui.find({ type: 'Button', key })).toBeFalsy()
   await ui.unmount()
 })
 
@@ -92,7 +104,10 @@ test('a worker\'s conversation shows what it was asked, said and did, with a fie
     expect(await ui.find({ type: 'Text', text: /^Codebase review$/ })).toBeTruthy()
     expect(await ui.find({ type: 'Text', text: /Model: GPT-6.1 Sol, high effort/ })).toBeTruthy()
     for (const text of [/Task from main/, /▸ ls -A1 · exit 0/, /^Codex$/, /^You$/]) expect(await ui.find({ type: 'Text', text })).toBeTruthy()
-    expect(await ui.find({ type: 'Input', key: 'say-2' })).toBeTruthy()
+    const field: any = await ui.find({ type: 'Input', key: 'say-2' })
+    expect(field).toBeTruthy()
+    // The desktop app rings a focused field: it is not focused there until the person picks it.
+    expect(Boolean(field?.props?.autoFocus ?? field?.autoFocus)).toBe(surface !== 'desktop')
     for (const key of ['p-interrupt', 'p-stop', 'p-ids']) expect(await ui.find({ type: 'Button', key })).toBeTruthy()
     expect(await ui.find({ type: 'Button', key: 'attach:W1' })).toBeFalsy()
     await ui.unmount()
