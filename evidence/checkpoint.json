@@ -215,10 +215,10 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/managed-activation-delivery",
-    "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+    "branch": "fix/issue39-retry-guidance",
+    "code_commit": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
     "evidence": "evidence/issue-39-managed-activation.json",
-    "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
+    "source_map_sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8",
     "status": "PASS"
   },
   "feature_work": {
@@ -233,9 +233,9 @@
   "fingerprints": "evidence/fingerprints.json",
   "git": {
     "base_commit": "9844b21",
-    "branch": "fix/managed-activation-delivery",
-    "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
-    "last_verified_publication": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+    "branch": "fix/issue39-retry-guidance",
+    "code_commit": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
+    "last_verified_publication": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,11 +302,11 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/managed-activation-delivery",
+    "branch": "fix/issue39-retry-guidance",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
-    "verified_remote_code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+    "verified_remote_commit": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
+    "verified_remote_code_commit": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -535,7 +535,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T02:10:31.161225-04:00",
+  "updated_at": "2026-10-31T02:24:18.864021-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2428,6 +2428,33 @@
       "current_review": {
         "branch": "fix/managed-activation-delivery",
         "code_commit": "8a97a667c0d997ae0ba2ae4a0f3b8495d689d1f5",
+        "evidence": "evidence/issue-39-managed-activation.json",
+        "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
+        "status": "PASS"
+      }
+    },
+    {
+      "stage": "INSTALLED_NATIVE_QUALIFIED",
+      "updated_at": "2026-10-31T02:10:31.161225-04:00",
+      "git": {
+        "base_commit": "9844b21",
+        "branch": "fix/managed-activation-delivery",
+        "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+        "last_verified_publication": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/managed-activation-delivery",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+        "verified_remote_code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/managed-activation-delivery",
+        "code_commit": "e718802e7c4e47ff5f68c4ffb6cf12d62e14e353",
         "evidence": "evidence/issue-39-managed-activation.json",
         "source_map_sha256": "8a3eefd32e9334574e331697ecf3ad4a733e969221efc787d4215df0c15e6ede",
         "status": "PASS"
