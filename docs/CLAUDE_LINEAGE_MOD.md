@@ -73,7 +73,7 @@ The person types in an ordinary `claude` session (CLI or the desktop app's Code 
 
 ### 1.2 Drill-down
 
-The person selects a row with the native keys (↓, then Enter) or presses `[Open]` in the band or pane. The main view switches to that agent's transcript:
+The person selects a row with the native keys (↓, then Enter) or presses `[Open]` in the band or pane. The main view switches to that agent's transcript. The desktop app has no main view to switch (X17): there, a worker's transcript opens from the app's Background tasks, and `[Open]` is not offered.
 
 - **First row:** the brief, labeled as sent by the main agent (T3's "Sent by another agent"), collapsible.
 - **Streaming text:** the worker's assistant text, as markdown.
@@ -110,7 +110,8 @@ Their **initial** completions keep NativePeers' own delivery (push or wait, as r
 
 The same mod, installed at user scope, loads into the desktop app's local Code sessions:
 - Shadows are ordinary subagents, so they produce the same SDK task events (`task_started`, `task_progress`, `task_notification`) that the desktop app renders.
-- The band and pane draw on the `desktop` surface.
+- The pane carries the band's summary on the `desktop` surface. It opens beside the conversation when a delegate starts, and no band draws above the prompt (`band: always` draws it there too).
+- A desktop session in Auto ends every shadow run with `SubagentHandback` (§7.5.2), as the engine requires there (X15).
 - Desktop parity has preconditions, gated in M0 (§13): NativePeers must recognize desktop-hosted engines, and `$.process`/`$.http` must be available in that host.
 
 ---
@@ -152,6 +153,10 @@ Four throwaway mods (`npspike` to `npspike4`; Appendix A) were run headless agai
 | X12 | `claude plugin validate` refuses passing `$` to a closure. It accepts a top-level function declaration, a top-level `const f = async (…) => …`, or a function imported from the mod's own files. It refuses a top-level `const` that merely aliases another function. | validator (spikes and review) |
 | X13 | With `ANTHROPIC_BASE_URL` pointed at a local **tripwire** stub (HTTP 400, request counter, no header logging), a deliberate fault fallthrough sent all 6 of its model requests to the stub. The run showed `total_cost_usd: 0`, `modelUsage {}`, and a synthetic `API Error: 400 …` row in the shadow. Running without credentials does **not** prevent billing: spike 2 billed with `apiKeySource:"none"`. | tripwire log + result |
 | X14 | The review probe's main-loop hook yielded a native **`Agent` tool call** (Path A), and the first completion **did** reach the parent conversation (`queue` record, then `prompt.submit` with origin `task-notification`). The same probe had a hook bug and made real, billed requests; that does not affect this observation. | review probe log |
+| X15 | In a session in **auto mode** (the desktop app's Auto, or `--permission-mode auto`), the engine requires every subagent run to end with a `SubagentHandback({ message })` call: plain text at the end is not delivered. It opens the run with a note row (`session.append` door `note`, `origin.kind:'engine'`), and after a run that ends on plain text it appends `[handback-send-enforce] …` and asks for another step. Seen on 2.1.309 (the desktop app's engine) and 2.1.314. | desktop session `5a5bfe52` shadow transcript; gate G6 capture; `run_handback.py` control on the pre-fix mod |
+| X16 | Only auto mode's classifier may allow `SubagentHandback`: a `tool.check` allow is refused (`Only the auto-mode classifier can allow SubagentHandback: an allow of type 'hook' is not the classifier's verdict`), and an agent type with a `tools` list must name the tool. With no verdict available the engine delivers the report flagged. | `run_handback.py` on 2.1.309 and 2.1.314 |
+| X17 | On the desktop surface `$.ui.view({ agentId })` answers `{ deny: 'no main view here' }`: a worker's transcript there opens from the app's Background tasks. The engine heads a plugin's toasts with the plugin's name. | desktop run, 2026-10-30; terminal captures showing `np: np: interrupt` |
+| X18 | A background agent gets periodic `agent_summary` side requests made with its own model: for a shadow, the unserved `np-mirror-*` model, which the API answers with an error and no content. They occur only while the agent runs. | `run_handback.py` control: 10 requests during a 90 s hang |
 
 **Verification cost.** Two runs made billed Claude requests: one deliberate fallthrough in spike 2 ($0.00027), and the review probe with a hook bug ($0.079). Those two are why the tripwire (X13) is mandatory for every harness run.
 
@@ -588,6 +593,8 @@ integrations/claude/mod/np/
 | `allowFromClaudeSubagents` | boolean | `false` |
 | `notifyOnCompletion` | `off`, `long-only` | `off` |
 
+`band: auto` draws the band on the terminal; on the desktop app the pane beside the conversation carries it. `always` draws the band on every surface, and `off` draws none.
+
 ### 7.2 Activation, and worker-mode guard
 
 `session.start`:
@@ -601,12 +608,12 @@ integrations/claude/mod/np/
    Otherwise stay inert. Headless `-p` and SDK runs with no attached surface include CI and NativePeers' own workers.
 4. **Check the engine version** (§5).
 5. **Start the bridge** with `$.process.spawn` in a detached loop, as in the documented pattern. Read the ready line, then store `{socket, token}` in module memory and `bridge` in `$.state`.
-   - On failure: `bridge.state = 'down'`, a dim one-time notice (`np: NativePeers bridge unavailable — <reason>; /np doctor`), and no agent types.
+   - On failure: `bridge.state = 'down'`, a one-time toast (`NativePeers bridge unavailable: <reason>. Run /np doctor.`), and no agent types.
 6. **Register agent types** `np:codex`, `np:claude`, `np:antigravity` and `np:grok`, only for providers the catalog reports usable. Spec for each:
 
    ```js
    { name, description: '<when to delegate; header grammar; catalog tool>',
-     prompt: SHADOW_PLACEHOLDER_PROMPT, tools: ['mcp__np__mirror'], model: 'haiku', effort: 'low',
+     prompt: SHADOW_PLACEHOLDER_PROMPT, tools: ['mcp__np__mirror', 'SubagentHandback'], model: 'haiku', effort: 'low',
      omitClaudeMd: true, background: true,
      permissionMode: <gate G6 decision; never inherited>, maxTurns: <gate G8 decision> }
    ```
@@ -716,14 +723,14 @@ on('turn.step', async function* stepHook($, e, next) { ... }).catch(async functi
 | `message.delta` | `text` in the current text block | no |
 | `message.completed` (no prior deltas) | one `text` with the whole message | no |
 | `reasoning.delta` (`showReasoning:live`) | `thinking` (shown live, not recorded: X6) | no |
-| `tool.started` (live) | for each `tool.started` in the batch: `tool` (`mcp__np__mirror`, a fresh `toolu_…` id) and `input` `{kind,title,detail,ref}`, where `ref = worker:generation:item` | yes: `stop{tool_use}` |
+| `tool.started` (live) | for each `tool.started` in the batch: `tool` (`mcp__np__mirror`, a fresh `toolu_…` id) and `input` `{title,kind,detail?,ref}`: the title first, `detail` only when it adds to the title, and `ref = #<seq>` of the `tool.started` event, unique within the shadow (a surface may show the input) | yes: `stop{tool_use}` |
 | `tool.started` + `tool.completed` already in the batch, or catch-up | the same, up to 8 parallel blocks per step; the tool hook answers immediately | yes |
 | `files.changed` without a tool event | a mirror `edit` block | yes |
 | `usage` | accumulate; report on the next stop chunk as `{input_tokens:0, output_tokens:Δ, cache_*:0, model:<observed>}` (display only: X7) | no |
 | `input.queued` / `input.accepted` | dim `text` marker, for example `↳ follow-up accepted` | no |
 | `fallback.started` | `text` marker, for example `↳ provider fallback: claude → antigravity gemini-4-argon-high (QUOTA_EXHAUSTED)` | no |
 | `gap` | dim `text`, for example `[N activity events unavailable: <reason>]` | no |
-| `task.terminal` | `POST /v1/mirror/surfacing`, then the final answer `text` (§7.5.1), then `stop{end_turn}` | yes |
+| `task.terminal` | `POST /v1/mirror/surfacing`, then the final answer `text` (§7.5.1), then `stop{end_turn}`; in a handback run, a footer in words, then `SubagentHandback` carrying the report, then `stop{tool_use}` (§7.5.2) | yes |
 
 6. **Silence.** If the worker is quiet for 60 s, optionally yield one `thinking` heartbeat (`codex: still working (3m12s)`). Nothing is recorded.
 7. **Generations within one run.** A shadow run ends only when its worker has no task in progress and no accepted-but-unstarted input.
@@ -771,6 +778,16 @@ artifacts: result <id> · patch <id> (npeer artifact-read ID) · changes: 3 file
 - **Mirror-owned generation:** the mod posts `/v1/mirror/surfacing` before yielding the final text, and `/v1/mirror/ack` on `turn.complete`.
 - **Native-owned generation:** it posts neither, and the final row ends `delivered via NativePeers notice`.
 
+#### 7.5.2 Handback runs (auto mode)
+
+In auto mode only a `SubagentHandback` call reaches the parent (X15). For such a run:
+- **Detection.** The engine's note row (door `note`, `origin.kind:'engine'`, naming `SubagentHandback(`) or its enforcement row marks the shadow `handback`. A note that lands before the shadow's record is held by the module until the first step.
+- **The report** is the §7.5.1 text with the worker's final text always included. It is the call's `message`, kept on the shadow until the run completes.
+- **The transcript** closes with a footer in words, with no ids: `— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s`. The worker's final text precedes it when it was not streamed.
+- **The call** is left to auto mode's classifier (X16, §7.6). A refused call returns as another step: after three tries the run ends on `end_turn` with `[NativePeers could not hand this report to the main conversation …; npeer result <group>]`.
+- **A step after the answer** with no new input is the engine asking for the report again. It hands the kept report back, or ends at once; it never waits on activity from a worker with nothing left to run.
+- Failures that end a run before any activity (spawn refused, binding failed) end the same way, with their text as the report.
+
 ### 7.6 Mirror tool contract
 
 `tool.call` matcher `{ tool: 'mcp__np__mirror' }`, a dedicated registration with `.catch(() => ({ deny: 'NativePeers mirror unavailable' }))`.
@@ -796,6 +813,7 @@ Failures are reported in the text. The renderer colors them from mod state rathe
 
 **`tool.check`:**
 - **Allow** `mcp__np__mirror` only for shadow agentIds with a pending ref.
+- **Leave** `SubagentHandback` to the engine (`next`) for a shadow holding its report: only auto mode's classifier may allow it (X16). Deny it to a shadow holding none.
 - **Deny** every other tool inside shadow loops.
 - **Deny** `mcp__np__mirror` everywhere else.
 
@@ -841,7 +859,7 @@ Main-view Esc does nothing to workers.
 
 ### 7.9 User interface
 
-All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for the degraded viewer (mobile has no `Input`). Size to `bodyColumns`. Test on `terminal` and `desktop` with the test kit. No brand logos: providers are short neutral tags (`cx`, `cl`, `ag`, `gk`) in theme colors.
+All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for the degraded viewer (mobile has no `Input`). Size to `bodyColumns`. Test on `terminal` and `desktop` with the test kit. No brand logos: providers are short neutral tags (`cx`, `cl`, `ag`, `gk`) in theme colors in the band, and names (Codex, Claude, Antigravity, Grok) in the pane.
 
 1. **Tasks list.** Native; nothing drawn. The mod controls the type name and `description`. M0 gate G1 records what else the row shows. If it shows the latest tool title, the mirror `title` is written for that (`pytest -q`, `src/foo.py +12 −3`). If a per-agent `Spinner` instance feeds it, render `{ message: '<tag>: <latest>' }`.
 2. **`ToolUse` and `ToolResult` for `mcp__np__mirror`:**
@@ -851,14 +869,16 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
    - Running state shows `⎿ running…`.
 3. **`UserMessage` in shadow views.** Label provenance: `From main agent` (coordinator), `You` (person) and `Task from main · via NativePeers` (adoption brief). `UserMessage` props carry no agent id or view (D), so label by `origin.kind`: coordinator rows occur only in subagent transcripts. Gates G1 and G3 confirm the kinds. The row folds to one line unless `isExpanded`, keeping T3's "Show full message" behavior through ctrl+o.
 4. **`AbovePrompt` band** (respect `hasSurvey`, `maxRows` and collapse):
+   - **Drawn** on the terminal (and everywhere under `band: always`). On the desktop app under `band: auto` the hook passes, and the pane carries the summary.
    - **Main view:** `⟐ np · N delegates · r running · d done · f failed [Stop all] [Pane]`, then up to 4 rows: `<tag> <model> <effort> · <title> · <elapsed> · <status> [Open]`. `[Open]` calls `$.ui.view({agentId})`. Hotkeys are `1` to `4`.
    - **Shadow view** (`e.props.view.agentId` is a shadow): `↳ Subagent of main · <provider> · <model observed> · <effort> · <profile> · <elapsed> [Interrupt] [Stop] [Resume cmd] [Pane]`. `[Resume cmd]` uses `$.ui.copy` on the terminal. On remote surfaces copy has no path, so it shows the command in the pane instead.
    - **Offers:** `[Attach]` and `[Re-attach]` rows (§7.4 Path C).
    - **Degraded mode** (no shadows): rows open the pane viewer instead.
-5. **Pane `np-lineage`** (`/np pane`, docked in fullscreen at 110 columns or more, inline otherwise):
-   - lineage tree, including descendants (read-only);
-   - details for the selected worker: native ID, group, task, generation, workspace or worktree, requested versus observed model, usage, artifacts, delta preview summary;
-   - buttons: Open, Interrupt, Stop, Copy resume command, Patch preview (`delta-preview`).
+5. **Pane `np-lineage`**, titled `NativePeers` (`/np pane`, docked in fullscreen at 110 columns or more, inline otherwise; on the desktop app it opens unfocused beside the conversation when a delegate starts, unless it is already open):
+   - lineage tree in words, `<Provider> · <title> · <Status> · <elapsed>`, including descendants (read-only);
+   - details for the selected worker in words: model and effort (and the requested model when another was observed), access (`Read-only` or `Can edit its own workspace`), output tokens, latest activity. Its ids (worker, group, task, native, generation) are not shown: `[Copy IDs]` copies them;
+   - on the desktop app: the band's summary with `[Stop all]` while delegates run, and `Its transcript is in Background tasks.` in place of `[Open]`;
+   - buttons: Open (where a main view can switch), Interrupt, Stop, Copy resume command, Patch preview (`delta-preview`), Copy IDs.
    - In degraded mode it also renders the worker transcript from activity, as `Markdown` and `Code`.
 6. **Commands.**
 
@@ -869,11 +889,12 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
    | `/np open <n>` | View that worker (person-initiated). |
    | `/np stop [<n>\|all]` | Stop one worker, or all. |
    | `/np attach <n\|all>` / `/np reattach` | Attach unmirrored workers (Path C). |
-   | `/np doctor` | Bridge, binding, versions, gates, fallthrough flag. |
+   | `/np doctor` | Readiness in sentences: `Ready.` or what is not ready, the Claude Code version and where it comes from (the desktop app keeps and updates its own copy), the bridge, providers by name, the fallthrough flag and the npeer path. |
    | `/np resume-cmd <n>` | Copy the exact manual resume command. |
 
 7. **Status, toasts and notifications:**
-   - `$.ui.status('np ◉r ✓d ✗f')` while there are active groups.
+   - `$.ui.status('<r> running · <d> done · <f> failed · <s> stopped')`, zero counts left out, while the session has delegates; refreshed on every lineage change.
+   - Toasts are sentences without a prefix: the engine heads them with the plugin's name (X17).
    - A toast on each completion or failure.
    - Optional `$.ui.notify` (config `notifyOnCompletion`, default off) for completions of tasks that ran 2 minutes or more. It sends at once through the person's channel, and is skipped where it answers `no-surface` (desktop and SDK hosts).
 

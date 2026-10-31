@@ -95,4 +95,8 @@ export const register: Register = on => {
     yield { kind: 'stop', stopReason: 'end_turn', usage: null }
     return { turnId: e.turnId, index: e.index, answer: text, toolUses: [], stopReason: 'end_turn', usage: null }
   })
+  // NP_DRIVER_ALLOW_AGENT=1: the scripted main loop's Agent calls are allowed, standing in for auto mode's
+  // classifier, whose model request the tripwire refuses.
+  on('tool.check', { tool: 'Agent' }, async ($, e, next) =>
+    e.agentId === undefined && (await $.env.get('NP_DRIVER_ALLOW_AGENT')) === '1' ? { decision: 'allow' as const, reason: 'harness: scripted Agent call' } : next(e))
 }

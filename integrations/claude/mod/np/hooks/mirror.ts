@@ -1,6 +1,7 @@
 // The mirror planner: (activity batch, open step) -> chunks, tool refs and where
 // the step ends. Pure: no $ here, so every rule below is unit-tested.
-import type { NpPending } from '../types'
+import type { NpPending, NpProvider } from '../types'
+import { NAMES, modelLabel } from './agents'
 
 export type Activity = { seq: number; kind: string; generation: number; task_id?: string | null; item?: string | null; data: any; at?: string }
 export type Chunk =
@@ -41,8 +42,9 @@ export type Planned = {
 
 const SKIP_AFTER_TOOL = new Set(['tool.progress', 'tool.completed', 'usage'])
 
-export function ref(workerId: string, generation: number, item: string): string {
-  return `${workerId}:${generation}:${item}`
+// A shadow's pending refs are its own, so the event's seq names one: short, since the desktop shows the tool's input.
+export function ref(seq: number): string {
+  return '#' + seq
 }
 
 function detailOf(kind: string, input: any): string {
@@ -69,11 +71,13 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
     if (open.held !== undefined) { const held = open.held;open.held = undefined;text(held) }
   }
   const marker = (s: string) => { flushHeld();open.textBlock = null;text(s + '\n');open.textBlock = null }
+  // The input is what a surface shows for the call: the title first, a detail only when it adds to the title.
   const tool = (kind: string, title: string, detail: string, r: string, pending: NpPending) => {
     flushHeld();open.textBlock = null
-    const index = open.block++, id = ctx.newId(), input = { kind, title: title.slice(0, 200), detail, ref: r }
+    const shownTitle = title.slice(0, 200), shownDetail = detail && detail !== shownTitle ? detail : ''
+    const index = open.block++, id = ctx.newId(), input = { title: shownTitle, kind, ...(shownDetail ? { detail: shownDetail } : {}), ref: r }
     out.chunks.push({ kind: 'tool', index, id, name: MIRROR_TOOL }, { kind: 'input', index, json: JSON.stringify(input) })
-    out.toolUses.push({ name: MIRROR_TOOL, input });out.refs[r] = pending;open.tools += 1
+    out.toolUses.push({ name: MIRROR_TOOL, input });out.refs[r] = { ...pending, title: shownTitle, detail: shownDetail };open.tools += 1
   }
   for (const e of events.slice(0, MAX_EVENTS)) {
     if (open.tools > 0 && e.kind !== 'tool.started' && !SKIP_AFTER_TOOL.has(e.kind)) break
@@ -94,7 +98,7 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
       case 'tool.started': {
         const item = e.item ?? 'seq' + e.seq
         const title = String(d.title ?? d.kind ?? 'tool'), kind = String(d.kind ?? 'other')
-        tool(kind, title, detailOf(kind, d.input), ref(ctx.workerId, e.generation, item), { item, kind, startSeq: e.seq, title, detail: detailOf(kind, d.input), generation: e.generation })
+        tool(kind, title, detailOf(kind, d.input), ref(e.seq), { item, kind, startSeq: e.seq, title, detail: detailOf(kind, d.input), generation: e.generation })
         break
       }
       case 'files.changed':
@@ -102,7 +106,7 @@ export function planBatch(events: readonly Activity[], open: Open, ctx: Context,
           const paths: string[] = Array.isArray(d.paths) ? d.paths : []
           const title = `${paths.slice(0, 3).join(', ')}${paths.length > 3 ? ` +${paths.length - 3}` : ''} (+${d.stats?.added ?? 0} −${d.stats?.removed ?? 0})`
           const item = 'seq' + e.seq
-          tool('edit', title, paths.join(', ').slice(0, 300), ref(ctx.workerId, e.generation, item), { item, kind: 'edit', startSeq: e.seq, title, detail: paths.join(', ').slice(0, 300), generation: e.generation, immediate: true })
+          tool('edit', title, paths.join(', ').slice(0, 300), ref(e.seq), { item, kind: 'edit', startSeq: e.seq, title, detail: paths.join(', ').slice(0, 300), generation: e.generation, immediate: true })
         }
         break
       case 'plan.updated': {
@@ -218,5 +222,20 @@ export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'n
   if (generations.length > 1) lines.push(`generations: ${generations.join(', ')}`)
   // A wait-mode route is never pushed: its result stays with NativePeers until asked for.
   if (owner === 'native') lines.push(mode === 'wait' ? `result retained in NativePeers: npeer result ${s.groupId ?? s.workerId}` : 'delivered via NativePeers notice')
+  return lines.join('\n')
+}
+
+// The closing line a person reads in the shadow's transcript when the report itself travels by SubagentHandback:
+// names and labels, no ids (the report carries those for the parent).
+export function humanFooter(terminal: Activity, s: Summary): string {
+  const d = terminal.data ?? {}
+  const status = String(d.status ?? 'completed')
+  const provider = NAMES[s.provider as NpProvider] ?? s.provider
+  const id = s.modelObserved ?? s.modelRequested, model = id ? ' · ' + modelLabel(id, s.provider as NpProvider) : ''
+  const profile = s.profile === 'analysis' ? 'read-only' : s.profile === 'workspace' ? 'can edit' : s.profile
+  const lines = [`— NativePeers · ${provider}${model}${s.effort ? ' · ' + s.effort + ' effort' : ''}${profile ? ' · ' + profile : ''} · ${status}${s.elapsedMs !== undefined ? ' in ' + duration(s.elapsedMs) : ''}`]
+  if (status === 'interrupted') lines.push('Interrupted: the text above is a partial result.')
+  if (d.error?.code) lines.push(`Error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`.trim())
+  if (s.changes?.files) lines.push(`Changed ${s.changes.files} file${s.changes.files === 1 ? '' : 's'} (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})`)
   return lines.join('\n')
 }

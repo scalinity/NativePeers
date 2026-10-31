@@ -1,10 +1,10 @@
 import { expect, test } from 'claude-code/testing'
-import { agentSpec, describe, modelLabel, parseHeader, shadowModel, titleFrom, workerSpec } from '../hooks/agents'
-import { followUp, provenance, stripFraming } from '../hooks/inputs'
+import { agentSpec, describe, modelLabel, parseHeader, shadowModel, statusLabel, statusSummary, titleFrom, workerSpec } from '../hooks/agents'
+import { followUp, handbackRequired, provenance, stripFraming } from '../hooks/inputs'
 
-test('a shadow type has only the mirror tool, an unserved model and an explicit permission mode', () => {
+test('a shadow type has only the mirror tool and SubagentHandback, an unserved model and an explicit permission mode', () => {
   const spec = agentSpec('codex')
-  expect(spec.tools).toEqual(['mcp__np__mirror'])
+  expect(spec.tools).toEqual(['mcp__np__mirror', 'SubagentHandback'])
   expect(spec.model).toBe('np-mirror-codex')
   expect(shadowModel('grok')).toBe('np-mirror-grok')
   expect(spec.permissionMode).toBe('dontAsk')
@@ -60,4 +60,31 @@ test('only prompt and delivery rows from a person or the parent are follow-ups',
   expect(followUp(row('prompt', 'engine', [{ type: 'text', text: 'x' }]))).toBe(null)
   expect(provenance('model')).toBe('parent-model')
   expect(provenance('task-notification')).toBe(null)
+})
+
+// The rows a shadow saw in an auto-mode session (gate G6 capture, desktop run 5a5bfe52).
+const NOTE = '<system-reminder>\nYour final report is delivered through SubagentHandback: when your work is complete, call SubagentHandback({message: <your full report>}). The call ends your run, so make it your last step.\n</system-reminder>'
+const ENFORCE = '[handback-send-enforce] Your report has not been delivered. Call SubagentHandback({message: <your full report>}) now; the call ends your run.'
+
+test('the engine\'s SubagentHandback note and enforcement mark a run that must hand back; nobody else\'s text does', () => {
+  const row = (text: string, kind: string, door = 'note') => ({ door, origin: { kind }, message: { type: 'user', content: [{ type: 'text', text }] } })
+  expect(handbackRequired(row(NOTE, 'engine'))).toBe(true)
+  expect(handbackRequired(row(ENFORCE, 'engine', 'prompt'))).toBe(true)
+  expect(handbackRequired({ door: 'prompt', origin: { kind: 'engine' }, message: { type: 'user', content: ENFORCE } })).toBe(true)
+  expect(handbackRequired(row(NOTE, 'composer', 'prompt'))).toBe(false)
+  expect(handbackRequired(row(NOTE, 'coordinator', 'delivery'))).toBe(false)
+  expect(handbackRequired(row('Your report is ready.', 'engine'))).toBe(false)
+  // Neither row is ever forwarded to the worker as a follow-up.
+  expect(followUp(row(NOTE, 'engine'))).toBe(null)
+  expect(followUp(row(ENFORCE, 'engine', 'prompt'))).toBe(null)
+})
+
+test('the status line counts what delegates are doing and stays until there are none', () => {
+  const w = (status: string, parentWorkerId?: string) => ({ workerId: status, groupId: 'G', generation: 1, provider: 'codex', title: 't', status, parentWorkerId }) as any
+  expect(statusSummary([])).toBe(undefined)
+  expect(statusSummary([w('running')])).toBe('1 running')
+  expect(statusSummary([w('completed')])).toBe('1 done')
+  expect(statusSummary([w('running'), w('completed'), w('failed'), w('canceled'), w('running', 'P')])).toBe('1 running · 1 done · 1 failed · 1 stopped')
+  expect(statusLabel('timed_out')).toBe('Timed out')
+  expect(statusLabel('completed')).toBe('Completed')
 })

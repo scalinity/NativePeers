@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, finalAnswer, humanFooter, openStep, planBatch, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -15,15 +15,16 @@ test('streamed deltas join one text block and a message already streamed is not 
   expect(open.answer).toBe('Hello world')
 })
 
-test('a tool start ends the step with a mirror call naming worker, generation and item', () => {
+test('a tool start ends the step with a mirror call: title first, a short ref, no detail that repeats the title', () => {
   const p = planBatch([ev(1, 'message.completed', { text: 'Running tests.' }, 'm1'), ev(2, 'tool.started', { kind: 'exec', title: 'pytest -q', input: { command: 'pytest -q' } }, 'c1'), ev(3, 'message.delta', { text: 'after' }, 'm2')], openStep(), ctx())
   expect(p.end).toBe('tool_use')
   expect(p.consumed).toBe(2)
   const tool = p.chunks.find(c => c.kind === 'tool') as any
   expect(tool.name).toBe(MIRROR_TOOL)
   const input = JSON.parse((p.chunks.find(c => c.kind === 'input') as any).json)
-  expect(input).toEqual({ kind: 'exec', title: 'pytest -q', detail: 'pytest -q', ref: 'W:1:c1' })
-  expect(p.refs['W:1:c1']).toMatchObject({ item: 'c1', kind: 'exec', startSeq: 2, generation: 1 })
+  expect(input).toEqual({ title: 'pytest -q', kind: 'exec', ref: '#2' })
+  expect(Object.keys(input)[0]).toBe('title')
+  expect(p.refs['#2']).toMatchObject({ item: 'c1', kind: 'exec', startSeq: 2, generation: 1, title: 'pytest -q', detail: '' })
   expect(p.toolUses).toEqual([{ name: MIRROR_TOOL, input }])
 })
 
@@ -86,7 +87,7 @@ test('reasoning streams as thinking only when enabled; usage reports the cumulat
 test('a file change with no tool event becomes an immediate edit row', () => {
   const p = planBatch([ev(7, 'files.changed', { paths: ['a.py', 'b.py'], stats: { added: 3, removed: 1 }, diff: { text: '@@' } })], openStep(), ctx())
   expect(p.end).toBe('tool_use')
-  expect(p.refs['W:1:seq7']).toMatchObject({ kind: 'edit', immediate: true })
+  expect(p.refs['#7']).toMatchObject({ kind: 'edit', immediate: true })
 })
 
 test('tool results replay output, exit, duration and diffs; a terminal without completion is interrupted', () => {
@@ -109,4 +110,23 @@ test('the final answer carries NativePeers references and says who delivered it'
   expect(text).toContain('delivered via NativePeers notice')
   expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'native', [1], false, [], 'wait')).toContain('result retained in NativePeers: npeer result G')
   expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1], true).startsWith('partial')).toBe(false)
+})
+
+test('a detail that adds to the title is kept, and a long title is recorded as the call shows it', () => {
+  const long = 'x'.repeat(250)
+  const p = planBatch([ev(4, 'tool.started', { kind: 'exec', title: long, input: { command: 'make test' } }, 'c9')], openStep(), ctx())
+  const input = JSON.parse((p.chunks.find(c => c.kind === 'input') as any).json)
+  expect(input.title.length).toBe(200)
+  expect(input.detail).toBe('make test')
+  // The mirror tool compares the call's title with the recorded one: both are the 200-character form.
+  expect(p.refs['#4']?.title).toBe(input.title)
+})
+
+test('the human footer names the worker in words and carries no ids', () => {
+  const terminal = ev(9, 'task.terminal', { status: 'completed', final_text: 'Done.' })
+  const text = humanFooter(terminal, { provider: 'codex', modelRequested: 'gpt-6.1-sol', modelObserved: 'gpt-6.1-sol', effort: 'low', profile: 'analysis', workerId: 'W', groupId: 'G', taskId: 'T', nativeId: 'N', elapsedMs: 5000, resultArtifact: 'R' })
+  expect(text).toBe('— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s')
+  for (const id of ['W', 'G', 'T', 'N', 'R']) expect(text.includes(' ' + id + ' ')).toBe(false)
+  const failed = humanFooter(ev(9, 'task.terminal', { status: 'failed', error: { code: 'QUOTA_EXHAUSTED', message: 'over the limit' } }), { provider: 'grok', workerId: 'W' })
+  expect(failed).toContain('Error: QUOTA_EXHAUSTED over the limit')
 })
