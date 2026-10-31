@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "stage": "Native pane on the desktop app: the footer's np entry as a menu in place of the band, and the pane restyled as the app's own transcript",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "46ad3ba",
+  "scope": "The np mod: a desktop SessionMode hook drawing the footer's np entry as a Select (summary closed; Open NativePeers and each worker's conversation open) in place of the one-line band, its ui.close tracking and activation reconcile, and $.ui.status on the desktop app; native worker buttons with a footnote status line; a conversation headline in one footnote line (with the model asked for when another answered); labelled turns; tool steps as one line with shell wrappers stripped; file changes and generation ends as notes; follow-ups without the trailing contract; on the desktop app long messages folded behind Show more and tool output opened on press; scroll to the end on open, on new rows and on send; space below the field; a one-second redraw while a worker runs and the pane is shown; no toast on send. The desktop app run needs the person after install.",
+  "finding": {
+    "observed": "Desktop check after PR #46 (engine 2.1.309), 2026-10-31. The band above the prompt offered a closed pane back where the footer's np entry was wanted as a menu. Worker buttons in the list had no button face and no room above or below. The back arrow (‹) was small. The field was visible only after scrolling to the end, and was cut off at its bottom edge. A running worker's time stayed at 0s, then jumped to 12s when it ended. The pane did not follow new rows. Rows showed shell wrappers and raw text. Each send raised a large toast.",
+    "cause": "The list drew its worker buttons plain, without spacing. Elapsed time is computed when the pane draws, and nothing redrew it while a worker ran without lineage changes. The pane never called $.ui.scroll, and the field had no space below it. deliverDraft toasted every outcome. Rows used the tool title as the provider reported it (/bin/zsh -lc '…'), and a follow-up's input_preview carries NativePeers' contract after the message.",
+    "found_while_fixing": "The terminal keeps a pane's focus ring by position: with a toggle button drawn among the rows, the ring that autoFocus put on the field (debug log: ui.focus onto np's say-0: moved) landed on the button when the rows arrived above it, and typed text reached the main prompt. Rows stay text on the terminal; the toggles are drawn on the desktop app only."
+  },
+  "tests": {
+    "mod": {
+      "status": "PASS",
+      "passed": 47,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "pane_conversation_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_pane_conversation.py",
+      "result": "opened in the pane, ✓ tool step, ✓ Completed mark, no send toast, the typed message reached the replay bridge once as a person's follow-up, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+    },
+    "handback_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
+      "result": "deliver: one call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself; on engines 2.1.314 and 2.1.309"
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
+      }
+    },
+    "full_suite": {
+      "status": "NOT_RUN",
+      "note": "No Python module changed; the last full run (1119 passed, 31 failed, the standing failure set) was on 27bc698."
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-native-pane-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The pane conversation run with the restyled rows, handback deliver and refuse runs, and the startup race run passed on this engine.",
+      "source_head": "b0a851a"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-native-pane-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The pane conversation, handback deliver and refuse, and startup race runs passed on the desktop app's own engine.",
+      "source_head": "b0a851a"
+    }
+  ],
+  "independent_review": {
+    "result": "NOT_RUN",
+    "note": "The lane's 32 worker inputs were spent on the earlier rounds, so this change has tests and probes but no independent review."
+  },
+  "limitations": [
+    "The footer menu is verified in the test kit on the desktop surface; harness runs draw the terminal surface, so its look in the desktop app is confirmed only by the person after install.",
+    "The terminal keeps a pane's focus ring by position, so conversation rows do not fold there; long messages and the first 6 lines of a step's output show in full.",
+    "The desktop app rings a focused text field and InputProps offers no styling: the ring shows while the person types."
+  ]
+}
