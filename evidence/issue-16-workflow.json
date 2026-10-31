@@ -86,6 +86,13 @@
       "seconds": 261.94,
       "source_commit": "62b20401967767ce43c4ad71f433a081b4bb28d0",
       "scope": "Complete candidate after final #39 diagnostic; Lineage51 later changes only its own integration/docs/records and retains owner checks."
+    },
+    "post_lineage51_coherence": {
+      "status": "PASS",
+      "tests": 24,
+      "subtests": 20,
+      "seconds": 7.67,
+      "scope": "Regenerated candidate pointers plus launcher/context regressions after accepted Lineage51 merge. NP Python/launchers/schema/dependencies byte-identical to full-qualified62b2040; Lineage51 test/desktop limits remain its owner record."
     }
   },
   "operation_checks": [
@@ -266,7 +273,7 @@
     "Initial stale source-pointer failures, oversized definite pre-input recheck refusal, wrong merge guard and parent setup/fixture mistakes are retained with agent attribution. No accepted/uncertain operation was replayed.",
     "Publication excludes private history and local installation/validation records; canonical local main intentionally retains private history ancestry and is not pushed."
   ],
-  "code_commit": "1654ba2765c117e3c9d1757921843323920382ae",
+  "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -378,7 +385,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
-  "updated_at": "2026-10-31T02:38:38.268863-04:00",
+  "updated_at": "2026-10-31T02:46:39.218322-04:00",
   "helper_publication": {
     "pr": "https://github.com/scalinity/skills/pull/2",
     "merged": "e05c43fb5c5a6ee1f36acb3d14568896b363e342",
