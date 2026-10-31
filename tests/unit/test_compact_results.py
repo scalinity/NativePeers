@@ -89,3 +89,19 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         for view in (self.service.result(self.caller,earlier,compact=True),self.service.status(self.caller,earlier,compact=True)):
             self.assertIsNone(view['tasks'][0]['model_observed']);self.assertIsNone(view['tasks'][0]['native_id'])
             self.assertEqual(view['tasks'][0]['state'],'FAILED');self.assertEqual(view['tasks'][0]['model_requested'],'sonnet')
+
+    async def test_compact_read_reports_a_worker_membership_change_instead_of_crashing(self):
+        task=self.add('RUNNING');original=self.j.all;changed=False
+        def read(sql,parameters=()):
+            nonlocal changed
+            rows=original(sql,parameters)
+            if not changed and sql.startswith('SELECT worker_id,peer_key,provider'):
+                changed=True
+                row=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.worker,));row['worker_id']=new_id()
+                self.j.db.execute('INSERT INTO workers VALUES('+','.join('?' for _ in row)+')',tuple(row.values()))
+                self.j.db.execute('UPDATE tasks SET worker_id=? WHERE task_id=?',(row['worker_id'],task))
+            return rows
+        with patch.object(self.j,'all',side_effect=read):value=self.service.result(self.caller,task,compact=True)
+        self.assertTrue(changed);self.assertEqual(value['tasks'][0]['task_id'],task)
+        self.assertIn('Worker membership changed',value['tasks'][0]['unavailable'])
+        self.assertEqual(value['tasks'][0]['state'],'RUNNING')

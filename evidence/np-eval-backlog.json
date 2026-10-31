@@ -27,16 +27,17 @@
     },
     "full": {
       "status": "PASS",
-      "tests": 1099,
+      "tests": 1100,
       "skipped": 4,
       "subtests": 1048,
-      "seconds": 276.78,
-      "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
-      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-5.txt",
-      "scope": "Final reviewed combined product, launcher, integration and test source; installed acceptance is separate"
+      "seconds": 293.14,
+      "source_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
+      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-6.txt",
+      "scope": "Final product source including concurrent compact-membership handling; later publication edits are metadata only"
     },
     "installed_operations": {
-      "status": "NOT_RUN"
+      "status": "BLOCKED",
+      "reason": "Shared root/package/guard transition remains with issue7 owner; backlog operations are not installed in current4b98ea7 root"
     },
     "visible_final_tail": {
       "status": "BLOCKED",
@@ -70,6 +71,12 @@
       "status": "PASS",
       "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
       "scope": "Latest automated review reports no remaining findings; all four prior threads resolved after regressions"
+    },
+    "compact_membership": {
+      "status": "PASS",
+      "tests": 66,
+      "subtests": 45,
+      "private_artifact": "evidence/scratch/np-eval-backlog/compact-membership-check.txt"
     }
   },
   "operation_checks": [
@@ -100,7 +107,7 @@
       "operation": "installed operations and genuine delayed-frame visible tail",
       "status": "BLOCKED",
       "parent_context": "Shared installed source/runtime transition owned by issue7; no competing activation",
-      "scope": "Source PR15 merged; published installed/TUI acceptance NOT_RUN at observation. Existing selected normal-update package does not contain silent queue consumption."
+      "scope": "Current selection moved independently to0.166-763301510afa; passive worker/inbox/quota approval matches. Owner preinstall standalone TUI fixture passes warm/cold22-frame controls; actual_worker_controller_push remains not_run and production QueuedInput owned configuration is missing. No installed acceptance is inferred."
     }
   ],
   "reviews": [
@@ -179,6 +186,11 @@
       "finding": "Comparison normalizes repository subdirectories the same way as preparation",
       "disposition": "FIXED",
       "check": "Focused privacy/artifact/preflight regressions:43 tests/56 subtests pass"
+    },
+    {
+      "finding": "A fallback can add worker membership between status queries",
+      "disposition": "FIXED",
+      "check": "Concurrent worker/task snapshot regression returns an explicit unavailable row and exact task inspection route; no replay or invented attribution"
     }
   ],
   "failed_runs": [
@@ -196,11 +208,11 @@
   "limitations": [
     "This is source and operation qualification, not a published private session evaluation.",
     "Installed launcher/root, provider approvals and package selection were not changed by this lane.",
-    "Issue7 actual standalone visible-tail acceptance and runtime transition remain with their owner.",
     "Queue admission is not native ingestion or model acknowledgment; pending native input was not replayed.",
-    "The historical64.5/100 evaluation and fixed rubric remain unchanged."
+    "The historical64.5/100 evaluation and fixed rubric remain unchanged.",
+    "Issue7 production guard installation and genuine worker/controller visible-tail acceptance remain with their owner; a private preinstall TUI fixture PASS is recorded separately."
   ],
-  "code_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+  "code_commit": "991c0cc1498d6525e383ecc5c0450a439fbb242a",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -236,7 +248,7 @@
     "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
     "nativepeers/cleanup.py": "76c2bc590e3678c962bfdd9d0f33d5f3104fa530a9c5de27cd4997daa2d67ab6",
     "nativepeers/cli.py": "846ace3e231d781a9f295f677ec79df741775d2898ce940bf455a3841ad3a5c8",
-    "nativepeers/compact.py": "1083cf233e493404004f2526a8705e399ae24c4c3c26919fe240e021f92091eb",
+    "nativepeers/compact.py": "7cde09b437445bab44726f73b33a33f93a5e2ae163465f861fd3790cfebb0122",
     "nativepeers/compatibility.py": "33dee50c11e571c1b706fac2359bcade975839dde602169007abf9bb4856e6b0",
     "nativepeers/completion_delivery.py": "7617097e4fc4310f5532810121ea1b9dc49e2878379e99b15055b139178b9f78",
     "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
@@ -310,8 +322,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "596ae3fe6594e8e40e14c1c4c2e557990e85d3c1b758ad78dbe084c7b9f85610",
-  "updated_at": "2026-10-30T19:52:31.728778-04:00",
+  "source_map_sha256": "5319fe0f73d28c4a7b8f06190ac14fd4efb5c4247b905d3458f112184bdbc999",
+  "updated_at": "2026-10-30T20:07:55.625747-04:00",
   "source_run_history": [
     {
       "status": "FAIL",
@@ -342,6 +354,26 @@
       "source_commit": "9fae4414e7fd447922526d10c22fde7dce817f04",
       "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-4.txt",
       "scope": "Before the subsequent private-root/revocation/subdirectory comparison corrections; those have separate focused checks"
+    },
+    {
+      "status": "PASS",
+      "tests": 1099,
+      "skipped": 4,
+      "subtests": 1048,
+      "seconds": 276.78,
+      "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-5.txt",
+      "scope": "Reviewed source before the subsequent compact-membership race correction; that correction has separate66-test focused qualification until final full run settles"
+    },
+    {
+      "status": "PASS",
+      "tests": 1099,
+      "skipped": 4,
+      "subtests": 1048,
+      "seconds": 276.78,
+      "source_commit": "ba2477a4c56599792eff6717a632c61790b4181b",
+      "private_artifact": "evidence/scratch/np-eval-backlog/full-suite-5.txt",
+      "scope": "Reviewed source before the subsequent compact-membership race correction; that correction has separate66-test focused qualification until final full run settles"
     }
   ]
 }
