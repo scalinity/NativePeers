@@ -1,3 +1,13 @@
+# Review and follow-up workflow — source remediation (2026-10-30)
+
+The [scoped record](../evidence/review-followup-workflow.json) retains source checks, native review attribution, all F001–F007 dispositions and installed checks independently. Its current source fingerprints do not update any provider approval or claim installed qualification. The initial source run failed22 checks:20 process fixtures lacked the worktree-local environment and pass after linking the existing project environment; two checks correctly detect predecessor verification fingerprints. The generated source-only record retains these failures and leaves installed/native operations NOT_RUN.
+
+The real independent reviewer requested `sonnet`/high and observed `claude-sonnet-5-5`, native UUID `799e9500-cade-48d4-8a79-c8440c7a25bd`, task `43f423e9-5389-411e-aee2-3ec39cf8d29f`. It used Read/Glob/Grep and the scoped NativePeers facade, no Bash, in analysis/inherit-read-only. It returned three Warnings and four Suggestions with matching IDs and exact severities. Parent `/address` fixed every item with focused tests and per-fix commits; the parser fixes F002/F003/F006/F007 are coupled in one necessary change. Final correction/probe review and installed acceptance remain pending.
+
+The new installed-only `tests/probes/live_followup.py` reuses the existing qualified standalone/localhost harness, one owned Codex worker and four exact task phases. Its two offline checks are not native acceptance. It requires the normal selected approved package and refuses candidate source activation. A private `pyte==0.8.2`/`wcwidth==0.9.4` test dependency target stays under ignored task evidence; daily Python dependencies are unchanged.
+
+---
+
 # Issue 7: installed silent queue consumption — 2026-10-30
 
 The final response remains the last chat entry while late NativePeers frames drain. Managed Codex consumes exact policy-suppressed plain-text queue items before turn startup, model work, hook/history rows or work footers. Its exact registered-owner receiving guard also survives a change of managed selection. Ordinary human input, active delivery, expiry, exchange/phase cutoffs, retained results and original accepted receipts are preserved.
