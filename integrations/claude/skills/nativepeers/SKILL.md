@@ -45,6 +45,12 @@ npeer context-check ARTIFACT_ID --project /absolute/recipient/repo --json
 
 `context-check` reports changed selected paths, heads and expected/current runtime fingerprints without mutations. Frozen observations carry their original time. Queue `ACCEPTED_QUEUED` is admission; native ingestion, `ack` (model-reported processing), a reply, integration and installed qualification are separate evidence. Unknown delivery never triggers automatic replay. Reply to the immediate received message ID with `npeer reply MESSAGE_ID --message TEXT --client-request-id NEW_ID --json`; add `--request-reply` only when another answer is needed. Controller completions have no peer reply address.
 
+## Claude native subagents
+
+In Claude Code with the `np` mod, independent NativePeers workers also appear as native subagents; elsewhere they stay outside the vendor's private subagent navigation UI. Preserve vendor-native tools.
+
+When `np:*` agent types are listed, prefer `Agent(subagent_type:"np:<provider>")` for delegations the person may want to watch: an optional ```np {"model","effort","profile","title"}``` JSON header, then a self-contained brief; call `mcp__np__catalog` once for exact models; end the turn and let the background notification arrive; follow up with `SendMessage`. Keep `npeer spawn` for batch groups, sibling collaboration and isolated-copy inputs; the mod adopts those workers automatically and NativePeers delivers their first results. See `/Users/danny/Documents/Tools/NativePeers/docs/LINEAGE_USAGE.md`.
+
 ## Other work and recovery
 
 Use `permission_profile:"workspace"` with `isolated-worktree` for authorized Git edits; non-Git `isolated-copy` requires explicit files. Each worker owns distinct files/responsibilities. Inspect worker-only deltas with `npeer delta-preview WORKER_ID --json`, then explicitly integrate and check; no automatic merge occurs. Preserve unrelated dirty input and unique work.
