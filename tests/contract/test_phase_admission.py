@@ -270,3 +270,67 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
             core.return_value.router.send=deliver
             await self.group.notify(phase);await self.group.notify(phase)
         deliver.assert_awaited_once()
+
+    async def test_sibling_request_does_not_create_a_parent_push(self):
+        row=self.j.one('SELECT * FROM workers WHERE worker_id=?',(self.released,));peer=self.core.registry.get(row['peer_key'])
+        sibling=Caller('peer',peer['handle'],peer['incarnation_id'],grants=dict(worker_id=self.released,group_id=self.gid,allow_sibling_messages=True))
+        policy=json.loads(self.j.one('SELECT policy_json FROM groups')['policy_json']);policy['completion_mode']='push'
+        self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(policy).decode(),))
+        sent=await self.core.router.send(sibling,self.target,'sibling followup',expect_reply=True,client_request_id='sibling')
+        self.assertEqual(sent['followup']['completion_mode'],'wait')
+
+    async def test_mirror_owns_push_until_lease_expires_then_exact_phase_rearms(self):
+        from nativepeers import mirror
+        meta=dict(claude_session='fixture-session',delivery_owner='mirror',origin='fixture',client_request_id='mirror-followup')
+        self.j.db.execute('INSERT INTO bridge_requests VALUES(?,?,?,?,?,?,?)',(self.caller.key,'input','mirror-followup','fixture',canonical(meta).decode(),None,time.time()))
+        with self.j.transaction() as db:mirror.grant(db,self.live,'fixture-session','agent',self.caller.key,display_only=False)
+        sent=await self.core.router.send(self.caller,self.target,'mirror followup',expect_reply=True,client_request_id='mirror-followup')
+        phase=sent['followup']['completion_phase'];task=sent['followup']['task_id']
+        self.assertEqual(sent['followup']['notification_state'],'MIRROR_PENDING')
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(task,))
+        send=AsyncMock(return_value=dict(state='ACCEPTED_QUEUED',message_id=new_id()))
+        with patch('nativepeers.core.Core') as core:
+            core.return_value.router.send=send;await self.group.notify(phase);send.assert_not_awaited()
+            self.j.db.execute('UPDATE mirror_leases SET expires_at=? WHERE worker_id=?',(time.time()-1,self.live))
+            mirror.expire(self.j,group_id=self.gid,supervised=True)
+            self.assertEqual(self.j.one('SELECT state,mode FROM completion_routes WHERE completion_generation=?',(phase,)),dict(state='UNCLAIMED',mode='push'))
+            await self.group.notify(phase);await self.group.notify(phase);send.assert_awaited_once()
+
+    async def test_new_quiet_phase_retains_completion_without_changing_input_receipts(self):
+        from nativepeers.notification_policy import apply
+        await apply(self.j,self.core.registry,self.caller,'close')
+        sent=await self.core.router.send(self.caller,self.target,'quiet followup',expect_reply=True,client_request_id='quiet-followup')
+        receipts=sent['receipts'];phase=sent['followup']['completion_phase'];task=sent['followup']['task_id']
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED' WHERE task_id=?",(task,))
+        deliver=AsyncMock(return_value=dict(stage='ACCEPTED_QUEUED',evidence_kind='fixture-parent'))
+        self.core.router.adapters['test']=deliver
+        with patch('nativepeers.core.Core',return_value=self.core):await self.group.notify(phase);await self.group.notify(phase)
+        deliver.assert_not_awaited()
+        self.assertEqual(self.j.one('SELECT state FROM completion_routes WHERE completion_generation=?',(phase,))['state'],'RETAINED')
+        self.assertEqual(self.core.router.outcome(sent['message_id'])['receipts'],receipts)
+
+    async def test_exact_retry_preserves_explicit_wait_mode_and_task_identity(self):
+        class Reader:
+            async def read(self,n):await asyncio.Future()
+        sent=await self.core.router.send(self.caller,self.target,'retry',expect_reply=True,client_request_id='retry-route')
+        task=sent['followup']['task_id'];phase=sent['followup']['completion_phase']
+        await self.group.wait(dict(caller_key=self.caller.key,handle=task,timeout_ms=1,on_timeout='retain'),Reader())
+        before=self.j.one('SELECT * FROM completion_routes WHERE completion_generation=?',(phase,));count=len(self.sent)
+        retry=await self.core.router.send(self.caller,self.target,'retry',expect_reply=True,client_request_id='retry-route')
+        self.assertEqual(retry['followup']['task_id'],task);self.assertEqual(retry['followup']['completion_mode'],'wait')
+        self.assertEqual(self.j.one('SELECT * FROM completion_routes WHERE completion_generation=?',(phase,)),before)
+        self.assertEqual(len(self.sent),count)
+
+    async def test_monitor_visits_each_committed_phase_without_replaying_accepted_initial(self):
+        for n in range(2):await self.core.router.send(self.caller,self.target,'monitor '+str(n),expect_reply=True,client_request_id='monitor-'+str(n))
+        self.j.db.execute("UPDATE tasks SET state='COMPLETED'")
+        self.j.db.execute("UPDATE completion_routes SET state='PUSH_ACCEPTED' WHERE completion_generation=1")
+        initial=self.j.one('SELECT * FROM completion_routes WHERE completion_generation=1')
+        self.group.policy.update(survive_parent=False,followup_grace_seconds=0)
+        self.j.db.execute('UPDATE groups SET policy_json=?',(canonical(self.group.policy).decode(),))
+        send=AsyncMock(return_value=dict(state='ACCEPTED_QUEUED',message_id=new_id()))
+        with patch('nativepeers.core.Core') as core:
+            core.return_value.router.send=send;await asyncio.wait_for(self.group.monitor(),2)
+        self.assertEqual(send.await_count,2)
+        self.assertEqual(self.j.one('SELECT * FROM completion_routes WHERE completion_generation=1'),initial)
+        self.assertEqual([r['state'] for r in self.j.all('SELECT state FROM completion_routes ORDER BY completion_generation')],['PUSH_ACCEPTED']*3)
