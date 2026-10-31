@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
+  "code_commit": "e4cbf578533e0ed7c4bc38cb008311c06b53e9bb",
   "reviewed_commit": "364bd53",
   "publication_branch": "fix/managed-activation-delivery",
-  "updated_at": "2026-10-31T01:19:37.708188-04:00",
+  "updated_at": "2026-10-31T01:28:32.741818-04:00",
   "current_record": "evidence/issue-39-managed-activation.json",
   "file_classes": {
     "product": {
@@ -28,7 +28,7 @@
         "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
         "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
         "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
-        "nativepeers/adapters/native_delivery.py": "994cf623839a7508bb26ea148f9dda3dd3856dc61b0feec969613a935506e08a",
+        "nativepeers/adapters/native_delivery.py": "f2565fedab6f41297052a3dcbbd66448da52547f1ad0a004444f36c379e9e18d",
         "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
         "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
         "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "5aefde91c974dfe1b1516a2a69890f36f85fba4148cd2e9164d948b5a0ce2ac2"
+      "sha256": "5d2dc7979fceb8aeedef150ef1590b464a03db6232904365741a8bafba362d6d"
     },
     "launchers": {
       "files": {
@@ -357,10 +357,10 @@
         "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
         "tests/unit/test_lifecycle_recovery.py": "c1d36858a346b31888eb20c4b5a5a2d1a1867a4ff43ec06176bc068f82334389",
         "tests/unit/test_live_followup_probe.py": "a8c0521c7f88e3cdd205447d1267c924b6d4ec9937a5a82cf12e757f7276518f",
-        "tests/unit/test_managed_activation.py": "806d6a3875d198b9d229e24d6bc83877f0d0f3d0560fd9cfadb9496e542950c0",
+        "tests/unit/test_managed_activation.py": "672d03e37a8b446ba098a5c0e2e4ea45cc5b7235b746ab64e4d87a3408ea498e",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
         "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
-        "tests/unit/test_native_delivery.py": "3da99d6901a060c235a749f6d945ca24ca473ad88a7489986d5bdc1cc86109d2",
+        "tests/unit/test_native_delivery.py": "b51c7b8a3d9a4870d69afbacb0b47991851cb4df530e31fb69cd3ab4f2cadde2",
         "tests/unit/test_native_usage_parsers.py": "30e3f80041d54613b05aa80b67ee91476d7e2b00941c2eeb7354a26753ad02a0",
         "tests/unit/test_nested_caller.py": "23be6293a36883654eb848b34424588db73fb6f4cf2fbec551ec71c55d5eb9c2",
         "tests/unit/test_notification_guard_hooks.py": "a52922c6cc8094256b3ac4abcf9c8fe16890cf5f18eeaa0eca0e724c22af944b",
@@ -407,7 +407,7 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 241,
-      "sha256": "ba0bff3e33bcd9437a5ba6cb2ff5578e8d5aa61ad2cb7b705ff3d107faf445a0"
+      "sha256": "4a3b75c7b2a3298ac9b52617c6ea8b3974d649fe6cb969eebf6df35436550aeb"
     }
   },
   "operation_checks": [

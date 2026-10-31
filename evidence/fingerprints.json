@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-31T01:19:37.708188-04:00",
+  "at": "2026-10-31T01:28:32.741818-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,7 +60,7 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
+  "code_commit": "e4cbf578533e0ed7c4bc38cb008311c06b53e9bb",
   "current_verification": "evidence/issue-39-managed-activation.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
@@ -150,7 +150,7 @@
     "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
     "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
     "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
-    "nativepeers/adapters/native_delivery.py": "994cf623839a7508bb26ea148f9dda3dd3856dc61b0feec969613a935506e08a",
+    "nativepeers/adapters/native_delivery.py": "f2565fedab6f41297052a3dcbbd66448da52547f1ad0a004444f36c379e9e18d",
     "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
     "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
     "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",

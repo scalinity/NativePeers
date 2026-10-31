@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "originating_task": "NativePeers #39 managed activation delivery",
-  "stage": "REVIEW_ACCEPTED_FINAL_COMBINED_CHECKS_PENDING",
+  "stage": "EXPIRY_EDGE_RECHECK_PENDING_INSTALLED_NOT_RUN",
   "status": "PENDING",
   "reviewed_commit": "364bd53",
   "design": "Exact registered recipient runtime and queue helper; selected runtime remains mandatory for new workers. Definitely unsubmitted runtime failures reuse immutable admission; quiet retention and accepted/uncertain attempts remain inert.",
@@ -108,6 +108,29 @@
       "seconds": 1.04,
       "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py",
       "source_commit": "c950063"
+    },
+    "combined_before_expiry_wait": {
+      "status": "PASS",
+      "passed": 1166,
+      "skipped": 4,
+      "subtests": 1066,
+      "seconds": 256.99,
+      "source_commit": "05e7e3b1d559306adc22574b198db2b07d031a9d",
+      "scope": "Before P003 lock-wait expiry guard; not transferred to later source."
+    },
+    "runtime_lock_expiry_before": {
+      "status": "FAIL",
+      "failed": 1,
+      "source_commit": "05e7e3b",
+      "reason": "Helper launched after original expiry elapsed during runtime lock wait."
+    },
+    "runtime_lock_expiry_after": {
+      "status": "PASS",
+      "passed": 66,
+      "subtests": 6,
+      "seconds": 2.83,
+      "source_commit": "e4cbf57",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_native_delivery.py tests/unit/test_completion_delivery.py tests/unit/test_notification_policy.py tests/contract/test_phase_admission.py"
     }
   },
   "operation_checks": [
@@ -130,7 +153,7 @@
     "Installed/native acceptance pending. Existing Python processes may retain imported modules. Tracker #16 remains open. Setup totals and net time savings unknown."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "a9f2f306e6b7eaf64f3f41227b52074c3f10c43b",
+  "code_commit": "e4cbf578533e0ed7c4bc38cb008311c06b53e9bb",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -152,7 +175,7 @@
     "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
     "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
     "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
-    "nativepeers/adapters/native_delivery.py": "994cf623839a7508bb26ea148f9dda3dd3856dc61b0feec969613a935506e08a",
+    "nativepeers/adapters/native_delivery.py": "f2565fedab6f41297052a3dcbbd66448da52547f1ad0a004444f36c379e9e18d",
     "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
     "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
     "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
@@ -241,8 +264,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "5aefde91c974dfe1b1516a2a69890f36f85fba4148cd2e9164d948b5a0ce2ac2",
-  "updated_at": "2026-10-31T01:19:37.708188-04:00",
+  "source_map_sha256": "5d2dc7979fceb8aeedef150ef1590b464a03db6232904365741a8bafba362d6d",
+  "updated_at": "2026-10-31T01:28:32.741818-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
@@ -378,10 +401,16 @@
         "fixed and verified",
         "c950063",
         "20 focused tests/6 subtests; approved, retained fingerprint, grant-only path, malformed receipt and nearer unregistered boundary"
+      ],
+      [
+        "P003",
+        "fixed pending substantive recheck",
+        "e4cbf57",
+        "Original expiry rechecked under runtime lock after exact verification, before budget/helper; failing-before/passing-after regression"
       ]
     ],
-    "final_recheck_task": "5ad170f1-7142-4672-8679-187ddd764838",
-    "status": "APPROVE_WITH_SUGGESTION_F301_FIXED",
+    "final_recheck_task": "5af13854-09a1-4d31-b4b2-01f2899dc458",
+    "status": "FIFTH_EXPIRY_RECHECK_PENDING",
     "reviewer_tests": "NOT_RUN; independent analysis/read-only findings, parent execution separately attributed",
     "second_task": "35b864f1-c7e0-4253-a4eb-46be3dea23a6",
     "second_result": "Fixed source accepted; F101-F106 remained on the proposed driver/last edge cases.",
