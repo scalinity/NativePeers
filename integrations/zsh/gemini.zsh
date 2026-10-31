@@ -28,7 +28,7 @@ gemini() {
       if (( ${#resume_words} )); then
         local session_id="${(j: :)resume_words}"
         if [[ ! $session_id =~ '^[[:xdigit:]]{8}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{4}-[[:xdigit:]]{12}$' ]]; then
-          session_id=$(command env PYTHONPATH=/Users/danny/Documents/Tools/NativePeers /Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m nativepeers.antigravity resolve-name "$session_id") || return $?
+          session_id=$(command env PYTHONPATH=/Users/danny/Documents/Tools/NativePeers /Users/danny/Documents/Tools/NativePeers/.venv/bin/python -P -m nativepeers.antigravity resolve-name "$session_id") || return $?
         fi
         set -- --conversation "$session_id" "$@"
       else

@@ -91,6 +91,9 @@ class Router:
         for ref in artifact_refs:
             require(isinstance(ref,str),"PROTOCOL_ERROR","Artifact references must be opaque handles")
             Artifacts(self.journal).read(ref,caller.key,0,1)
+        if artifact_refs:
+            from .selected_context import packets
+            packets(self.journal,caller,artifact_refs)
         transport = peer["transport"]["kind"]
         with self.journal.transaction() as db:
             raced = db.execute("SELECT * FROM send_requests WHERE caller_key=? AND client_request_id=?",(caller.key,request_id)).fetchone()

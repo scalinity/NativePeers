@@ -133,7 +133,7 @@ def desired(home):
         home/'.gemini/config/hooks.json':('json','nativepeers',{
             'SessionStart':[hook('SessionStart')], 'PreInvocation':[hook('PreInvocation')],
             'PreToolUse':[{'matcher':'.*','hooks':[hook('PreToolUse')]}]}),
-        home/'.gemini/config/mcp_config.json':('mcp','nativepeers',{'command':str(PYTHON),'args':['-m','nativepeers.mcp_server','--native-caller'],
+        home/'.gemini/config/mcp_config.json':('mcp','nativepeers',{'command':str(PYTHON),'args':['-P','-m','nativepeers.mcp_server','--native-caller'],
             'env':{'PYTHONPATH':str(ROOT)}}),
         home/'.gemini/config/agents/nativepeers-analysis.md':('file',None,worker_profile('analysis')),
         home/'.gemini/config/agents/nativepeers-workspace.md':('file',None,worker_profile('workspace')),

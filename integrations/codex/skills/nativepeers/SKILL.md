@@ -19,6 +19,8 @@ Keep the originating-task label through review, `/address` and final acceptance.
 npeer context-prepare --project /absolute/repo --base BASE_COMMIT --path docs/NATIVE_REVIEW.md --path src/file.py --path tests/test_file.py --json
 ```
 
+For a small diff in large modules, add `--source-format review` and optional `--range src/file.py:START:END` for current LF line ranges. The primary contains the exact diff, selected ranges and unchanged supporting text once; full source is in the immutable recovery artifact. Grant **every** returned `context_refs` entry. Check the reported primary/recovery sizes and omitted-source bytes before dispatch; read recovery before judging an omitted branch or caller. The default `full` format remains available.
+
 Add `--untracked new_file.py --path new_file.py` for explicit new inputs. The immutable packet includes base/current selected source, real diff, dirty/staged identity and omissions. Large selections fail with their measured size: narrow the paths or explicitly choose `--max-bytes`. Binary content is tagged base64. No diff, textconv, pager or custom filter runs.
 
 Tailor `/Users/danny/Documents/Tools/NativePeers/examples/bounded-review.json`: use a fresh request ID, the exact authorized provider/model and returned `context_refs`. Keep `analysis` / `inherit-read-only`; its Claude tools are Read/Glob/Grep and the scoped facade, without Bash. The packet is readable with `artifact_read`, `text:true` and `limit:16000`; follow `next_offset` to fit native tool-output limits.

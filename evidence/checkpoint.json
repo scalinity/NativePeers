@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/lineage-desktop-reopen",
-    "code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
-    "evidence": "evidence/claude-lineage-desktop-reopen.json",
-    "source_map_sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8",
-    "status": "PASS_WITH_OPEN_ITEMS"
+    "branch": "fix/issue-16-workflow",
+    "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+    "evidence": "evidence/issue-16-workflow.json",
+    "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
+    "status": "COMBINED_SOURCE_PASS_INSTALLED_PENDING"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "8957af4",
-    "branch": "fix/lineage-desktop-reopen",
-    "code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
-    "last_verified_publication": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+    "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+    "branch": "fix/issue-16-workflow",
+    "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+    "last_verified_publication": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,45 +302,87 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/lineage-desktop-reopen",
+    "branch": "fix/issue-16-workflow",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
-    "verified_remote_code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+    "verified_remote_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+    "verified_remote_code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Desktop reopen: the np status entry restored, the footer menu removed, a slim line offering a closed pane back",
+  "stage": "issue-16-combined-candidate-checks",
   "tests_current": {
-    "mod": {
+    "focused": {
       "status": "PASS",
-      "passed": 49,
-      "command": "claude plugin test integrations/claude/mod/np",
-      "validate": "passed",
-      "tsc": "tsc --noEmit clean"
+      "tests": 25,
+      "subtests": 34
     },
-    "pane_conversation_harness": {
+    "budget_facade": {
       "status": "PASS",
-      "command": "tests/integration/claude_mod/run_pane_conversation.py",
-      "result": "opened in the pane, ✓ tool step, ✓ Completed mark, one provider label per turn, no send toast, the typed message reached the replay bridge once, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+      "tests": 30,
+      "subtests": 54
     },
-    "handback_harness": {
+    "initial_complete": {
+      "status": "FAIL",
+      "passed": 1148,
+      "failed": 2,
+      "skipped": 4,
+      "subtests": 1076,
+      "seconds": 278.32,
+      "failures": "Generated publication pointers still described predecessor source; assertions are unchanged. Functional tests passed. Final source qualification remains pending."
+    },
+    "publication_coherence": {
       "status": "PASS",
-      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
-      "result": "deliver and refuse passed on engines 2.1.314 and 2.1.309"
+      "tests": 3,
+      "scope": "Regenerated from pushed a33c8fd; original two failures preserved. Assertions unchanged."
     },
-    "startup_race_harness": {
+    "remediation_context": {
       "status": "PASS",
-      "command": "tests/integration/claude_mod/run_startup_race.py",
-      "result": {
-        "starts": 1,
-        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
-      }
+      "tests": 18,
+      "subtests": 10
     },
-    "full_suite": {
-      "status": "NOT_RUN",
-      "note": "This change touches no Python module."
+    "remediation_launcher_antigravity": {
+      "status": "PASS",
+      "tests": 23,
+      "subtests": 31
+    },
+    "helper": {
+      "status": "PASS",
+      "tests": 24,
+      "scope": "Source-only public bundle and canonical master; history preserved"
+    },
+    "complete_source": {
+      "status": "PASS",
+      "tests": 1152,
+      "subtests": 1076,
+      "skipped": 4,
+      "seconds": 270.77,
+      "scope": "Candidate source b5209d0 with regenerated source pointers; exact Python3.14.10/candidate import checked",
+      "source_commit": "b5209d0c5405c3605dfc4232231326815a79d623"
+    },
+    "facade_contract_after_fixes": {
+      "status": "PASS",
+      "tests": 12,
+      "subtests": 19
+    },
+    "combined_source": {
+      "status": "PASS",
+      "source_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
+      "scope": "Isolated combined candidate b14603f; complete offline suite; later owner diagnostic not yet included",
+      "tests": 1177,
+      "subtests": 1084,
+      "skipped": 4,
+      "seconds": 281.2
+    },
+    "final_merged_source": {
+      "status": "PASS",
+      "tests": 1178,
+      "subtests": 1084,
+      "skipped": 4,
+      "seconds": 261.94,
+      "source_commit": "62b20401967767ce43c4ad71f433a081b4bb28d0",
+      "scope": "Complete candidate after final #39 diagnostic; Lineage51 later changes only its own integration/docs/records and retains owner checks."
     }
   },
   "transports": {
@@ -349,7 +391,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T02:41:38.472262-04:00",
+  "updated_at": "2026-10-31T02:46:39.218322-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2167,6 +2209,60 @@
       }
     },
     {
+      "stage": "issue-16-workflow-source-review",
+      "updated_at": "2026-10-31T01:01:38.811562-04:00",
+      "git": {
+        "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "last_verified_publication": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-16-workflow",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "verified_remote_code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "a33c8fd973a9f714e9822fc7f8fb58985dfb09aa",
+        "evidence": "evidence/issue-16-workflow.json",
+        "source_map_sha256": "b79155145c4f49d453b39cd11b6b8b25e3172ddbbf608d452b2baed1c89f288f",
+        "status": "SOURCE_REVIEW_IN_PROGRESS"
+      }
+    },
+    {
+      "stage": "issue-16-workflow-reviewed-source",
+      "updated_at": "2026-10-31T01:35:27.209607-04:00",
+      "git": {
+        "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
+        "last_verified_publication": "b5209d0c5405c3605dfc4232231326815a79d623",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-16-workflow",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
+        "verified_remote_code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "b5209d0c5405c3605dfc4232231326815a79d623",
+        "evidence": "evidence/issue-16-workflow.json",
+        "source_map_sha256": "953cbc3fa0c67d4db3fe50567c9854f3c846f8ddc1fc577d73683acef85a014e",
+        "status": "REVIEWED_SOURCE_INSTALL_PENDING"
+      }
+    },
+    {
       "stage": "SOURCE_REVIEW_PASS_INSTALLED_NATIVE_PENDING",
       "updated_at": "2026-10-31T01:43:17.884886-04:00",
       "git": {
@@ -2326,6 +2422,33 @@
         "evidence": "evidence/issue-39-managed-activation.json",
         "source_map_sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8",
         "status": "PASS"
+      }
+    },
+    {
+      "stage": "Desktop reopen: the np status entry restored, the footer menu removed, a slim line offering a closed pane back",
+      "updated_at": "2026-10-31T02:41:38.472262-04:00",
+      "git": {
+        "base_commit": "8957af4",
+        "branch": "fix/lineage-desktop-reopen",
+        "code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+        "last_verified_publication": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/lineage-desktop-reopen",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+        "verified_remote_code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/lineage-desktop-reopen",
+        "code_commit": "b3703e7c17ec7cc3eb47d6f4233deab6ad27bd46",
+        "evidence": "evidence/claude-lineage-desktop-reopen.json",
+        "source_map_sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8",
+        "status": "PASS_WITH_OPEN_ITEMS"
       }
     }
   ],

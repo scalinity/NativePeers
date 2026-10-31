@@ -23,11 +23,72 @@ def content(raw):
     except UnicodeDecodeError:return dict(base64=base64.b64encode(raw).decode())
 
 
-def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), runtimes=(), max_bytes=262144):
+def review_packet(packet, ranges):
+    """Keep the exact diff; include current supporting source once or by explicit LF range."""
+    selected = {}
+    require(isinstance(ranges, (list, tuple)) and len(ranges) <= 128, 'PROTOCOL_ERROR', 'Select at most 128 current source ranges')
+    for value in ranges:
+        require(isinstance(value, str), 'PROTOCOL_ERROR', 'Use PATH:START:END for current source ranges')
+        try:
+            path, start, end = value.rsplit(':', 2);start, end = int(start), int(end)
+        except (ValueError, TypeError):
+            raise PeerError('PROTOCOL_ERROR', 'Use PATH:START:END for current source ranges')
+        require(path in {f['path'] for f in packet['files']} and 1 <= start <= end,
+                'PROTOCOL_ERROR', 'Ranges must select current lines in an included path')
+        selected.setdefault(path, []).append((start, end))
+    files = []
+    for item in packet['files']:
+        row = {k:v for k,v in item.items() if k not in ('base', 'current')}
+        row['versions'] = {version:dict(byte_size=len(base64.b64decode(item[version]['base64'])) if 'base64' in (item[version] or {}) else len((item[version] or {}).get('text','').encode()),
+                                       present=item[version] is not None,
+                                       encoding='base64' if 'base64' in (item[version] or {}) else 'utf-8')
+                           for version in ('base','current')}
+        current = item['current']
+        row['excerpts'] = []
+        if item['path'] in selected:
+            require(current is not None and 'text' in current, 'PROTOCOL_ERROR', 'Ranges require current UTF-8 source')
+        if current is not None and 'text' in current:
+            parts = current['text'].split('\n')
+            lines = [p+'\n' for p in parts[:-1]] + ([parts[-1]] if parts[-1] else [])
+            spans = selected.get(item['path'])
+            if spans is None and (item['base_sha256'] == item['current_sha256'] or item['untracked']):
+                spans = [(1, len(lines))] if lines else []
+            merged = []
+            for start, end in sorted(spans or []):
+                require(end <= len(lines), 'PROTOCOL_ERROR', 'Range extends beyond current source: '+item['path'])
+                if merged and start <= merged[-1][1]+1:
+                    merged[-1] = (merged[-1][0], max(end, merged[-1][1]))
+                else:merged.append((start,end))
+            for start, end in merged:
+                row['excerpts'].append(dict(version='current', start_line=start, end_line=end,
+                                            file_sha256=item['current_sha256'],
+                                            excerpt_sha256=hashlib.sha256(''.join(lines[start-1:end]).encode()).hexdigest(),
+                                            text=''.join(lines[start-1:end])))
+            row['versions']['current']['line_count'] = len(lines)
+        excerpt_bytes = sum(len(e['text'].encode()) for e in row['excerpts'])
+        row['base_same_as_current'] = item['base_sha256'] == item['current_sha256']
+        row['omitted_bytes'] = row['versions']['current']['byte_size'] - excerpt_bytes
+        if not row['base_same_as_current']:row['omitted_bytes'] += row['versions']['base']['byte_size']
+        row['omitted'] = 'Base source is in the full recovery artifact; current source outside excerpts is omitted. The exact selected Git diff is included.'
+        files.append(row)
+    selected_bytes = sum(v['byte_size'] for f in files for v in f['versions'].values())
+    excerpt_bytes = sum(len(e['text'].encode()) for f in files for e in f['excerpts'])
+    return dict(packet, representation='review', files=files,
+                source_bytes=dict(full_versions=selected_bytes, excerpts=excerpt_bytes,
+                                  omitted_source=sum(f['omitted_bytes'] for f in files),
+                                  diff='Exact Git diff is additional; source-byte counts are decoded UTF-8/binary, not tokens or serialized savings.'),
+                boundaries=dict(packet['boundaries'], full_selected_content=False,
+                                source='Explicit current LF line ranges; unchanged supporting files and untracked text appear once. Changed files otherwise have diff context only. Recover full source before judging omitted branches/callers.'))
+
+
+def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), runtimes=(), max_bytes=262144, source_format='full', ranges=()):
     require(caller.kind == 'peer' and caller.incarnation and not caller.grants.get('worker_id'),
             'APPROVAL_BLOCKED', 'Selected context requires a verified parent')
     peer = Registry(journal).verify(caller.key, caller.incarnation)
     require(type(max_bytes) is int and 0 < max_bytes <= ARTIFACT_MAX, 'PROTOCOL_ERROR', 'Packet limit must be 1 to 10485760 bytes')
+    require(source_format in ('full','review'), 'PROTOCOL_ERROR', 'Select full or review source format')
+    require(not ranges or source_format == 'review', 'PROTOCOL_ERROR', 'Source ranges require review format')
+    source_limit = ARTIFACT_MAX if source_format == 'review' else max_bytes
     require(isinstance(paths, (list, tuple)) and paths and len(paths) <= 64,
             'PROTOCOL_ERROR', 'Select 1 to 64 exact repository paths')
     paths = _safe_paths(paths)
@@ -58,7 +119,7 @@ def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), 
             require(not entry or entry.split()[0] in ('100644', '100755'), 'PROTOCOL_ERROR', 'Select regular files, not symlinks, submodules or directories')
             require(name in tracked or bool(entry) or name in untracked, 'PROTOCOL_ERROR', 'Untracked input needs an explicit --untracked selection: '+name)
             original = git('show', base_oid+':'+name) if entry else None
-            current, mode = _selected_file_bytes(path, max_bytes, metadata=True) if path.exists() or path.is_symlink() else (None, None)
+            current, mode = _selected_file_bytes(path, source_limit, metadata=True) if path.exists() or path.is_symlink() else (None, None)
             require(current is not None or original is not None, 'PROTOCOL_ERROR', 'Selected path is absent: '+name)
             files.append(dict(path=name, untracked=name not in tracked and not entry,
                               current_mode=mode,
@@ -71,7 +132,7 @@ def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), 
                 'WORKSPACE_SNAPSHOT_REQUIRED', 'Selected source changed while preparing context')
         for item in files:
             path = root/item['path']
-            now, mode = _selected_file_bytes(path, max_bytes, metadata=True) if path.exists() or path.is_symlink() else (None, None)
+            now, mode = _selected_file_bytes(path, source_limit, metadata=True) if path.exists() or path.is_symlink() else (None, None)
             require(item['current_sha256'] == (hashlib.sha256(now).hexdigest() if now is not None else None) and item['current_mode'] == mode,
                     'WORKSPACE_SNAPSHOT_REQUIRED', 'Selected content changed while preparing context')
     runtime_rows = []
@@ -86,12 +147,27 @@ def prepare(journal, caller, paths, *, project=None, base='HEAD', untracked=(), 
                   untracked='Explicit new inputs have base:null; they are outside Git diff.',
                   tools='Read through artifact_read; analysis needs no Bash or write grant.',
                   delivery='This packet records no admission, native ingestion, model acknowledgment or integration.'))
+    recovery = None
+    if source_format == 'review':
+        full = canonical(packet)
+        require(len(full) <= ARTIFACT_MAX, 'PAYLOAD_TOO_LARGE', 'Full recovery packet exceeds 10 MiB; select fewer paths', details=dict(byte_size=len(full), ceiling=ARTIFACT_MAX))
+        packet = review_packet(packet, ranges)
+        # Reserve only the fixed-length handle's bytes while checking the primary cap.
+        packet['recovery'] = dict(artifact_id='art_'+'0'*36, sha256=hashlib.sha256(full).hexdigest(), byte_size=len(full))
+        size = len(canonical(packet))
+        require(size <= max_bytes, 'PAYLOAD_TOO_LARGE', 'Selected review packet exceeds its byte limit; narrow ranges/paths or explicitly increase --max-bytes', details=dict(byte_size=size, ceiling=max_bytes, recovery_byte_size=len(full)))
+        recovery = Artifacts(journal).put(full, caller.key, media_type=MEDIA)
+        packet['recovery']['artifact_id'] = recovery
     raw = canonical(packet)
     require(len(raw) <= max_bytes, 'PAYLOAD_TOO_LARGE', 'Selected packet exceeds its byte limit; select fewer paths or explicitly increase --max-bytes', details=dict(byte_size=len(raw), ceiling=max_bytes))
     handle = Artifacts(journal).put(raw, caller.key, media_type=MEDIA)
     return dict(artifact_id=handle, sha256=hashlib.sha256(raw).hexdigest(), byte_size=len(raw),
                 source=packet['source'], paths=paths, omitted='All unselected paths and histories',
-                context_refs=[handle], next_action='Use context_refs on spawn or --artifact on send; artifact-read pages retain the complete packet')
+                source_format=source_format, recovery=packet.get('recovery'),
+                source_bytes=packet.get('source_bytes'),
+                context_refs=[handle]+([recovery] if recovery else []),
+                coverage=packet['boundaries'],
+                next_action='Grant every context_refs entry on spawn or as separate --artifact entries on send; review packets require both primary and immutable full recovery')
 
 
 def packets(journal, caller, refs):
@@ -102,6 +178,8 @@ def packets(journal, caller, refs):
             raw = _selected_file_bytes(journal.root/'artifacts'/ref, ARTIFACT_MAX)
             require(hashlib.sha256(raw).hexdigest() == meta['sha256'], 'PROTOCOL_ERROR', 'Selected context changed')
             value = json.loads(raw)
+            require(not value.get('recovery') or value['recovery']['artifact_id'] in refs,
+                    'PROTOCOL_ERROR', 'Review context requires its full recovery artifact in context_refs')
             found.append(dict(artifact_id=ref, byte_size=meta['byte_size'], source=value['source'], paths=[f['path'] for f in value['files']]))
     return found
 
