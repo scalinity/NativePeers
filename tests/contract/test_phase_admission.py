@@ -180,6 +180,10 @@ class PhaseAdmissionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(error.exception.details['worker_id'],self.live)
         self.assertIn(self.target,error.exception.details['command'])
         self.assertIn('--request-reply',error.exception.details['command'])
+        for state in ('RESERVED','RELEASING','FAILED','EXITED'):
+            with self.assertRaises(PeerError) as refused:assert_released(self.j,dict(row,state=state))
+            self.assertEqual(refused.exception.details['command'],'npeer status '+self.gid+' --json')
+            self.assertIn('cannot accept',refused.exception.details['next_action'])
 
     async def test_shutdown_after_admission_before_reply_retains_uncertainty_without_replay(self):
         admitted=asyncio.Event();enqueue=self.group.enqueue
