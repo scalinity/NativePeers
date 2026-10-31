@@ -67,6 +67,7 @@ def parser():
     q=command('context-prepare');q.add_argument('--project',type=Path);q.add_argument('--path',action='append',required=True,dest='paths')
     q.add_argument('--base',default='HEAD');q.add_argument('--untracked',action='append',default=[])
     q.add_argument('--runtime',action='append',default=[],choices=['claude','codex','antigravity','grok']);q.add_argument('--max-bytes',type=int,default=262144)
+    q.add_argument('--source-format',choices=['full','review'],default='full');q.add_argument('--range',action='append',default=[],dest='ranges',metavar='PATH:START:END')
     q=command('context-check');q.add_argument('handle');q.add_argument('--project',type=Path)
     q=command('artifact-export');q.add_argument('handle');q.add_argument('--output',type=Path,required=True)
     q=command('delta-preview');q.add_argument('worker_id');q.add_argument('--task-id')
@@ -154,7 +155,7 @@ async def dispatch(args,journal):
         return compare(journal,caller,args.handle,project=args.project)
     if name=='context-prepare':
         from .selected_context import prepare
-        return prepare(journal,caller,args.paths,project=args.project,base=args.base,untracked=args.untracked,runtimes=args.runtime,max_bytes=args.max_bytes)
+        return prepare(journal,caller,args.paths,project=args.project,base=args.base,untracked=args.untracked,runtimes=args.runtime,max_bytes=args.max_bytes,source_format=args.source_format,ranges=args.ranges)
     if name=='artifact-add':
         from .artifacts import Artifacts
         return Artifacts(journal).add_file(args.file,caller,max_bytes=args.max_bytes)

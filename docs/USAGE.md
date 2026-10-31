@@ -254,6 +254,18 @@ paths and native histories are omitted. External diff, textconv, pagers and cust
 filters never execute; selected filters are refused. Current dirty/staged content,
 file digests/modes, base/HEAD and observation time remain distinct.
 
+`--source-format review` keeps the same exact diff and file/version digests while
+omitting repeated base/current source. Use repeated `--range PATH:START:END` to
+include current LF line ranges (inclusive); overlapping ranges merge. Unchanged
+selected supporting files and explicit untracked UTF-8 inputs appear once. Changed
+files otherwise carry only the exact diff context. Binary source and omitted
+branches remain in a full immutable recovery artifact, bounded separately to
+10 MiB. Both artifacts are returned in `context_refs`; grant both, including two
+`--artifact` arguments for peer sends. Spawn rejects a primary without recovery.
+Reported primary/recovery serialized bytes and decoded excerpt/omitted source bytes
+state the coverage difference. They are not token, billing or time savings.
+`context-check` works on either artifact; the default `full` route is unchanged.
+
 Tailor [bounded-review.json](../examples/bounded-review.json), put the returned
 `context_refs` on its worker and use `spawn --check --compact --spec FILE --json`.
 The concise view reuses the normal identity, readiness and limit checks. Planned

@@ -33,7 +33,80 @@ class SelectedContextTests(unittest.IsolatedAsyncioTestCase):
 
     def packet(self,**kw):return prepare(self.j,self.caller,['a.py'],**kw)
 
-    def read(self,info):return json.loads(Artifacts(self.j).read(info['artifact_id'],self.caller.key,text=True)['text'])
+    def test_review_one_line_change_and_unchanged_support_have_exact_recovery(self):
+        import hashlib
+        text=''.join(f'value_{i}={i}\n' for i in range(10000))
+        (self.repo/'a.py').write_text(text);(self.repo/'caller.py').write_text('call(value_5000)\n')
+        git(self.repo,'add','a.py','caller.py');git(self.repo,'commit','-qm','Create large module and supporting caller')
+        changed=text.replace('value_5000=5000','value_5000=5001');(self.repo/'a.py').write_text(changed)
+        full=prepare(self.j,self.caller,['a.py','caller.py'],max_bytes=1048576)
+        compact=prepare(self.j,self.caller,['a.py','caller.py'],source_format='review',ranges=['a.py:4995:5008'],max_bytes=10000)
+        packet=self.read(compact);a,caller=packet['files']
+        self.assertLess(compact['byte_size'],full['byte_size']/10)
+        self.assertNotIn('base',a);self.assertNotIn('current',a)
+        self.assertEqual(packet['diff'],self.read(full)['diff'])
+        excerpt=a['excerpts'][0]
+        self.assertEqual((excerpt['version'],excerpt['start_line'],excerpt['end_line']),('current',4995,5008))
+        self.assertEqual(excerpt['text'],''.join(changed.splitlines(keepends=True)[4994:5008]))
+        self.assertEqual(excerpt['sha256'],hashlib.sha256(changed.encode()).hexdigest())
+        self.assertEqual(len(caller['excerpts']),1)
+        recovery=Artifacts(self.j).read(compact['recovery']['artifact_id'],self.caller.key,limit=262144,text=True)
+        # Page the full immutable object; a primary byte cap does not truncate recovery.
+        raw=recovery['text']
+        while recovery['next_offset'] is not None:
+            recovery=Artifacts(self.j).read(compact['recovery']['artifact_id'],self.caller.key,recovery['next_offset'],262144,text=True);raw+=recovery['text']
+        frozen=json.loads(raw)
+        self.assertEqual(frozen['files'][0]['base']['text'],text)
+        self.assertEqual(frozen['files'][0]['current']['text'],changed)
+        self.assertEqual(compare(self.j,self.caller,compact['artifact_id'])['changed_paths'],[])
+        self.assertFalse(packet['boundaries']['full_selected_content'])
+        self.assertEqual(compact['recovery']['byte_size'],len(raw.encode()))
+
+    def test_review_dirty_untracked_deleted_binary_and_range_errors(self):
+        (self.repo/'gone.py').write_text('deleted\n');(self.repo/'bin.dat').write_bytes(b'\x00\xff\x01')
+        git(self.repo,'add','gone.py','bin.dat');git(self.repo,'commit','-qm','Add deleted and binary inputs')
+        (self.repo/'gone.py').unlink();(self.repo/'bin.dat').write_bytes(b'\x00\xfe\x02')
+        (self.repo/'a.py').write_text('value=2\n');git(self.repo,'add','a.py');(self.repo/'a.py').write_text('value=3\n')
+        (self.repo/'new.py').write_text('new=4\n')
+        info=prepare(self.j,self.caller,['a.py','gone.py','bin.dat','new.py'],source_format='review',untracked=['new.py'])
+        packet=self.read(info);items={f['path']:f for f in packet['files']}
+        a,gone,binary,new=(items[n] for n in ['a.py','gone.py','bin.dat','new.py'])
+        self.assertIn('+value=3',packet['diff']['text']);self.assertIn('4d4d',packet['source']['selected_status_hex'])
+        self.assertFalse(gone['versions']['current']['present']);self.assertEqual(gone['excerpts'],[])
+        self.assertEqual(binary['versions']['current']['byte_size'],3);self.assertEqual(binary['versions']['current']['encoding'],'base64')
+        self.assertEqual(new['excerpts'][0]['text'],'new=4\n')
+        self.assertEqual(compare(self.j,self.caller,info['artifact_id'])['changed_paths'],[])
+        for ranges in [['a.py:0:1'],['a.py:1:200'],['gone.py:1:1'],['bin.dat:1:1'],['unselected:1:1'],['malformed']]:
+            with self.subTest(ranges=ranges),self.assertRaises(PeerError):
+                prepare(self.j,self.caller,['a.py','gone.py','bin.dat'],source_format='review',ranges=ranges)
+
+    def test_review_grants_include_full_recovery_and_no_artifacts_on_primary_limit_failure(self):
+        from nativepeers.selected_context import packets
+        info=self.packet(source_format='review')
+        with self.assertRaises(PeerError):packets(self.j,self.caller,[info['artifact_id']])
+        self.assertEqual(len(packets(self.j,self.caller,info['context_refs'])),2)
+        for ref in info['context_refs']:
+            with self.assertRaises(PeerError):Artifacts(self.j).read(ref,'other-reader',text=True)
+            Artifacts(self.j).grant(ref,self.caller.key,['other-reader'])
+            self.assertTrue(Artifacts(self.j).read(ref,'other-reader',text=True)['text'])
+        before=self.j.all('SELECT * FROM artifacts')
+        with self.assertRaises(PeerError):self.packet(source_format='review',max_bytes=8)
+        self.assertEqual(self.j.all('SELECT * FROM artifacts'),before)
+
+    def read(self,info):
+        page=Artifacts(self.j).read(info['artifact_id'],self.caller.key,text=True);text=page['text']
+        while page['next_offset'] is not None:
+            page=Artifacts(self.j).read(info['artifact_id'],self.caller.key,page['next_offset'],text=True);text+=page['text']
+        return json.loads(text)
+
+    async def test_review_format_cli_and_mcp_options_preserve_full_default(self):
+        from nativepeers.cli import parser
+        from nativepeers.mcp_server import TOOLS
+        args=parser().parse_args(['context-prepare','--path','a.py','--source-format','review','--range','a.py:1:1'])
+        self.assertEqual((args.source_format,args.ranges),('review',['a.py:1:1']))
+        self.assertEqual(parser().parse_args(['context-prepare','--path','a.py']).source_format,'full')
+        info=await Core(self.j).tool(self.caller,'context_prepare',dict(paths=['a.py'],source_format='review',ranges=['a.py:1:1']))
+        self.assertEqual(self.read(info)['files'][0]['excerpts'][0]['text'],'value=1\n')
 
     def test_committed_dirty_staged_and_untracked_are_frozen_without_index_changes(self):
         (self.repo/'a.py').write_text('value=2\n');git(self.repo,'add','a.py');(self.repo/'a.py').write_text('value=3\n')
