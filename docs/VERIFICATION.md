@@ -392,3 +392,47 @@ IMPLEMENTATION.md  615eb40eafbc5d875373c2b173bce77f450d31444543b27d56d7b6ea9cb81
 KICKOFF_PROMPT.md  18de5e0d3230bba5bab4a380108c3a8cd420d4ddc281936e4104d89138841141
 REVIEW.md          625e8ec453a673e1c616bc359cdba269741e721f685031389ddc65586d2778e1
 ```
+# Workflow improvements: installed scope, 2026-10-31
+
+[The workflow record](../evidence/issue-16-workflow.json) qualifies issues #41,
+#42 and #43, consuming the #39 owner's accepted activation result without
+transferring its workers or leases. Product PR #45 is installed at `77f32fb`.
+The complete merged Python suite passed 1,178 tests and 1,084 subtests, with four
+platform skips. Later Lineage #51 changed no NativePeers Python, launcher, schema
+or dependency bytes; its separate tests and desktop limits remain in its own
+record. The post-merge coherence, launcher and context checks passed 24 tests and
+20 subtests.
+
+Fresh installed CLI and official-SDK MCP stdio processes passed from an unrelated
+Git repository containing a shadow package and a detached worktree without a
+virtual environment. Both loaded the installed package/root/interpreter,
+preserved CWD, explicit workspace and the verified native caller, and completed
+review-context prepare/check with complete primary/full recovery reads and digest
+checks. These checks submitted no model input. Five launcher entrypoints and the
+owned Antigravity MCP/resume-name paths use Python safe-path mode; explicit
+candidate execution retains its separate source qualification.
+
+Supported default and Antigravity installation updated three owned skills and
+one owned MCP entry. Both repeat installs returned zero operations and
+`changed:false`. Ten protected raw files, owned Codex hook trust, non-owned MCP
+values, runtime approval bytes, current/previous package links and CodexForge
+source were preserved. The exact-parent/tree source transition held manager then
+runtime locks; the runtime lock lasted 4.524601 seconds. Preserved long-lived
+processes may retain cached modules; fresh-process qualification is the claim.
+
+Three useful implementation reviews and three source-transition reviews used one
+owned native Claude Sonnet 5.5 history, analysis/read-only tools and no Bash.
+All 20 actionable IDs are fixed and parent verified. The final implementation
+review has no findings; the transition's final suggestion uses its proposed
+published-tip lookup and passed the actual guarded transition. Reviewer execution
+checks remain `not_run`, separately from parent checks. The source-only cost
+helper is published in `scalinity/skills#2`, installed through the existing shared
+master, and passed 24 deterministic tests while preserving private history.
+
+The #39 owner's installed activation, once-only delivery, refusal of new work on
+an unqualified runtime, and quiet/follow-up observations retain their exact
+runtime/source scope in [its record](../evidence/issue-39-managed-activation.json).
+Physical-screen observation and universal provider certification are not claimed.
+Tracker #16 remains open: a QUIET receipt does not prove this parent's final
+visible tail, and the measured useful workflow still includes bounded manual
+recovery. No paid experiment is run solely to improve its score.

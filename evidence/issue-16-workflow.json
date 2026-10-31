@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "stage": "issue-16-combined-candidate-checks",
-  "status": "COMBINED_SOURCE_PASS_INSTALLED_PENDING",
+  "stage": "issue-16-workflow-installed-acceptance",
+  "status": "PASS_SCOPED_TRACKER16_OPEN",
   "reviewed_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
   "originating_task": "NativePeers remaining workflow improvements and issue16 acceptance",
   "issues": [
@@ -116,14 +116,32 @@
     },
     {
       "operation": "supported NativePeers install and affected installed/native routes",
-      "parent_context": "Waiting for #39 owner reviewed source/native transition interval release",
-      "status": "NOT_RUN"
+      "parent_context": "Installed77f32fb; fresh CLI/official-SDK MCP in unrelated shadow-package repo and unprovisioned worktree, original native UUID/CWD/workspace preserved; no model input. Owner39 native scopes separately consumed.",
+      "status": "PASS"
     },
     {
       "operation": "combined candidate full offline suite",
       "parent_context": "Isolated candidate b14603f; no live-state journal or vendor inference",
       "source_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
       "status": "PASS"
+    },
+    {
+      "operation": "guarded publication and protected-root source sync",
+      "status": "PASS",
+      "source_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+      "parent_context": "Exact PR45 parents/tree; manager then runtime lock; package/previous/approvals/host/CF unchanged; runtime lock4.524601s"
+    },
+    {
+      "operation": "owned default and Antigravity install with zero-operation repeats",
+      "status": "PASS",
+      "parent_context": "Three owned skills and one owned MCP entry;10 protected raw files, hook trust, non-owned MCP values and package links unchanged; no runtime approval renewal"
+    },
+    {
+      "operation": "issue39 native activation and quiet/follow-up consumption",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "status": "PASS",
+      "parent_context": "Owner01a19025 closing comment6540144142 and evidence/issue-39-managed-activation.json; unchanged relevant runtime/delivery/quiet implementation; physical screen NOT_RUN"
     }
   ],
   "context_comparison": {
@@ -264,16 +282,110 @@
       "74d732a6-1805-4883-b3c7-a8d47481d4f6"
     ],
     "final_findings": [],
-    "final_report_complete": true
+    "final_report_complete": true,
+    "transition_findings": {
+      "F201": {
+        "task_id": "61705b49-c3a1-42a1-a6bf-77ba2c89590e",
+        "severity": "warning",
+        "summary": "F201: Irreversible remote merge precedes runtime lock, second quiescence and state guard; lock timeout or a transient hook fails after merge",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F202": {
+        "task_id": "61705b49-c3a1-42a1-a6bf-77ba2c89590e",
+        "severity": "warning",
+        "summary": "F202: Merge-commit check is path-scoped and does not pin merged^1/^2 or tree, so a concurrent merge to main could be fast-forwarded in unreviewed",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F203": {
+        "task_id": "61705b49-c3a1-42a1-a6bf-77ba2c89590e",
+        "severity": "warning",
+        "summary": "F203: Preflight constructs non-read-only Journal() which runs candidate SCHEMA DDL and policy repair on the live journal",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F204": {
+        "task_id": "61705b49-c3a1-42a1-a6bf-77ba2c89590e",
+        "severity": "warning",
+        "summary": "F204: Strict equality guards include volatile host files (auth.json, config.toml, settings.json) so unrelated drift aborts apply, including after the merge",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F205": {
+        "task_id": "61705b49-c3a1-42a1-a6bf-77ba2c89590e",
+        "severity": "info",
+        "summary": "F205: Preflight omits dependency-manifest (pyproject.toml/uv.lock) and PR mergeability checks and does not record PR info",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F301": {
+        "task_id": "d86fe7e6-05e7-4fe7-b59c-716386c670eb",
+        "severity": "warning",
+        "summary": "F301: Merged-state merge_identity runs before the merge commit is fetched locally, so the documented resume/check path raises on rev-parse",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F302": {
+        "task_id": "d86fe7e6-05e7-4fe7-b59c-716386c670eb",
+        "severity": "warning",
+        "summary": "F302: base-is-ancestor-of-head is not asserted before publication; the tree-equality check (and F205 dependency comparison) can fail only after the remote merge",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F303": {
+        "task_id": "d86fe7e6-05e7-4fe7-b59c-716386c670eb",
+        "severity": "info",
+        "summary": "F303: runtime.lock now spans network merge/fetch, deferring Codex native-queue deliveries (5 s timeout); record lock hold time and require unchanged request IDs for retries",
+        "status": "fixed and parent verified; independently rechecked",
+        "parent_check": "5 deterministic guard checks plus exact base-ancestry/unchanged dependency checks",
+        "scope": "Coupled private transition-script fixes; source publication excludes captures; final script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+        "independent_recheck": "102a4292-fe11-46a8-bf1c-a1971d163650"
+      },
+      "F401": {
+        "task_id": "102a4292-fe11-46a8-bf1c-a1971d163650",
+        "severity": "info",
+        "summary": "F401: Post-merge identity relies on gh pr view returning MERGED with mergeCommit immediately; poll briefly or derive the published tip from git ls-remote so a lagging read does not strand the sync",
+        "status": "fixed and parent verified",
+        "parent_check": "Use reviewer-proposed ls-remote published tip; full exact-parent/tree guard still refuses concurrent main;5 deterministic tests and real guarded transition follow",
+        "scope": "Private transition script SHA 8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1"
+      }
+    },
+    "transition_tasks": [
+      "61705b49-c3a1-42a1-a6bf-77ba2c89590e",
+      "d86fe7e6-05e7-4fe7-b59c-716386c670eb",
+      "102a4292-fe11-46a8-bf1c-a1971d163650"
+    ],
+    "transition_verdict": "All9 transition IDs fixed and parent verified; all prior Critical/Warning fixes independently rechecked. Final F401 applies reviewer-proposed published-tip lookup and actual guarded transition passes. No extra paid formatting or score-only input.",
+    "total_actionable_ids": 20,
+    "total_native_rounds": 72,
+    "total_worker_seconds": 759.6143400669098,
+    "writer_release": "All six tasks completed. Owned idle grace explicitly cancelled after consumption; fresh captured-process/output EOF closure verified, then finite supervisor exit observed before source sync."
   },
   "limits": [
     "All11 independent actionable IDs are fixed and parent verified; the final native check is a genuine no-findings report with complete correspondence. Reviewer tests remain not_run.",
-    "Issue39 owner publicly released the shared interval after installed native qualification; its record retains exact source/runtime coverage. Lineage work remains owned separately.",
-    "Three real review inputs used one native Claude history,55 reported native turns and430.1686888 seconds of worker durations. Captured CLI command intervals are a subset; parent thinking/active effort, billing and wire bytes are unknown.",
+    "Installed fresh processes are qualified; preserved long-lived imported Python modules are not hot reloaded. Independent Lineage51 and its open desktop observation remain with its owner.",
+    "Six useful native review inputs used one exact owned Claude history,72 native turns and759.614340s. Only recorded CLI intervals are measured; broader parent time and counterfactual net savings are unknown.",
     "Initial stale source-pointer failures, oversized definite pre-input recheck refusal, wrong merge guard and parent setup/fixture mistakes are retained with agent attribution. No accepted/uncertain operation was replayed.",
-    "Publication excludes private history and local installation/validation records; canonical local main intentionally retains private history ancestry and is not pushed."
+    "Publication excludes private history and local installation/validation records; canonical local main intentionally retains private history ancestry and is not pushed.",
+    "Tracker16 remains OPEN: current-parent visible final-tail and a fully friction-free useful measured workflow are not established by a QUIET receipt or these source/SDK checks. No new experiment is launched solely for a score.",
+    "Current doctor reports selected Codex/Grok approved and Claude/Antigravity supported updates. No provider approval was rewritten to force acceptance; this is not universal provider/UI certification."
   ],
-  "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+  "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -385,7 +497,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
-  "updated_at": "2026-10-31T02:46:39.218322-04:00",
+  "updated_at": "2026-10-31T02:59:56.439226-04:00",
   "helper_publication": {
     "pr": "https://github.com/scalinity/skills/pull/2",
     "merged": "e05c43fb5c5a6ee1f36acb3d14568896b363e342",
@@ -401,5 +513,43 @@
     "record": "evidence/issue-39-managed-activation.json",
     "source_commit": "8957af49b99e501799bddc00418457fd6dbb35d3",
     "scope": "Owner-reviewed installed localhost interval, exact retained executables, CLI/MCP status and quiet/follow-up native history. No physical screen or external network instrumentation."
+  },
+  "installed": {
+    "source_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+    "package": "rust-v0.166.0-1f1ad134e048-1793413989628396000",
+    "codex_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+    "source_activation": "PASS",
+    "source_script_sha256": "8ec60b9b1054ec4ae0b387fa3b77662fd652440c4765d44c8d66071ec7dc04e1",
+    "source_lock_seconds": 4.524601415992947,
+    "cli_sdk_mcp_cases": [
+      "unrelated Git repo with shadow package",
+      "detached unprovisioned worktree"
+    ],
+    "context_scope": "Actual installed CLI/SDK MCP review prepare/check parity, source/CWD/native identity and complete granted primary/full immutable recovery SHA checks; zero model inputs",
+    "repeat_default_operations": 0,
+    "repeat_antigravity_operations": 0,
+    "nonowned_preserved": true,
+    "rollback": "Source66db477 retained in Git; no package/approval change. Owned skill snapshots and supported installer targeted backups remain private; conditional source revert and matching owned-block rollback only, no reset or whole-receipt restoration."
+  },
+  "cost_capture": {
+    "metrics": {
+      "setup_tool_calls": 17,
+      "result_bytes": 1981649,
+      "orchestration_seconds": 48.43910093964308,
+      "native_rounds": 72
+    },
+    "measurements": {
+      "observation_window_seconds": 7461.36565314731,
+      "command_calls": 71,
+      "command_interval_union_seconds": 144.77422548167755,
+      "wait_interval_union_seconds": 96.33512454203446,
+      "worker_duration_sum_seconds": 759.6143400669098,
+      "worker_interval_union_seconds": 759.6143400669098,
+      "observed_parent_effort_seconds": null,
+      "unmeasured_parent_effort_events": 0,
+      "interventions": 9,
+      "excluded_events": 2
+    },
+    "coverage": "Opt-in command subset only;9 retrospectively extracted untimed interventions. Parent effort/thinking, billing, wire/MCP transport bytes and net time saved unknown. Source tests/builds and parent mistakes are not NativePeers tool defects."
   }
 }

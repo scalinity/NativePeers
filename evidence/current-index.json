@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "b7e31c1ec1c7ba1b237018664e268f6c87f11dcf",
+  "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
   "reviewed_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
   "publication_branch": "fix/issue-16-workflow",
-  "updated_at": "2026-10-31T02:46:39.218322-04:00",
+  "updated_at": "2026-10-31T02:59:56.439226-04:00",
   "current_record": "evidence/issue-16-workflow.json",
   "file_classes": {
     "product": {
@@ -432,14 +432,32 @@
     },
     {
       "operation": "supported NativePeers install and affected installed/native routes",
-      "parent_context": "Waiting for #39 owner reviewed source/native transition interval release",
-      "status": "NOT_RUN"
+      "parent_context": "Installed77f32fb; fresh CLI/official-SDK MCP in unrelated shadow-package repo and unprovisioned worktree, original native UUID/CWD/workspace preserved; no model input. Owner39 native scopes separately consumed.",
+      "status": "PASS"
     },
     {
       "operation": "combined candidate full offline suite",
       "parent_context": "Isolated candidate b14603f; no live-state journal or vendor inference",
       "source_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
       "status": "PASS"
+    },
+    {
+      "operation": "guarded publication and protected-root source sync",
+      "status": "PASS",
+      "source_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+      "parent_context": "Exact PR45 parents/tree; manager then runtime lock; package/previous/approvals/host/CF unchanged; runtime lock4.524601s"
+    },
+    {
+      "operation": "owned default and Antigravity install with zero-operation repeats",
+      "status": "PASS",
+      "parent_context": "Three owned skills and one owned MCP entry;10 protected raw files, hook trust, non-owned MCP values and package links unchanged; no runtime approval renewal"
+    },
+    {
+      "operation": "issue39 native activation and quiet/follow-up consumption",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "status": "PASS",
+      "parent_context": "Owner01a19025 closing comment6540144142 and evidence/issue-39-managed-activation.json; unchanged relevant runtime/delivery/quiet implementation; physical screen NOT_RUN"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
