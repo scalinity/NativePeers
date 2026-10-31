@@ -84,7 +84,10 @@ def result_view(service, status, policy, handle, *, results=True):
                               result_artifact_id=row['result_artifact_id'], details_omitted=True,
                               findings_count=(row.get('findings') or {}).get('count'),
                               checks_count=(row.get('checks') or {}).get('count'),
-                              failure_present=bool(row.get('failure')))
+                              unavailable=bool(row.get('unavailable')),
+                              failure=dict(code=clip(row['failure']['code'], 96) if row['failure'].get('code') else None,
+                                           may_have_received=row['failure'].get('may_have_received'),
+                                           details_omitted=True) if row.get('failure') else None)
                           for row in rows]
     return value
 

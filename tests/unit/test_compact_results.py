@@ -134,3 +134,12 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         row=value['tasks'][0];self.assertTrue(row['details_omitted'])
         self.assertEqual(row['findings_count'],1);self.assertTrue(row['result_artifact_id'])
         self.assertEqual(row['state'],'COMPLETED')
+        failed=self.add('FAILED',native_id='猫'*4000,error=dict(code='BUDGET_EXHAUSTED',may_have_received=True))
+        missing=self.add();artifact=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(missing,))['result_artifact_id']
+        (self.j.root/'artifacts'/artifact).unlink()
+        value=self.service.result(self.caller,self.group,compact=True)
+        self.assertLessEqual(len(json.dumps(dict(data=value,ok=True,schema_version=1,error=None,request_id=new_id())).encode()),4096)
+        self.assertEqual(value['tasks'][0]['task_id'],failed)
+        self.assertEqual(value['tasks'][0]['failure']['code'],'BUDGET_EXHAUSTED')
+        self.assertTrue(value['tasks'][0]['failure']['may_have_received'])
+        self.assertTrue(value['tasks'][1]['unavailable'])
