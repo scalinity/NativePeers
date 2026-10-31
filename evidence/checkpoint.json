@@ -216,7 +216,7 @@
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
     "branch": "fix/issue-7-silent-close",
-    "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "code_commit": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
     "evidence": "evidence/issue-7-silent-queue.json",
     "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
     "status": "PARTIAL"
@@ -234,8 +234,8 @@
   "git": {
     "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
     "branch": "fix/issue-7-silent-close",
-    "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
-    "last_verified_publication": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "code_commit": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
+    "last_verified_publication": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -305,8 +305,8 @@
     "branch": "fix/issue-7-silent-close",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
-    "verified_remote_code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "verified_remote_commit": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
+    "verified_remote_code_commit": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
@@ -373,7 +373,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T20:58:33.011518-04:00",
+  "updated_at": "2026-10-30T21:07:23.049807-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1675,6 +1675,33 @@
         "evidence": "evidence/np-eval-compact-followup.json",
         "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
         "status": "SOURCE_AND_SCOPED_NATIVE_PASS_INSTALLED_COMPACT_PENDING"
+      }
+    },
+    {
+      "stage": "issue-7-silent-queue-source",
+      "updated_at": "2026-10-30T20:58:33.011518-04:00",
+      "git": {
+        "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+        "branch": "fix/issue-7-silent-close",
+        "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "last_verified_publication": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-7-silent-close",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "verified_remote_code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-7-silent-close",
+        "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "evidence": "evidence/issue-7-silent-queue.json",
+        "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
+        "status": "PARTIAL"
       }
     }
   ],

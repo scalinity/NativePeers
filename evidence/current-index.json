@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+  "code_commit": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
   "reviewed_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
   "publication_branch": "fix/issue-7-silent-close",
-  "updated_at": "2026-10-30T20:58:33.011518-04:00",
+  "updated_at": "2026-10-30T21:07:23.049807-04:00",
   "current_record": "evidence/issue-7-silent-queue.json",
   "file_classes": {
     "product": {
@@ -163,12 +163,12 @@
         "integrations/claude/mod/np/tests/ui.test.tsx": "a288c757f64f04edacce09617462016931ed6a2546596162f8fec4bbb6ae3c54",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "integrations/claude/mod/np/types/index.d.ts": "e0ec78fa56885d8e106bad6f60ebb00b04b4c6b56a2c007a8d41dcc7973827db",
-        "integrations/claude/skills/nativepeers/SKILL.md": "3d25493c739eceadeb7e62420551120a921961ef26c1dc531d8fd6a0f3590757",
+        "integrations/claude/skills/nativepeers/SKILL.md": "06ac428b743793c6cdeaccff87dc583635ae10ba39f1ae24ed724106b8e623d9",
         "integrations/codex/skills/nativepeers/SKILL.md": "3d25493c739eceadeb7e62420551120a921961ef26c1dc531d8fd6a0f3590757",
         "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
       "file_count": 33,
-      "sha256": "2a662be1203a8a403a7c7069e5e7f693aa4eee1c3a275a6c48ae700973fd939b"
+      "sha256": "6489d689cd2a70f8de76a8fc241b4bb269fe7fa7156da7ca5daf255975fa3d99"
     },
     "tests": {
       "files": {

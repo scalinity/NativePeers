@@ -144,7 +144,7 @@
     "The separate normal-update package0.166-4a9 is currently selected/approved; it does not include the issue7 native consume extension.",
     "Source and probe failures remain retained separately."
   ],
-  "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+  "code_commit": "36e9c4123192fa1e9fffc4c920695de3c6fa5f6a",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -256,7 +256,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
-  "updated_at": "2026-10-30T20:58:33.011518-04:00",
+  "updated_at": "2026-10-30T21:07:23.049807-04:00",
   "failed_experiments": [
     {
       "status": "FAIL",
