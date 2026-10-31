@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "stage": "INSTALLED_SCOPED_ACCEPTANCE_PASS_PENDING_PARALLEL_ISSUE28_HANDOFF",
-  "status": "PARTIAL",
+  "stage": "INSTALLED_WORKFLOW_ACCEPTANCE_PASS_EVALUATION_RECORDED",
+  "status": "PASS_WITH_TRACKER_OPEN",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "originating_task": "NativePeers review/remediation/follow-up workflow (#28, #32, #33, #34)",
   "issues": [
@@ -83,6 +83,15 @@
       "seconds": 288.96,
       "command": "python -m pytest -q",
       "source_scope": "bfc423d product/integration/test classes; source evidence current; all earlier attempts retained."
+    },
+    "merged_default_suite": {
+      "status": "PASS",
+      "passed": 1144,
+      "skipped": 4,
+      "subtests": 1060,
+      "seconds": 274.92,
+      "command": "python -m pytest -q",
+      "scope": "Merged workflow qualification branch plus unchanged lineage PR37 source; per-operation native claims remain separately attributed."
     }
   },
   "reviews": [
@@ -286,8 +295,8 @@
     },
     {
       "operation": "current-selected-Codex-live-followup-owner-qualification",
-      "parent_context": "Separate issue28 qualification lane; consumed reviewed result remains pending",
-      "status": "NOT_RUN",
+      "parent_context": "Parallel owned fixture on bb45eb7; parent read-only hash/contract/receipt/native-history/ANSI-through-EOF validation; no new inference.",
+      "status": "PASS",
       "provider": "codex",
       "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
     },
@@ -333,7 +342,7 @@
     "Pi, routers, Mac network/security settings and CodexForge are untouched."
   ],
   "rollback": "Revert this task delta through normal Git publication and run the supported owned installer; preserve later configuration, approvals, leases and histories.",
-  "code_commit": "b7ad9f8b0d62ee5cd5f251a3c0d60559d97bc4ed",
+  "code_commit": "34651fdab5d7d4f907655f9e1833e75196ef3b85",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -445,7 +454,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
-  "updated_at": "2026-10-30T22:52:22.486097-04:00",
+  "updated_at": "2026-10-30T23:00:37.599722-04:00",
   "disposable_privileged_packet": {
     "status": "PASS",
     "scope": "Exact toy before/after bytes plus verified validation/recovery SHA256, imported through existing immutable artifact API; no host execution.",
@@ -668,15 +677,15 @@
     "status": "PASS",
     "sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
     "scope": "Existing activation owner qualified package, private worker app-server, native hooks, queue ingestion, exact resume and44-frame standalone quiet TUI; passive installed doctor now matches its exact approval. No activation/approval was changed by this lane.",
-    "live_followup_on_this_runtime": "NOT_RUN by this lane; awaiting the separate issue28 qualification owner report.",
-    "coordination": "Earlier f8fdfef0-b537-43de-824b-d027d90d2325 was definitely refused before input. Fresh update8e49a61c-6ddf-4acf-9023-41a38e4e8e22 is ACCEPTED_QUEUED, not yet a processing/qualification claim."
+    "live_followup_on_this_runtime": "PASS: parallel owner fixture group088e6ef6-ae53-4d44-afda-dbfef90ffb12, independently consumed from durable archive with no new input/inference.",
+    "coordination": "Fresh update8e49a61c-6ddf-4acf-9023-41a38e4e8e22 is exact native INGESTED and REPLY_RECORDED; earlier definite pre-input refusal remains retained."
   },
   "evaluation": {
-    "id": "np-eval-2026-10-30-nativepeers-review-followup-01a18fab",
+    "id": "np-eval-2026-10-30-nativepeers-review-followup-01a18fab-r2",
     "score": 87.0,
     "coverage_percent": 100,
-    "report": "/Users/danny/Documents/Codez/Claude/skills/skills/engineering/np-eval/history/reports/np-eval-2026-10-30-nativepeers-review-followup-01a18fab.md",
-    "scope": "Observed session, unchanged fixed rubric; prior94.5/100 and64.5/100 records preserved. Unknown total orchestration/net-time and preparation failures prevent full-score claims."
+    "report": "/Users/danny/Documents/Codez/Claude/skills/skills/engineering/np-eval/history/reports/np-eval-2026-10-30-nativepeers-review-followup-01a18fab-r2.md",
+    "scope": "Observed session, fixed rubric87/100 at100% coverage. Revision consumes current-runtime acceptance; initial record and every failed/refused attempt remain preserved. Unknown total orchestration/net-time prevents full-score claims."
   },
   "concurrent_qualification": {
     "pull_request": 37,
@@ -692,6 +701,58 @@
       "command": ".venv/bin/python -m pytest -q tests",
       "note": "Run on 873dbf8 (from df3df5a). No failure that the last merged lineage run lacked, by test id; one evidence-pointer check from that run now passes. The rest are failures shared with main plus the evidence-pointer check that publication regenerates. cea937b changes no Python file."
     },
-    "combined_default_suite": "PENDING current merged-tree standard unit/contract run."
-  }
+    "combined_default_suite": "PASS:1144 tests/1060 subtests/four skips,274.92s."
+  },
+  "current_runtime_followup": {
+    "status": "PASS",
+    "attribution": "Parent read-only consumption of the explicitly shared parallel #28 result; no new native fixture or inference.",
+    "owner_source": "bb45eb7",
+    "delivery_source_unchanged_from": "1125fa7",
+    "runtime": {
+      "path": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-1f1ad134e048-1793413989628396000/bin/codex",
+      "sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "size": 309974008
+    },
+    "group_id": "088e6ef6-ae53-4d44-afda-dbfef90ffb12",
+    "worker_id": "16b7e3ce-368c-4c3d-88bc-645a0a8c1dce",
+    "native_worker_id": "01a18fe5-008f-76a1-954a-57e6b65dac16",
+    "parent_native_id": "01a18fe4-fa79-71a2-8966-952837b81158",
+    "receipt_stages": {
+      "3": [
+        "ACCEPTED_QUEUED",
+        "INGESTED"
+      ],
+      "4": [
+        "RETAINED"
+      ]
+    },
+    "checks": [
+      "exact reviewed probe hash",
+      "four task/phase/model/history contract",
+      "accepted+ingested phase3 and retained-only phase4",
+      "all captured process/output closure and PTY EOF",
+      "four actual post-final frame oracle checks",
+      "complete ANSI SHA256 and exact saved-cell replay",
+      "no further bytes through PTY EOF",
+      "native-history silence"
+    ],
+    "sampled_frame_after_phase4": false,
+    "post_phase4_UI_basis": "Unchanged complete byte stream positively drained through EOF; no later frame invented.",
+    "hashes": {
+      "qualification.json": "afd23cbff05e15cdf655611987b65f8157283f953565aaa4d7bc9065aad9f24f",
+      "independent-frame-audit.json": "c049a5c033e44342e81ba11592a9ffb9b8b5152158f8d4c41b1e99612d65850b",
+      "independent-eof-frame-audit.json": "7ac5bae3a3c254b3de050e499d73047f3f2142068b00697061beea6d55bf39ef"
+    },
+    "ansi_sha256": "fbde0aff8400b47f1610e264a09f3d416ef43cab1ec968d0339c12872195469a",
+    "archive": "/Users/danny/Documents/Tools/NativePeers/.worktrees/.archives/issue28-qualification-20261030-01a18fca",
+    "preservation_sha256": "03d0f1c804ee8c07e4dbdacc02dc25eda242fccc42cf75a53f5f85fd539903ee",
+    "preservation_file_count": 5751
+  },
+  "acceptance_satisfied_issues": [
+    28,
+    32,
+    33,
+    34
+  ],
+  "open_tracker": 16
 }

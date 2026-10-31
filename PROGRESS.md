@@ -6,10 +6,10 @@
 - [x] Complete final source and installed suites: each 1,144 tests / 1,060 subtests / four skips; supported three-skill installation and zero-operation repeat; configuration/approval preservation; installed CLI/authenticated MCP facade parity.
 - [x] Pass one bounded installed Codex fixture with four distinct tasks in one native history. Runtime `467acfa3…2a1ac10`: phase 2 wait, phase 3 one accepted+ingested push, phase 4 retained-only QUIET, preserved input receipts and proved process/output closure. Localhost Responses/TUI, not external paid inference.
 - [x] Append the unchanged fixed-rubric evaluation: **87/100 at 100% coverage**. Prior 94.5/100 and 64.5/100 records remain unchanged; preparation failures and unknown net-time costs remain explicit.
-- [ ] #28 final disposition: the parallel qualification lane is preserved. Its existing activation owner has qualified current Codex `6e9a7f0d…2025f71`; this lane's exact follow-up case covers predecessor `467acfa3…2a1ac10`. The reviewed parallel feature result remains pending. Fresh coordination is queue-admitted, with processing unconfirmed.
+- [x] Consume the parallel #28 current-runtime fixture on `6e9a7f0d…2025f71`: exact four-phase contract, retained-only QUIET, native-history silence and complete 24,290-byte ANSI replay through proved PTY EOF. Its owner closed #28; no competing fixture was launched.
 - [ ] #16 remains open; full-score workflow anchors and total orchestration/net-time observations are unmet.
 
-[Scoped verification and every finding disposition](evidence/review-followup-workflow.json). Existing #7 qualification retains its own scope. No Pi, network, authentication, CodexForge or unrelated lineage change was performed. Current runtime/activation work belongs to its existing owner; no approval was copied or widened here.
+[Scoped verification and every finding disposition](evidence/review-followup-workflow.json). Existing #7 qualification retains its own scope. No Pi, network, authentication, CodexForge or unrelated lineage change was performed. Current runtime approval was completed by its existing owner. All four scoped issues have satisfied acceptance; no approval was copied or widened here.
 
 ---
 
