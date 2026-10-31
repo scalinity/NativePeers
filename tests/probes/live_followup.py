@@ -97,6 +97,21 @@ class Model(q.Model):
         return super().answer(payload)
 
 
+def validate_result(result,token,receipt_stages):
+    """Fail qualification on wrong phase/model/history or unproved receipts."""
+    records=sorted(result['results'],key=lambda row:row['completion_phase'])
+    routes=sorted(result['notifications'],key=lambda row:row['completion_generation'])
+    if [r['completion_phase'] for r in records]!=[1,2,3,4] or [r['completion_generation'] for r in routes]!=[1,2,3,4] or [r['state'] for r in routes]!=['UNCLAIMED','NOTIFICATION_UNKNOWN','PUSH_ACCEPTED','RETAINED']:
+        raise RuntimeError('Phase attribution or delivery dispositions differ')
+    if any(r['status']!='completed' or r['model_requested']!=q.MODEL or r['model_observed']!=q.MODEL or r['summary']!=f'NPF_RESULT_{n}_{token}' for n,r in enumerate(records,1)):
+        raise RuntimeError('Native task identity/model/result differs')
+    native_ids={r['worker']['native_session_id'] for r in records}
+    if len(native_ids)!=1 or len({r['task_id'] for r in records})!=4:raise RuntimeError('Follow-ups did not use four tasks in the same owned native history')
+    if set(receipt_stages)!={3,4} or not {'ACCEPTED_QUEUED','INGESTED'}<=set(receipt_stages[3]) or set(receipt_stages[4])!={'RETAINED'}:
+        raise RuntimeError('Push/quiet completion receipt evidence differs')
+    return next(iter(native_ids))
+
+
 def run_fixture(source,run,binary,approval,resources,report):
     import pyte
     from nativepeers.journal import Journal
@@ -125,21 +140,23 @@ def run_fixture(source,run,binary,approval,resources,report):
     until(lambda:(run/'entered-4').exists(),pump=pump);(run/'release-4').touch()
     until(lambda:(run/'collected.json').exists(),pump=pump)
     data=json.loads((run/'collected.json').read_text());result=data['result'];group=result['group_id']
-    if [r['completion_phase'] for r in result['results']]!=[1,2,3,4] or [n['state'] for n in result['notifications']]!=['UNCLAIMED','NOTIFICATION_UNKNOWN','PUSH_ACCEPTED','RETAINED']:
-        raise RuntimeError('Phase attribution or delivery dispositions differ')
-    if any(r['status']!='completed' or r['model_requested']!=q.MODEL or r['model_observed']!=q.MODEL or r['summary']!=f'NPF_RESULT_{n}_{token}' for n,r in enumerate(result['results'],1)):
-        raise RuntimeError('Native task identity/model/result differs')
-    native_ids={r['worker']['native_session_id'] for r in result['results']}
-    if len(native_ids)!=1:raise RuntimeError('Follow-ups did not use the same owned native history')
     with closing(Journal(state,read_only=True)) as journal:
-        messages=journal.all("SELECT m.* FROM messages m JOIN send_requests s USING(message_id) JOIN completion_routes c ON c.delivery_id=s.client_request_id WHERE c.group_id=?",(group,))
+        messages=journal.all("SELECT m.*,c.completion_generation FROM messages m JOIN send_requests s USING(message_id) JOIN completion_routes c ON c.delivery_id=s.client_request_id WHERE c.group_id=?",(group,))
         if len(messages)!=2:raise RuntimeError('Duplicate or missing phase notices')
-        stages={json.loads(m['payload_json'])['body']['text']:journal.all('SELECT stage FROM receipts WHERE message_id=?',(m['message_id'],)) for m in messages}
+        stages={m['completion_generation']:[r['stage'] for r in journal.all('SELECT stage FROM receipts WHERE message_id=?',(m['message_id'],))] for m in messages}
+        for message in messages:
+            envelope=json.loads(message['payload_json'])
+            if envelope['from'].get('kind')!='controller' or envelope['from'].get('group_id')!=group or envelope['to']['peer_key']!=who['key']:
+                raise RuntimeError('Completion notice has wrong native scope')
+    native_id=validate_result(result,token,stages)
+    for phase in (3,4):
+        original=json.loads((run/f'sent-{phase}.json').read_text())['receipts']
+        if any(receipt not in data[f'status{phase}']['receipts'] for receipt in original):raise RuntimeError('Original accepted input receipt changed')
     if not any('NPF_RESULT_4_'+token in str(m) for m in data['retained']):raise RuntimeError('Quiet result was not readable')
     end=time.monotonic()+5;until(lambda:time.monotonic()>=end,pump=pump)
     if model.parent_requests!=before:raise RuntimeError('Quiet follow-up caused parent model work')
     base.require_native_silence(run/'codex-home',who['native_session_id'],answer,['NPF_RESULT_4_'+token])
-    report.update(identity=who,group_id=group,native_worker_id=next(iter(native_ids)),worker_id=result['workers'][0]['worker_id'],tasks=result['tasks'],notifications=result['notifications'],receipt_stages=stages,parent_requests=model.parent_requests,results=data,external_model_inputs='NOT_INSTRUMENTED; localhost fixture configured')
+    report.update(identity=who,group_id=group,native_worker_id=native_id,worker_id=result['workers'][0]['worker_id'],tasks=result['tasks'],notifications=result['notifications'],receipt_stages=stages,parent_requests=model.parent_requests,results=data,external_model_inputs='NOT_INSTRUMENTED; localhost fixture configured')
     until(lambda:json.loads((state/'groups'/group/'owner.json').read_text()).get('released') is True,pump=pump)
 
 
