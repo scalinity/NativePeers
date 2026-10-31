@@ -488,6 +488,28 @@ class TakeoverTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(path.exists())  # A closed listener leaves its file behind: stale, so reclaimed.
         self.assertEqual(claim_free(path), path);self.assertFalse(path.exists())
 
+    async def test_a_bridge_that_loses_the_socket_never_records_over_the_holders_manifest(self):
+        import socket as sockets
+        path = socket_path('session-2', root=self.root)
+        holder = sockets.socket(sockets.AF_UNIX);holder.bind(str(path));holder.listen()
+        recorded = []
+        backend = type('Backend', (), {'record_manifest': lambda _, p: recorded.append(p), 'hello': lambda _: {}})()
+        try:
+            with self.assertRaises(PeerError) as error:await Bridge(backend, path, out=io.StringIO()).run()
+        finally:
+            holder.close()
+        self.assertEqual((error.exception.code, recorded), ('BRIDGE_RUNNING', []))
+
+    def test_each_bridge_process_keeps_its_own_manifest_and_records_nothing_once_released(self):
+        from nativepeers.bridge_backend import NativeBackend
+        j = Journal(self.root / 'state');self.addCleanup(j.close)
+        own = manifest_path(j, self.root / 'b-x.sock');self.assertEqual(own.name, f'b-x.{os.getpid()}.json')
+        successor = own.with_name('b-x.1.json');successor.write_text('{}')
+        backend = NativeBackend.__new__(NativeBackend);backend.manifest, backend.released, backend.socket = own, False, None
+        own.write_text('{}');backend.release_manifest()
+        self.assertFalse(own.exists());self.assertTrue(successor.exists())
+        backend.record_manifest(self.root / 'b-x.sock');self.assertFalse(own.exists())  # A late rebind after release writes nothing.
+
     async def test_a_bridge_started_supervisor_is_reparented_and_a_cli_one_stays_a_child(self):
         from nativepeers import delegation
         fake = self.root / 'python';fake.write_text('#!/bin/sh\nsleep 0.3\nprintf \'{"ppid": %s}\' "$PPID" > "$NPEER_HOME/groups/$4/ppid.json"\n'

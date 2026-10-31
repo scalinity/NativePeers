@@ -9,6 +9,8 @@ export type NpBridge = {
   since: number
   steer?: Partial<Record<NpProvider, boolean>>
   socket?: string
+  // A nonsecret id unique to each bridge launch, across module instances: an exit or restore names its own launch.
+  launch?: string
 }
 
 export type NpWorker = {
