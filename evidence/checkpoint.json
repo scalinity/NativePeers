@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/issue-7-silent-close",
-    "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
-    "evidence": "evidence/issue-7-silent-queue.json",
-    "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
-    "status": "PARTIAL"
+    "branch": "fix/lineage-desktop-race",
+    "code_commit": "7049f4df3e3499a9f275db1f23090919aa0d1144",
+    "evidence": "evidence/claude-lineage-startup-race.json",
+    "source_map_sha256": "837810e53cd4892f9f9032b12ed197df57f429c069909d357d969f65f6eed9eb",
+    "status": "PASS_WITH_OPEN_ITEMS"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
-    "branch": "fix/issue-7-silent-close",
-    "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
-    "last_verified_publication": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "base_commit": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+    "branch": "fix/lineage-desktop-race",
+    "code_commit": "7049f4df3e3499a9f275db1f23090919aa0d1144",
+    "last_verified_publication": "7049f4df3e3499a9f275db1f23090919aa0d1144",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,69 +302,46 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/issue-7-silent-close",
+    "branch": "fix/lineage-desktop-race",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
-    "verified_remote_code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+    "verified_remote_commit": "7049f4df3e3499a9f275db1f23090919aa0d1144",
+    "verified_remote_code_commit": "7049f4df3e3499a9f275db1f23090919aa0d1144",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-7-silent-queue-source",
+  "stage": "One np bridge start per session when a command arrives during startup (desktop first message); race-free bridge state and manifests",
   "tests_current": {
+    "full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1092,
+      "failed": 32,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Run on the branch merged with main 4146b47. The identical failure set, by test id, as the run before the merge and the merged desktop-host run: failures shared with main plus the two evidence-pointer checks this publication regenerates."
+    },
     "focused": {
       "status": "PASS",
-      "tests": 72,
-      "subtests": 114,
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q tests/unit/test_notification_policy.py tests/unit/test_notification_guard_hooks.py tests/unit/test_completion_delivery.py tests/unit/test_hook_identity.py tests/unit/test_owned_caller_identity.py tests/unit/test_install.py tests/unit/test_install_home.py tests/unit/test_readiness.py",
-      "private_artifact": "evidence/scratch/issue-7/focused-source-final.log"
+      "passed": 57,
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_bridge_backend.py tests/contract/test_bridge_inputs.py tests/unit/test_desktop_host.py tests/unit/test_claude_mod_install.py"
     },
-    "full": {
-      "status": "NOT_RUN",
-      "command": "/Users/danny/Documents/Tools/NativePeers/.venv/bin/python -m pytest -q",
-      "scope": "Newly merged desktop and selected-context source plus notification fix and reviewed oracles"
-    },
-    "installed_native": {
-      "status": "NOT_RUN"
-    },
-    "standalone_tui": {
-      "status": "NOT_RUN"
-    },
-    "probe_offline": {
+    "mod": {
       "status": "PASS",
-      "tests": 24,
-      "subtests": 29,
-      "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
-      "scope": "45 focused guard/probe tests, including24 standalone probe tests;29 subtests in the combined run"
+      "passed": 21,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
     },
-    "genuine_worker_probe_offline": {
+    "startup_race_harness": {
       "status": "PASS",
-      "tests": 42,
-      "subtests": 53,
-      "private_artifact": "evidence/scratch/issue-7/genuine-probe-stale-screen-fix.log"
-    },
-    "registered_owner_guard": {
-      "status": "PASS",
-      "tests": 31,
-      "subtests": 30,
-      "private_artifact": "evidence/scratch/issue-7/old-owner-boundary-focused.log"
-    },
-    "legacy_owner_probe_offline": {
-      "status": "PASS",
-      "tests": 45,
-      "private_artifact": "evidence/scratch/issue-7/probe-termination-cleanup.log"
-    },
-    "probe_cleanup_regressions": {
-      "status": "PASS",
-      "tests": 91,
-      "subtests": 57,
-      "private_artifact": "evidence/scratch/issue-7/reopen-audit-sequencing-focused-02.log"
-    },
-    "combined_preinstall_tui": {
-      "status": "PASS",
-      "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
-      "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "bridge: ready",
+        "tripwire_hits": 0
+      },
+      "control": "The same run on the pre-fix mod (f3bcc2e): starts 2, doctor bridge: down (A bridge already serves this Claude session)."
     }
   },
   "transports": {
@@ -373,7 +350,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-30T20:58:33.011518-04:00",
+  "updated_at": "2026-10-30T21:17:34.770474-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -1675,6 +1652,33 @@
         "evidence": "evidence/np-eval-compact-followup.json",
         "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
         "status": "SOURCE_AND_SCOPED_NATIVE_PASS_INSTALLED_COMPACT_PENDING"
+      }
+    },
+    {
+      "stage": "issue-7-silent-queue-source",
+      "updated_at": "2026-10-30T20:58:33.011518-04:00",
+      "git": {
+        "base_commit": "0ee014f5a640bb12e2b5a0408450c5dc89a99fd6",
+        "branch": "fix/issue-7-silent-close",
+        "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "last_verified_publication": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-7-silent-close",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "verified_remote_code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-7-silent-close",
+        "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
+        "evidence": "evidence/issue-7-silent-queue.json",
+        "source_map_sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182",
+        "status": "PARTIAL"
       }
     }
   ],

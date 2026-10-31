@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-30T20:58:33.011518-04:00",
+  "at": "2026-10-30T21:17:34.770474-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,8 +60,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "1047400c99a31deb1485a9068f64d324e6cf550a",
-  "current_verification": "evidence/issue-7-silent-queue.json",
+  "code_commit": "7049f4df3e3499a9f275db1f23090919aa0d1144",
+  "current_verification": "evidence/claude-lineage-startup-race.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
     "acceptance": "evidence/acceptance.json extensions.models_antigravity_implementation",
@@ -154,8 +154,8 @@
     "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
     "nativepeers/antigravity_install.py": "0c25419fbc6f33932c9e6f4381f9d8662c40ea801035381837e1266b9e933b39",
     "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
-    "nativepeers/bridge.py": "d1b5da96e70a37b81855d0c7a9584f37a6ea94e63b7b3e988fb148d5d8790bb2",
-    "nativepeers/bridge_backend.py": "50d866e5658390b8b92777f148961dd549825b24a2c6702c10309a8a28eeeaf8",
+    "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
+    "nativepeers/bridge_backend.py": "9272dd2145f68acdbaed890963fdb6e7e262685829d70f8e99ccbc059a9096f3",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
     "nativepeers/caller.py": "3856e3f24fe0cf192e018061da5b71ecdb638264082a1cf5ede4fd0982e7ab70",
     "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
