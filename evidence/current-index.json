@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "9928ac0574ddf7f99d0e40e53f4808de0b78b891",
-  "reviewed_commit": "4b98ea7ec9defa2ddc18fbdeccf63821d76e9e1c",
-  "publication_branch": "fix/lineage-desktop-host",
-  "updated_at": "2026-10-30T20:17:09.214964-04:00",
-  "current_record": "evidence/claude-lineage-desktop.json",
+  "code_commit": "58a70cb0b13fa4b785cfba98e561f7aaff47749f",
+  "reviewed_commit": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+  "publication_branch": "fix/np-eval-unavailable-attribution",
+  "updated_at": "2026-10-30T20:44:00.484976-04:00",
+  "current_record": "evidence/np-eval-compact-followup.json",
   "file_classes": {
     "product": {
       "files": {
@@ -42,7 +42,7 @@
         "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
         "nativepeers/cleanup.py": "76c2bc590e3678c962bfdd9d0f33d5f3104fa530a9c5de27cd4997daa2d67ab6",
         "nativepeers/cli.py": "846ace3e231d781a9f295f677ec79df741775d2898ce940bf455a3841ad3a5c8",
-        "nativepeers/compact.py": "7cde09b437445bab44726f73b33a33f93a5e2ae163465f861fd3790cfebb0122",
+        "nativepeers/compact.py": "1d9800e30b9fdccf7f24b1055689099012d9f39d5002007666193d03d736e7fe",
         "nativepeers/compatibility.py": "33dee50c11e571c1b706fac2359bcade975839dde602169007abf9bb4856e6b0",
         "nativepeers/completion_delivery.py": "05bc672aabac4b8f22004bf0674bbc08036e9edb5a0e7d55438e4974e4bc5e5f",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "2b2db81f0131a677ae08741b97d48b61215983b81eb0b3f0b9d686dc8ef57064"
+      "sha256": "5b7b9dcf795cde9a5ed1c6fd46292e671addb5de597ae931e095da0706a78182"
     },
     "launchers": {
       "files": {
@@ -332,7 +332,7 @@
         "tests/unit/test_cleanup.py": "2502ced5ab2dfbb0a249eee5f6b1c8e5e46181d570316338b5212777263d4c0a",
         "tests/unit/test_cli.py": "714c78223d74e78e1b34af864eaebb6de5000140e4206ddd5853b73a1045f2c6",
         "tests/unit/test_combined_input_budget.py": "9a3e007f1361b0261fdc4a4803a00d65130a226ee47aca37f40545bab3239371",
-        "tests/unit/test_compact_results.py": "c73823d04eb6e6729118046d3b23580e3050bbac44bda2daba6d4c9a901f8639",
+        "tests/unit/test_compact_results.py": "84aebe1a766285bcb78e512fd1a7118f5404cfea7f698a5aac288c448239168f",
         "tests/unit/test_compatibility_receipts.py": "ec2ccb673bd6205ddf7969a280eb27a57a0ec958d219494930a403c1339c2bcc",
         "tests/unit/test_completion_context.py": "dcae6135efda27dc832057c9a5a8b0741b1e1332dbe456f54e43785ee3296040",
         "tests/unit/test_completion_delivery.py": "7bbb57c5af32becc7026986fe98005ce9f8559f605f7b164e3dbdc4176dc15bc",
@@ -408,18 +408,40 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 234,
-      "sha256": "b6e2ec7694c2e6f2ad20ee05d6b6af0d27ce6e6c9fe61fd611eeda0b179239a8"
+      "sha256": "56593300e4002b8650758b59f9f386f67312c952b81ac3a0e176885031c6edad"
     }
   },
   "operation_checks": [
     {
       "provider": "claude",
-      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
-      "operation": "desktop-host-first-use-approval",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "installed-prepared-context-analysis-review",
       "status": "PASS",
-      "parent_context": "scratch state root; the installed Claude desktop engine 2.1.309; no model input",
-      "scope": "Bridge-side first-use approval on a scratch state root: private bundle copy, codesign requirement (team Q6L2SF6YDW, identifier com.anthropic.claude-code) and sandboxed --version passed in 2.37 s; the exact-hash approval check the hook uses took 0.10 s; no temporary copy left",
-      "source_head": "c7a5d4d"
+      "source_head": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+      "packet_head": "bf3f49b95b28ab2288ed1a47dc7eca19765c9462",
+      "task_id": "3ef0375d-b659-4689-9bcc-01d5e1f297a0",
+      "parent_context": "Registered Codex parent 01a18f12-3a10-7c93-8389-29e17a3526f9 on retained immutable 0646bf9 runtime; not a fresh selected-763 parent",
+      "scope": "Installed CLI admitted wall7200/logical40/native64; one logical input consumed; analysis profile without Bash. Review completed from real diff, current test source only partially read. No claim of full packet coverage or quiet-tail acceptance."
+    },
+    {
+      "provider": "grok",
+      "runtime_sha256": "5c8a688251bf61e35370b828b6a353b0a20fcc3f64000de8a91d426039f29cec",
+      "operation": "installed-native-round-budget",
+      "status": "PASS",
+      "source_head": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+      "task_id": "0c792e81-1b96-44f0-8311-9c96efad43fb",
+      "native_id": "e68d7ecf-f0ca-4006-a839-bdc20090df31",
+      "parent_context": "Registered Codex parent; installed npeer CLI; selected Grok1.0.70",
+      "scope": "Deliberate cap fixture retained FAILED/BUDGET_EXHAUSTED: native cap1, observed1, logical allowance40, wall7200. Requested/observed grok-4.7; native usage separately names engine_model grok-4.7-build. Input may have executed; no replay or report-only resume. Account quota UNKNOWN."
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "installed-native-failure-phase-rendering",
+      "status": "PASS",
+      "source_head": "f3bcc2e841eb204a293cc4322a7fe5f3587f4ccd",
+      "parent_context": "Read-only rendering of exact owned retained native budget tasks",
+      "scope": "Failed cap1/observed2 phase1, separately completed phase2 and failed phase3 remain attributed. Configured cap, observed count, may_have_received and read-only recovery action appear. This is not new queue ingestion or visible final-tail acceptance."
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
