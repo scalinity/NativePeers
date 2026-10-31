@@ -132,9 +132,14 @@ def operation_readiness(journal):
         if provider=='codex':
             from .registry import Registry
             from .completion_delivery import readiness as inbox_readiness
-            inbox['scope']='Selected runtime for new work; live inboxes use their exact recipient executable'
-            inbox['recipients']=[inbox_readiness(journal,p['handle']) for p in Registry(journal).list('codex')
-                                 if p['transport'].get('kind')=='codex-native-queue']
+            recipients=[inbox_readiness(journal,p['handle']) for p in Registry(journal).list('codex')
+                        if p['transport'].get('kind')=='codex-native-queue']
+            ready=sum(p['ready'] for p in recipients)
+            state='READY' if recipients and ready==len(recipients) else 'PARTIAL' if ready else 'CAPABILITY_MISMATCH' if recipients else 'NO_LIVE_RECIPIENTS'
+            inbox=dict(state=state,reason=f'{ready} of {len(recipients)} live recipient routes are ready',
+                       scope='Exact live recipient executables; selected-build readiness is separate',
+                       next_action='Use the exact recipient route; inspect blocked recipient details before retry.' if recipients else 'Resolve a live registered recipient.',
+                       recipients=recipients,selected_worker_runtime=dict(broad))
         checks=integrations['providers'].get(provider,{}).get('checks',[{'state':'UNKNOWN'}])
         results.append(dict(provider=provider,selected_home=str(home),
             configuration_layout='implicit ~/.claude.json' if provider=='claude' and not config_override else 'explicit native provider home',

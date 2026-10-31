@@ -36,8 +36,9 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.j = Journal(self.root/'state'); self.addCleanup(self.j.close)
         atomic_json(self.j.root/'compat/runtime.json', {'providers': {
             'claude': fingerprint(self.claude), 'codex': fingerprint(self.codex)}})
+        self.enterContext(patch('nativepeers.registry.matches',return_value=True))
         peer = Registry(self.j).register('codex', self.home/'.codex', new_id(), 'parent',
-            identity(os.getpid()).json(), str(self.root), {'kind':'codex-native-queue'},
+            dict(identity(os.getpid()).json(),executable=str(self.codex)), str(self.root), {'kind':'codex-native-queue'},
             owner_kind='test', policy={'profiles':['analysis']})
         self.caller = Caller('peer', peer['handle'], peer['incarnation_id'])
         self.enterContext(patch('pathlib.Path.home', return_value=self.home))
@@ -203,3 +204,26 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
             await group.notify()
         self.assertEqual(calls,[calls[0],calls[0]])
         self.assertEqual(self.j.one('SELECT COUNT(*) n FROM attempts')['n'],1)
+
+    async def test_approved_recipient_readiness_survives_unqualified_selection_and_doctor_is_passive(self):
+        from nativepeers.readiness import operation_readiness
+        old=self.root/'immutable-approved';old.write_bytes(self.codex.read_bytes())
+        atomic_json(self.j.root/'compat/runtime.json',{'providers':{'claude':fingerprint(self.claude),'codex':fingerprint(old)}})
+        peer=Registry(self.j).register('codex',self.home/'.codex',new_id(),'approved parent',
+              dict(identity(os.getpid()).json(),executable=str(old)),self.root,{'kind':'codex-native-queue'},policy={'profiles':['analysis']})
+        caller=Caller('peer',peer['handle'],peer['incarnation_id'])
+        self.codex.write_text('new selected unqualified runtime')
+        route=readiness(self.j,caller.key)
+        self.assertTrue(route['ready']);self.assertEqual(route['runtime'],fingerprint(old))
+        with patch('nativepeers.cli.bind_caller',return_value=caller):
+            who=await dispatch(parser().parse_args(['whoami']),self.j)
+        self.assertTrue(who['inbox_readiness']['ready'])
+        plan=await Core(self.j).tool(caller,'worker_spawn',{'spec':{'workers':[{'provider':'claude','title':'useful','task':'fixture'}]},'check':True})
+        self.assertTrue(plan['push_ready'])
+        before=self.j.db.total_changes;receipt=(self.j.root/'compat/runtime.json').read_bytes()
+        row=next(r for r in operation_readiness(self.j) if r['provider']=='codex')
+        self.assertEqual(row['operations']['inbox']['state'],'READY')
+        self.assertEqual(row['operations']['worker_turns']['state'],'CAPABILITY_MISMATCH')
+        self.assertEqual(row['operations']['inbox']['selected_worker_runtime']['state'],'CAPABILITY_MISMATCH')
+        self.assertEqual(self.j.db.total_changes,before)
+        self.assertEqual((self.j.root/'compat/runtime.json').read_bytes(),receipt)

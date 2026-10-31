@@ -256,7 +256,7 @@ def diagnose(journal, executables=None):
         'codex':Path.home()/'.local/share/codex-mcp-manager/current/bin/codex',
         'antigravity':Path.home()/'.local/bin/agy','grok':grok_executable()}
     operations={'claude':['interactive inbox','structured worker turns'],
-        'codex':['native queue','private worker app-server'],
+        'codex':['new recipient queue helpers','private worker app-server'],
         'antigravity':['native hook inbox','streaming worker turns'],
         'grok':['native hook inbox','streaming worker turns']}
     results=[]

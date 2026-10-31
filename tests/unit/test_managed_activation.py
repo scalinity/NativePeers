@@ -217,3 +217,14 @@ class ManagedActivationTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(PeerError):retain_codex_recipients(self.j,apply=True,expected=plan['expected'])
         revoke(self.j,'codex',self.prior['sha256'])
         self.assertEqual(retain_codex_recipients(self.j)['additions'],[])
+
+    def test_retention_does_not_capture_dead_unmatched_or_nonqueue_peers(self):
+        for number,transport,binary in ((1,'codex-native-queue',self.old),(2,'owned-worker',self.old),(3,'codex-native-queue',self.new)):
+            owner=dict(identity(os.getpid()).json(),pid=100000+number,executable=str(binary))
+            Registry(self.j).register('codex',self.root/'.codex',new_id(),'excluded '+str(number),owner,self.root,{'kind':transport})
+        self.select(self.new)
+        with patch('nativepeers.registry.matches',side_effect=lambda o:o['pid']!=100001):self.approve()
+        history=json.loads((self.j.root/'compat/runtime.json').read_text())['retained']['codex'][self.prior['sha256']]
+        self.assertEqual(history['peers'],[{k:self.peer[k] for k in ('handle','incarnation_id','owner')}])
+        unregistered=dict(self.peer,handle='np1_'+'a'*64)
+        with self.assertRaises(PeerError):codex_inbox_runtime(self.j,unregistered)
