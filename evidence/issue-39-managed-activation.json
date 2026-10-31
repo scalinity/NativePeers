@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "originating_task": "NativePeers #39 managed activation delivery",
-  "stage": "COMBINED_SOURCE_FINAL_RECHECK_PENDING_INSTALLED_NOT_RUN",
+  "stage": "FINAL_CALLER_RECHECK_INSTALLED_NOT_RUN",
   "status": "PENDING",
-  "reviewed_commit": "1589db49b28c3fe7e84bda9e8f5a474a0b232ead",
+  "reviewed_commit": "364bd53",
   "design": "Exact registered recipient runtime and queue helper; selected runtime remains mandatory for new workers. Definitely unsubmitted runtime failures reuse immutable admission; quiet retention and accepted/uncertain attempts remain inert.",
   "tests": {
     "focused_runtime": {
@@ -83,6 +83,23 @@
       "tests": 66,
       "subtests": 9,
       "source_commit": "1589db49b28c3fe7e84bda9e8f5a474a0b232ead"
+    },
+    "combined_before_caller": {
+      "status": "PASS",
+      "passed": 1164,
+      "skipped": 4,
+      "subtests": 1063,
+      "seconds": 267.87,
+      "source_commit": "b161775",
+      "scope": "Before P002 caller boundary; not final installed acceptance."
+    },
+    "retained_caller_boundary": {
+      "status": "PASS",
+      "passed": 55,
+      "subtests": 20,
+      "seconds": 12.94,
+      "source_commit": "364bd53",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_managed_activation.py tests/unit/test_notification_guard_hooks.py tests/unit/test_desktop_host.py tests/unit/test_grok_diagnostics.py tests/contract/test_controller_boundaries.py"
     }
   },
   "operation_checks": [
@@ -105,7 +122,7 @@
     "Final substantive independent recheck and installed native acceptance pending. Existing controllers keep loaded Python until normal release. Tracker #16 remains open. Initial setup totals unknown; no net time-savings claim."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "7dd0c70b10b812b8d6f6a6dfd42dc830105f20e0",
+  "code_commit": "364bd5378197fdfff45c658bb70dbe7c1878d1f9",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -134,7 +151,7 @@
     "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
     "nativepeers/bridge_backend.py": "9272dd2145f68acdbaed890963fdb6e7e262685829d70f8e99ccbc059a9096f3",
     "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
-    "nativepeers/caller.py": "3856e3f24fe0cf192e018061da5b71ecdb638264082a1cf5ede4fd0982e7ab70",
+    "nativepeers/caller.py": "feac9c8288133ddb8f8c2b0ed82a89142ea187b249463522ee51bd4fade7a2b6",
     "nativepeers/change_preview.py": "67549b70d827ab253edf8f4162512f6fefb436589d2fe9cb6dc09caf6ac295ec",
     "nativepeers/claude_mod_check.py": "10a72fc1f0bae52928d86c5585420e3fe69115303c7a9ce0abc6daf97f794a71",
     "nativepeers/claude_mod_install.py": "ccab3cfd4abe468c45d79a93690d23a3ca87cabafa1e6c795e7a11c5d2501f67",
@@ -216,8 +233,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "source_map_sha256": "3c25b3928128c9b74ecb71c8b1674881160b2c08ca5a360e8d6470330660c6d4",
-  "updated_at": "2026-10-31T01:05:11.414743-04:00",
+  "source_map_sha256": "5aefde91c974dfe1b1516a2a69890f36f85fba4148cd2e9164d948b5a0ce2ac2",
+  "updated_at": "2026-10-31T01:15:43.765525-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
@@ -290,46 +307,71 @@
       ],
       [
         "F101",
-        "fixed pending independent recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "private driver",
         "Exact clean worktree pin before NativePeers import; negative invalid-head check refuses before production access."
       ],
       [
         "F102",
-        "fixed pending independent recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "private driver",
         "Read-only migration preflight before publication; exact merged-head resume; preflight02 CHECKED after observed base drift."
       ],
       [
         "F103",
-        "fixed pending independent recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "1589db4 / b15f4f4",
         "Precise first-import/quiet synchronization scope and no forced facade restart."
       ],
       [
         "F104",
-        "fixed pending independent recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "ff9b81f",
         "Per-grant fingerprint and retained exact worker identity across two relocations."
       ],
       [
         "F105",
-        "fixed pending independent recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "68e880a",
         "No reservation before failed verification, exactly one after immutable retry."
       ],
       [
         "F106",
-        "fixed pending independent recheck",
+        "fixed and independently accepted as read; parent checks verified",
         "ff9b81f",
         "Only exact selected candidate defers; abandoned unselected runtime terminal."
+      ],
+      [
+        "F201",
+        "fixed pending final recheck",
+        "private transition script",
+        "Exact merge commit and remote ancestry; real remote-advance rehearsal PASS"
+      ],
+      [
+        "F202",
+        "fixed pending final recheck",
+        "private transition script",
+        "Explicit CF expected base"
+      ],
+      [
+        "F203",
+        "fixed pending final recheck",
+        "private transition script",
+        "Interpreter flags and relative interpreter samples PASS"
+      ],
+      [
+        "P002",
+        "fixed pending final recheck",
+        "21a3d9c / 364bd53",
+        "Qualified retained native caller boundaries; nearer unregistered writer remains refused"
       ]
     ],
-    "final_recheck_task": "389ef792-c7d2-40e0-8f19-753270867f35",
-    "status": "FINAL_RECHECK_PENDING",
+    "final_recheck_task": "5ad170f1-7142-4672-8679-187ddd764838",
+    "status": "FINAL_CALLER_TRANSITION_RECHECK_PENDING",
     "reviewer_tests": "NOT_RUN; parent checks separately attributed",
     "second_task": "35b864f1-c7e0-4253-a4eb-46be3dea23a6",
-    "second_result": "Fixed source accepted; F101-F106 remained on the proposed driver/last edge cases."
+    "second_result": "Fixed source accepted; F101-F106 remained on the proposed driver/last edge cases.",
+    "third_task": "389ef792-c7d2-40e0-8f19-753270867f35"
   },
   "concurrent_base": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
   "scoped_predecessors": [
