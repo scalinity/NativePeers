@@ -128,10 +128,17 @@ def operation_readiness(journal):
         broad={'state':'APPROVED' if item['state']=='PASS' else item['state'],
                'runtime':item['current'],'approved_runtime':item['expected'],'scope':item['verification_scope']}
         broad.update({key:item[key] for key in ('compatibility_state','reason','next_action','native_acceptance') if key in item})
+        inbox=dict(broad)
+        if provider=='codex':
+            from .registry import Registry
+            from .completion_delivery import readiness as inbox_readiness
+            inbox['scope']='Selected runtime for new work; live inboxes use their exact recipient executable'
+            inbox['recipients']=[inbox_readiness(journal,p['handle']) for p in Registry(journal).list('codex')
+                                 if p['transport'].get('kind')=='codex-native-queue']
         checks=integrations['providers'].get(provider,{}).get('checks',[{'state':'UNKNOWN'}])
         results.append(dict(provider=provider,selected_home=str(home),
             configuration_layout='implicit ~/.claude.json' if provider=='claude' and not config_override else 'explicit native provider home',
-            operations={'quota':quota,'worker_turns':dict(broad),'inbox':dict(broad),
+            operations={'quota':quota,'worker_turns':dict(broad),'inbox':inbox,
                         'mcp':{'state':'UNKNOWN','reason':'A bound native caller and effective native tool inventory are required; static definitions alone are insufficient.'}},
             integration_states=sorted({c['state'] for c in checks}),native_acceptance='Only the source/runtime and operation named by each acceptance record are covered.'))
     return results

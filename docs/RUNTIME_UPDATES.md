@@ -73,3 +73,27 @@ The public CLI surfaces are documented in the [Claude CLI reference](https://cod
 ## Managed Codex quiet queue qualification
 
 Issue #7 qualifies `/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000/bin/codex` (SHA-256 `467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10`) through normal CodexForge assembly, guarded selection and expected-old worker/inbox approval. Fresh standalone TUI qualification covers44 mixed frames, exact resume, reopen and permitted controls; three actual native worker/controller phases separately cover active push and quiet suppression. Quota metadata has its own check and is not used as worker/inbox approval. Existing immutable leases remain pinned; new work selects current. Commands, exact source scope, preserved predecessor and guarded rollback are in [verification](VERIFICATION.md).
+
+## Managed activation and live recipients
+
+Managed Codex qualification can require the candidate selected for real hook ancestry.
+Selection and approval remain distinct. New worker launches verify the selected build;
+an unqualified selected build remains refused before model input. Its next action is to
+wait for the CodexForge activation owner and retry the unchanged request, never to apply
+an approval as an ordinary sender.
+
+A live Codex inbox uses its registered owner's exact executable for both verification
+and queue launch. The NativePeers runtime lock covers fresh verification through helper
+creation, so a changed selection cannot redirect the helper. Each queue receipt names
+the executed fingerprint. Guarded approval replacement retains the old exact runtime
+only for live recipient handle/incarnation/owner records observed at that transition,
+beside existing verified worker leases. A later incarnation, modified/missing executable
+or revoked approval cannot borrow that permission. No selected-runtime fallback exists.
+
+A definitely unsubmitted Codex runtime refusal uses `ADMISSION_DEFERRED`. Retry the
+original command with identical target, body, options and client request ID after
+qualification. It reuses the original message/attempt and expiry, checks the original
+recipient incarnation, and delivers once. This is caller-driven recovery, not a new
+polling service. Accepted/uncertain attempts remain inert. Quiet-policy `RETAINED`
+remains permanently unsubmitted and is never replayed. Status exposes the original
+runtime cause; doctor separates selected-build readiness from live recipient routes.

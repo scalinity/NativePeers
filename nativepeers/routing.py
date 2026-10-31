@@ -166,6 +166,12 @@ class Router:
         elif isinstance(exception, PeerError):
             error = exception
             state = exception.code
+            if exception.code=='CAPABILITY_MISMATCH':
+                attempt=self.journal.one('SELECT transport FROM attempts WHERE attempt_id=?',(attempt_id,))
+                if attempt and attempt['transport']=='codex-native-queue':
+                    state='ADMISSION_DEFERRED'
+                    error=PeerError(state,'Codex inbox admission has not started; retry the unchanged client request ID after runtime qualification',
+                                    details=dict(exception.details or {},cause=exception.json(),retryable=True))
         else:
             state = 'ADMISSION_DEFERRED'
             error = PeerError(state, 'Native admission has not started; retry the same client request ID', details={'cause':type(exception).__name__})

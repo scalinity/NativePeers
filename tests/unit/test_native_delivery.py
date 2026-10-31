@@ -4,6 +4,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from nativepeers.adapters.native_delivery import codex_queue
 from nativepeers.errors import PeerError
@@ -30,9 +31,9 @@ class QueueHelperTests(unittest.IsolatedAsyncioTestCase):
                 executable.write_text('#!/bin/sh\nexit 1\n')
                 executable.chmod(0o755)
                 peer={'home':str(home/'.codex'),'peer_key':{'native_session_id':new_id()}}
-                with patch('nativepeers.adapters.native_delivery.Path.home',return_value=home),patch('nativepeers.adapters.native_delivery.asyncio.create_subprocess_exec',side_effect=harmless_helper),patch('nativepeers.adapters.native_delivery.asyncio.wait_for',side_effect=fast_wait),patch('nativepeers.adapters.native_delivery.QUEUE_STOP_GRACE',.05,create=True):
+                with patch('nativepeers.compatibility.codex_inbox_runtime',return_value={'path':str(executable)}),patch('nativepeers.adapters.native_delivery.Path.home',return_value=home),patch('nativepeers.adapters.native_delivery.asyncio.create_subprocess_exec',side_effect=harmless_helper),patch('nativepeers.adapters.native_delivery.asyncio.wait_for',side_effect=fast_wait),patch('nativepeers.adapters.native_delivery.QUEUE_STOP_GRACE',.05,create=True):
                     message={'from':{'kind':'peer','peer_key':'fixture'},'body':{'text':'non-model'},'message_id':new_id(),'exchange_id':new_id()}
-                    task=asyncio.create_task(codex_queue(peer,message))
+                    task=asyncio.create_task(codex_queue(peer,message,journal=SimpleNamespace(root=home)))
                     readiness=asyncio.create_task(ready.wait())
                     done,_=await asyncio.wait({task,readiness},timeout=3,return_when=asyncio.FIRST_COMPLETED)
                     if task in done:

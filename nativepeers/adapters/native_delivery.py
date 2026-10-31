@@ -9,7 +9,7 @@ import stat
 import signal
 
 from ..errors import PeerError, require
-from ..files import canonical
+from ..files import async_advisory_lock, canonical
 from ..launch import launch_environment
 from ..models import PEER_FRAME, new_id
 from ..process import identity,signal_owned
@@ -28,14 +28,16 @@ async def stop_queue_writer(process,owner):
             raise PeerError('DELIVERY_UNKNOWN','Queue helper cleanup could not be confirmed; reconcile the owned attempt',may_have_received=True) from None
 
 
-async def codex_queue(peer, message):
-    executable = (Path.home()/".local/share/codex-mcp-manager/current/bin/codex").resolve(strict=True)
+async def codex_queue(peer, message, *, journal):
     env = launch_environment("codex")
     env["CODEX_HOME"] = peer["home"]
-    process = await asyncio.create_subprocess_exec(str(executable), "queue", "--thread",
-        peer["peer_key"]["native_session_id"], "--message", render(message),
-        env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True)
+    from ..compatibility import codex_inbox_runtime
+    async with async_advisory_lock(journal.root/'locks/runtime.lock'):
+        runtime=codex_inbox_runtime(journal,peer)
+        process = await asyncio.create_subprocess_exec(runtime["path"], "queue", "--thread",
+            peer["peer_key"]["native_session_id"], "--message", render(message),
+            env=env, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE, start_new_session=True, close_fds=True)
     try:owner=identity(process.pid).json()
     except ProcessLookupError:owner=None
     try:
@@ -55,7 +57,7 @@ async def codex_queue(peer, message):
         raise PeerError("DELIVERY_UNKNOWN", "Native queue outcome is unconfirmed", may_have_received=True,
                         details={"exit_code":process.returncode, "diagnostic":stderr.decode(errors="replace")[:1024]})
     return dict(stage="ACCEPTED_QUEUED", external_submission_id=match[1].decode(),
-                native_expiry_enforced=False, evidence_kind="native-queue-admission")
+                native_expiry_enforced=False, evidence_kind="native-queue-admission", runtime=runtime)
 
 
 def socket_endpoint(peer):

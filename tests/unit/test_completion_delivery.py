@@ -97,9 +97,9 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
             with patch('nativepeers.core.Core',return_value=core):await group.notify(generation)
         status=Core(self.j).delegation.status(self.caller,group_id)
         routes=status['notifications']
-        self.assertEqual([r['state'] for r in routes],['RETAINED','RETAINED','HELD'])
-        self.assertEqual([r['delivery']['state'] for r in routes],['CAPABILITY_MISMATCH','REJECTED','HELD'])
-        self.assertEqual(routes[0]['delivery']['error']['message'],'exact fixture mismatch')
+        self.assertEqual([r['state'] for r in routes],['UNCLAIMED','RETAINED','HELD'])
+        self.assertEqual([r['delivery']['state'] for r in routes],['ADMISSION_DEFERRED','REJECTED','HELD'])
+        self.assertEqual(routes[0]['delivery']['error']['details']['cause']['message'],'exact fixture mismatch')
         self.assertEqual(routes[1]['delivery']['error']['code'],'PROVIDER_POLICY_REFUSED')
         result=Core(self.j).delegation.result(self.caller,group_id)
         self.assertEqual(result['notifications'],routes); self.assertTrue(result['results'])

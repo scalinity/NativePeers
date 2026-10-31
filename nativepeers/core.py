@@ -19,12 +19,15 @@ class Core:
         for provider,kind in [('claude','claude-inbox'),('codex','codex-native-queue'),('grok','grok-native-hook')]:
             adapter=self.router.adapters[kind]
             async def checked(peer,message,provider=provider,adapter=adapter):
-                if provider=='grok':
+                if provider=='codex':
+                    from .compatibility import codex_inbox_runtime
+                    codex_inbox_runtime(journal,peer)
+                elif provider=='grok':
                     from .grok import executable as selected_grok
                     executable=selected_grok()
                 else:
                     executable=Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
-                verify(journal,provider,executable)
+                if provider!='codex':verify(journal,provider,executable)
                 test=journal.root/'test-budget.json'
                 if test.exists() and message['from']['kind']=='peer':
                     from .budget import LiveBudget
@@ -33,6 +36,7 @@ class Core:
                     except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
                     budget.admit(reservation)
                     journal.event(message['message_id'],'live-peer-reservation',{'reservation':reservation,'native_id':peer['peer_key']['native_session_id']})
+                if provider=='codex':return await adapter(peer,message,journal=journal)
                 return await adapter(peer,message)
             self.router.adapters[kind]=checked
         async def owned(peer,message):
