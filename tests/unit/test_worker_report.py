@@ -73,7 +73,41 @@ class WorkerReportTests(unittest.TestCase):
             self.assertEqual(findings,[]);self.assertTrue(any('Invalid findings entry' in line for line in limits))
             self.assertTrue(any('correspondence incomplete' in line for line in limits))
         for value in ({},{'findings':[]},{'findings':[],'tests_run':None}):
-            self.assertTrue(extract(self.report(value))[2])
+            self.assertTrue(extract('## Code Review: missing required arrays\n'+self.report(value))[2])
+
+    def test_prefaced_and_missing_headers_cannot_disable_correspondence(self):
+        item=dict(severity='info',summary='F001: Suggestion',file='fixture.py',line=1)
+        valid=self.review([item])
+        self.assertEqual(extract('A preface.\n'+valid)[2],[])
+        mismatched=self.review([item],[dict(item,summary='F002: Different')])
+        for text in ('A preface.\n'+mismatched,valid.replace('## Code Review:','## code review:'),valid.replace('## Code Review:','Plain heading:')):
+            self.assertTrue(any('correspondence incomplete' in line for line in extract(text)[2]))
+
+    def test_markdown_fix_blocks_do_not_fabricate_readable_items(self):
+        item=dict(severity='critical',summary='F001: Patch markdown',file='fixture.md',line=1)
+        valid=self.review([item])
+        patch='\n   - Risk: input 1,2 follows subtraction and returns -1 instead of 3.\n   - Fix:\n```markdown\n### Warnings (Should Fix)\n1. **[F002] Example only** - example.md:9\n```\n'
+        valid=valid.replace('### 🟡 Warnings',patch+'### 🟡 Warnings')
+        self.assertEqual(extract(valid)[2],[])
+        # A fenced item cannot supply a missing real readable ID.
+        forged=valid.replace('1. **[F001] Title** - fixture.md:1','None.').replace('[F002] Example only** - example.md:9','[F001] Example only** - fixture.md:1')
+        self.assertTrue(any('correspondence incomplete' in line for line in extract(forged)[2]))
+
+    def test_correspondence_includes_locations_and_retains_overflow(self):
+        item=dict(severity='info',summary='F001: Suggestion',file='fixture.py',line=1)
+        for structured in ([dict(item,file='other.py')],[dict(item,line=2)],[dict(severity='info',summary=item['summary'])]):
+            self.assertTrue(any('correspondence incomplete' in line for line in extract(self.review([item],structured))[2]))
+        items=[dict(item,summary=f'F{i:03}: Suggestion') for i in range(1,22)]
+        findings,checks,limits=extract(self.review(items))
+        self.assertEqual(findings,[]);self.assertIn('Invalid findings list; provider final text retained.',limits)
+
+    def test_generic_optional_reports_remain_optional(self):
+        from nativepeers.worker_report import report_incomplete
+        for value in ({},{'findings':[dict(severity='info',summary='ordinary implementation observation')]},{'tests_run':[]}):
+            findings,checks,limits=extract(self.report(value));self.assertEqual(limits,[])
+        limits=extract('Ordinary implementation answer.')[2]
+        self.assertFalse(report_incomplete('Ordinary implementation answer.',limits))
+        self.assertTrue(report_incomplete('## Code Review: missing appendix',limits))
 
     def test_correspondence_rejects_missing_extra_duplicate_and_recategorized_ids(self):
         item=dict(severity='info',summary='F001: Useful suggestion',file='fixture.py',line=3)
