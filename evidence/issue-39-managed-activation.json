@@ -251,7 +251,7 @@
     "Physical capture and external network instrumentation NOT_RUN."
   ],
   "private_evidence": "evidence/scratch/issue-39/; no private bodies or transcripts published",
-  "code_commit": "1e78dba29a4eb8d2388e648c6f292934dbd3a9bd",
+  "code_commit": "44dea522c1cb3c4ce5ee363b56b4b8be4a87b251",
   "source": {
     "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
     "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
@@ -363,7 +363,7 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "d940344d0ddc54ffdd62f5d4049c0fe43b219baaac88b0fce48b4b07e5f316a8",
-  "updated_at": "2026-10-31T02:24:18.864021-04:00",
+  "updated_at": "2026-10-31T02:31:49.693255-04:00",
   "review": {
     "initial_task": "739612f7-1ba3-4101-97ea-56a830177b4c",
     "provider": "claude",
@@ -538,9 +538,9 @@
       ],
       [
         "P005",
-        "fixed and source verified; installed check pending",
+        "fixed and verified",
         "1e78dba",
-        "Shared worker refusal hint distinguishes terminal worker requests from retryable peer deferral; diagnostic-only, no additional model turn"
+        "72 affected checks, 1170 full checks and actual CLI refusal diagnostic; same instruction bytes and one changed diagnostic string constant. Installed confirmation required before issue closure."
       ]
     ],
     "final_recheck_task": "cf120e6e-64c6-495e-bb0f-9e02c0fe04d1",
@@ -581,9 +581,14 @@
       "record": "evidence/claude-lineage-native-pane.json",
       "source_merge": "8a97a667c0d997ae0ba2ae4a0f3b8495d689d1f5",
       "scope": "Separate owner integration preserved. NativePeers Python, Codex hooks and issue39 probe bytes equal the qualified32e1112 tree; no Lineage qualification attributed to issue39."
+    },
+    {
+      "record": "evidence/claude-lineage-desktop-entry.json",
+      "source_merge": "0ef2dfdd750eca27fc6758af218b7953ede1722b",
+      "scope": "Separate owner record preserved; no NativePeers Python/Codex hook or issue39 probe changes. No Lineage qualification attributed to issue39."
     }
   ],
-  "issue39": "Ready for closure after this verification record is published and synchronized; tracker16 remains OPEN",
+  "issue39": "Close only after diagnostic PR50 publication and fresh installed doctor check; original installed native/quiet/followup proofs retain their stated scope. Tracker16 remains OPEN.",
   "publication": {
     "nativepeers_product_pr": 40,
     "nativepeers_product_merge": "32e1112f042da48a2ea9a6a179c841f56f637075",
@@ -619,13 +624,25 @@
   },
   "diagnostic_followup": {
     "source_commit": "1e78dba",
-    "status": "CANDIDATE_TESTED",
+    "status": "SOURCE_AND_CLI_CONTRACT_VERIFIED",
     "change": "Distinguish same-ID deferred peer retry from terminal failed worker requests requiring new work/new ID; no admission, delivery or replay change",
     "focused": {
       "passed": 72,
       "subtests": 14,
       "seconds": 5.39
     },
-    "native_reuse": "update_status instruction bytes equal; one diagnostic string constant changes. Native06 execution/guard qualification remains scoped to its original run; fresh installed diagnostic check pending."
+    "native_reuse": "update_status instruction bytes equal; exactly one diagnostic string constant changes. Native06 execution/guard qualification retains its original scope. Fresh candidate CLI doctor contract passes without model input; installed confirmation is required by close-out.",
+    "full": {
+      "status": "PASS",
+      "passed": 1170,
+      "skipped": 4,
+      "subtests": 1068,
+      "seconds": 275.23,
+      "exit_code": 0,
+      "source_commit": "d5978c0bcb48a8a0b5aa88e379a08ddd5ab68be4",
+      "command": ".venv/bin/python -m pytest -q",
+      "cwd": "/Users/danny/Documents/Tools/NativePeers/.worktrees/issue-39-guidance",
+      "scope": "Final diagnostic source and regression; before source-independent Lineage PR49 merge; no source edits during run."
+    }
   }
 }
