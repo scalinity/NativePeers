@@ -90,7 +90,9 @@ only for live recipient handle/incarnation/owner records observed at that transi
 beside existing verified worker leases. A later incarnation, modified/missing executable
 or revoked approval cannot borrow that permission. No selected-runtime fallback exists.
 
-A definitely unsubmitted Codex runtime refusal uses `ADMISSION_DEFERRED`. Retry the
+A definitely unsubmitted refusal for the exact selected Codex candidate uses
+`ADMISSION_DEFERRED`. Unknown non-selected builds are terminal; resume on an approved
+runtime or ask the runtime owner to qualify that exact executable. Retry the
 original command with identical target, body, options and client request ID after
 qualification. It reuses the original message/attempt and expiry, checks the original
 recipient incarnation, and delivers once. Peer recovery is caller-driven. The existing finite completion controller retries
@@ -119,8 +121,11 @@ On failed qualification, compensate selection only when the actual expected stat
 still matches; keep the prior approval. Candidate-hosted sessions whose executable
 was never qualified remain blocked after compensation. Preserve their histories;
 qualify that exact runtime or resume normally on an approved runtime, then resolve
-the new incarnation rather than retargeting an old intent. Already loaded controllers
-keep their pre-install Python code until normal release; qualification of this change
-covers fresh controllers, without restarting existing work. Native validation records
+the new incarnation rather than retargeting an old intent. Python keeps modules already imported and can read newly synchronized modules on
+first import. Synchronize after finite controllers release and no command is in flight.
+An in-place fast-forward is not an atomic import switch: an uncoordinated concurrent
+invocation can fail or report UNKNOWN while files change. Preserve that outcome; use
+fresh post-sync invocations for qualification rather than claiming an older process
+loaded one uniform version. Existing native TUI executables remain unchanged. Native validation records
 the real owner executable path and its equality to the verified queue fingerprint,
 plus recipient ingestion and complete terminal bytes through owned output EOF.
