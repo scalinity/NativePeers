@@ -556,6 +556,9 @@ class Group:
                 db.execute("UPDATE completion_routes SET state='UNCLAIMED',waiter_id=NULL WHERE group_id=? AND completion_generation=?",(self.id,generation))
                 row=dict(row);row['state']='UNCLAIMED'
             if row['state']!='UNCLAIMED' or row['mode']!='push':return
+            prior=db.execute("SELECT a.ended_at,a.error_json FROM attempts a JOIN send_requests s USING(message_id) WHERE s.caller_key=? AND s.client_request_id=? AND a.state='ADMISSION_DEFERRED' ORDER BY a.started_at DESC LIMIT 1",
+                             (self.controller.key,row['delivery_id'])).fetchone()
+            if prior and (json.loads(prior['error_json'] or '{}').get('details') or {}).get('compatibility_state') in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED') and time.time()-prior['ended_at']<15:return
             db.execute("UPDATE completion_routes SET state='PUSH_SUBMITTING',claimed_generation=? WHERE group_id=? AND completion_generation=?",(self.generation,self.id,generation))
         from .core import Core
         result=Delegation(self.journal,Registry(self.journal)).result(self.parent,self.id)

@@ -65,7 +65,7 @@ class CompatibilityReceiptTests(unittest.TestCase):
             self.assertEqual(result[0]['state'],'CAPABILITY_MISMATCH')
             self.assertEqual(result[0]['expected'],expected)
             self.assertNotEqual(result[0]['current']['sha256'],expected['sha256'])
-            self.assertIn('native queue',result[0]['affected_operations'])
+            self.assertIn('new recipient queue helpers',result[0]['affected_operations'])
             self.assertEqual(result[0]['verification_scope'],expected['scope'])
             self.assertEqual(result[1]['error'],'FileNotFoundError')
             self.assertEqual((journal.root/'compat/runtime.json').read_bytes(),before)

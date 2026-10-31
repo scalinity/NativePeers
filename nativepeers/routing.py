@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import math
 import time
+from functools import partial
 
 from .adapters.native_delivery import claude_inbox, codex_queue
 from .errors import PeerError, require
@@ -17,7 +18,7 @@ class Router:
         self.journal, self.registry = journal, registry
         from .antigravity import queue_native_hook
         from .grok import queue_native_hook as grok_hook
-        self.adapters = adapters or {"claude-inbox":claude_inbox, "codex-native-queue":codex_queue,
+        self.adapters = adapters or {"claude-inbox":claude_inbox, "codex-native-queue":partial(codex_queue,journal=journal),
                                      "antigravity-native-hook":queue_native_hook,"grok-native-hook":grok_hook}
 
     def outcome(self, message_id):
@@ -146,7 +147,9 @@ class Router:
                     db.execute("UPDATE attempts SET state='SUBMITTING',error_json=NULL,ended_at=NULL WHERE attempt_id=?", (attempt_id,))
                 submitted = True
                 try:
-                    receipt = await adapter(peer, envelope)
+                    if admission_deadline is not None and attempt['transport']=='codex-native-queue':
+                        receipt = await adapter(peer,envelope,admission_deadline=admission_deadline)
+                    else:receipt = await adapter(peer,envelope)
                     self.record(message_id, attempt_id, receipt, peer)
                 except BaseException as exception:
                     self.admission_error(attempt_id, exception, submitted=True)
@@ -159,13 +162,19 @@ class Router:
         return dict(self.outcome(message_id), client_request_id=request_id)
 
     def admission_error(self, attempt_id, exception, *, submitted):
-        uncertain = submitted and (not isinstance(exception, PeerError) or exception.may_have_received)
+        uncertain = submitted and not getattr(exception,'definitely_unsubmitted',False) and (not isinstance(exception, PeerError) or exception.may_have_received)
         if uncertain:
             error = exception if isinstance(exception, PeerError) else PeerError('DELIVERY_UNKNOWN', type(exception).__name__, may_have_received=True)
             state = 'DELIVERY_UNKNOWN'
         elif isinstance(exception, PeerError):
             error = exception
             state = exception.code
+            if exception.code=='CAPABILITY_MISMATCH' and (exception.details or {}).get('compatibility_state') in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED'):
+                attempt=self.journal.one('SELECT transport FROM attempts WHERE attempt_id=?',(attempt_id,))
+                if attempt and attempt['transport']=='codex-native-queue':
+                    state='ADMISSION_DEFERRED'
+                    error=PeerError(state,'Codex inbox admission has not started; retry the unchanged client request ID after runtime qualification',
+                                    details=dict(exception.details or {},cause=exception.json(),retryable=True))
         else:
             state = 'ADMISSION_DEFERRED'
             error = PeerError(state, 'Native admission has not started; retry the same client request ID', details={'cause':type(exception).__name__})

@@ -18,21 +18,24 @@ class Core:
         from pathlib import Path
         for provider,kind in [('claude','claude-inbox'),('codex','codex-native-queue'),('grok','grok-native-hook')]:
             adapter=self.router.adapters[kind]
-            async def checked(peer,message,provider=provider,adapter=adapter):
+            async def checked(peer,message,provider=provider,adapter=adapter,*,admission_deadline=None):
                 if provider=='grok':
                     from .grok import executable as selected_grok
                     executable=selected_grok()
                 else:
                     executable=Path.home()/('.local/bin/claude' if provider=='claude' else '.local/share/codex-mcp-manager/current/bin/codex')
-                verify(journal,provider,executable)
-                test=journal.root/'test-budget.json'
-                if test.exists() and message['from']['kind']=='peer':
-                    from .budget import LiveBudget
-                    config=json.loads(test.read_text());budget=LiveBudget(Path(config['path']))
-                    try:reservation=budget.reserve('peer native input '+message['message_id'],tranche=config.get('tranche','remaining_mandatory'))
-                    except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
-                    budget.admit(reservation)
-                    journal.event(message['message_id'],'live-peer-reservation',{'reservation':reservation,'native_id':peer['peer_key']['native_session_id']})
+                if provider!='codex':verify(journal,provider,executable)
+                def reserve():
+                    test=journal.root/'test-budget.json'
+                    if test.exists() and message['from']['kind']=='peer':
+                        from .budget import LiveBudget
+                        config=json.loads(test.read_text());budget=LiveBudget(Path(config['path']))
+                        try:reservation=budget.reserve('peer native input '+message['message_id'],tranche=config.get('tranche','remaining_mandatory'))
+                        except RuntimeError as error:raise PeerError('BUDGET_EXHAUSTED',str(error)) from error
+                        budget.admit(reservation)
+                        journal.event(message['message_id'],'live-peer-reservation',{'reservation':reservation,'native_id':peer['peer_key']['native_session_id']})
+                if provider=='codex':return await adapter(peer,message,journal=journal,before_launch=reserve,admission_deadline=admission_deadline)
+                reserve()
                 return await adapter(peer,message)
             self.router.adapters[kind]=checked
         async def owned(peer,message):

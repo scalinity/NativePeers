@@ -73,3 +73,59 @@ The public CLI surfaces are documented in the [Claude CLI reference](https://cod
 ## Managed Codex quiet queue qualification
 
 Issue #7 qualifies `/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000/bin/codex` (SHA-256 `467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10`) through normal CodexForge assembly, guarded selection and expected-old worker/inbox approval. Fresh standalone TUI qualification covers44 mixed frames, exact resume, reopen and permitted controls; three actual native worker/controller phases separately cover active push and quiet suppression. Quota metadata has its own check and is not used as worker/inbox approval. Existing immutable leases remain pinned; new work selects current. Commands, exact source scope, preserved predecessor and guarded rollback are in [verification](VERIFICATION.md).
+
+## Managed activation and live recipients
+
+Managed Codex qualification can require the candidate selected for real hook ancestry.
+Selection and approval remain distinct. New worker launches verify the selected build;
+an unqualified selected build remains refused before model input. Its next action is to
+wait for the CodexForge activation owner and retry the unchanged request, never to apply
+an approval as an ordinary sender.
+
+A live Codex inbox uses its registered owner's exact executable for both verification
+and queue launch. The NativePeers runtime lock covers fresh verification through helper
+creation, so a changed selection cannot redirect the helper. Each queue receipt names
+the executed fingerprint. Guarded approval replacement retains the old exact runtime
+only for live recipient handle/incarnation/owner records observed at that transition,
+beside existing verified worker leases. A later incarnation, modified/missing executable
+or revoked approval cannot borrow that permission. No selected-runtime fallback exists.
+
+A definitely unsubmitted refusal for the exact selected Codex candidate uses
+`ADMISSION_DEFERRED`. Unknown non-selected builds are terminal; resume on an approved
+runtime or ask the runtime owner to qualify that exact executable. Retry the
+original command with identical target, body, options and client request ID after
+qualification. It reuses the original message/attempt and expiry, checks the original
+recipient incarnation, and delivers once. Peer recovery is caller-driven. The existing finite completion controller retries
+activation deferrals no more often than every 15 seconds, within the original message
+expiry; hard runtime refusals retain the result without retry. No new service is created. Accepted/uncertain attempts remain inert. Quiet-policy `RETAINED`
+remains permanently unsubmitted and is never replayed. Status exposes the original
+runtime cause; doctor separates selected-build readiness from live recipient routes.
+
+
+The install owner first runs `compatibility.retain_codex_recipients(journal)` from
+the reviewed candidate and inspects its `additions` and `expected` state. Under the
+manager update lock, `retain_codex_recipients(journal, apply=True,
+expected=plan['expected'])` rechecks selected current, existing Codex approvals and
+live owner fingerprints under the runtime lock. It adds only exact live incarnations
+matching existing non-revoked retained approvals. It approves no executable and
+preserves unrelated providers. Do this before synchronizing the installed source:
+old code ignores the additive grants, and new code then sees them immediately.
+A changed approval/retained record or selection refuses the stale plan. Source sync
+then takes manager-before-runtime locks. If synchronization fails, keep these valid
+additive grants; old code ignores them. Never restore an entire old receipt.
+
+Run native qualification outside the NativePeers runtime lock, since a real queue
+helper must acquire that lock. Keep the manager lock across any actual package
+selection/qualification and take the runtime lock only for exact guarded writes.
+On failed qualification, compensate selection only when the actual expected state
+still matches; keep the prior approval. Candidate-hosted sessions whose executable
+was never qualified remain blocked after compensation. Preserve their histories;
+qualify that exact runtime or resume normally on an approved runtime, then resolve
+the new incarnation rather than retargeting an old intent. Python keeps modules already imported and can read newly synchronized modules on
+first import. Synchronize after finite controllers release and no command is in flight.
+An in-place fast-forward is not an atomic import switch: an uncoordinated concurrent
+invocation can fail or report UNKNOWN while files change. Preserve that outcome; use
+fresh post-sync invocations for qualification rather than claiming an older process
+loaded one uniform version. Existing native TUI executables remain unchanged. Native validation records
+the real owner executable path and its equality to the verified queue fingerprint,
+plus recipient ingestion and complete terminal bytes through owned output EOF.
