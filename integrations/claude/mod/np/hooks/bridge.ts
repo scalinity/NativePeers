@@ -4,7 +4,7 @@
 // own 10 s budget (gate X11).
 import type { EngineInterface } from 'claude-code'
 import type { NpWorker } from '../types'
-import { statusSummary } from './agents'
+import { statusFor } from './agents'
 import { bridgeExited, bridgeFailed, bridgeRestored, setBridge, setLineage } from './state'
 
 export class BridgeError extends Error {
@@ -143,8 +143,7 @@ export async function followLineage($: EngineInterface): Promise<void> {
       cursor = data.cursor ?? cursor
       if (data.changed !== false && Array.isArray(data.workers)) {
         await setLineage($, data.workers as NpWorker[])
-        // On the desktop app the footer's np menu carries the summary.
-        if ((await $.session.surface()) !== 'desktop') $.ui.status(statusSummary(data.workers))
+        $.ui.status(statusFor(await $.session.surface(), data.workers))
       }
     } catch {
       await sleep($, 2000)
