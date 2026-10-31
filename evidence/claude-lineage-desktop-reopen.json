@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "stage": "Desktop reopen: the np status entry restored, the footer menu removed, a slim line offering a closed pane back",
+  "status": "PASS_WITH_OPEN_ITEMS",
+  "reviewed_commit": "8957af4",
+  "scope": "The np mod: the status entry carries the summary on every surface; the desktop SessionMode footer menu and its bookkeeping are removed; under band: auto the desktop app shows one line above the prompt, np · <summary> with [Open], while the pane is closed (ui.close tracking, reconciled at activation); /np doctor recognizes the desktop app from $.session.surfaces(); delegate summaries leave zero counts out; a worker's turn is labelled once; a running worker's state shows above the field; the field submits with Send. Spec X21 records the desktop footer fact. The desktop app run needs the person after install.",
+  "finding": {
+    "observed": "Desktop session 'NP doctor' (engine 2.1.309, Remote Control on), 2026-10-31 2:26-2:28 AM EDT, after the #49 install. The np status entry showed briefly after the np:codex worker started, then disappeared for good; the footer showed only the model and permission controls, so a closed pane could not be reopened. /np doctor printed no desktop lines. The pane listed '1 delegate · 1 running · 0 done', labelled 'Codex' again after each tool step, and kept the running state at the top, out of view below a long conversation.",
+    "cause": "The status entry was cleared once renderNpMenu had returned its Select on the desktop surface (footer 'drawn'), and the flag never reset. Clearing requires that path, so the desktop app did call the SessionMode hook with surface desktop, yet nothing appeared in its footer: it does not paint a mod's tree there. The app logs record no render error, and Remote Control admitted no remote client in that window. The doctor took its surface from command.run's presentation.surface, absent in the desktop app, so it fell back to terminal."
+  },
+  "tests": {
+    "mod": {
+      "status": "PASS",
+      "passed": 49,
+      "command": "claude plugin test integrations/claude/mod/np",
+      "validate": "passed",
+      "tsc": "tsc --noEmit clean"
+    },
+    "pane_conversation_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_pane_conversation.py",
+      "result": "opened in the pane, ✓ tool step, ✓ Completed mark, one provider label per turn, no send toast, the typed message reached the replay bridge once, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+    },
+    "handback_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
+      "result": "deliver and refuse passed on engines 2.1.314 and 2.1.309"
+    },
+    "startup_race_harness": {
+      "status": "PASS",
+      "command": "tests/integration/claude_mod/run_startup_race.py",
+      "result": {
+        "starts": 1,
+        "doctor": "np: Ready. / Bridge: Connected (protocol 1, activity schema v1)"
+      }
+    },
+    "full_suite": {
+      "status": "NOT_RUN",
+      "note": "This change touches no Python module."
+    }
+  },
+  "operation_checks": [
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-desktop-reopen-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "Pane conversation, handback deliver and refuse, and startup race runs passed on this engine. Harness runs draw the terminal surface; the desktop reopen line is covered by the test kit and the person's desktop run.",
+      "source_head": "7929a60"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-desktop-reopen-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same runs passed on the desktop app's own engine, drawing the terminal surface.",
+      "source_head": "7929a60"
+    },
+    {
+      "operation": "managed activation inbox and worker boundary",
+      "parent_context": "Disposable real native sender/recipient/qualification sessions, fresh installed CLI and bound stdio MCP",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "status": "PASS"
+    }
+  ],
+  "independent_review": {
+    "result": "NOT_RUN",
+    "note": "The lane's 32 worker inputs were spent on the earlier rounds."
+  },
+  "limitations": [
+    "The reopen line restores the mechanism the desktop app drew after PR #46 (one line above the prompt with ui.close tracking); its look in this form is confirmed by the person's desktop run.",
+    "The desktop footer offers a mod nothing pressable (X21): a footer menu like the model picker is not possible through this API.",
+    "Checks carried unchanged from evidence/issue-39-managed-activation.json remain that record's lane's."
+  ]
+}
