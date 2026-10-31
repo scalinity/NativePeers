@@ -8,11 +8,14 @@ Supported installation updates exactly the owned Claude, Codex and Antigravity s
 
 The installed `tests/probes/live_followup.py` run uses one genuinely owned Codex worker history and four tasks, with exact native parent/model/phase attribution and native TUI frames. Runtime SHA-256 `467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10`: phase 2 wait claims only itself; phase 3 pushes exactly once with ACCEPTED_QUEUED and INGESTED receipts; phase 4 has only RETAINED under QUIET, no later parent model request and preserved original accepted input receipts. Owned process death and output EOF pass. It reuses the existing localhost Responses harness; external paid Codex inference and other-provider UI are NOT_RUN. Private captures stay under `evidence/scratch/review-followup-20261030/installed-followup-attempt-1/`.
 
-A concurrent external managed selection is now SHA-256 `6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71`, UPDATE_UNTESTED/CAPABILITY_MISMATCH. Exact #28 coordination was definitely refused before native input; no uncertain input was replayed and no approval/activation was changed here. The passed fixture certifies its named predecessor. The new #28 qualification lane and current-runtime owner dependency remain pending; #28 and tracker #16 stay open.
+Current managed SHA-256 `6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71` now matches the exact approval supplied by its existing activation owner. The earlier #28 coordination attempt was definitely refused while that transition was unqualified; a fresh update is ACCEPTED_QUEUED, with recipient processing unconfirmed. This lane changed no approval or activation. Its passed follow-up fixture certifies predecessor `467acfa3…2a1ac10`; the separate #28 lane's reviewed feature result remains pending. #28 and tracker #16 stay open.
 
 The actual evaluation is **87/100 at 100% coverage**, report `np-eval-2026-10-30-nativepeers-review-followup-01a18fab` in the canonical local np-eval history. It preserves prior scores, preparation failures, measured 83 remote-review rounds and unknown total orchestration/billing/net-time costs. The session is observational, not a controlled regression comparison or universal provider certification.
 
 Rollback preserves current provider state: revert only PR #36's source delta through normal Git publication and rerun the supported owned installer. Prior skill bytes are in ignored `evidence/scratch/review-followup-20261030/recovery/`; installer recovery is `backups/install-1793414263959701000/`. Do not restore whole historical configuration/approval files, retarget the CLI or alter another owner's activation. The current managed-runtime transition remains separate.
+
+
+Concurrent [PR #37](https://github.com/scalinity/NativePeers/pull/37) is preserved unchanged. Its [lineage-owner record](../evidence/claude-lineage-desktop-handback.json) retains its own reviewed source, harness checks, historical full-run failures and open desktop items. Merged-tree metadata carries each operation's original attribution; no workflow acceptance is transferred to those desktop features.
 
 ---
 

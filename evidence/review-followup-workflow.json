@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "stage": "INSTALLED_SCOPED_ACCEPTANCE_PASS_CURRENT_RUNTIME_COORDINATION_BLOCKED",
+  "stage": "INSTALLED_SCOPED_ACCEPTANCE_PASS_PENDING_PARALLEL_ISSUE28_HANDOFF",
   "status": "PARTIAL",
   "reviewed_commit": "df3df5aa6ce3a42f174125f784d812ddcf2c1d8f",
   "originating_task": "NativePeers review/remediation/follow-up workflow (#28, #32, #33, #34)",
@@ -273,9 +273,9 @@
       "status": "PASS"
     },
     {
-      "operation": "current-selected-Codex-worker-inbox",
-      "parent_context": "Concurrent external managed selection; no approval or activation by this lane",
-      "status": "BLOCKED",
+      "operation": "current-selected-Codex-runtime-approval",
+      "parent_context": "Existing activation owner qualification; passive doctor exact approval match; this lane made no approval/activation change.",
+      "status": "PASS",
       "provider": "codex",
       "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
     },
@@ -283,6 +283,35 @@
       "operation": "external-paid-Codex-inference-and-other-provider-UI",
       "parent_context": "Outside this bounded fixture/review slice",
       "status": "NOT_RUN"
+    },
+    {
+      "operation": "current-selected-Codex-live-followup-owner-qualification",
+      "parent_context": "Separate issue28 qualification lane; consumed reviewed result remains pending",
+      "status": "NOT_RUN",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "np-handback-harness",
+      "status": "PASS",
+      "parent_context": "disposable interactive claude 2.1.314 in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input (auto mode's classifier requests refused by the tripwire)",
+      "scope": "One np:codex shadow: the engine's handback note seen, one SubagentHandback call carrying the report with ids, no enforcement row, the parent notified 1.0 s after the worker ended, not stopped by anyone; the pre-fix mod hung under the same run. With --refuse: three refused calls, the shadow's note, the run ended by itself and the parent was notified after 8.0 s.",
+      "source_head": "3be5d68",
+      "attribution": "Existing lineage-owner record, not rerun by workflow lane",
+      "record": "evidence/claude-lineage-desktop-handback.json"
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
+      "operation": "np-handback-harness-desktop-engine",
+      "status": "PASS",
+      "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session in auto mode, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
+      "scope": "The same handback run on the desktop app's own engine: one SubagentHandback call, no enforcement row, the parent notified 1.0 s after the worker ended; the startup race run on this engine started one bridge and reported Bridge: Connected. With --refuse on this engine: three refused calls, the shadow's note, the parent notified after 8.0 s.",
+      "source_head": "3be5d68",
+      "attribution": "Existing lineage-owner record, not rerun by workflow lane",
+      "record": "evidence/claude-lineage-desktop-handback.json"
     }
   ],
   "runtime_scopes": [
@@ -298,7 +327,7 @@
     }
   ],
   "limits": [
-    "Current fingerprints describe the published Python/integration/test source classes. Every native result retains its exact runtime; current selected6e9a7f0d remains BLOCKED, and no runtime approval was changed.",
+    "Current fingerprints describe the merged published source classes. Native results retain their exact runtime/source. Existing owner has qualified current6e9a7f0d; this lane's live-followup fixture remains predecessor467acfa3-scoped, and the parallel current-runtime feature result is pending.",
     "The existing #7 physical/native qualification retains its own source/runtime scope; only affected regressions and one bounded new follow-up fixture are in scope.",
     "Disposable review accounting cases verify consistency, not model compliance or privileged execution.",
     "Pi, routers, Mac network/security settings and CodexForge are untouched."
@@ -636,11 +665,11 @@
     ]
   },
   "current_selected_runtime": {
-    "status": "BLOCKED",
-    "compatibility_state": "UPDATE_UNTESTED",
+    "status": "PASS",
     "sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
-    "reason": "Concurrent external managed selection differs from approved predecessor. Exact coordination message f8fdfef0-b537-43de-824b-d027d90d2325 was definitely refused before native input; no replay or approval/activation change.",
-    "owner_dependency": "New issue28 qualification lane .worktrees/issue28-qualification-01a18fca is preserved; consume its reviewed current-runtime result before final issue28 disposition."
+    "scope": "Existing activation owner qualified package, private worker app-server, native hooks, queue ingestion, exact resume and44-frame standalone quiet TUI; passive installed doctor now matches its exact approval. No activation/approval was changed by this lane.",
+    "live_followup_on_this_runtime": "NOT_RUN by this lane; awaiting the separate issue28 qualification owner report.",
+    "coordination": "Earlier f8fdfef0-b537-43de-824b-d027d90d2325 was definitely refused before input. Fresh update8e49a61c-6ddf-4acf-9023-41a38e4e8e22 is ACCEPTED_QUEUED, not yet a processing/qualification claim."
   },
   "evaluation": {
     "id": "np-eval-2026-10-30-nativepeers-review-followup-01a18fab",
@@ -648,5 +677,21 @@
     "coverage_percent": 100,
     "report": "/Users/danny/Documents/Codez/Claude/skills/skills/engineering/np-eval/history/reports/np-eval-2026-10-30-nativepeers-review-followup-01a18fab.md",
     "scope": "Observed session, unchanged fixed rubric; prior94.5/100 and64.5/100 records preserved. Unknown total orchestration/net-time and preparation failures prevent full-score claims."
+  },
+  "concurrent_qualification": {
+    "pull_request": 37,
+    "merge_commit": "bb45eb7a34cc372c83577a43e1e2337493e19199",
+    "record": "evidence/claude-lineage-desktop-handback.json",
+    "owner_status": "PASS_WITH_OPEN_ITEMS",
+    "scope": "Consumed the published reviewed record and preserved all lineage source unchanged. Its own harness/mod/engine claims and open desktop items are not this lane's acceptance claims.",
+    "owner_full_suite": {
+      "status": "PASS_WITH_PREEXISTING_FAILURES",
+      "passed": 1094,
+      "failed": 31,
+      "skipped": 4,
+      "command": ".venv/bin/python -m pytest -q tests",
+      "note": "Run on 873dbf8 (from df3df5a). No failure that the last merged lineage run lacked, by test id; one evidence-pointer check from that run now passes. The rest are failures shared with main plus the evidence-pointer check that publication regenerates. cea937b changes no Python file."
+    },
+    "combined_default_suite": "PENDING current merged-tree standard unit/contract run."
   }
 }
