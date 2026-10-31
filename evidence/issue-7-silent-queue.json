@@ -32,14 +32,14 @@
     "standalone_tui": {
       "status": "PASS",
       "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/standalone-tui/qualification.json",
-      "scope": "Normally registered standalone native TUI:44 mixed frames,22 warm and22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit"
+      "scope": "Normally registered standalone native TUI: 44 mixed fixture frames, 22 warm and 22 cold, exact-session resume, reopen, human/root and active controls, raw ANSI/terminal-cell tail and status audit."
     },
     "probe_offline": {
       "status": "PASS",
       "tests": 24,
       "subtests": 29,
       "private_artifact": "evidence/scratch/issue-7/review-fixes-focused.log",
-      "scope": "45 focused guard/probe tests, including24 standalone probe tests;29 subtests in the combined run"
+      "scope": "24 standalone probe regressions; the original combined guard/probe run recorded 45 tests and 29 subtests."
     },
     "genuine_worker_probe_offline": {
       "status": "PASS",
@@ -67,7 +67,7 @@
     "combined_preinstall_tui": {
       "status": "PASS",
       "private_artifact": "evidence/scratch/issue-7/combined-tui-preinstall-04/qualification.json",
-      "scope": "Actual selected 763301510afa package, 44 mixed frames warm/cold exact resume, strict reviewed reopen/history repaint oracle; supported global reinstall/final package checks pending"
+      "scope": "Historical selected 763301510afa preinstall run: 44 mixed frames, warm/cold exact resume and reviewed reopen/history repaint oracle. Installed checks are recorded separately under installed_native and standalone_tui."
     },
     "genuine_worker_push": {
       "status": "PASS",
@@ -234,9 +234,9 @@
   ],
   "private_artifacts": "evidence/scratch/issue-7/",
   "limitations": [
-    "Installed-current and actual TUI acceptance remain pending.",
-    "The separate normal-update package0.166-4a9 is currently selected/approved; it does not include the issue7 native consume extension.",
-    "Source and probe failures remain retained separately."
+    "The 44-frame standalone probe uses explicitly labeled completion fixtures. Genuine native worker/controller delivery is qualified separately by the three phases under tests.genuine_worker_push.",
+    "Both installed native probes use localhost model fixtures. External paid-model inference is NOT_RUN and external network traffic is NOT_INSTRUMENTED.",
+    "The current complete source-suite PASS is tied to2ae4acd; the earlier77564c6 run remains under prior_installed_runs. Earlier source/probe failures remain recorded separately."
   ],
   "code_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
   "source": {
@@ -394,7 +394,7 @@
       "package": "/Users/danny/.local/share/codex-mcp-manager/releases/rust-v0.166.0-763301510afa-1793404941146559000",
       "sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
       "gates": 22,
-      "scope": "Installed current; guarded exact approval and fresh installed qualification PASS",
+      "scope": "Candidate build passed 22 gates. Exact selected-package installation and native qualification are recorded under tests.installed_native.",
       "private_artifact": "artifacts/quiet-close-issue-7/candidate-build-08.json"
     },
     "fixing_commits": [
@@ -546,5 +546,6 @@
     "source_commit": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
     "reason": "Separately owned bridge source merged after the first complete run. All installed checks repeated against the actual new main; same exact managed package and notification hook bytes.",
     "private_artifact": "evidence/scratch/issue-7/installed-1793409855477028000/qualification.json"
-  }
+  },
+  "record_prose_updated_at": "2026-10-30T21:37:34.103747-04:00"
 }

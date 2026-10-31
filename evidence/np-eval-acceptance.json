@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "stage": "Evaluation backlog installed acceptance and unavailable compact records",
-  "status": "SOURCE_PASS_INSTALLED_DELTA_AND_DELIVERY_PENDING",
+  "status": "INSTALLED_ACCEPTANCE_PASS_COORDINATION_PENDING",
   "reviewed_commit": "4146b47bdf381194c1e947ad7a214b052168dc76",
-  "scope": "Only nativepeers/compact.py and tests/unit/test_compact_results.py change product behavior. Physical main and installation remain with the active issue-7 owner.",
+  "scope": "Compact-result source fix, installed CLI/MCP qualification, installed review recipe and consumption of the separately owned issue-7 qualification. Physical main and provider configuration remain outside this editing lane.",
   "tests": {
     "focused": {
       "status": "PASS",
@@ -23,11 +23,28 @@
       "status": "NOT_RUN"
     },
     "installed_final_delta": {
-      "status": "NOT_RUN"
+      "status": "PASS",
+      "tests": 9,
+      "source_head": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+      "module": "/Users/danny/Documents/Tools/NativePeers/nativepeers/compact.py",
+      "sha256": "38a7e3bf5accf0ae0b5d2551b264584d5594e68bdf2d41f754c0b185ac90c6d8",
+      "scope": "All compact regression cases run against the actual installed module from the home directory; disposable test journals, not fabricated native outcomes."
     },
     "genuine_delayed_controller_visible_tail": {
-      "status": "NOT_RUN",
-      "dependency": "https://github.com/scalinity/NativePeers/issues/7"
+      "status": "PASS",
+      "dependency": "https://github.com/scalinity/NativePeers/issues/7",
+      "qualified_source": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+      "evidence": "evidence/scratch/issue-7/installed-1793408968597610000/genuine-workers/qualification.json",
+      "scope": "Owner native qualification consumed. Parent independently reaudited both genuine quiet-phase stored terminal frames after exact native completion: no later body/footer; zero later parent requests. No new native input or external inference claimed."
+    },
+    "supported_install": {
+      "status": "PASS",
+      "cwd": "/Users/danny",
+      "source_head": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+      "operations": 0,
+      "repeat_operations": 0,
+      "captured_owned_files_unchanged": true,
+      "scope": "Dry-run, supported installer and repeat plan after lineage handoff; no-op; settings, skill and runtime approval hashes identical."
     }
   },
   "reviews": [
@@ -55,6 +72,20 @@
       "task_id": "d2823b37-4e4b-48da-94b5-b4743a9a53e7",
       "status": "NO_REMAINING_FINDINGS",
       "scope": "Exact 3535-byte patch brief; same owned released native history, no full-packet reread or executed checks claimed"
+    },
+    {
+      "provider": "claude",
+      "requested_model": "sonnet",
+      "observed_model": "claude-sonnet-5-5",
+      "native_id": "d4ccfc7c-829b-4c49-bb7d-b0994663555a",
+      "task_id": "b159e6bf-7611-49a8-8e70-829753d645af",
+      "packet_bytes": 38721,
+      "packet_pages": [
+        16000,
+        16000,
+        6721
+      ],
+      "scope": "Useful installed-recipe review of owner qualification. Full bounded packet read; exact owner JSON reads separately disclosed. Parent verified selected runtime, source drift, counters and stored terminal frames; stale public limitations corrected without changing original captures. Seven findings with unsupported severity labels remained in raw output with explicit validation warnings; no formatting-only model call."
     }
   ],
   "operation_checks": [
@@ -75,14 +106,38 @@
       "source_head": "4146b47bdf381194c1e947ad7a214b052168dc76",
       "parent_context": "Separate installed native-caller facade process authenticated through this actual parent ancestry",
       "scope": "task_status returned exact native parent; task_result compact data exactly matched installed CLI. CLI 2181 bytes; MCP text 2211 bytes; outer JSON-RPC 2494 bytes. No model submission/notification claims; owned facade exited 0."
+    },
+    {
+      "provider": "codex",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "operation": "installed-final-compact-result-status",
+      "status": "PASS",
+      "source_head": "77564c6e7791300423f812bafe0b55c30bd8a2e3",
+      "scope": "Actual CLI result/status each 2181 bytes; bound MCP data equal. Worker handle returns typed owning-group inspection route."
+    },
+    {
+      "provider": "claude",
+      "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
+      "operation": "installed-recipe-useful-acceptance-review",
+      "status": "PASS",
+      "source_head": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+      "scope": "Compact preflight 3401 bytes, no reservation/input; template logical2/native64/wall900; requested sonnet/observed claude-sonnet-5-5; complete 38721-byte selected packet, analysis without Bash, no human intervention or permission broadening."
+    },
+    {
+      "provider": "codex",
+      "runtime_sha256": "467acfa394f32091c032d763c2bb0cdbb58bc44d54bdf44ab00f229e72a1ac10",
+      "operation": "owner-genuine-controller-tail-independent-reaudit",
+      "status": "PASS",
+      "source_head": "2ae4acdd4723c49bd090ebd3381b68b359903e35",
+      "scope": "Qualified guard/controller/compact sources match 77564c6; only bridge.py and bridge_backend.py differ. Two stored post-completion frames per quiet phase pass the exact pinned native terminal-cell oracle. This is reanalysis of owner evidence, not a new native run."
     }
   ],
   "limitations": [
-    "The new missing-record guard has focused source and independent patch review, not installed acceptance yet.",
-    "Normal shared skill/hook install remains coordinated with issue-7 owner.",
-    "A selected-path packet detects equal files but changed source head and selected package path; recipient acknowledgment and integration remain unconfirmed.",
-    "No overall evaluation score is inferred; fixed rubric and historical 64.5/100 are preserved.",
-    "No provider homes, authentication, approvals, selected package or physical main edits were made by this lane."
+    "Issue-14 final selected-path comparison request 1ec1313e-63bf-4f1b-9aef-84f5d25ee9b3 remains submitted-unconfirmed until a recipient observation or reply is available; no replay.",
+    "Original native fixture scopes remain distinct: 44 manually framed mixed controls, three genuine native worker/controller phases and external paid inference NOT_RUN for those fixtures.",
+    "No current full-suite pass is inferred from the source77564c6 owner run or the focused compact checks.",
+    "The fixed evaluation rubric and historical64.5/100 remain unchanged; final session evaluation follows actual coordination close-out.",
+    "Issue28 separately records live-worker follow-up delivery limitations; this lane used explicit owned resume and group/task waits."
   ],
   "code_commit": "29d1f3281e72f41edb4af38acc89076a6da17c14",
   "source": {
@@ -196,5 +251,6 @@
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
   "source_map_sha256": "45dd6c105855e33128f30affdd10fda515fe0dafc66f7317dad57c2adf71545f",
-  "updated_at": "2026-10-30T21:04:59.139753-04:00"
+  "updated_at": "2026-10-30T21:33:12.062197-04:00",
+  "source_map_scope": "The source map and code_commit retain the original reviewed compact fix at29d1f32. Each later installed/dependency operation names its own actual source; no current full-suite pass is inferred."
 }
