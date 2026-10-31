@@ -215,9 +215,9 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/lineage-pane-polish",
-    "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-    "evidence": "evidence/claude-lineage-pane-polish.json",
+    "branch": "fix/lineage-native-pane",
+    "code_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
+    "evidence": "evidence/claude-lineage-native-pane.json",
     "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
     "status": "PASS_WITH_OPEN_ITEMS"
   },
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d1ef0ad",
-    "branch": "fix/lineage-pane-polish",
-    "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-    "last_verified_publication": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+    "base_commit": "46ad3ba",
+    "branch": "fix/lineage-native-pane",
+    "code_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
+    "last_verified_publication": "c95d7923c7d5320e499c94b2381576dcea55dd20",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,20 +302,20 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/lineage-pane-polish",
+    "branch": "fix/lineage-native-pane",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-    "verified_remote_code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+    "verified_remote_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
+    "verified_remote_code_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "Pane polish on the desktop app: a way back to a closed pane, an unfocused message field, controls apart from the field, follow-ups without the routing envelope, short tool output",
+  "stage": "Native pane on the desktop app: the footer's np entry as a menu in place of the band, and the pane restyled as the app's own transcript",
   "tests_current": {
     "mod": {
       "status": "PASS",
-      "passed": 42,
+      "passed": 47,
       "command": "claude plugin test integrations/claude/mod/np",
       "validate": "passed",
       "tsc": "tsc --noEmit clean"
@@ -323,12 +323,12 @@
     "pane_conversation_harness": {
       "status": "PASS",
       "command": "tests/integration/claude_mod/run_pane_conversation.py",
-      "result": "opened in the pane, tool row, closing note, the typed message reached the replay bridge once, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
+      "result": "opened in the pane, ✓ tool step, ✓ Completed mark, no send toast, the typed message reached the replay bridge once as a person's follow-up, the follow-up answer appeared; on engines 2.1.314 and 2.1.309"
     },
     "handback_harness": {
       "status": "PASS",
       "command": "tests/integration/claude_mod/run_handback.py [--refuse]",
-      "result": "deliver: one call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself"
+      "result": "deliver: one call, no closing text outside the report, parent notified 1.0 s after the worker ended; refuse: three tries, the run ended by itself; on engines 2.1.314 and 2.1.309"
     },
     "startup_race_harness": {
       "status": "PASS",
@@ -349,7 +349,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T01:12:52.236760-04:00",
+  "updated_at": "2026-10-31T01:59:15.040967-04:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2027,6 +2027,33 @@
         "branch": "fix/lineage-pane-conversation",
         "code_commit": "371cbde3fb88ae7ec9dac0042904779135fd1180",
         "evidence": "evidence/claude-lineage-pane-conversation.json",
+        "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
+        "status": "PASS_WITH_OPEN_ITEMS"
+      }
+    },
+    {
+      "stage": "Pane polish on the desktop app: a way back to a closed pane, an unfocused message field, controls apart from the field, follow-ups without the routing envelope, short tool output",
+      "updated_at": "2026-10-31T01:12:52.236760-04:00",
+      "git": {
+        "base_commit": "d1ef0ad",
+        "branch": "fix/lineage-pane-polish",
+        "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "last_verified_publication": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/lineage-pane-polish",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "verified_remote_code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/lineage-pane-polish",
+        "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
+        "evidence": "evidence/claude-lineage-pane-polish.json",
         "source_map_sha256": "e0f425ecd1c2272a5295cdd56585a25c50aa6ef93251f1e505c82ec1cfdab1e8",
         "status": "PASS_WITH_OPEN_ITEMS"
       }

@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-10-31T01:12:52.236760-04:00",
+  "at": "2026-10-31T01:59:15.040967-04:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,8 +60,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-  "current_verification": "evidence/claude-lineage-pane-polish.json",
+  "code_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
+  "current_verification": "evidence/claude-lineage-native-pane.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
     "acceptance": "evidence/acceptance.json extensions.models_antigravity_implementation",

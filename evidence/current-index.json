@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "4b5de8ccfe3246ba306ef372f6520157352e4b85",
-  "reviewed_commit": "d1ef0ad",
-  "publication_branch": "fix/lineage-pane-polish",
-  "updated_at": "2026-10-31T01:12:52.236760-04:00",
-  "current_record": "evidence/claude-lineage-pane-polish.json",
+  "code_commit": "c95d7923c7d5320e499c94b2381576dcea55dd20",
+  "reviewed_commit": "46ad3ba",
+  "publication_branch": "fix/lineage-native-pane",
+  "updated_at": "2026-10-31T01:59:15.040967-04:00",
+  "current_record": "evidence/claude-lineage-native-pane.json",
   "file_classes": {
     "product": {
       "files": {
@@ -140,27 +140,27 @@
         "integrations/claude/mod/np/.claude-plugin/plugin.json": "d76d723ce6dc874ede14a0b80aa4e282244c2803298f4d56bab6079a656576f0",
         "integrations/claude/mod/np/.gitignore": "41713a4a3d0bab754c7478395d7a4861b3c685cbfa5d0bde780a2692556cd299",
         "integrations/claude/mod/np/hooks/agents.ts": "89d3f13d64b8c7b480e78edc8191f6580e4d74b2f2f61072ff0c4c7e80065d27",
-        "integrations/claude/mod/np/hooks/bridge.ts": "c1bfaa1e8b356549c7d4ca09c6b7777f912161d1bc68c4d7dbda890aad1ea9c1",
+        "integrations/claude/mod/np/hooks/bridge.ts": "47d424a056f6f4fb1f3d4ecd06d798c4c93adb7bb2b4dc29b83362281d83e940",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
-        "integrations/claude/mod/np/hooks/mirror.ts": "e817a8fa2123db5f611601dcbe08cf0f8e6cda14debe6f30737ff95f02e937af",
-        "integrations/claude/mod/np/hooks/register.tsx": "49baf1eab693ae006f1330a9a698ff3a26213fc50ab7cefce2630ff8fcbf5cbd",
+        "integrations/claude/mod/np/hooks/mirror.ts": "94d776965e4bdc2ae6583385db33f1129d12a07ecbf0e315d8821446bcbe13b2",
+        "integrations/claude/mod/np/hooks/register.tsx": "d5700029274c1e8d0ab7e3f7a22a90c509440a99e2679599cc79aa1b9af1a71f",
         "integrations/claude/mod/np/hooks/shadow.ts": "fb0c71ce3f6db403a07be6686bc5f076c025d2c942f0238bef927fd7d03ef9d6",
-        "integrations/claude/mod/np/hooks/state.ts": "7976eb2d6fc64f8000f8ab5699d74629452c9320501d82427a5a74f16d953204",
-        "integrations/claude/mod/np/hooks/transcript.ts": "5d4c789615ee14d59bffbb9cc3f864044dfd437409c8f9e274c7ef7f2872b0c8",
-        "integrations/claude/mod/np/hooks/ui.tsx": "ef73aff31b7e67b1ca0a809143e396a7ec3db5c16cd0b51ed6a4c5bdfba6f987",
+        "integrations/claude/mod/np/hooks/state.ts": "66395eb53c95422476da2a9b4273683eefe72f6c844c7080023cdb2bb59c31a7",
+        "integrations/claude/mod/np/hooks/transcript.ts": "60831235dc021b3c6c015e41be825319501300ea03430dfd145d9e23ea343589",
+        "integrations/claude/mod/np/hooks/ui.tsx": "0e8001b6ae9f40ba794f41163fff125d1a88e095f8a7e872a260adc3bd185f40",
         "integrations/claude/mod/np/tests/agents.test.ts": "551f1ff62641ce2d615c98270080f5266899e588fb6833e5060089cf6188c7bc",
         "integrations/claude/mod/np/tests/planner.test.ts": "41f71282a0ef622dfe12c1bbbf36052e9fbd2819f841963dcf44aa10607c9bd4",
-        "integrations/claude/mod/np/tests/transcript.test.ts": "a4d598b2cdf6bf7bf8f9d73afaa5e712a3ddcf1fd75ff39050ebd7c81e633020",
-        "integrations/claude/mod/np/tests/ui.test.tsx": "e3be8c8f0bd1df7e436d4000ee5325d09c1d41ff8653ce338bfd23114e0750f3",
+        "integrations/claude/mod/np/tests/transcript.test.ts": "2330355b8592a683a68bac380ff48c8aaee355e10d783a0a5f6b40143b999862",
+        "integrations/claude/mod/np/tests/ui.test.tsx": "b9cb050775c855eeae929edbc903628f839fe8f2181bcb53b0974a699d0e1d1e",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
-        "integrations/claude/mod/np/types/index.d.ts": "eb030da72df6492d6bf0e6f6a4202a32503b9748092153c542baea09da6efcbb",
+        "integrations/claude/mod/np/types/index.d.ts": "c29246274098f6fea557445dc23d8d176f879066e4f89b11e9bb468d3560c691",
         "integrations/claude/skills/nativepeers/SKILL.md": "6129889358034762810da7a0ed330fceaa11ec03617d0dd320407a4005932100",
         "integrations/codex/skills/nativepeers/SKILL.md": "52d9454a032010db898160936e6892cfcbbe6777a675eaa94c53a2d6bf5b5998",
         "integrations/zsh/gemini.zsh": "0ce50d1cc1e17b49f954b8bb139f8e878469ee97a7c3ea47b63936be8ac79ffa"
       },
       "file_count": 25,
-      "sha256": "e92916c5c8614f4bf4565a662fa3969d4751f5cebcbb693115a84acde4ef7b18"
+      "sha256": "989701164e9975aab3ceb03ff58a71c7828916517b43f3934b6184c62cccff76"
     },
     "tests": {
       "files": {
@@ -250,7 +250,7 @@
         "tests/integration/claude_mod/run_live_slice.py": "675fa6bcc890f7130c0ac687a0ae94f47ef462f8a1fdaf16b88dce3d0a417807",
         "tests/integration/claude_mod/run_mod_pty.py": "c3ec9e1bb728c285fd00e63172a01fd97f9d730bb6f79e61638a01cd182ce784",
         "tests/integration/claude_mod/run_modes.py": "049d2ec9a7180cbc933256b095eb608b9f04c7cf3d4a062b9cc8f83c50bd3ee0",
-        "tests/integration/claude_mod/run_pane_conversation.py": "6dcb13066de32d73d9ac5447628b9476c06d3f88f90cd946d10f9e69f7b48a16",
+        "tests/integration/claude_mod/run_pane_conversation.py": "a5d912effce7d44c84495d6bd78dbfe3091def71a24d66f6e733ab17003db576",
         "tests/integration/claude_mod/run_startup_race.py": "9d6f4e55a6989f544b540d2d0a711ea3b7246e8c4db8d8c15205d1db9e8f8ebe",
         "tests/integration/claude_mod/scenarios/adopt_grok.json": "ae57c7bef298f09e7b1882b6b8d4f6a8ce953a01636e42964048fc9cecca9e37",
         "tests/integration/claude_mod/scenarios/codex_basic.json": "a039390fb8370174eb213e92075b431a4289b4f528114ed24a16888c83da68af",
@@ -406,27 +406,27 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 240,
-      "sha256": "4db3c9d3148334fcfc9ca3bd8a756088430d34ed613ba7dc765256e0d6508e0c"
+      "sha256": "3f53b0f0de1a7123c8bfc23c590d393e7b02c128d2f8baec1d77e13b175b350d"
     }
   },
   "operation_checks": [
     {
       "provider": "claude",
       "runtime_sha256": "21d6e7b9a6f07b4cfcb7df13760b3b72aa25e084e13a5354413382987ba832ed",
-      "operation": "np-pane-polish-harness",
+      "operation": "np-native-pane-harness",
       "status": "PASS",
       "parent_context": "disposable interactive claude 2.1.314 (auto mode by default), temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The pane conversation run with the relaid conversation and its top-row controls, and handback deliver and refuse runs, passed on this engine.",
-      "source_head": "ef86f3c"
+      "scope": "The pane conversation run with the restyled rows, handback deliver and refuse runs, and the startup race run passed on this engine.",
+      "source_head": "b0a851a"
     },
     {
       "provider": "claude",
       "runtime_sha256": "40fa5522dc98b3b85d7122c1159b900891107ef6c198e3c8d0fd222586c13e31",
-      "operation": "np-pane-polish-harness-desktop-engine",
+      "operation": "np-native-pane-harness-desktop-engine",
       "status": "PASS",
       "parent_context": "the Claude desktop app's engine copy 2.1.309 run as a disposable interactive session, temporary HOME, np mod by --plugin-dir, scripted parent, replay bridge; no model input",
-      "scope": "The pane conversation run passed on the desktop app's own engine.",
-      "source_head": "ef86f3c"
+      "scope": "The pane conversation, handback deliver and refuse, and startup race runs passed on the desktop app's own engine.",
+      "source_head": "b0a851a"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
