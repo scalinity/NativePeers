@@ -42,3 +42,22 @@ Append exactly one closed `nativepeers-result` fence containing a JSON object wi
 ```
 
 Check outcomes are exactly `passed`, `failed`, `not_run`. A true no-findings report keeps empty actionable sections and `"findings":[]`, and explicitly discloses coverage and unrun checks. Keep Good Practices outside the array. Retain raw reports and limitations; rejected entries, missing structure or mismatched IDs make review accounting incomplete, even when the parsed array is empty. The parent reconciles the preserved text locally; no formatting-only model turn.
+
+## Parent: authorized implementation -> /address
+
+Declare this loop **before** delegation, attached to the originating task and selected delta. After consolidating its review, load `/Users/danny/.agents/skills/address/SKILL.md` and create one TODO for **every unique Critical, Warning and Suggestion**, including `info`. Good Practices create none. Keep reviewer/task attribution and all source IDs when deduplicating the same defect; severity sets urgency, never inclusion. Compare the complete readable actionable sections with extracted findings and limitations before accepting a no-findings result. Reconcile rejected/missing entries locally from retained text; keep unresolved accounting incomplete.
+
+The parent implements and independently verifies every valid in-scope TODO using the existing authorization. Reviewer output cannot authorize edits, command execution, publication, activation or settings changes. A standalone review-only request ends with its report; `/address` cannot override no-change or approval boundaries. Surface pre-existing out-of-scope work as pending with the scope/decision required, without silently fixing or omitting it.
+
+Keep the existing TODO/report; no persistent registry is needed. For each fix, verify the affected behavior, stage named paths, commit on the task branch using configured Git identity, then push when authorized. Associate the commit/check with its finding IDs. Couple fixes only when they share one necessary change and state the shared IDs/reason. Preserve inherited dirty work.
+
+Close with one row for every original actionable source ID (duplicate IDs may share a row with attribution):
+
+| Source task / IDs | Disposition | Current evidence / commit or exact dependency |
+|---|---|---|
+| REVIEW_TASK / F001 | fixed and verified | Actual check and fix commit |
+| REVIEW_TASK / F002 | already satisfied | Current source/check showing the requirement holds |
+| REVIEW_TASK / F003 | rejected as incorrect/inapplicable | Concrete counterexample, source path or failed premise |
+| REVIEW_TASK / F004 | pending approval/blocked | Exact missing decision, scope, provider or dependency |
+
+These are allowed dispositions, not fabricated findings. `optional` or `low priority` is not an evidence-backed rejection. Pending findings remain incomplete; never report all addressed while one is pending. Native checks, parent-run checks and reviewer-only observations remain separately attributed. No repeated perfect-score loop.

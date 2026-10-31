@@ -13,7 +13,7 @@ Use the native shell and `npeer`. Workers are real native conversations with the
 
 ## Bounded review
 
-Before delegating a review, read [the shared review contract](/Users/danny/Documents/Tools/NativePeers/docs/NATIVE_REVIEW.md). Include it in the packet with the changed paths and essential source:
+Declare the parent review/remediation loop before delegation. For an authorized implementation review, load `/address` after consolidation and account for every Critical, Warning and Suggestion, including duplicates and pending items, using the shared contract. Review-only ends with its report. Before delegating a review, read [the shared review contract](/Users/danny/Documents/Tools/NativePeers/docs/NATIVE_REVIEW.md). Include it in the packet with the changed paths and essential source:
 
 ```sh
 npeer context-prepare --project /absolute/repo --base BASE_COMMIT --path docs/NATIVE_REVIEW.md --path src/file.py --path tests/test_file.py --json
