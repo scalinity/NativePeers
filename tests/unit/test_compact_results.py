@@ -295,6 +295,7 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
                 self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(artifact,task))
                 with self.assertRaises(PeerError) as error:self.service.report(self.caller,task)
                 self.assertEqual(error.exception.code,'PROTOCOL_ERROR')
+                if raw in (b'\xff',b'not-json'):self.assertIn('npeer result '+task+' --compact --json',error.exception.message)
 
     async def test_aggregate_digest_rejects_an_inconsistent_page_before_report_decode(self):
         import base64
