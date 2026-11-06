@@ -255,9 +255,9 @@ class Router:
                         messages[index]=dict(message_id=message['message_id'],body_available=False,reason='Reply routing changed during this inbox read; read again.')
                         continue
                     outcome=self.outcome(message['message_id'])
-                    if outcome['state'] in ('SUBMITTING','ACCEPTED_QUEUED'):
+                    if not any(r['stage']=='INGESTED' for r in outcome['receipts']):
                         attempt=outcome['attempt']['attempt_id'];native=self.registry.get(caller.key)['peer_key']['native_session_id']
-                        db.execute("UPDATE attempts SET state='INGESTED',ended_at=? WHERE attempt_id=?",(time.time(),attempt))
+                        db.execute("UPDATE attempts SET state=?,ended_at=? WHERE attempt_id=?",(reduce_receipt(outcome['state'],'INGESTED'),time.time(),attempt))
                         db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),message['message_id'],attempt,'INGESTED','owned-task-inbox-read',native,None,'{}',time.time()))
         if paged or cursor is not None:
             last=rows[limit-1] if len(rows)>limit else None

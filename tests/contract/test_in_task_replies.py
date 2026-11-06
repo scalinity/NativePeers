@@ -170,6 +170,21 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(reply['state'],'INGESTED')
         self.assertEqual(len(self.group.tasks()),1)
 
+    async def test_inbox_read_reconciles_uncertain_admission_without_replay(self):
+        from nativepeers.errors import PeerError
+        question=await self.ask();enqueue=self.core.router.adapters['owned-worker']
+        async def lost_response(peer,message):
+            await enqueue(peer,message)
+            raise PeerError('DELIVERY_UNKNOWN','Lost admitted response',may_have_received=True)
+        self.core.router.adapters['owned-worker']=lost_response
+        request=new_id();reply=await self.reply(question,request)
+        self.assertEqual(reply['state'],'DELIVERY_UNKNOWN')
+        received=next(m for m in self.core.router.inbox(self.worker) if m['message_id']==reply['message_id'])
+        self.assertEqual(received['artifact_refs'],[self.art])
+        self.assertEqual(self.core.router.outcome(reply['message_id'])['state'],'INGESTED')
+        self.assertEqual((await self.reply(question,request))['state'],'INGESTED')
+        self.assertEqual(len(self.group.tasks()),1);self.group.send_worker.assert_not_awaited()
+
     async def test_task_slot_claim_after_supervisor_row_read_is_seen_at_admission(self):
         question=await self.ask();self.complete()
         other=Journal(self.j.root);self.addCleanup(other.close)
