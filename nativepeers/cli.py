@@ -296,7 +296,8 @@ def main():
         raise SystemExit(exit_code)
     raw=canonical(response)
     if len(raw)>CONTROL_RESPONSE:
-        raw=canonical(dict(schema_version=1,ok=False,data=None,error={'code':'PAYLOAD_TOO_LARGE','message':'Result exceeds 2 MiB; request an artifact page'},request_id=request_id));exit_code=2
+        message=('Report exceeds 2 MiB JSON; use npeer result '+args.handle+' --report for the complete UTF-8 text') if args.command=='result' and args.report else 'Result exceeds 2 MiB; request an artifact page'
+        raw=canonical(dict(schema_version=1,ok=False,data=None,error={'code':'PAYLOAD_TOO_LARGE','message':message},request_id=request_id));exit_code=2
     if args.command=='usage' and not args.json and response['ok']:
         from .usage.service import format_summary
         print(format_summary(response['data'],args.details),flush=True)

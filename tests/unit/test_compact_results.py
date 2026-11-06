@@ -182,9 +182,13 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         old=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(task,))['result_artifact_id']
         record=json.loads((self.j.root/'artifacts'/old).read_bytes())
         start=canonical(record).index(b'BOUNDARY_SENTINEL')
-        text='START-'+'x'*(RESULT_PAGE-1-start-len('START-'))+'猫\nMIDDLE-Δ\n'+'y'*19000+'\nEND-π'
+        first='START-'+'x'*(RESULT_PAGE-1-start-len('START-'))+'猫\nMIDDLE-Δ\n'
+        record['summary']=first+'SECOND_SPLIT'
+        second=canonical(record).index(b'SECOND_SPLIT')
+        text=first+'x'*(2*RESULT_PAGE-1-second)+'狗'+'y'*(RESULT_PAGE+19000)+'\nEND-π'
         record['summary']=text;raw=canonical(record)
         self.assertEqual(raw[RESULT_PAGE-1:RESULT_PAGE+2],'猫'.encode())
+        self.assertEqual(raw[2*RESULT_PAGE-1:2*RESULT_PAGE+2],'狗'.encode())
         artifact=Artifacts(self.j).put(raw,self.caller.key,media_type='application/json')
         self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(artifact,task))
         offsets=[];read=Artifacts.read
@@ -194,7 +198,7 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
             result=await dispatch(parser().parse_args(['result',task,'--report']),self.j)
         self.assertEqual(result['report'],text)
         self.assertEqual(result['sha256'],hashlib.sha256(raw).hexdigest())
-        self.assertEqual(result['byte_size'],len(raw));self.assertEqual(offsets,[0,RESULT_PAGE])
+        self.assertEqual(result['byte_size'],len(raw));self.assertEqual(offsets,[0,RESULT_PAGE,2*RESULT_PAGE,3*RESULT_PAGE])
 
     async def test_truncated_report_previews_end_on_a_line_with_exact_recovery_command(self):
         import re
@@ -228,7 +232,8 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_report_requires_one_recorded_task_and_rejects_mixed_views(self):
         task=self.add()
-        with self.assertRaises(PeerError):self.service.report(self.caller,self.group)
+        with self.assertRaises(PeerError) as group:self.service.report(self.caller,self.group)
+        self.assertEqual(group.exception.code,'PROTOCOL_ERROR');self.assertIn('task ID',group.exception.message);self.assertIn('result GROUP --json',group.exception.message)
         missing=self.add('RUNNING')
         with self.assertRaises(PeerError) as pending:self.service.report(self.caller,missing)
         self.assertIn('no recorded report',pending.exception.message)
@@ -301,3 +306,47 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(Artifacts,'read',inconsistent):
             with self.assertRaises(PeerError) as error:self.service.report(self.caller,task)
         self.assertEqual(error.exception.code,'PROTOCOL_ERROR');self.assertIn('digest or size differs',error.exception.message)
+
+
+    async def test_complete_report_read_claims_no_notification(self):
+        task=self.add()
+        self.j.db.execute('INSERT INTO completion_routes VALUES(?,?,?,?,?,?,?,?,?)',(self.group,1,self.caller.key,'wait','WAIT_LEASED',1,'waiter',new_id(),1))
+        before=self.j.all('SELECT * FROM completion_routes')
+        self.service.report(self.caller,task)
+        self.assertEqual(self.j.all('SELECT * FROM completion_routes'),before)
+
+    def test_report_cli_failure_returns_a_typed_envelope_without_report_text(self):
+        import contextlib
+        import io
+        from nativepeers.cli import main
+        task=self.add(summary='PRIVATE-REPORT-CONTENT')
+        artifact=Artifacts(self.j).put(b'not-json',self.caller.key)
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(artifact,task))
+        output,error=io.StringIO(),io.StringIO()
+        with patch('sys.argv',['npeer','result',task,'--report']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(output),contextlib.redirect_stderr(error):
+            with self.assertRaises(SystemExit) as done:main()
+        self.assertEqual(done.exception.code,7);self.assertEqual(error.getvalue(),'')
+        self.assertNotIn('PRIVATE-REPORT-CONTENT',output.getvalue())
+        result=json.loads(output.getvalue());self.assertFalse(result['ok']);self.assertEqual(result['error']['code'],'PROTOCOL_ERROR')
+
+    def test_report_json_returns_complete_text_within_control_limit(self):
+        import contextlib
+        import io
+        from nativepeers.cli import main
+        text='猫 complete\n'*2000
+        task=self.add(summary=text);output=io.StringIO()
+        with patch('sys.argv',['npeer','result',task,'--report','--json']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as done:main()
+        self.assertEqual(done.exception.code,0);self.assertEqual(json.loads(output.getvalue())['data']['report'],text)
+
+    def test_oversize_report_json_points_to_unframed_complete_report(self):
+        import contextlib
+        import io
+        from nativepeers.cli import main
+        from nativepeers.models import CONTROL_RESPONSE
+        task=self.add(summary='z'*(CONTROL_RESPONSE+1));output=io.StringIO()
+        with patch('sys.argv',['npeer','result',task,'--report','--json']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as done:main()
+        self.assertEqual(done.exception.code,2)
+        result=json.loads(output.getvalue());self.assertEqual(result['error']['code'],'PAYLOAD_TOO_LARGE')
+        self.assertIn('npeer result '+task+' --report',result['error']['message'])
