@@ -10,8 +10,11 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 from nativepeers.artifacts import Artifacts
+from nativepeers.caller import Caller
+from nativepeers.delegation import Delegation
 from nativepeers.errors import PeerError
 from nativepeers.files import atomic_json
 from nativepeers.journal import Journal
@@ -169,6 +172,30 @@ class ReadOnlyArtifactTests(unittest.TestCase):
                     self.assertIn('task_status/task_result use the same scope', response['error']['message'])
                     self.assertIn('context_refs', response['error']['message'])
                     self.assertIn('artifact_read', response['error']['message'])
+
+    def test_parent_reads_do_not_renew_runtime_or_write_state(self):
+        parent = Registry(self.journal).register('claude', self.root/'claude', new_id(), 'parent',
+            self.owner, self.root, {'kind': 'claude-inbox'}, owner_kind='test')
+        caller = Caller('peer', parent['handle'], parent['incarnation_id'])
+        self.journal.db.execute('UPDATE groups SET parent_key=?', (caller.key,))
+        task = self.add_task()
+        atomic_json(self.journal.root/'compat/runtime.json', {'providers': {'claude':
+            dict(path='/old', sha256='0'*64, size=1)}})
+        actual = dict(path='/changed', sha256='1'*64, size=2)
+        with self.read_only_state(), patch('nativepeers.compatibility.fingerprint', return_value=actual), patch('nativepeers.compatibility.AUTO_RENEW', True), patch('nativepeers.runtime_updates.renew_selected', side_effect=AssertionError('passive read attempted renewal')) as renewal:
+            reader = Journal(self.journal.root, read_only=True)
+            before = {p.relative_to(self.journal.root): (p.read_bytes() if p.is_file() else None, p.stat().st_mtime_ns, p.stat().st_mode)
+                      for p in [self.journal.root, *self.journal.root.rglob('*')]}
+            try:
+                service = Delegation(reader, Registry(reader))
+                for value in (service.status(caller, self.group_id), service.result(caller, task)):
+                    self.assertEqual(value['completion_delivery']['state'], 'CAPABILITY_MISMATCH')
+                self.assertEqual(service.groups(caller)['groups'][0]['group_id'], self.group_id)
+                renewal.assert_not_called()
+                after = {p.relative_to(self.journal.root): (p.read_bytes() if p.is_file() else None, p.stat().st_mtime_ns, p.stat().st_mode)
+                         for p in [self.journal.root, *self.journal.root.rglob('*')]}
+                self.assertEqual(after, before)
+            finally:reader.close()
 
     def test_analysis_worker_cli_reads_granted_context_from_live_wal_without_writes(self):
         # Checkpoint before publishing the context so immutable/main-file-only reads

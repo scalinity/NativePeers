@@ -128,7 +128,7 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
             if sql.startswith('SELECT * FROM spawn_requests') and not skipped:
                 skipped=True;return None
             return one(sql,params)
-        def route(journal,parent):
+        def route(journal,parent,*,renew=True):
             self.assertFalse(journal.db.in_transaction)
             return {'ready':True,'state':'READY','reason':'fixture','parent_key':parent}
         with patch.object(self.j,'one',side_effect=query),patch('nativepeers.completion_delivery.readiness',side_effect=route) as route_check,patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock) as launch:

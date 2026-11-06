@@ -6,7 +6,7 @@ from .errors import PeerError, require
 from .registry import Registry
 
 
-def readiness(journal, parent_key):
+def readiness(journal, parent_key, *, renew=True):
     value = dict(ready=False, state='UNKNOWN', parent_key=parent_key,
                  result_collection='retained results remain available',
                  scope='Passive route check; native policy and later ingestion are not guaranteed')
@@ -21,7 +21,7 @@ def readiness(journal, parent_key):
                 from .compatibility import codex_inbox_runtime
                 value['runtime']=codex_inbox_runtime(journal,peer)
                 value['runtime_scope']='exact live recipient and queue helper'
-            else:value['runtime'] = verify(journal, provider, Path.home()/'.local/bin/claude')
+            else:value['runtime'] = verify(journal, provider, Path.home()/'.local/bin/claude',renew=renew)
             if kind == 'claude-inbox':
                 from .adapters.native_delivery import socket_endpoint
                 socket_endpoint(peer)
@@ -40,7 +40,7 @@ def readiness(journal, parent_key):
             from .compatibility import verify
             from .grok import executable as grok_executable
             provider=peer['peer_key']['provider']
-            value['runtime'] = verify(journal,provider,grok_executable() if provider=='grok' else Path.home()/'.local/bin/agy')
+            value['runtime'] = verify(journal,provider,grok_executable() if provider=='grok' else Path.home()/'.local/bin/agy',renew=renew)
             value.update(state='NEXT_INVOCATION', reason='The hook cannot wake an idle parent',
                          next_action='Collect retained results or use the next normal native invocation')
             return value

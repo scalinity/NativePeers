@@ -390,7 +390,7 @@ class Delegation:
         elif completion:
             from .completion_delivery import annotate,describe,readiness
             result['notifications']=[describe(self.journal,route) for route in result['notifications']]
-            annotate(result,readiness(self.journal,group['parent_key']),
+            annotate(result,readiness(self.journal,group['parent_key'],renew=False),
                      push=any(route['mode']=='push' for route in result['notifications']))
         from .fallback import result_details
         from .routing import unread_replies
