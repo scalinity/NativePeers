@@ -1,0 +1,551 @@
+{
+  "schema_version": 1,
+  "originating_task": "NativePeers issue #59",
+  "stage": "issue-59-source-verification",
+  "status": "SOURCE_PASS_INSTALLED_NOT_RUN",
+  "reviewed_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
+  "tests": {
+    "plugin_validation": {
+      "status": "PASS",
+      "command": "Claude2.1.319 plugin validate integrations/claude/mod/np",
+      "output": "exit0; existing ICON_MISSING warning"
+    },
+    "typescript": {
+      "status": "PASS",
+      "command": "tsc -p integrations/claude/mod/np; tsc -p tests/integration/claude_mod/driver; tsc -p tests/integration/claude_mod/spawn_observer",
+      "output": "exit0"
+    },
+    "plugin_units": {
+      "status": "PASS",
+      "command": "Claude2.1.319 plugin test integrations/claude/mod/np",
+      "output": "58 pass,0fail"
+    },
+    "native_roles": {
+      "status": "PASS",
+      "command": "NP_CLAUDE_BIN=exact2.1.319 python tests/integration/claude_mod/run_spawn_roles.py --interactive --case CASE --keep OWN_IGNORED_DIR",
+      "output": "Fiveinteractivecasesandbothdefaultprintcasespassed onfinalfixturecode. Zero tripwiremodelrequests; printalsoAPI duration0/cost0/empty modelUsage; interactivehasnoheadlessresultmetrics."
+    },
+    "driver_regression": {
+      "status": "PASS",
+      "command": "python tests/integration/claude_mod/run_delivery_ownership.py --case direct",
+      "output": "passed exact2.1.319 afterdriverchange"
+    },
+    "python_complete": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "e2cfcae",
+      "output": "1237 passed, 5 skipped, 1117 subtests passed in296.45s"
+    },
+    "initial_python_complete": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "1072d95",
+      "output": "1237 passed,5skipped,1117subtests in313.20s"
+    }
+  },
+  "operation_checks": [
+    {
+      "operation": "installed-named-Agent",
+      "status": "NOT_RUN",
+      "parent_context": "OwnedClaudeparent afterallfivePRsmergedandcoordinatedinstall"
+    }
+  ],
+  "behavior": "Use pinned isTeammate/workflow/parentAgentId flags, nevernamealone. Refusalnamesconditionandworking unnamedAgent(np:*)frommain or npeer spawnthere. No permissionorbackendchange.",
+  "source_native_matrix": [
+    {
+      "case": "main-named",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "call_shape": true,
+        "native_classification": true,
+        "disposition": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "80d664a6-f3a3-49ef-911d-fe53fabb82df",
+          "type": "np:codex",
+          "name": "named-review",
+          "isTeammate": false,
+          "workflow": false,
+          "agentId": "aeca011fb4a1a7440"
+        }
+      ],
+      "native_calls": [],
+      "mode": "pty"
+    },
+    {
+      "case": "main-unnamed",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "call_shape": true,
+        "native_classification": true,
+        "disposition": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "43b937af-71ec-4e85-ad2f-15111dabe0f2",
+          "type": "np:codex",
+          "isTeammate": false,
+          "workflow": false,
+          "agentId": "ab665b236782fe14c"
+        }
+      ],
+      "native_calls": [],
+      "mode": "pty"
+    },
+    {
+      "case": "team-named",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "call_shape": true,
+        "native_classification": true,
+        "disposition": true,
+        "actionable_refusal": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "1fa1af2a-9fa8-4e0f-8f76-b55ade8932ae",
+          "type": "np:codex",
+          "name": "named-review",
+          "isTeammate": true,
+          "workflow": false,
+          "deny": "np teammate spawn refused (isTeammate): Claude Code classifies this named Agent call as a teammate. Use an unnamed Agent(np:*) from the main conversation, or run npeer spawn there."
+        }
+      ],
+      "native_calls": [],
+      "mode": "pty"
+    },
+    {
+      "case": "team-unnamed",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "call_shape": true,
+        "native_classification": true,
+        "disposition": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "1e58211f-a441-4542-a320-fc9822faceb5",
+          "type": "np:codex",
+          "isTeammate": false,
+          "workflow": false,
+          "agentId": "a1049a350b1b0b222"
+        }
+      ],
+      "native_calls": [],
+      "mode": "pty"
+    },
+    {
+      "case": "teammate",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "actual_teammate": true,
+        "caller_is_actual_teammate": true,
+        "both_denied": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "0786c6b4-2fa5-4929-92ae-98033186e2d0",
+          "type": "npdriver:member",
+          "name": "fixture-member",
+          "isTeammate": true,
+          "workflow": false,
+          "agentId": "afixture-member-b692fbf8cc159edb"
+        }
+      ],
+      "native_calls": [
+        {
+          "type": "teammate-call",
+          "caller": "afixture-member-b692fbf8cc159edb",
+          "name": "named-review",
+          "disposition": "NATIVE_TEAMMATE_NESTING_REFUSED"
+        },
+        {
+          "type": "teammate-call",
+          "caller": "afixture-member-b692fbf8cc159edb",
+          "name": null,
+          "disposition": "NATIVE_BACKGROUND_AGENT_REFUSED"
+        }
+      ],
+      "mode": "pty"
+    },
+    {
+      "case": "main-named",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "call_shape": true,
+        "native_classification": true,
+        "disposition": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "6919b180-3e43-4455-b8c7-93a9f4e81f75",
+          "type": "np:codex",
+          "name": "named-review",
+          "isTeammate": false,
+          "workflow": false,
+          "agentId": "ad10dbe1c9fa89486"
+        }
+      ],
+      "native_calls": [],
+      "mode": "print",
+      "result_metrics": {
+        "duration_api_ms": 0,
+        "total_cost_usd": 0,
+        "modelUsage": {}
+      }
+    },
+    {
+      "case": "main-unnamed",
+      "engine": {
+        "path": "/Users/danny/.local/share/claude/versions/2.1.319",
+        "sha256": "1f53587e92dee8e089fa349188a4cda64fa34ace6e7b0ca2ee278ddaa3cc2ebd",
+        "size": 321995200,
+        "version": "2.1.319 (Claude Code)"
+      },
+      "checks": {
+        "native_start": true,
+        "zero_api": true,
+        "observed_calls": true,
+        "backend_spawns": true,
+        "call_shape": true,
+        "native_classification": true,
+        "disposition": true,
+        "engine_unchanged": true
+      },
+      "roles": [
+        {
+          "session": "bd02fa29-1558-40e8-b286-326ef365e460",
+          "type": "np:codex",
+          "isTeammate": false,
+          "workflow": false,
+          "agentId": "a7a119c322e91a6de"
+        }
+      ],
+      "native_calls": [],
+      "mode": "print",
+      "result_metrics": {
+        "duration_api_ms": 0,
+        "total_cost_usd": 0,
+        "modelUsage": {}
+      }
+    }
+  ],
+  "worker_execution": "Source fixtures use replay backend, not native provider workers. Each source parent is an owned real Claude engine in a private fixture home.",
+  "workflow": {
+    "status": "UNIT_PASS_NATIVE_NOT_RUN",
+    "scope": "Pureguardcoversnamed/unnamedworkflowflags andordinarysubagentoption; no liveworkflowfixture"
+  },
+  "independent_reviews": [
+    {
+      "group_id": "d387b0a4-80ac-4997-9a01-eb2ed1117b72",
+      "task_id": "21d7fa0a-1e19-41d5-941a-21cff2edea4b",
+      "native_id": "cddb8d77-8afb-49ba-9d85-784b029f2d8c",
+      "requested_model": "sonnet",
+      "observed_model": "claude-sonnet-5-5",
+      "effort": "xhigh",
+      "verdict": "Guardaccepted;1warning5info allfixed/verified"
+    },
+    {
+      "request_id": "issue59-review-01a1af1e-2",
+      "status": "COMPLETED",
+      "source_commit": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+      "group_id": "bc34f304-ac95-445f-9edb-778664d05a8e",
+      "task_id": "bef2247d-d32b-46b5-a414-de963c967782",
+      "native_id": "4563bc3e-9461-4c8d-b0ab-d61b9185889b",
+      "requested_model": "sonnet",
+      "observed_model": "claude-sonnet-5-5",
+      "effort_requested": "xhigh",
+      "verdict": "No critical/warnings, all6firstfindingshold. Fiveinfo exactproposals applied/tested; productguardunchanged."
+    }
+  ],
+  "dispositions": [
+    {
+      "id": "F001",
+      "summary": "F001: Observer tsconfig.json exists on disk but is absent from the git index and commit",
+      "severity": "warning",
+      "disposition": "fixed and verified",
+      "evidence": "30dba66; tsc -p observer passed; configtracked"
+    },
+    {
+      "id": "F002",
+      "summary": "F002: Teammate assertions do not bind named/unnamed to their dispositions, the caller check is tautological, and polling stops before tool_result",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "80e8a8f; native teammate pairedrefusals withactualcaller andcompletedresults passed"
+    },
+    {
+      "id": "F003",
+      "summary": "F003: Teams-disabled baseline relies on '0' env parsing and print mode only",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "f558b39; interactiveoff named/unnamed bothpassed; teams variableomitted"
+    },
+    {
+      "id": "F004",
+      "summary": "F004: Driver now calls $.agent.list() on every subagent step and Agent check in all existing harness runs",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "c67e2c1; existing directdelivery/actualteammateregression passed; oldscriptsreturnbeforeagent.list"
+    },
+    {
+      "id": "F005",
+      "summary": "F005: Doc line says the hook applies only when not teammate/workflow, contradicting the new deny cases",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "ddb2ff4; PathA currentdoc matchesguard andresumepassthrough"
+    },
+    {
+      "id": "F006",
+      "summary": "F006: qualification.json omits the Claude binary path, version and hash it qualified",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "1072d95; five nativePTYfixtureswithresolvedengine/version/SHA/unchangedassert allpassed"
+    },
+    {
+      "id": "F101",
+      "summary": "F101: main-named/main-unnamed do not assert the call was actually named or unnamed",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "2c8a84b; allfourmainfixtures nowassertname exact; fivePTY andtwoheadlessruns passed"
+    },
+    {
+      "id": "F102",
+      "summary": "F102: Executable pin relies on pty_session being imported lazily after harness.CLAUDE is reassigned; no comment or assertion",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "613b922; explicitcommentkeepsPTYimportafterenginepin; allfivePTYfixturespassed"
+    },
+    {
+      "id": "F103",
+      "summary": "F103: The --version probe runs with the caller's environment and real HOME, outside the harness isolation",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "58ebad9; versionprobeusescleanenv/temporaryHOME; sevennativefixturesallpassed"
+    },
+    {
+      "id": "F104",
+      "summary": "F104: Section 1112 does not say the teams variable is omitted in all teams-off runs or that --interactive asserts only prompt_ready and zero tripwire model requests",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "e2cfcae; docsstateallteams-offvariableomissionandmode-specificmetrics; diffcheckpassed"
+    },
+    {
+      "id": "F105",
+      "summary": "F105: No post-F003 run of the default headless main-* path is recorded; record status fields still pending",
+      "severity": "info",
+      "disposition": "fixed and verified",
+      "evidence": "thisverificationrecord; bothdefaultheadlesscasesafterF003/F103passedallzeroAPImetrics; reviewstatusnowCOMPLETED"
+    }
+  ],
+  "integration": {
+    "old_head": "4fcc3f6cc5bfb39ee31d68b98f891c827a13f5c6",
+    "new_head": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+    "main_base": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
+    "byte_identical_paths": [
+      "docs/CLAUDE_LINEAGE_MOD.md",
+      "integrations/claude/mod/np/hooks/agents.ts",
+      "integrations/claude/mod/np/hooks/register.tsx",
+      "integrations/claude/mod/np/tests/agents.test.ts",
+      "tests/integration/claude_mod/driver/hooks/register.ts",
+      "tests/integration/claude_mod/run_spawn_roles.py",
+      "tests/integration/claude_mod/spawn_observer/.claude-plugin/plugin.json",
+      "tests/integration/claude_mod/spawn_observer/hooks/hooks.json",
+      "tests/integration/claude_mod/spawn_observer/hooks/register.ts",
+      "tests/integration/claude_mod/spawn_observer/tsconfig.json"
+    ]
+  },
+  "failed_checks": [
+    {
+      "files": "59-team-named initialheadless",
+      "classification": "Wrong fixture assumption: printmodewithteamsenvdoesnotcreate teammates; currentofficialdocsconfirminteractiverequirement. Switchedteamscases toPTY andverifiedcurrentengine."
+    },
+    {
+      "files": "59-teammate-pty / -2 / -3",
+      "classification": "Nativeguardsrefuseteammatechildren BEFOREagent.spawnhook, so hook-onlyobservermissed bothcalls. Readonlyownedmemberfile yieldscomputedrefusalclassifications; no prompts/transcriptsinpublicrecord."
+    }
+  ],
+  "installed_observation": {
+    "status": "NOT_RUN",
+    "dependency": "allfive merged,sharedwindow,supportedinstall"
+  },
+  "recovery": "NormalGitrevert/install; no nativehomes,providerpermissions,auth/account or existinginputchanges.",
+  "sources": [
+    "https://code.claude.com/docs/en/agent-teams",
+    "native-generated Claude2.1.319 types",
+    "Ownnative roleobservations"
+  ],
+  "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/activity/__init__.py": "e8141e603948b121b9c0488950d3fc8c7ef1900bb87c11c883aca612b01ae711",
+    "nativepeers/activity/antigravity.py": "0c859aae693bc9243625aa170b203de6033d2048ae7584adce3ad9fcccbc696a",
+    "nativepeers/activity/backfill.py": "360c0f80d2dedb3ffdef9d0eef4651fdfc8b0aeb7d266d5d604db8ce41b2a114",
+    "nativepeers/activity/bounds.py": "8e39fbba82329cbdc6101f5c70bd99fd9b937949a3c5c8360cf2befde013212e",
+    "nativepeers/activity/claude.py": "2b1454647d1ba497831b6d949e2c2c4267c50e120e7b8da8171e21157c708d74",
+    "nativepeers/activity/codex.py": "be9b810672ce4b48b1e119c2536d3284a1322186ba9d075d206a654b847a22e6",
+    "nativepeers/activity/command.py": "f798f87ae23d50b5310807038570fac14fc430dd7c576a10b17b1de5b1be56cf",
+    "nativepeers/activity/config.py": "81a7ae71c0adb8a0baeaaf80a1a6c817037cc13179c72091ad142be306735bbc",
+    "nativepeers/activity/context.py": "fc2e4935f885a6a54698300d2a886c6d06e2c76ff95dca3fd1735bf50deb568c",
+    "nativepeers/activity/events.py": "433b3a14827f0a15192b5d858d8c8d333068cbab97b3e54307cf8afa8cb8c7c3",
+    "nativepeers/activity/grok.py": "ab6538d72bfd65c1dd0ff791002c7a199325197cb0a18bc9989f07b796997377",
+    "nativepeers/activity/reader.py": "fe587c8d2198b19b7ae90691be7337e76ab33e62f3f0522167c2388442aa6f81",
+    "nativepeers/activity/recorder.py": "7b15594769a8e7494532b2918149c5d08508b7460cea0048d673c6439cf7ed6c",
+    "nativepeers/activity/redact.py": "b9563ca18525f47845e9c7976835f8b27cabcb6a93b96b62f81b242aba3dc18e",
+    "nativepeers/activity/store.py": "4afbab994dd9bbac6ebf2e41c1d495513a80df19724d8ad13359a9520a85a00e",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
+    "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
+    "nativepeers/adapters/native_delivery.py": "56ae95de5b6e67931c01bd5b8163554dbad7a0fc6dc1fa006ef719e76fc75aeb",
+    "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
+    "nativepeers/antigravity_install.py": "6a565ad9d3403c839992e72631d431ae357b8f047ddc980a7bc2aa59e93bc291",
+    "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
+    "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
+    "nativepeers/bridge_backend.py": "28edd5af838bbb6e127f60c84b57c8876bb9424d2c1e27d4ce2e12904a3b9afa",
+    "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
+    "nativepeers/caller.py": "feac9c8288133ddb8f8c2b0ed82a89142ea187b249463522ee51bd4fade7a2b6",
+    "nativepeers/change_preview.py": "b9237b96069cdd19403c0137e910654f28d1e1831a6cc89fd4aa4759470bb3c1",
+    "nativepeers/claude_mod_check.py": "10a72fc1f0bae52928d86c5585420e3fe69115303c7a9ce0abc6daf97f794a71",
+    "nativepeers/claude_mod_install.py": "ccab3cfd4abe468c45d79a93690d23a3ca87cabafa1e6c795e7a11c5d2501f67",
+    "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
+    "nativepeers/cleanup.py": "9d5bb2b6023bf630e66675007807c354664c92fa53e475ff79a0d9b06d66988f",
+    "nativepeers/cli.py": "c1bc3a6bfd2c080c1e08f82b8167a766d88427e6e0bfca16e49f26282fb62f63",
+    "nativepeers/compact.py": "2ee0720326f15d585e287257002aa6a5482f329eb5d669a7621873ecc64e4de2",
+    "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
+    "nativepeers/completion_delivery.py": "c4324f8e1351ef61222ba59b7a4411f90709f440c3bf9d57eae33b6e1d633da6",
+    "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
+    "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
+    "nativepeers/delegation.py": "e5c2e7e0332a87f5c1e4563bbb142b55b3d87f9760704419d3787d8b196e5479",
+    "nativepeers/desktop_host.py": "d31795ce8509b7ad43813ae1f450c19240940a592aad7b70d24806cfce3317e3",
+    "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
+    "nativepeers/fallback.py": "62cd4b1ff02f0d8280f5427de0f9710aa298e70c2f827f8c28d687efcbeb0481",
+    "nativepeers/files.py": "0d4a5aa977625dc3c609d9a2081728ed2afe8aca3c60a54f16f2a30e49c6ae1d",
+    "nativepeers/grok.py": "ef04d38d50e77b6f60f26324e0ec3720397676cfcc93dd3b929d52a6162fded6",
+    "nativepeers/grok_hooks.py": "5bbef9a7efc60d4dc6bcc8b34bc07b6564eb5808b61a76353fc4590e681a9776",
+    "nativepeers/grok_install.py": "caf6a4fb0c2348697586c0174f7a221fc7f197e611c310b0efbcf2d39f75974a",
+    "nativepeers/grok_worker.py": "19bcf05b42d818adc25ab36fc63deb2053b48286c8e900cc3d3fa18322e1f687",
+    "nativepeers/history_cleanup.py": "af3f7c8c46d67ee0926e17639554ca669895ba7dd3bc65516d77cf2f8bdc8f46",
+    "nativepeers/hooks.py": "b9c98838939d4de4b14a851d6a7d6e15bce3473fb37e2acb02904a6d5d9fb776",
+    "nativepeers/install.py": "da00ffe46c3c6cb494ade876623c81fb691848d9a14ea9240420f21a8a2fec6c",
+    "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
+    "nativepeers/journal.py": "44f284c9aad07c416ce6efd4ef5c94134ab9b5b3a21543f61716c9d08bf99be6",
+    "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
+    "nativepeers/mcp_server.py": "1e9f71388057ef03bec0ff84de29968993c91950b5aff38644194d2103d76f2b",
+    "nativepeers/mirror.py": "b3713d90a12171c58f4f800ffc62a26eb113b299189e11f6517b44c490b27ff3",
+    "nativepeers/models.py": "de17e04d5eda71a961b40b5123ba1a1642483f22cefc38cd0d6a0d6ff7f80adb",
+    "nativepeers/notification_policy.py": "f61af4495fea105d2ae2db74546e34945058a9823c565274f01c9c5992cefca5",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "80be827ae6ceb3bd7199200ea04141ef0693e48e45b200766340b69ade82d701",
+    "nativepeers/presentation.py": "98771f0e89e6ae71e9edb0b1621fbc78f1691c703ba50f670bb827c288e15f30",
+    "nativepeers/process.py": "ac4e1d8aec27217853a7c37571da00b8e56ae784e1376968204dc50d042de049",
+    "nativepeers/profiles.py": "f8e3be9ee53584f754b90a286a0a8b7959bc1d6e848aa1a5c152bbfc8233f94e",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
+    "nativepeers/readiness.py": "b671e414ed98fb085a005ce604783367eedf52e48ef170c0df711a8d3181bcef",
+    "nativepeers/receipts.py": "ca559249b8983fb77cbb3554faa70d41446deadda46a870faf49eb198dcbf7cd",
+    "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
+    "nativepeers/recovery.py": "f6367bb82b03612d0efaeee4949cca401aae883c1efd96c51eeefc652e163015",
+    "nativepeers/registry.py": "76bd8005f7a203332ad5abbcc61f8e2fcbebae0b374944ea5d30c4d75fd89b99",
+    "nativepeers/routing.py": "8ff2c427eb13e1cbe42199cc372e3aa02612cb611ec3398a4c581556955c8e3d",
+    "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
+    "nativepeers/selected_context.py": "cdf63b792f8d6eec90343155c24cc53df504feb2bfd804e51334f458588c25b0",
+    "nativepeers/supervisor.py": "e2b304d92e2e050feea373a9af390cb2954bc6db8d9b4e8fbd4e3497287a7bd3",
+    "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
+    "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
+    "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
+    "nativepeers/usage/collectors.py": "d52d6d6034e3e33dc0364a9ccf470a6cec5892b213b6c0ed065920ed4a6cee06",
+    "nativepeers/usage/config.py": "aa427528e54572d6be732c48692f4a741cacc9967848723898daeb7bf1d81554",
+    "nativepeers/usage/contracts.py": "fa28d801364fd2f9305e8965aabe4f0203988f13518de67017e879247b83ecb3",
+    "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
+    "nativepeers/usage/forecast.py": "ed637f520ddd798ce0201d430ce70ce14e1612ef72a5cdbd0c5de48e0b6c400f",
+    "nativepeers/usage/grok_native.py": "a0d2411c77c88623a0db1e8c860fb471b9195932a6639426aef840d2dc6b271c",
+    "nativepeers/usage/import_snapshot.py": "d952602ae271dcc076b7b268e9e96c216b186f53ddbf481a2b4310e0a60a17d3",
+    "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
+    "nativepeers/usage/native_command.py": "0102b9b9fae9f22d4d1dfc6cbee1f87ec9dd2a5d938d3c5bef5275cb2fe3c462",
+    "nativepeers/usage/normalize.py": "f6d3c9f6343ad6f08ed4ee575c49cdbb3f59789cbe67c38de8704e5ae8b41e35",
+    "nativepeers/usage/service.py": "21472e05c8f45b1d498b8d57da3ba6a372ea67db10c15d2626e849a26e08339e",
+    "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
+    "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
+    "nativepeers/worker_process.py": "8f12e604c58d5ed5cde0351879937a580ad707c13950476d9a91ee65b6a1d75c",
+    "nativepeers/worker_report.py": "22f6e29aa584a6fc483fd4694cdf5f172ce5e002ee53794c377ed10d5c900bea",
+    "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
+    "nativepeers/workspace_retirement.py": "d5dd5ae0c3f7d5ac768e8c9c11b0d54f90f988b6a2862659eb58b68ecd1d280d",
+    "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
+    "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
+    "schemas/activity.v1.json": "69fa63e88911819f5d80dcfe44f33570eef51c0dca12d728cba136cad06ff1d1",
+    "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
+    "schemas/peer.v1.json": "f92135c15ecc1372d7eda7e8d3afe09d27a6aa09da53c91b68e389f9b6008024",
+    "schemas/receipt.v1.json": "ee05acef9a19a56113885952e3b9b827ff766803e1a6e797c2a7b29f2682e928",
+    "schemas/requirements.v1.json": "326106aac17bbe21e5ec8a79f8896f31e72321beb8c113cfd886fb685ea9ced1",
+    "schemas/result.v1.json": "4ae0c689a3e4f10e571daa06861551d98d8cd738a262b8de4248dbd6a0ee6f94",
+    "schemas/spawn.v1.json": "cacc21096c24d2a83eeeec5ea7bc6a4f241d9c5f97126e092af11bb1fdda7740",
+    "schemas/usage-import.v1.json": "15d57cd7510f356176b2c799470495ba489989ca9d37eac7e0292a991a2d9d2d",
+    "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
+    "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
+  },
+  "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
+  "updated_at": "2026-11-06T04:05:56.599452-05:00"
+}
