@@ -369,3 +369,12 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         compact=self.service.result(self.caller,self.group,compact=True)
         self.assertEqual(compact['next_action'],'npeer result '+task+' --report')
         self.assertEqual(compact['tasks'][0]['report_command'],compact['next_action'])
+
+    async def test_second_compact_pass_propagates_truncation_without_final_collapse(self):
+        for _ in range(2):self.add(summary='A'*149+'\n'+'B'*149,findings=[dict(severity='warning',summary='猫'*1000)],limitations=['猫'*1000])
+        compact=self.service.result(self.caller,self.group,compact=True)
+        for row in compact['tasks']:
+            self.assertTrue(row['findings']['omitted']);self.assertNotIn('details_omitted',row)
+            self.assertTrue(row['summary_truncated'])
+            self.assertEqual(row['report_command'],'npeer result '+row['task_id']+' --report')
+        self.assertEqual(compact['next_action'],'npeer result '+self.group+' --json')
