@@ -783,7 +783,7 @@ People read this text too (the desktop app shows a handed-back report as the run
 - `failed`, `canceled` and `timed_out` replace `completed` and add `Error: <CODE> <message>`.
 - `interrupted` adds `Interrupted: the text above is a partial result.`
 - **Mirror-owned generation:** the mod posts `/v1/mirror/surfacing` before yielding the final text, and `/v1/mirror/ack` on `turn.complete`. The last line reads `Details: npeer result <group>`.
-- **Native-owned generation:** it posts neither and ends without that task's report. NativePeers delivers or retains the result on its existing route. Earlier mirror-owned folded generations remain independently scoped.
+- **Native-owned generation:** it posts `/v1/mirror/surfacing`, which leaves the native route unchanged (`changed:false`), posts no ack, and ends without that task's report. NativePeers delivers or retains the result on its existing route. Earlier mirror-owned folded generations remain independently scoped.
 
 #### 7.5.2 Handback runs (auto mode)
 
