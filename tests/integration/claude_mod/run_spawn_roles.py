@@ -39,11 +39,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--case', choices=['main-named', 'main-unnamed', 'team-named', 'team-unnamed', 'teammate'], required=True)
     parser.add_argument('--keep', type=Path, required=True)
+    parser.add_argument('--interactive', action='store_true', help='Use a PTY for a teams-disabled main case too')
     args = parser.parse_args()
     args.keep.mkdir(parents=True, exist_ok=True)
     roles = args.keep / 'roles'
     roles.mkdir()
     team = args.case.startswith('team')
+    interactive = team or args.interactive
     teammate = args.case == 'teammate'
     with tempfile.TemporaryDirectory(prefix='np-spawn-roles-') as directory:
         script = dict(notifications='ack')
@@ -59,10 +61,10 @@ def main():
         environment = {
             'NP_DRIVER_SCRIPT': str(script_path), 'NP_DRIVER_ALLOW_AGENT': '1', 'NP_DRIVER_SPAWN_LOG': str(roles),
             'NP_REPLAY_LOG': str(args.keep / 'replay.ndjson'), 'NP_REPLAY_SCENARIO': str(HERE / 'scenarios/codex_basic.json'),
-            'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS': '1' if team else '0',
         }
+        if team:environment['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] = '1'
         plugins = [HERE / 'driver', HERE / 'spawn_observer', REPO / 'integrations/claude/mod/np']
-        if team:
+        if interactive:
             from pty_session import Session
             session = Session(plugins, env=environment, args=['--permission-mode', 'default'], settings=settings, keep=args.keep, label=args.case)
             try:
@@ -90,7 +92,7 @@ def main():
     replay = [json.loads(line) for line in replay_path.read_text().splitlines()] if replay_path.exists() else []
     spawns = [row for row in replay if row['kind'] == 'spawn' and not row.get('body', {}).get('check_only')]
     denied = teammate or args.case == 'team-named'
-    checks = dict(native_start=record.get('prompt_ready', False) if team else record['exit_code'] == 0, zero_api=record['zero_api'],
+    checks = dict(native_start=record.get('prompt_ready', False) if interactive else record['exit_code'] == 0, zero_api=record['zero_api'],
         observed_calls=len(targets) == (2 if teammate else 1),
         backend_spawns=len(spawns) == (0 if denied else 1))
     if teammate:
