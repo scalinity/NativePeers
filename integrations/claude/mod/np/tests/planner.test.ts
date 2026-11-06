@@ -165,3 +165,17 @@ test('folded surfacing and acknowledgment target the original worker after a rep
   expect(taskAddress('replacement', { workerId: 'replacement', taskId: 'T2', generation: 1 })).toEqual({ worker_id: 'replacement', task_id: 'T2', generation: 1 })
   expect(taskAddress('same-worker', { taskId: 'persisted', generation: 2 })).toEqual({ worker_id: 'same-worker', task_id: 'persisted', generation: 2 })
 })
+
+
+test('colliding generation numbers identify included results by position', () => {
+  const folded = [{ generation: 1, text: 'EARLIER' }]
+  const current = ev(4, 'task.terminal', { status: 'completed', final_text: 'CURRENT' }, null, 1)
+  const report = finalAnswer(current, { provider: 'codex', workerId: 'replacement', groupId: 'G' }, [1, 1], false, folded)
+  expect(report).toStartWith('[result 1 · generation 1]\nEARLIER')
+  expect(report).toContain('[result 2 · generation 1]\nCURRENT')
+  expect(report).toContain('Results: 1 (generation 1), 2 (generation 1)')
+  expect(report).not.toContain('Generations: 1, 1')
+  const earlier = foldedAnswer([...folded, { generation: 1, text: 'OTHER' }], 'G')
+  expect(earlier).toContain('[result 2 · generation 1]\nOTHER')
+  expect(earlier).toContain('Results: 1 (generation 1), 2 (generation 1)')
+})

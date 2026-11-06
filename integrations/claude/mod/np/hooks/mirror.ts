@@ -219,13 +219,24 @@ export type Summary = {
   resultArtifact?: string; patchArtifact?: string; changes?: { files?: number; added?: number; removed?: number; worktree?: string }
 }
 
+// Generation numbers restart in a replacement worker. Where they collide,
+// number the included report entries so each heading names one result.
+function generationLabels(generations: number[]): { labels: string[]; summary: string } {
+  const repeated = new Set(generations).size !== generations.length
+  return {
+    labels: generations.map((g, i) => repeated ? `result ${i + 1} · generation ${g}` : `generation ${g}`),
+    summary: repeated ? `Results: ${generations.map((g, i) => `${i + 1} (generation ${g})`).join(', ')}` : `Generations: ${generations.join(', ')}`,
+  }
+}
+
 // Only earlier claimed tasks belong here; the current task may be native-owned.
 // Its provider/status facts must not be attributed to these earlier reports.
 export function foldedAnswer(folded: { generation: number; text: string }[], handle: string): string {
   if (!folded.length) return ''
   const lines: string[] = []
-  for (const f of folded) lines.push(`[generation ${f.generation}]`, f.text.trim() || '(no final text)', '')
-  lines.push('— NativePeers · earlier task results', `Generations: ${folded.map(f => f.generation).join(', ')}`, `Details: npeer result ${handle}`)
+  const names = generationLabels(folded.map(f => f.generation))
+  for (const [i, f] of folded.entries()) lines.push(`[${names.labels[i]}]`, f.text.trim() || '(no final text)', '')
+  lines.push('— NativePeers · earlier task results', names.summary, `Details: npeer result ${handle}`)
   return lines.join('\n')
 }
 
@@ -240,14 +251,15 @@ export function finalAnswer(terminal: Activity, s: Summary, generations: number[
   const handle = s.groupId ?? s.workerId
   const lines: string[] = []
   // Earlier generations of this run were shown as they ended; the notification carries only this message, so it repeats them.
-  for (const f of folded) lines.push(`[generation ${f.generation}]`, f.text.trim() || '(no final text)', '')
-  if (folded.length) lines.push(`[generation ${terminal.generation}]`)
+  const names = generationLabels(generations)
+  for (const [i, f] of folded.entries()) lines.push(`[${names.labels[i]}]`, f.text.trim() || '(no final text)', '')
+  if (folded.length) lines.push(`[${names.labels[folded.length]}]`)
   if (body.text.trim() && (!shown || folded.length)) lines.push(body.truncated ? body.text + `\n[… truncated; the full text: npeer result ${handle}]` : body.text)
   if (status === 'interrupted') lines.push('Interrupted: the text above is a partial result.')
   lines.push('', closingLine(terminal, s))
   if (d.error?.code) lines.push(`Error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`.trim())
   if (s.changes?.files) lines.push(`Changed ${s.changes.files} file${s.changes.files === 1 ? '' : 's'} (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})${s.changes.worktree ? ' in ' + s.changes.worktree : ''}`)
-  if (generations.length > 1) lines.push(`Generations: ${generations.join(', ')}`)
+  if (generations.length > 1) lines.push(names.summary)
   lines.push(`Details: npeer result ${handle}`)
   return lines.join('\n')
 }
