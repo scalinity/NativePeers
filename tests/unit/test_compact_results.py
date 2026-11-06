@@ -266,3 +266,11 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
             expected='npeer result '+handle+(' --json' if handle==self.group else ' --report')
             self.assertEqual(compact['next_action'],expected)
             self.assertLessEqual(len(json.dumps(compact).encode()),3400)
+
+
+    async def test_a_single_long_line_has_an_explicit_marker_only_preview(self):
+        task=self.add(summary='猫'*20000)
+        compact=self.service.result(self.caller,task,compact=True)['tasks'][0]
+        self.assertTrue(compact['summary'].startswith('[Report truncated: 60000 bytes omitted.'))
+        self.assertNotIn('猫',compact['summary'])
+        self.assertEqual(compact['report_command'],'npeer result '+task+' --report')
