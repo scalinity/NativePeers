@@ -2,7 +2,7 @@
 // mod's own files, the only places $ may be passed (the validator, X12).
 import type { EngineInterface, Register, TurnStepInput, TurnStepResult } from 'claude-code'
 import type { NpProvider, NpWorker } from '../types'
-import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, titleFrom, workerSpec } from './agents'
+import { PROVIDERS, adoptionBrief, agentSpec, describe, isProvider, parseHeader, shadowModel, spawnRefusal, titleFrom, workerSpec } from './agents'
 import { BridgeError, connected, connectionGeneration, followLineage, heartbeat, launch, request, restoreReady, shutdown, sleep, starting } from './bridge'
 import { HANDBACK_TOOL } from './inputs'
 import { MIRROR_TOOL } from './mirror'
@@ -101,8 +101,8 @@ async function pathA($: EngineInterface, e: any, next: (e: any) => Promise<any>,
     if (r.agentId) await loadShadow($, r.agentId)
     return r
   }
-  if (e.isTeammate || e.workflow) return { deny: 'np agents are not available in teams or workflows (v1)' }
-  if (e.parentAgentId && !o.allowFromClaudeSubagents) return { deny: 'np agents can be started only from the main conversation' }
+  const denied = spawnRefusal(e, o.allowFromClaudeSubagents)
+  if (denied) return { deny: denied }
   const provider = String(e.subagentType).slice(3)
   if (!isProvider(provider)) return { deny: `unknown NativePeers provider "${provider}"` }
   if ((await getBridge($)).state !== 'ready') return { deny: 'NativePeers bridge unavailable — run /np doctor' }

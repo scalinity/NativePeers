@@ -8,6 +8,13 @@ export const NAMES: Record<NpProvider, string> = { codex: 'Codex', claude: 'Clau
 
 export const ACTIVE = ['queued', 'starting', 'running', 'waiting']
 
+export function spawnRefusal(e: { name?: string; isTeammate?: boolean; workflow?: unknown; parentAgentId?: string }, allowSubagents = false): string | undefined {
+  const remedy = 'Use an unnamed Agent(np:*) from the main conversation, or run npeer spawn there.'
+  if (e.isTeammate) return `np teammate spawn refused (isTeammate): Claude Code classifies this named Agent call as a teammate. ${remedy}`
+  if (e.workflow) return `np workflow spawn refused (workflow): workflow agents are outside v1. ${remedy}`
+  if (e.parentAgentId && !allowSubagents) return `np spawn refused (parentAgentId): only the main conversation may start np agents. ${remedy}`
+}
+
 export function counts(workers: readonly NpWorker[]) {
   return { total: workers.length, running: workers.filter(w => ACTIVE.includes(w.status)).length,
     done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out'].includes(w.status)).length,

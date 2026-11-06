@@ -1,6 +1,21 @@
 import { expect, test } from 'claude-code/testing'
-import { agentSpec, describe, modelLabel, parseHeader, shadowModel, startedSince, statusLabel, statusSummary, titleFrom, workerSpec } from '../hooks/agents'
+import { agentSpec, describe, modelLabel, parseHeader, shadowModel, spawnRefusal, startedSince, statusLabel, statusSummary, titleFrom, workerSpec } from '../hooks/agents'
 import { followUp, handbackRequired, provenance, stripFraming } from '../hooks/inputs'
+
+test('spawn refusals use pinned role facts, not name, and give the main-conversation remedy', () => {
+  for (const name of [undefined, 'named-review']) {
+    expect(spawnRefusal({ name })).toBe(undefined)
+    const main = spawnRefusal({ name, isTeammate: true })!
+    expect(main).toContain('isTeammate')
+    expect(main).toContain('unnamed Agent(np:*) from the main conversation')
+    expect(main).toContain('npeer spawn')
+    expect(spawnRefusal({ name, workflow: { runId: 'wf_fixture' } })).toContain('workflow')
+    expect(spawnRefusal({ name, parentAgentId: 'member' })).toContain('parentAgentId')
+    expect(spawnRefusal({ name, isTeammate: true }, true)).toContain('teammate')
+    expect(spawnRefusal({ name, workflow: { runId: 'wf_fixture' } }, true)).toContain('workflow')
+    expect(spawnRefusal({ name, parentAgentId: 'ordinary' }, true)).toBe(undefined)
+  }
+})
 
 test('a shadow type has only the mirror tool and SubagentHandback, an unserved model and an explicit permission mode', () => {
   const spec = agentSpec('codex')

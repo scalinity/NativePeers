@@ -678,8 +678,12 @@ integrations/claude/mod/np/
 **Path A: native Agent call.** `on('agent.spawn', hook)` handles `e.subagentType` starting with `np:`. It applies only when `!e.resume && !e.isTeammate && !e.workflow`.
 
 Deny cases:
-- `e.parentAgentId` is set and `allowFromClaudeSubagents` is false;
-- a workflow agent, with the reason `np agents are not available in workflows (v1)`.
+- `e.isTeammate` is true: the engine classifies the call as a teammate. In a session with agent teams enabled, a named main-conversation call in an interactive session is a teammate; an unnamed call is an ordinary subagent. With teams disabled, both named and unnamed calls are ordinary subagents. The plugin uses this pinned engine fact, never `name` alone.
+- `e.workflow` is present: the agent belongs to a workflow.
+- `e.parentAgentId` is set and `allowFromClaudeSubagents` is false: only the main conversation may spawn.
+- Actual teammate calls are refused by the engine before `agent.spawn`: named children cannot nest teammates; unnamed np agents are background agents, which in-process teammates cannot spawn. These native restrictions also hold with `allowFromClaudeSubagents` enabled.
+
+Every refusal names its matching condition (`isTeammate`, `workflow` or `parentAgentId`) and the working alternative: use an unnamed `Agent(np:*)` from the main conversation, or run `npeer spawn` there. `allowFromClaudeSubagents` permits ordinary subagents only; it does not enable teams or workflows.
 
 Then:
 1. Parse the header. Build the worker spec: provider from the type; `title` from the header or `e.description`; the brief as `task`; `cwd` from `e.cwd` or the session's.
@@ -1087,7 +1091,7 @@ The delivery route state machine is defined in §6.4.
 
 **2. Mod unit tests** (`claude plugin test integrations/claude/mod/np`)
 - **Pure logic:** the planner (golden batch to chunk plan), header parser, labels and input capture with dedupe.
-- **Guards:** mirror denials and `tool.check`.
+- **Guards:** mirror denials, `tool.check`, and named/unnamed spawn refusals using engine role facts and the ordinary nested-subagent option.
 - **Fail-closed:** the `.catch` generator path.
 - **Renderers:** `ToolUse`, `UserMessage`, band and pane, each on `terminal` **and** `desktop`.
 - **State:** `shape` migration.
@@ -1104,6 +1108,8 @@ The delivery route state machine is defined in §6.4.
   - fault injection (bridge kill, malformed events, budget overrun) yields fail-closed text;
   - and in **every** run: `duration_api_ms == 0`, `total_cost_usd == 0`, `modelUsage == {}`, **zero tripwire hits**, and no API error messages.
 - **Tripwire, not missing credentials.** A run without credentials can still bill (X13). On the Mac, Keychain OAuth is found regardless of `HOME`. So every harness run points `ANTHROPIC_BASE_URL` at a local tripwire stub (`tests/integration/claude_mod/tripwire.py`) that answers HTTP 400, counts requests and never logs headers. Gate G0 proves on the Mac that the tripwire catches a deliberate fallthrough before any harness run counts as free.
+
+`run_spawn_roles.py --case CASE --keep <ignored-capture-directory>` runs the native spawn-role matrix through this harness: `main-named`, `main-unnamed`, `team-named`, `team-unnamed`, and `teammate` (both named and unnamed calls from one actual teammate). It records session/agent role facts and computed refusal classifications, and asserts the expected backend spawn count. Main calls without teams use print mode and require all headless zero-API checks. Team cases require interactive mode and assert zero tripwire model requests; print mode does not create teammates. It uses an owned scripted fixture member for the teammate loop; no real worker input is submitted. Workflow guard cases run in the mod unit tests.
 
 **4. Live acceptance on the Mac**
 - Covers: the CLI (normal and fullscreen layouts), the desktop app, all four providers, fan-out of four, follow-ups, interrupt, stop, Stop all with cascade, adoption, re-attach, and fault injection.
