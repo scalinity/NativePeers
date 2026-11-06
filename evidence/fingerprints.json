@@ -45,7 +45,7 @@
       "nativepeers/worktrees.py": "71c13084142b7b3e42ac8b6e02e578d31417cc4edc8f950bcb2e4e44c2d0054c"
     }
   },
-  "at": "2026-11-05T21:23:25.735999-05:00",
+  "at": "2026-11-06T00:28:27.397154-05:00",
   "authorized_deltas": "evidence/installation.json",
   "canonical_and_dependency_sha256": {
     "docs/IMPLEMENTATION.md": "360a374bad1aa06873caf31d444018e8519632c29a51dca24f423b752639c950",
@@ -60,8 +60,8 @@
     "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
     "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
   },
-  "code_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
-  "current_verification": "evidence/issue-53-in-task-replies.json",
+  "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+  "current_verification": "evidence/issue-55-tool-inventory.json",
   "installed_runtime_fingerprints": "evidence/capabilities.json",
   "model_antigravity_extension": {
     "acceptance": "evidence/acceptance.json extensions.models_antigravity_implementation",
@@ -194,7 +194,7 @@
     "nativepeers/policy.py": "80be827ae6ceb3bd7199200ea04141ef0693e48e45b200766340b69ade82d701",
     "nativepeers/presentation.py": "164a8f7a15e08703dca34b96c717ba97428d771dbed32bfefefe4ecf44e90f0b",
     "nativepeers/process.py": "ac4e1d8aec27217853a7c37571da00b8e56ae784e1376968204dc50d042de049",
-    "nativepeers/profiles.py": "60be4db17b7a95c13749c14371696a92e23ad61fe0e46957f1688686bbd58cff",
+    "nativepeers/profiles.py": "f8e3be9ee53584f754b90a286a0a8b7959bc1d6e848aa1a5c152bbfc8233f94e",
     "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
     "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
     "nativepeers/readiness.py": "b671e414ed98fb085a005ce604783367eedf52e48ef170c0df711a8d3181bcef",
@@ -222,7 +222,7 @@
     "nativepeers/usage/service.py": "21472e05c8f45b1d498b8d57da3ba6a372ea67db10c15d2626e849a26e08339e",
     "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
     "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
-    "nativepeers/worker_process.py": "06fe69cd04cb7272b4ffcf66ab12a34d9855051592ac95f895f89c230468fec7",
+    "nativepeers/worker_process.py": "8f12e604c58d5ed5cde0351879937a580ad707c13950476d9a91ee65b6a1d75c",
     "nativepeers/worker_report.py": "22f6e29aa584a6fc483fd4694cdf5f172ce5e002ee53794c377ed10d5c900bea",
     "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
     "nativepeers/workspace_retirement.py": "d5dd5ae0c3f7d5ac768e8c9c11b0d54f90f988b6a2862659eb58b68ecd1d280d",
