@@ -215,9 +215,9 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/issue-58-readonly-reads",
-    "code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
-    "evidence": "evidence/issue-58-readonly-reads.json",
+    "branch": "fix/issue-59-named-spawn",
+    "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+    "evidence": "evidence/issue-59-named-spawn.json",
     "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
     "status": "SOURCE_PASS_INSTALLED_NOT_RUN"
   },
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "4c8fd80d932c2c283e957c908af3e4910f81f551",
-    "branch": "fix/issue-58-readonly-reads",
-    "code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
-    "last_verified_publication": "8a195a73c1136b096442db4cb771f311fc2187e7",
+    "base_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
+    "branch": "fix/issue-59-named-spawn",
+    "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+    "last_verified_publication": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,38 +302,53 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/issue-58-readonly-reads",
+    "branch": "fix/issue-59-named-spawn",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
-    "verified_remote_code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
+    "verified_remote_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+    "verified_remote_code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-58-source-verification",
+  "stage": "issue-59-source-verification",
   "tests_current": {
-    "focused": {
+    "plugin_validation": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_completion_delivery.py tests/unit/test_readonly_artifacts.py",
-      "output": "19 passed,20subtests in3.04s"
+      "command": "Claude2.1.319 plugin validate integrations/claude/mod/np",
+      "output": "exit0; existing ICON_MISSING warning"
+    },
+    "typescript": {
+      "status": "PASS",
+      "command": "tsc -p integrations/claude/mod/np; tsc -p tests/integration/claude_mod/driver; tsc -p tests/integration/claude_mod/spawn_observer",
+      "output": "exit0"
+    },
+    "plugin_units": {
+      "status": "PASS",
+      "command": "Claude2.1.319 plugin test integrations/claude/mod/np",
+      "output": "58 pass,0fail"
+    },
+    "native_roles": {
+      "status": "PASS",
+      "command": "NP_CLAUDE_BIN=exact2.1.319 python tests/integration/claude_mod/run_spawn_roles.py --interactive --case CASE --keep OWN_IGNORED_DIR",
+      "output": "Fiveinteractivecasesandbothdefaultprintcasespassed onfinalfixturecode. Zero tripwiremodelrequests; printalsoAPI duration0/cost0/empty modelUsage; interactivehasnoheadlessresultmetrics."
+    },
+    "driver_regression": {
+      "status": "PASS",
+      "command": "python tests/integration/claude_mod/run_delivery_ownership.py --case direct",
+      "output": "passed exact2.1.319 afterdriverchange"
     },
     "python_complete": {
       "status": "PASS",
       "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "8a195a7",
-      "output": "1237 passed, 5 skipped, 1117 subtests passed in352.20s"
+      "source_commit": "e2cfcae",
+      "output": "1237 passed, 5 skipped, 1117 subtests passed in296.45s"
     },
     "initial_python_complete": {
       "status": "PASS",
       "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "8cf8db6",
-      "output": "1234 passed, 5 skipped, 1113 subtests passed in337.99s"
-    },
-    "protected_notifications": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_readonly_artifacts.py tests/contract/test_notifications.py",
-      "output": "44 passed,43subtests in6.52s; allthreeprotectedtestfilesunchanged"
+      "source_commit": "1072d95",
+      "output": "1237 passed,5skipped,1117subtests in313.20s"
     }
   },
   "transports": {
@@ -342,7 +357,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-11-06T03:29:29.801074-05:00",
+  "updated_at": "2026-11-06T04:05:56.599452-05:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2832,6 +2847,60 @@
         "evidence": "evidence/issue-58-readonly-reads.json",
         "source_map_sha256": "934a4c256e1792da5a408345538c332e46b2b2824acfce38b567dd554305480c",
         "status": "SOURCE_PENDING_REVIEW_AND_FULL_SUITE"
+      }
+    },
+    {
+      "stage": "issue-58-source-verification",
+      "updated_at": "2026-11-06T03:29:29.801074-05:00",
+      "git": {
+        "base_commit": "4c8fd80d932c2c283e957c908af3e4910f81f551",
+        "branch": "fix/issue-58-readonly-reads",
+        "code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
+        "last_verified_publication": "8a195a73c1136b096442db4cb771f311fc2187e7",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-58-readonly-reads",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
+        "verified_remote_code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-58-readonly-reads",
+        "code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
+        "evidence": "evidence/issue-58-readonly-reads.json",
+        "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
+        "status": "SOURCE_PASS_INSTALLED_NOT_RUN"
+      }
+    },
+    {
+      "stage": "issue-59-source-verification",
+      "updated_at": "2026-11-06T03:34:27.368536-05:00",
+      "git": {
+        "base_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
+        "branch": "fix/issue-59-named-spawn",
+        "code_commit": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+        "last_verified_publication": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-59-named-spawn",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+        "verified_remote_code_commit": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-59-named-spawn",
+        "code_commit": "1072d95c3abcf640a43bd5e9566fa829d6649a19",
+        "evidence": "evidence/issue-59-named-spawn.json",
+        "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
+        "status": "SOURCE_PENDING_FINAL_REVIEW_AND_FULL_SUITE"
       }
     }
   ],

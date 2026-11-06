@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
-  "reviewed_commit": "4c8fd80d932c2c283e957c908af3e4910f81f551",
-  "publication_branch": "fix/issue-58-readonly-reads",
-  "updated_at": "2026-11-06T03:29:29.801074-05:00",
-  "current_record": "evidence/issue-58-readonly-reads.json",
+  "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+  "reviewed_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
+  "publication_branch": "fix/issue-59-named-spawn",
+  "updated_at": "2026-11-06T04:05:56.599452-05:00",
+  "current_record": "evidence/issue-59-named-spawn.json",
   "file_classes": {
     "product": {
       "files": {
@@ -139,17 +139,17 @@
         "integrations/claude/mod/.claude-plugin/marketplace.json": "ee35af957b34f5c589a14c41445930023e4933ef7b741381df7c79f026322122",
         "integrations/claude/mod/np/.claude-plugin/plugin.json": "d76d723ce6dc874ede14a0b80aa4e282244c2803298f4d56bab6079a656576f0",
         "integrations/claude/mod/np/.gitignore": "41713a4a3d0bab754c7478395d7a4861b3c685cbfa5d0bde780a2692556cd299",
-        "integrations/claude/mod/np/hooks/agents.ts": "11c79e7a7e94076106044daf7fe5e3213296e6ab96c507cd78ea619c788e056e",
+        "integrations/claude/mod/np/hooks/agents.ts": "3a7612855b85835767992904d60702e0782655d3a43e1a570867204030b0a1f5",
         "integrations/claude/mod/np/hooks/bridge.ts": "c628238857f4e8d08a6957dba21fbe1179a1e70d28ca8cfc0b447deea37948e5",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
         "integrations/claude/mod/np/hooks/mirror.ts": "d5b0843e46e4ad4c6b0b1f2a14ef24d632463e0fb006bcbb894aaaa76a76e1dd",
-        "integrations/claude/mod/np/hooks/register.tsx": "b2a1447164edd4950c7303d79e89737c7ba702a44883b7123f1f7976cb700f74",
+        "integrations/claude/mod/np/hooks/register.tsx": "a35c5002afa5f5add28c9b34b1e8f4078aa14d28a56af48c16fdcb56968b83ea",
         "integrations/claude/mod/np/hooks/shadow.ts": "172c450ec62a14f0a99590c71c4293337c9f0ab0d4ae9e9172e65b351859b7a6",
         "integrations/claude/mod/np/hooks/state.ts": "66395eb53c95422476da2a9b4273683eefe72f6c844c7080023cdb2bb59c31a7",
         "integrations/claude/mod/np/hooks/transcript.ts": "60831235dc021b3c6c015e41be825319501300ea03430dfd145d9e23ea343589",
         "integrations/claude/mod/np/hooks/ui.tsx": "0925d02cf618222ad6d396d9c27a16afd6f40ac8a736a02fd716a7639df65f94",
-        "integrations/claude/mod/np/tests/agents.test.ts": "7544b7e08c673bc47f2724cf3a691cbe06a4776b0a91f98f7d891f427e186986",
+        "integrations/claude/mod/np/tests/agents.test.ts": "ab77cd5b8b18e9b3fc97971d86014c506bffced13ed31fe4801419c27e9363b5",
         "integrations/claude/mod/np/tests/planner.test.ts": "925f34f200cda0fefe430813e0c3db2aea6445239b51eb770d529e48ecd9b211",
         "integrations/claude/mod/np/tests/transcript.test.ts": "2330355b8592a683a68bac380ff48c8aaee355e10d783a0a5f6b40143b999862",
         "integrations/claude/mod/np/tests/ui.test.tsx": "dda045e19997d669f1f2b2a824bf9256add3fdd9d7ba2e46da19009eef50ff38",
@@ -160,7 +160,7 @@
         "integrations/zsh/gemini.zsh": "25947321b1a6603681efcc7a58b68aad1c169357ca8ac77d324c49cc785e9bc5"
       },
       "file_count": 25,
-      "sha256": "638e868ee0d354b8f3fae04923397aa4b7ce3b47f0430aab4e63838f50704016"
+      "sha256": "2453e190f9e4c5a2219bef9c9565b9f4ff4db2803dfb9027006a190438404bec"
     },
     "tests": {
       "files": {
@@ -213,7 +213,7 @@
         "tests/integration/claude_mod/bin/npeer-replay": "70b255c667dd1b76535e7ee4a3c1a596ab5468760edcb84d85a8f39b8dc5d98a",
         "tests/integration/claude_mod/driver/.claude-plugin/plugin.json": "006b021b339f154b68c277321770aa1836bde46bd19f6a352b8e4ad07555cb3f",
         "tests/integration/claude_mod/driver/hooks/hooks.json": "c835c92d8e1159d20a40ca78ad654da7433942c3694ffeda0b376b0c4dfd52cf",
-        "tests/integration/claude_mod/driver/hooks/register.ts": "3e397f16dddba942ce54def0491bf107c36d7335b06e20af2bfa0e7b52a5e632",
+        "tests/integration/claude_mod/driver/hooks/register.ts": "33bfb135dc675df9f73aa551106252a5d9d144cd32e3de4df920cdcaa04e317e",
         "tests/integration/claude_mod/driver/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "tests/integration/claude_mod/harness.py": "73440997f640befc61db77f45f3709b9fb33f7fe5f431398ca13a046def6ad3a",
         "tests/integration/claude_mod/mod_harness.py": "7c8b7f744052e4a9e798ba86c1adf73151c8e4bff7ae5c0f19352b75ff89ee68",
@@ -253,6 +253,7 @@
         "tests/integration/claude_mod/run_mod_pty.py": "c3ec9e1bb728c285fd00e63172a01fd97f9d730bb6f79e61638a01cd182ce784",
         "tests/integration/claude_mod/run_modes.py": "049d2ec9a7180cbc933256b095eb608b9f04c7cf3d4a062b9cc8f83c50bd3ee0",
         "tests/integration/claude_mod/run_pane_conversation.py": "a5d912effce7d44c84495d6bd78dbfe3091def71a24d66f6e733ab17003db576",
+        "tests/integration/claude_mod/run_spawn_roles.py": "67023e20a0476e0ac7b10dd17975bbbd052522be140cba701afb1a163a2a91d8",
         "tests/integration/claude_mod/run_startup_race.py": "9d6f4e55a6989f544b540d2d0a711ea3b7246e8c4db8d8c15205d1db9e8f8ebe",
         "tests/integration/claude_mod/scenarios/adopt_grok.json": "ae57c7bef298f09e7b1882b6b8d4f6a8ce953a01636e42964048fc9cecca9e37",
         "tests/integration/claude_mod/scenarios/codex_basic.json": "a039390fb8370174eb213e92075b431a4289b4f528114ed24a16888c83da68af",
@@ -277,6 +278,10 @@
         "tests/integration/claude_mod/scripts/x_mode.json": "a73d1a4f16ec1dca5f25e8182453a8e9adede4686c9946ec220084f475ee2cef",
         "tests/integration/claude_mod/scripts/x_normal.json": "4e6a057b0e15f88bbcbd8454e406ba209f143fd8a46941e287b6f7710b84db7c",
         "tests/integration/claude_mod/setup_live.py": "da745e9c26af7e94ba99ebfdb27bfdfea586492ad7c6e88ea896b85cdef225fc",
+        "tests/integration/claude_mod/spawn_observer/.claude-plugin/plugin.json": "ffed6a3a1d1e5a072f0e17d41cedf0430976eb12eb49fa2904d8b4b658be2064",
+        "tests/integration/claude_mod/spawn_observer/hooks/hooks.json": "1c3cfc433b9383b0f6d714b7599d81bbc585d104ae2dffe321a190d81010ce5b",
+        "tests/integration/claude_mod/spawn_observer/hooks/register.ts": "83c1643cfb4acadef2baa434816e70f8402fce187d7956dc6e4768dbb81a8848",
+        "tests/integration/claude_mod/spawn_observer/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "tests/integration/claude_mod/tripwire.py": "67491f9dfa4047da5f98b8798ae2eb1cc00e669a27503fbed758eb667be91f2b",
         "tests/live/antigravity_paths.py": "90dacd710a38eb126b084d5cc0c053910ef2511b92b2e366a2ed517c68d5ec73",
         "tests/live/collect.py": "a089b07fec40e27af1e311ccafbab4485f2d32f04a0efa8135c67ccd2a99c34c",
@@ -410,15 +415,15 @@
         "tests/unit/test_worktrees_and_contracts.py": "5a27c9593b3df25dbd7587e34f01e51461f6d6d54ba40f1590a93c9ab47b3d97",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 245,
-      "sha256": "6b4c905bd6d546532736ebe829cd4f8e62bf578e32eb428f80f3d1050688dd04"
+      "file_count": 250,
+      "sha256": "c999c7b5c3e6efb01b636cd07c27fe975512a8962363107b536b4d2f2f985363"
     }
   },
   "operation_checks": [
     {
-      "operation": "installed-analysis-worker-reads",
+      "operation": "installed-named-Agent",
       "status": "NOT_RUN",
-      "parent_context": "Codex author; final coordinated install after all five PRs"
+      "parent_context": "OwnedClaudeparent afterallfivePRsmergedandcoordinatedinstall"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

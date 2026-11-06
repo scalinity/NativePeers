@@ -12,7 +12,7 @@ import type { Register, EngineInterface, TurnStepInput, TurnStepResult } from 'c
 // becomes NP_FIXTURE_DIR, "${agent:TYPE}" the newest agent id of that type and
 // "${agent1:TYPE}" the oldest.
 type Step = { text?: string; tools?: { name: string; input: unknown }[]; sleep_ms?: number }
-type Script = { steps?: Step[]; on?: Record<string, Step[]>; notifications?: 'ack' | Step[][] }
+type Script = { steps?: Step[]; on?: Record<string, Step[]>; notifications?: 'ack' | Step[][]; agents?: Record<string, Step[]> }
 
 let script: Script | undefined
 let cursor = 0
@@ -73,9 +73,18 @@ function toolId(n: number): string {
 }
 
 export const register: Register = on => {
+  on('session.start', async ($, e, next) => {
+    const r = await next(e)
+    if ((await loadScript($)).agents?.['npdriver:member']) await $.agent.register({ name: 'member', description: 'Scripted fixture teammate', prompt: 'Run the fixture script.', tools: ['Agent'], model: 'fixture-unserved', permissionMode: 'dontAsk' })
+    return r
+  })
   on('turn.step', async function* driverStep($, e: TurnStepInput, next): AsyncGenerator<any, TurnStepResult> {
-    if (e.agentId !== undefined) return yield* next(e)
-    const step = await planStep($, e)
+    const roles = (await loadScript($)).agents
+    if (e.agentId !== undefined && !roles) return yield* next(e)
+    const agent = e.agentId === undefined ? undefined : (await $.agent.list()).find(a => a.id === e.agentId)
+    const steps = agent ? roles?.[agent.type] : undefined
+    if (e.agentId !== undefined && !steps) return yield* next(e)
+    const step = steps ? (await substitute($, steps[e.index] ?? { text: 'fixture teammate complete' })) as Step : await planStep($, e)
     let index = 0
     const answer = step.text ?? ''
     if (answer) { yield { kind: 'text', index, text: answer }; index += 1 }
@@ -97,8 +106,14 @@ export const register: Register = on => {
   })
   // NP_DRIVER_ALLOW_AGENT=1: the scripted main loop's Agent calls are allowed, standing in for auto mode's
   // classifier, whose model request the tripwire refuses.
-  on('tool.check', { tool: 'Agent' }, async ($, e, next) =>
-    e.agentId === undefined && (await $.env.get('NP_DRIVER_ALLOW_AGENT')) === '1' ? { decision: 'allow' as const, reason: 'harness: scripted Agent call' } : next(e))
+  on('tool.check', { tool: 'Agent' }, async ($, e, next) => {
+    if ((await $.env.get('NP_DRIVER_ALLOW_AGENT')) !== '1') return next(e)
+    const roles = (await loadScript($)).agents
+    if (e.agentId !== undefined && !roles) return next(e)
+    const agent = e.agentId === undefined ? undefined : (await $.agent.list()).find(a => a.id === e.agentId)
+    const scripted = e.agentId === undefined || Boolean(agent && roles?.[agent.type])
+    return scripted ? { decision: 'allow' as const, reason: 'harness: scripted Agent call' } : next(e)
+  })
   // Only scripted messages to this fixture's own np shadow: no model or real
   // worker receives them. As for Agent above, stand in for the refusing tripwire's classifier.
   on('tool.check', { tool: 'SendMessage' }, async ($, e, next) => {
