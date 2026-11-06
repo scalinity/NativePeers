@@ -1,10 +1,13 @@
 """Observe native named/unnamed spawn roles through the documented replay harness."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import tempfile
 import time
+import subprocess
 
+import harness
 from harness import HERE, REPO, run
 
 
@@ -41,6 +44,11 @@ def main():
     parser.add_argument('--keep', type=Path, required=True)
     parser.add_argument('--interactive', action='store_true', help='Use a PTY for a teams-disabled main case too')
     args = parser.parse_args()
+    binary = harness.CLAUDE.resolve()
+    harness.CLAUDE = binary
+    with binary.open('rb') as stream:digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+    engine = dict(path=str(binary), sha256=digest, size=binary.stat().st_size,
+                  version=subprocess.run([str(binary), '--version'], check=True, capture_output=True, text=True, timeout=15).stdout.strip())
     args.keep.mkdir(parents=True, exist_ok=True)
     roles = args.keep / 'roles'
     roles.mkdir()
@@ -104,7 +112,8 @@ def main():
         checks['native_classification'] = len(targets) == 1 and targets[0]['isTeammate'] == denied and not targets[0].get('parentAgentId')
         checks['disposition'] = len(targets) == 1 and (bool(targets[0].get('deny')) if denied else bool(targets[0].get('agentId')))
     if denied and not teammate:checks['actionable_refusal'] = bool(targets) and all('unnamed Agent(np:*) from the main conversation' in row.get('deny', '') and 'npeer spawn' in row.get('deny', '') for row in targets)
-    result = dict(case=args.case, checks=checks, passed=all(checks.values()), roles=rows, native_calls=targets if teammate else [], harness=record)
+    with binary.open('rb') as stream:checks['engine_unchanged'] = hashlib.file_digest(stream, 'sha256').hexdigest() == digest
+    result = dict(case=args.case, engine=engine, checks=checks, passed=all(checks.values()), roles=rows, native_calls=targets if teammate else [], harness=record)
     (args.keep / 'qualification.json').write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=2))
     if not result['passed']:raise SystemExit(1)
