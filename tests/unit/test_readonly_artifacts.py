@@ -97,14 +97,14 @@ class ReadOnlyArtifactTests(unittest.TestCase):
                 dict(worker_id=self.worker_id, group_id=self.group_id, generation=1,
                      native_id=self.native_id, owner=self.owner, native_process=native))
             with self.read_only_state():
-                before = {path.relative_to(self.journal.root): (path.read_bytes(), path.stat().st_mtime_ns)
-                          for path in self.journal.root.rglob('*') if path.is_file()}
+                before = {path.relative_to(self.journal.root): (path.read_bytes() if path.is_file() else None, path.stat().st_mtime_ns, path.stat().st_mode)
+                          for path in [self.journal.root, *self.journal.root.rglob('*')]}
                 # Prove this fixture rejects the original writing startup.
                 with self.assertRaises(PermissionError):
                     Journal(self.journal.root)
                 stdout, stderr = process.communicate('go\n', timeout=10)
-                after = {path.relative_to(self.journal.root): (path.read_bytes(), path.stat().st_mtime_ns)
-                         for path in self.journal.root.rglob('*') if path.is_file()}
+                after = {path.relative_to(self.journal.root): (path.read_bytes() if path.is_file() else None, path.stat().st_mtime_ns, path.stat().st_mode)
+                         for path in [self.journal.root, *self.journal.root.rglob('*')]}
                 self.assertEqual(after, before)
         finally:
             if process.poll() is None:
