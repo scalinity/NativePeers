@@ -495,6 +495,36 @@ class Delegation:
             value.update(artifact_pages=pages,artifact_pages_limit=16,artifact_page_bytes=16384,artifact_handles_omitted=max(0,len(handles)-16))
         return value
 
+    def report(self,caller,handle):
+        """Read one authorized task's entire immutable report before emitting text."""
+        import base64
+        import hashlib
+        from .artifacts import Artifacts
+        from .models import RESULT_PAGE
+        status=self.status(caller,handle)
+        require(handle!=status['group_id'],'PROTOCOL_ERROR','Complete reports require a task ID; use result GROUP --json to select one')
+        task=next(t for t in status['tasks'] if t['task_id']==handle)
+        artifact=task['result_artifact_id']
+        require(artifact,'PROTOCOL_ERROR','This task has no recorded report yet; no input was replayed')
+        reader=caller.key;offset=0;pieces=[];identity=None
+        while True:
+            try:page=Artifacts(self.journal).read(artifact,reader,offset,RESULT_PAGE)
+            except PeerError as error:
+                if error.code!='APPROVAL_BLOCKED' or not caller.grants.get('worker_id') or caller.grants['worker_id']==reader:raise
+                reader=caller.grants['worker_id'];continue
+            current=(page['artifact_id'],page['sha256'],page['byte_size'])
+            if identity is None:identity=current
+            require(current==identity and page['offset']==offset,'PROTOCOL_ERROR','Report artifact changed while paging')
+            raw=base64.b64decode(page['data_base64'],validate=True);pieces.append(raw)
+            offset+=len(raw)
+            if page['next_offset'] is None:break
+            require(raw and page['next_offset']==offset,'PROTOCOL_ERROR','Report artifact page did not advance')
+        raw=b''.join(pieces)
+        require(len(raw)==identity[2] and hashlib.sha256(raw).hexdigest()==identity[1],'PROTOCOL_ERROR','Report artifact digest or size differs')
+        record=json.loads(raw.decode('utf-8'))
+        require(isinstance(record,dict) and record.get('task_id')==handle and isinstance(record.get('summary'),str),'PROTOCOL_ERROR',"Artifact is not this task's readable report")
+        return dict(task_id=handle,report=record['summary'],result_artifact_id=artifact,sha256=identity[1],byte_size=identity[2])
+
     def _render_result(self,status,policy,handle):
         # Only render the captured membership; concurrent admission belongs to a
         # later read, even if its immutable result becomes available meanwhile.
@@ -504,8 +534,9 @@ class Delegation:
             if task['result_artifact_id']:
                 artifact=self.journal.one('SELECT relative_path FROM artifacts WHERE artifact_id=?',(task['result_artifact_id'],))
                 result=json.loads((self.journal.root/'artifacts'/artifact['relative_path']).read_text())
-                raw=result['summary'].encode();result['summary']=raw[:12288].decode(errors='ignore');result['summary_truncated']=len(raw)>12288
-                from .compact import phase
+                from .compact import phase,summary_preview
+                result['summary_bytes']=len(result['summary'].encode())
+                result['summary'],result['summary_truncated']=summary_preview(result['summary'],task['task_id'],12288)
                 result['completion_phase']=phase(policy,task['task_id'])
                 result['result_artifact_id']=task['result_artifact_id'];result['initial_task']=task['task_id'] in policy['initial_tasks'];results.append(result)
                 from .fallback import result_details

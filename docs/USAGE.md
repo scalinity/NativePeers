@@ -27,6 +27,7 @@ If `push_ready` is false, use a bounded wait with `--on-timeout retain`, then co
 | Notification policy state | `npeer notifications status --json` |
 | Read quietly retained notices | `npeer inbox --retained --json`; add `--page --limit 20` and `--cursor CURSOR` |
 | Retained delegations for this parent | `npeer groups --mine --limit 20 --json`; continue with `--cursor CURSOR` |
+| Read a task's complete readable report | `npeer result TASK_ID --report` |
 | Export a granted artifact to a new file | `npeer artifact-export ARTIFACT_ID --output /absolute/new.patch --json` |
 | Preview a worker-only delta | `npeer delta-preview WORKER_ID --task-id TASK_ID --json` |
 | Plan retained workspace cleanup | `npeer cleanup --plan --limit 20 --json`; narrow with repeated `--worker-id WORKER_ID` |
@@ -176,6 +177,10 @@ Ambient worker binding belongs to the exact current generation's recorded native
 ## Batch checks and bounded artifact results
 
 `spawn --check` shares spawn validation and model/default selection, returns selected provider homes, immutable executable paths, profiles, input manifests and capacity, and creates no group, task, reservation or workspace. It reports any non-inference catalog helpers separately: Codex `model/list` and Antigravity `models`. A plan does not prove entitlement or freeze capacity, runtime tools or files for a later launch. An explicit model/profile or unsafe selection failure remains a structured error; executable/readiness failures appear in the plan's `failures` with `ready:false`.
+
+`npeer result TASK_ID --report` prints that task's complete readable report to stdout. It pages the result artifact internally, verifies the complete SHA-256 and byte size, then decodes UTF-8 and emits the report only after verification succeeds. It preserves multibyte characters across page boundaries. Use a task ID; a group may contain several reports. The command uses the existing task scope and artifact reader grants and never claims a completion or submits model input. `--report` is separate from `--compact` and `--include-artifacts`.
+
+Ordinary result summaries remain bounded. A truncated summary ends at a whole line and names the omitted byte count and exact `npeer result TASK_ID --report` command inline. Compact task previews also include `report_command`, and their `next_action` points to that command when the summary is truncated. Artifacts and full structured results remain available independently.
 
 `result GROUP_ID --include-artifacts` and MCP `task_result` with `include_artifacts:true` include at most 16 authorized first pages, each at most 16 KiB (256 KiB total decoded bytes). Each page carries a digest and `next_offset` for `artifact-read`; additional handles remain in the result and `artifact_handles_omitted` reports the count beyond this batch. Ordinary result reads stay compact. These reads never claim a completion notification.
 

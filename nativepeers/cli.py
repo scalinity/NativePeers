@@ -48,7 +48,7 @@ def parser():
         q=command(name);q.add_argument('handle')
         if name in ('status','result'):q.add_argument('--compact',action='store_true')
         if name=='status':q.add_argument('--explain-selection',action='store_true');q.add_argument('--refresh',action='store_true');q.add_argument('--scan-cursor');q.add_argument('--scan-max-bytes',type=int)
-        if name=='result':q.add_argument('--include-artifacts',action='store_true')
+        if name=='result':q.add_argument('--include-artifacts',action='store_true');q.add_argument('--report',action='store_true',help="Read one task's complete report, paging and verifying its artifact")
         if name=='wait':
             q.add_argument('--timeout-ms',type=int,default=WAIT_MAX_MS,help=f'Bounded wait in milliseconds: 1 <= timeout-ms <= {WAIT_MAX_MS} (default: {WAIT_MAX_MS}); larger values are rejected')
             q.add_argument('--on-timeout',choices=['push','retain'])
@@ -132,7 +132,9 @@ async def dispatch(args,journal):
     if name=='groups':return core.delegation.groups(caller,args.limit,args.cursor)
     if name=='spawn':return await core.delegation.spawn(caller,json.loads(read_file(args.spec)),check=args.check,compact=args.compact)
     if name=='status':return await core.status(caller,args.handle,refresh=args.refresh,scan_cursor=args.scan_cursor,scan_max_bytes=args.scan_max_bytes,explain_selection=args.explain_selection,compact=args.compact)
-    if name=='result':return core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts,compact=args.compact)
+    if name=='result':
+        require(not args.report or not (args.compact or args.include_artifacts),'PROTOCOL_ERROR','Use --report separately from compact previews and artifact pages')
+        return core.delegation.report(caller,args.handle) if args.report else core.delegation.result(caller,args.handle,include_artifacts=args.include_artifacts,compact=args.compact)
     if name=='wait':return await core.tool(caller,'task_wait',dict(handle=args.handle,timeout_ms=args.timeout_ms,on_timeout=args.on_timeout))
     if name=='cancel':return await core.delegation.cancel(caller,args.handle,args.reason)
     if name=='activity':
@@ -289,6 +291,9 @@ def main():
         response=dict(schema_version=1,ok=False,data=None,error={'code':'PROTOCOL_ERROR','message':str(error)[:1000],'may_have_received':False},request_id=request_id);exit_code=2
     finally:
         if journal:journal.close()
+    if args.command=='result' and args.report and not args.json and response['ok']:
+        print(response['data']['report'],end='',flush=True)
+        raise SystemExit(exit_code)
     raw=canonical(response)
     if len(raw)>CONTROL_RESPONSE:
         raw=canonical(dict(schema_version=1,ok=False,data=None,error={'code':'PAYLOAD_TOO_LARGE','message':'Result exceeds 2 MiB; request an artifact page'},request_id=request_id));exit_code=2

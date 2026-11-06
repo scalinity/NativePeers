@@ -25,6 +25,18 @@ def lifecycle(status, policy):
                 queued=sum(t['state']=='QUEUED' for t in tasks))
 
 
+def summary_preview(text, task_id, limit, *, total_bytes=None):
+    """Cut only at a whole line and keep the complete-report command inline."""
+    raw = text.encode();total = len(raw) if total_bytes is None else total_bytes
+    if len(raw) <= limit and total <= len(raw):return text, False
+    command = f'npeer result {task_id} --report'
+    reserve = len(f'\n[Report truncated: {total} bytes omitted. Complete report: {command}]'.encode())
+    prefix = raw[:max(0, limit-reserve)]
+    prefix = prefix.rsplit(b'\n', 1)[0] if b'\n' in prefix else b''
+    marker = f'[Report truncated: {total-len(prefix)} bytes omitted. Complete report: {command}]'
+    return (prefix.decode() + '\n' if prefix else '') + marker, True
+
+
 def result_view(service, status, policy, handle, *, results=True):
     selected = [t for t in status['tasks'] if t['task_id'] == handle] if handle != status['group_id'] else status['tasks'][-2:]
     rows = []
@@ -61,7 +73,8 @@ def result_view(service, status, policy, handle, *, results=True):
                 error = record.get('error') or {}
                 verification = record.get('verification') or {}
                 incomplete=report_incomplete(record.get('summary',''),verification.get('limitations',[]))
-                row.update(summary=clip(record.get('summary', ''), 420),
+                preview, truncated = summary_preview(record.get('summary', ''), task['task_id'], 420, total_bytes=record.get('summary_bytes'))
+                row.update(summary=preview, summary_truncated=truncated, summary_bytes=record.get('summary_bytes',len(record.get('summary','').encode())),
                            report_incomplete=incomplete,
                            failure=dict(code=error.get('code'), message=clip(error.get('message', ''), 240),
                                         may_have_received=error.get('may_have_received'), limit=error.get('limit'), execution=error.get('execution')) if error else None,
@@ -71,24 +84,25 @@ def result_view(service, status, policy, handle, *, results=True):
                            changes={k:v for k,v in (record.get('changes') or {}).items() if k in ('worktree', 'patch_artifact', 'worker_delta_artifact')})
             except (OSError, ValueError, TypeError, KeyError, PeerError) as error:
                 row['unavailable'] = dict(reason=type(error).__name__, next_action='Inspect the retained result artifact; no model input was replayed')
+        if row.get('summary_truncated'):row['report_command'] = 'npeer result '+task['task_id']+' --report'
         rows.append(row)
     value = dict(compact=True, handle=handle, group_id=status['group_id'], state=status['state'],
                  lifecycle=lifecycle(status, policy), undelivered_phases=status.get('undelivered_phases',0), tasks=rows,
                  omissions=dict(earlier_tasks=max(0, len(status['tasks'])-len(rows)) if handle == status['group_id'] else 0,
                                 detail='Bounded previews; full findings, checks, failures, attempts and history remain in result/artifact reads. Delivery is not inferred.'),
-                 next_action='npeer result '+handle+' --json')
+                 next_action=rows[0]['report_command'] if len(rows)==1 and rows[0].get('report_command') else 'npeer result '+handle+' --json')
     # Leave room for either CLI or MCP JSON framing, including ensure_ascii escaping.
     if len(json.dumps(value).encode()) > 3400:
         for row in rows:
             for key in ('findings', 'checks', 'limitations', 'changes'):
                 if key in row:row[key] = dict(omitted=True, count=row[key].get('count') if isinstance(row[key],dict) else None, full_result=row['result_artifact_id'])
-            if 'summary' in row:row['summary'] = clip(row['summary'], 160)
+            if 'summary' in row:row['summary'] = summary_preview(row['summary'],row['task_id'],160,total_bytes=row.get('summary_bytes'))[0]
             if row.get('failure'):
                 row['failure'] = {k:v for k,v in row['failure'].items() if k in ('code', 'may_have_received')}
                 row['failure']['details_omitted'] = True
     if len(json.dumps(value).encode()) > 3400:
         value['tasks'] = [dict(task_id=row['task_id'], phase=row['phase'], state=row['state'],
-                              result_artifact_id=row['result_artifact_id'], details_omitted=True,
+                              result_artifact_id=row['result_artifact_id'], details_omitted=True, report_command=row.get('report_command'),
                               findings_count=(row.get('findings') or {}).get('count'),
                               checks_count=(row.get('checks') or {}).get('count'),
                               unavailable=bool(row.get('unavailable')),

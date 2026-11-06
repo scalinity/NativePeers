@@ -174,3 +174,83 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(value['tasks'][0]['failure']['code'],'BUDGET_EXHAUSTED')
         self.assertTrue(value['tasks'][0]['failure']['may_have_received'])
         self.assertTrue(value['tasks'][1]['unavailable'])
+
+    async def test_complete_report_pages_bytes_before_decoding_a_split_multibyte_character(self):
+        import hashlib
+        from nativepeers.models import RESULT_PAGE
+        task=self.add(summary='BOUNDARY_SENTINEL')
+        old=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(task,))['result_artifact_id']
+        record=json.loads((self.j.root/'artifacts'/old).read_bytes())
+        start=canonical(record).index(b'BOUNDARY_SENTINEL')
+        text='START-'+'x'*(RESULT_PAGE-1-start-len('START-'))+'猫\nMIDDLE-Δ\n'+'y'*19000+'\nEND-π'
+        record['summary']=text;raw=canonical(record)
+        self.assertEqual(raw[RESULT_PAGE-1:RESULT_PAGE+2],'猫'.encode())
+        artifact=Artifacts(self.j).put(raw,self.caller.key,media_type='application/json')
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(artifact,task))
+        offsets=[];read=Artifacts.read
+        def page(store,handle,reader,offset=0,limit=RESULT_PAGE,**kwargs):
+            offsets.append(offset);return read(store,handle,reader,offset,limit,**kwargs)
+        with patch.object(Artifacts,'read',page),patch('nativepeers.cli.bind_caller',return_value=self.caller):
+            result=await dispatch(parser().parse_args(['result',task,'--report']),self.j)
+        self.assertEqual(result['report'],text)
+        self.assertEqual(result['sha256'],hashlib.sha256(raw).hexdigest())
+        self.assertEqual(result['byte_size'],len(raw));self.assertEqual(offsets,[0,RESULT_PAGE])
+
+    async def test_truncated_report_previews_end_on_a_line_with_exact_recovery_command(self):
+        import re
+        text=('A complete line with multibyte text 猫. '*60+'\n')*40
+        task=self.add(summary=text)
+        normal=self.service.result(self.caller,task)['results'][0]
+        prefix,marker=normal['summary'].rsplit('\n',1)
+        self.assertTrue(text.startswith(prefix+'\n'))
+        self.assertLessEqual(len(normal['summary'].encode()),12288)
+        self.assertTrue(normal['summary_truncated'])
+        omitted=int(re.search(r'(\d+) bytes omitted',marker).group(1))
+        self.assertEqual(omitted,len(text.encode())-len(prefix.encode()))
+        command='npeer result '+task+' --report'
+        self.assertIn(command,marker)
+        compact=self.service.result(self.caller,task,compact=True)
+        self.assertEqual(compact['next_action'],command)
+        self.assertEqual(compact['tasks'][0]['report_command'],command)
+        self.assertIn(command,compact['tasks'][0]['summary'])
+        self.assertTrue(compact['tasks'][0]['summary_truncated'])
+        single=self.add(summary='x'*20000)
+        self.assertTrue(self.service.result(self.caller,single)['results'][0]['summary'].startswith('[Report truncated: 20000 bytes omitted.'))
+
+    async def test_report_integrity_and_scope_fail_before_returning_any_text(self):
+        task=self.add(summary='private complete report\n'*1600)
+        with self.assertRaises(PeerError) as denied:self.service.report(Caller('peer','another-parent'),task)
+        self.assertEqual(denied.exception.code,'APPROVAL_BLOCKED')
+        artifact=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(task,))['result_artifact_id']
+        path=self.j.root/'artifacts'/artifact;raw=path.read_bytes();path.write_bytes(raw[:-1]+b'!')
+        with self.assertRaises(PeerError) as corrupt:self.service.report(self.caller,task)
+        self.assertEqual(corrupt.exception.code,'PROTOCOL_ERROR');self.assertIn('content changed',corrupt.exception.message)
+
+    async def test_report_requires_one_recorded_task_and_rejects_mixed_views(self):
+        task=self.add()
+        with self.assertRaises(PeerError):self.service.report(self.caller,self.group)
+        missing=self.add('RUNNING')
+        with self.assertRaises(PeerError) as pending:self.service.report(self.caller,missing)
+        self.assertIn('no recorded report',pending.exception.message)
+        for flag in ['--compact','--include-artifacts']:
+            with patch('nativepeers.cli.bind_caller',return_value=self.caller):
+                with self.assertRaises(PeerError):await dispatch(parser().parse_args(['result',task,'--report',flag]),self.j)
+
+    async def test_worker_report_reads_use_the_existing_artifact_reader_grant(self):
+        task=self.add(summary='Granted full text 猫\n'*1500)
+        artifact=self.j.one('SELECT result_artifact_id FROM tasks WHERE task_id=?',(task,))['result_artifact_id']
+        worker=Caller('peer','worker-peer',grants={'worker_id':self.worker,'group_id':self.group})
+        with self.assertRaises(PeerError) as denied:self.service.report(worker,task)
+        self.assertEqual(denied.exception.code,'APPROVAL_BLOCKED')
+        Artifacts(self.j).grant(artifact,self.caller.key,[self.worker])
+        self.assertEqual(self.service.report(worker,task)['report'],'Granted full text 猫\n'*1500)
+
+    def test_plain_report_cli_emits_only_the_complete_text(self):
+        import contextlib
+        import io
+        from nativepeers.cli import main
+        text='START\n'+'猫 report\n'*2200+'END-π'
+        task=self.add(summary=text);output=io.StringIO()
+        with patch('sys.argv',['npeer','result',task,'--report']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(output):
+            with self.assertRaises(SystemExit) as done:main()
+        self.assertEqual(done.exception.code,0);self.assertEqual(output.getvalue(),text)
