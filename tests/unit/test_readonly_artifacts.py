@@ -1,4 +1,4 @@
-"""Artifact CLI reads across an enforced filesystem permission boundary."""
+"""Authorized CLI reads across an enforced filesystem permission boundary."""
 import base64
 from contextlib import contextmanager
 import json
@@ -76,13 +76,13 @@ class ReadOnlyArtifactTests(unittest.TestCase):
             for path, mode in modes.items():
                 path.chmod(mode)
 
-    def cli(self, handle, *, binding_value=None, bound=True, offset=0, limit=262144):
+    def cli(self, handle=None, *, arguments=None, binding_value=None, bound=True, offset=0, limit=262144):
         atomic_json(self.binding, binding_value or self.binding_value)
         environment = dict(os.environ, NPEER_HOME=str(self.journal.root), PYTHONPATH=str(ROOT),
             PYTHONDONTWRITEBYTECODE='1', NPEER_BOOTSTRAP='', CODEX_THREAD_ID='',
             NPEER_BINDING=str(self.binding) if bound else '')
-        command = [sys.executable, '-B', '-m', 'nativepeers', 'artifact-read', handle,
-                   '--offset', str(offset), '--limit', str(limit), '--json']
+        command = [sys.executable, '-B', '-m', 'nativepeers', *(arguments if arguments is not None else
+                   ['artifact-read', handle, '--offset', str(offset), '--limit', str(limit), '--json'])]
         # Keep a distinct native executable in ancestry so the actual owned-binding
         # checks run, including the current generation's process manifest.
         process = subprocess.Popen(['/bin/bash', '-c', 'read -r ready\n"$@" &\nwait $!', 'reader', *command],
@@ -107,8 +107,68 @@ class ReadOnlyArtifactTests(unittest.TestCase):
             if process.poll() is None:
                 process.kill()
             process.communicate()
-        self.assertEqual(stderr, '')
+        self.assertEqual(stderr, '', stderr)
         return process.returncode, json.loads(stdout)
+
+    def add_task(self, worker=None, group=None):
+        task = new_id()
+        record = dict(task_id=task, group_id=group or self.group_id, status='completed',
+            summary='Read-only report 猫', findings=[], verification=dict(tests_run=[], limitations=[]),
+            worker=dict(provider='codex', native_session_id=self.native_id), changes={})
+        artifact = self.artifacts.put(json.dumps(record, ensure_ascii=False).encode(), 'parent', [self.worker_id])
+        self.journal.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',
+            (task, worker or self.worker_id, None, None, 'COMPLETED', artifact, None, 1, '{}'))
+        selected = group or self.group_id
+        policy = json.loads(self.journal.one('SELECT policy_json FROM groups WHERE group_id=?', (selected,))['policy_json'])
+        policy.setdefault('initial_tasks', []).append(task)
+        self.journal.db.execute('UPDATE groups SET policy_json=? WHERE group_id=?', (json.dumps(policy), selected))
+        return task
+
+    def test_analysis_worker_task_reads_do_not_write_and_groups_keep_parent_scope(self):
+        task = self.add_task()
+        self.journal.db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+        live = self.add_task()
+        for arguments in (
+            ['result', task, '--compact', '--json'],
+            ['result', live, '--json'],
+            ['result', live, '--report', '--json'],
+            ['status', live, '--json'],
+            ['status', self.group_id, '--compact', '--json'],
+            ['groups', '--mine', '--json'],
+        ):
+            with self.subTest(arguments=arguments):
+                code, response = self.cli(arguments=arguments)
+                self.assertEqual(code, 0, response)
+                self.assertTrue(response['ok'], response)
+                if arguments[0] == 'groups':
+                    self.assertEqual(response['data']['groups'], [])
+                elif '--report' in arguments:
+                    self.assertEqual(response['data']['report'], 'Read-only report 猫')
+                elif arguments[0] == 'status' and '--compact' not in arguments:
+                    self.assertEqual([t['task_id'] for t in response['data']['tasks']], [task, live])
+                    self.assertEqual(response['data']['notifications'], [])
+                else:
+                    self.assertIn(live if task not in arguments else task, json.dumps(response['data']))
+
+    def test_readonly_task_scope_refusals_are_typed_and_name_equivalent_mcp_scope(self):
+        sibling, foreign_worker, foreign_group = new_id(), new_id(), new_id()
+        self.journal.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',
+            (foreign_group, 'other-parent', '{}', 'COMPLETED', '{}'))
+        template = self.journal.one('SELECT * FROM workers WHERE worker_id=?', (self.worker_id,))
+        for worker, group in ((sibling, self.group_id), (foreign_worker, foreign_group)):
+            row = dict(template, worker_id=worker, group_id=group, peer_key=None)
+            self.journal.db.execute('INSERT INTO workers VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)', tuple(row.values()))
+        sibling_task = self.add_task(sibling)
+        foreign_task = self.add_task(foreign_worker, foreign_group)
+        for handle in (sibling_task, foreign_task, foreign_group):
+            for command in ('status', 'result'):
+                with self.subTest(command=command, handle=handle):
+                    code, response = self.cli(arguments=[command, handle, '--json'])
+                    self.assertEqual(code, 4, response)
+                    self.assertEqual(response['error']['code'], 'APPROVAL_BLOCKED')
+                    self.assertIn('task_status/task_result use the same scope', response['error']['message'])
+                    self.assertIn('context_refs', response['error']['message'])
+                    self.assertIn('artifact_read', response['error']['message'])
 
     def test_analysis_worker_cli_reads_granted_context_from_live_wal_without_writes(self):
         # Checkpoint before publishing the context so immutable/main-file-only reads

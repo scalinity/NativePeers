@@ -274,7 +274,8 @@ def main():
         from .bridge_backend import run
         raise SystemExit(0 if run(args) else 4)
     try:
-        journal=Journal(read_only=True) if args.command=='artifact-read' else Journal()
+        read_only=args.command in ('artifact-read','result','groups') or (args.command=='status' and not args.refresh)
+        journal=Journal(read_only=read_only)
         value=asyncio.run(dispatch(args,journal))
         response=dict(schema_version=1,ok=True,data=value,error=None,request_id=request_id)
         if isinstance(value,dict) and value.get('state') in ('DELIVERY_UNKNOWN','SUBMITTING','SUBMITTED_UNCONFIRMED','OUTBOX_COMMITTED'):

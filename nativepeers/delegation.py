@@ -52,7 +52,7 @@ class Delegation:
                 row=worker_handle
             require(row,'PROTOCOL_ERROR','Unknown task/group handle');group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(row['group_id'],))
         require(caller.kind=='peer' and (caller.key==group['parent_key'] or caller.grants.get('group_id')==group['group_id']),
-                'APPROVAL_BLOCKED','Task is outside the bound caller grant')
+                'APPROVAL_BLOCKED','Task is outside the bound caller grant; task_status/task_result use the same scope. Ask the parent to supply selected evidence through context_refs; granted artifacts are readable with artifact_read')
         require(not worker_handle,'PROTOCOL_ERROR','This is a worker ID; status/result require an exact task or group ID',
                 details=dict(handle_kind='worker',group_id=group['group_id'],next_action='npeer status '+group['group_id']+' --compact --json'))
         return group
@@ -383,7 +383,7 @@ class Delegation:
         if caller.key!=group['parent_key']:
             worker=caller.grants.get('worker_id')
             require(handle==group['group_id'] or any(t['task_id']==handle and t['worker_id']==worker for t in result['tasks']),
-                    'APPROVAL_BLOCKED','A worker can read only its own task results')
+                    'APPROVAL_BLOCKED','A worker can read only its own tasks; task_status/task_result use the same scope. Ask the parent to supply selected evidence through context_refs; granted artifacts are readable with artifact_read')
             result['workers']=[w for w in result['workers'] if w['worker_id']==worker]
             result['tasks']=[t for t in result['tasks'] if t['worker_id']==worker]
             result['notifications']=[]
