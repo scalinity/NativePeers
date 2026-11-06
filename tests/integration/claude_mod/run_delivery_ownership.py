@@ -12,7 +12,7 @@ import tempfile
 
 from harness import HERE, REPO, run
 
-CASES = ['adopted', 'direct', 'off', 'before', 'after', 'queued', 'folded-native', 'folded-native-plain', 'folded-repeat', 'folded-missing', 'reattach', 'native-plain']
+CASES = ['adopted', 'direct', 'off', 'before', 'after', 'after-plain', 'queued', 'folded-native', 'folded-native-plain', 'folded-repeat', 'folded-missing', 'reattach', 'native-plain']
 
 
 def message_blocks(event):
@@ -84,7 +84,8 @@ def main():
         steps.append({'sleep_ms': 8000, 'text': 'main fixture complete'})
         script = directory / 'driver.json';script.write_text(json.dumps({'notifications': 'ack', 'steps': steps}))
         scenario = json.loads((HERE / 'scenarios' / ('codex_basic.json' if direct else 'adopt_grok.json')).read_text())
-        if case in ('before', 'after'):scenario['surfacing_failure'] = dict(generation=1, when=case)
+        if case in ('before', 'after', 'after-plain'):scenario['surfacing_failure'] = dict(generation=1, when=case.split('-')[0])
+        if case == 'after-plain':scenario['workers']['codex']['events'].insert(-1, {'kind': 'message.completed', 'data': {'text': 'INTERIM_MUST_STAY_IN_WORKER'}})
         if queued:
             worker = scenario['workers']['codex'] if direct else scenario['external']
             scenario['delay_ms'] = 300
@@ -110,17 +111,22 @@ def main():
         traffic = [json.loads(line) for line in hit_path.read_text().splitlines()] if hit_path.exists() else []
         rows = [json.loads(line) for line in log.read_text().splitlines()] if log.exists() else []
         shadow_requests = sum(str(row.get('model', '')).startswith('np-mirror') for row in traffic)
-        expected = 0 if case in ('adopted', 'off', 'after', 'native-plain') else 1
+        expected = 0 if case in ('adopted', 'off', 'after', 'after-plain', 'native-plain') else 1
         joined = '\n'.join(reports)
         checks = dict(process_success=record['exit_code'] == 0, no_shadow_model_request=shadow_requests == 0,
                       report_count=len(reports) == expected, handback_count=len(calls) == (0 if plain else expected),
                       adoption=any(row['kind'] == 'mirror.attach' and not row['body'].get('check_only') for row in rows) == (adopted or case == 'reattach'))
         if expected:checks['report_ids'] = 'npeer result G-' in joined and '— NativePeers' in joined
-        if case in ('before', 'after'):
+        if case in ('before', 'after', 'after-plain'):
             routes = [row for row in rows if row['kind'] == 'report-route']
             checks['bounded_retry'] = sum(row['kind'] == 'mirror.surfacing' for row in rows) == 2
             checks['one_winning_transition'] = sum(row['changed'] and row['route'] == 'MIRROR_SURFACING' for row in routes) == 1
-            checks['no_ack_after_lost_reply'] = case != 'after' or not any(row['kind'] == 'mirror.ack' for row in rows)
+            checks['no_ack_after_lost_reply'] = not case.startswith('after') or not any(row['kind'] == 'mirror.ack' for row in rows)
+        if case == 'after-plain':
+            notices = [event.get('summary','') for event in events if event.get('type') == 'system' and event.get('subtype') == 'task_notification']
+            kept = [text.strip() for text in notices if 'Kept in NativePeers: npeer result G-' in text]
+            checks['one_handle_only_completion'] = len(kept) == 1 and kept[0] == 'Kept in NativePeers: npeer result G-W1'
+            checks['no_worker_text_in_completion'] = not any('INTERIM_MUST_STAY_IN_WORKER' in text or 'Three easy wins' in text for text in notices)
         if queued:
             checks['queued_disposition'] = [row['disposition'] for row in rows if row['kind'] == 'input-result'] == ['queued']
             surfacing = [row['body']['generation'] for row in rows if row['kind'] == 'mirror.surfacing']
