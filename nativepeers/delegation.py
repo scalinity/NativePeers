@@ -43,7 +43,7 @@ def supervisor_environment(journal):
 class Delegation:
     def __init__(self,journal,registry):self.journal,self.registry=journal,registry
 
-    def group(self,caller,handle,*,read_hint=False):
+    def group(self,caller,handle):
         group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(handle,))
         worker_handle=None
         if not group:
@@ -53,7 +53,7 @@ class Delegation:
                 row=worker_handle
             require(row,'PROTOCOL_ERROR','Unknown task/group handle');group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(row['group_id'],))
         require(caller.kind=='peer' and (caller.key==group['parent_key'] or caller.grants.get('group_id')==group['group_id']),
-                'APPROVAL_BLOCKED','Task is outside the bound caller grant'+(READ_SCOPE_HINT if read_hint else ''))
+                'APPROVAL_BLOCKED','Task is outside the bound caller grant')
         require(not worker_handle,'PROTOCOL_ERROR','This is a worker ID; status/result require an exact task or group ID',
                 details=dict(handle_kind='worker',group_id=group['group_id'],next_action='npeer status '+group['group_id']+' --compact --json'))
         return group
@@ -376,7 +376,10 @@ class Delegation:
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 
     def status(self,caller,handle,*,explain_selection=False,completion=True,compact=False):
-        group=self.group(caller,handle,read_hint=True)
+        try:group=self.group(caller,handle)
+        except PeerError as error:
+            if error.code!='APPROVAL_BLOCKED':raise
+            raise PeerError(error.code,str(error)+READ_SCOPE_HINT,details=error.details) from None
         result=dict(group_id=group['group_id'],state=group['state'],workers=self.journal.all(
             'SELECT worker_id,peer_key,provider,native_id,role_title,model_requested,model_observed,effort_requested,state,generation FROM workers WHERE group_id=?',(group['group_id'],)),
             tasks=self.journal.all('SELECT t.task_id,t.worker_id,t.native_turn_id,t.state,t.result_artifact_id,t.terminal_reason FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(group['group_id'],)),
