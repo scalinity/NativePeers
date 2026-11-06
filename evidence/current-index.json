@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "e09e32155fda3e603536d9773d8aeeb5db7feb19",
-  "reviewed_commit": "a6373ff79a2277e91f20bf9c00b57fa40c34f7de",
-  "publication_branch": "fix/issue-56-full-report",
-  "updated_at": "2026-11-06T02:38:58.955554-05:00",
-  "current_record": "evidence/issue-56-full-report.json",
+  "code_commit": "8a195a73c1136b096442db4cb771f311fc2187e7",
+  "reviewed_commit": "4c8fd80d932c2c283e957c908af3e4910f81f551",
+  "publication_branch": "fix/issue-58-readonly-reads",
+  "updated_at": "2026-11-06T03:29:29.801074-05:00",
+  "current_record": "evidence/issue-58-readonly-reads.json",
   "file_classes": {
     "product": {
       "files": {
@@ -41,13 +41,13 @@
         "nativepeers/claude_mod_install.py": "ccab3cfd4abe468c45d79a93690d23a3ca87cabafa1e6c795e7a11c5d2501f67",
         "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
         "nativepeers/cleanup.py": "9d5bb2b6023bf630e66675007807c354664c92fa53e475ff79a0d9b06d66988f",
-        "nativepeers/cli.py": "7afd13adfd887b9b178978080acdfecabfed7b06e465b9e59a72b153ea3a8bde",
+        "nativepeers/cli.py": "c1bc3a6bfd2c080c1e08f82b8167a766d88427e6e0bfca16e49f26282fb62f63",
         "nativepeers/compact.py": "2ee0720326f15d585e287257002aa6a5482f329eb5d669a7621873ecc64e4de2",
         "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
-        "nativepeers/completion_delivery.py": "7655c6dad151a49cc6133c1d8ca4b04513d715c21cce395c6c14770a18230eca",
+        "nativepeers/completion_delivery.py": "c4324f8e1351ef61222ba59b7a4411f90709f440c3bf9d57eae33b6e1d633da6",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
         "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
-        "nativepeers/delegation.py": "166e29861bc056fdba308c001a67e645e375b2c87b17ad2a7572e71ed7162fae",
+        "nativepeers/delegation.py": "e5c2e7e0332a87f5c1e4563bbb142b55b3d87f9760704419d3787d8b196e5479",
         "nativepeers/desktop_host.py": "d31795ce8509b7ad43813ae1f450c19240940a592aad7b70d24806cfce3317e3",
         "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
         "nativepeers/fallback.py": "62cd4b1ff02f0d8280f5427de0f9710aa298e70c2f827f8c28d687efcbeb0481",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "df0760810afc4159b3783447f8c76774484a0df39b73012bbdc4b79b51de3a08"
+      "sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8"
     },
     "launchers": {
       "files": {
@@ -334,7 +334,7 @@
         "tests/unit/test_compact_results.py": "89fa7cfbf6cf55396bacc43c1ca00a3017979efaa7d63817532c97160c75bd1e",
         "tests/unit/test_compatibility_receipts.py": "50b3c76f04b057c347146da9e01ea5431f4784c14fdfbefeb9b3b4289e7e4bd8",
         "tests/unit/test_completion_context.py": "5f56a4cd67c9eb898e835dfe34f670e3188184789a62f99dcfb3a3dd6697c845",
-        "tests/unit/test_completion_delivery.py": "509dfd693a61d89ce6a5dffa126386f94111a23849e28c60890f7e8f2683c70e",
+        "tests/unit/test_completion_delivery.py": "444b3d388e3aca972bbbffd568bfa2e8167b9a8af1f1cc5cacd69c64be8321b1",
         "tests/unit/test_delegation.py": "7d6a0bdb644a49d556e4dba511e4d172c441724fe9db1a9ae88302713b0377bd",
         "tests/unit/test_delegation_diagnostics.py": "4bf5509db53ab9cee9234df82d5325838ab15a880d721a77bb89d25af1cd9b1e",
         "tests/unit/test_delivery_envelopes.py": "5956afa44b8389943d4ee736e58e200462e742cb1e1a941584c7bf059fe3ac56",
@@ -376,7 +376,7 @@
         "tests/unit/test_quiet_close_tui_probe.py": "78a7a446fe1a8686c3e9758cab953b5aac09ab0f9ab675e47b9aaec601d567c5",
         "tests/unit/test_quiet_close_worker_probe.py": "21cf66937b1bfdeec0735187fdb4f62191ed8026b1c03a1aa8887c2a25f7c25c",
         "tests/unit/test_readiness.py": "6dbbd6f87cb653e89b641e071a0eb06ec2a6ac2d8bc590990d1f5f275cb9b2f0",
-        "tests/unit/test_readonly_artifacts.py": "ad5ad979d5b9ad208595319b2340049f528ef47e96dc0c0d4c1a86d92eb2f3aa",
+        "tests/unit/test_readonly_artifacts.py": "ee25342c7a169f70b9a38fb90e1f88e423666f833793676756e1441a8b7eee35",
         "tests/unit/test_receipts.py": "03e7392d650c1bea2c2b018de4ac1a93304e48984e9a28b55f45ff1fe5611c0b",
         "tests/unit/test_reconcile.py": "5a4783658bd418f864960a0cf518f7a194739b503af800ec999af6e62f84cef4",
         "tests/unit/test_reconcile_windows.py": "5b28209b8fb027c124eea37c4f1675729b49dd33209ff1922bf0e4cce86ea599",
@@ -411,14 +411,14 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 245,
-      "sha256": "a8058d885cd86943b9d8f05f5d99a068bf23522bb7dd33f55f96ca6676531db2"
+      "sha256": "6b4c905bd6d546532736ebe829cd4f8e62bf578e32eb428f80f3d1050688dd04"
     }
   },
   "operation_checks": [
     {
-      "operation": "installed-complete-report",
-      "parent_context": "Codex author; deferred until all5 PRs merged and shared-runtime window",
-      "status": "NOT_RUN"
+      "operation": "installed-analysis-worker-reads",
+      "status": "NOT_RUN",
+      "parent_context": "Codex author; final coordinated install after all five PRs"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",
