@@ -189,6 +189,10 @@ class ReadOnlyArtifactTests(unittest.TestCase):
         caller = Caller('peer', parent['handle'], parent['incarnation_id'])
         self.journal.db.execute('UPDATE groups SET parent_key=?', (caller.key,))
         task = self.add_task()
+        policy = json.loads(self.journal.one('SELECT policy_json FROM groups')['policy_json'])
+        usage = {'workers': [{'title': 'parent-visible'}]}
+        policy['usage_at_spawn'] = usage
+        self.journal.db.execute('UPDATE groups SET policy_json=?', (json.dumps(policy),))
         atomic_json(self.journal.root/'compat/runtime.json', {'providers': {'claude':
             dict(path='/old', sha256='0'*64, size=1)}})
         actual = dict(path='/changed', sha256='1'*64, size=2)
@@ -200,6 +204,7 @@ class ReadOnlyArtifactTests(unittest.TestCase):
                 service = Delegation(reader, Registry(reader))
                 for value in (service.status(caller, self.group_id), service.result(caller, task)):
                     self.assertEqual(value['completion_delivery']['state'], 'CAPABILITY_MISMATCH')
+                    self.assertEqual(value['usage_at_spawn'], usage)
                 self.assertEqual(service.groups(caller)['groups'][0]['group_id'], self.group_id)
                 renewal.assert_not_called()
                 after = {p.relative_to(self.journal.root): (p.read_bytes() if p.is_file() else None, p.stat().st_mtime_ns, p.stat().st_mode)
