@@ -32,6 +32,7 @@ for line in sys.stdin:
  elif method=='model/list':result={'data':[{'model':'gpt-6.1-sol','supportedReasoningEfforts':[{'reasoningEffort':'xhigh'}]}]}
  elif method in ('thread/start','thread/resume'):
   native=params.get('threadId',native);result={'thread':{'id':native,'source':{'custom':'nativepeers-worker'} if '--nativepeers-worker' in sys.argv else 'cli'},'model':params['model']}
+ elif method=='config/read':result={'config':{'features':{'apps':False,'plugins':False}}}
  elif method=='mcpServerStatus/list':result={'data':[{'name':'nativepeers','tools':{'peer_send':{}}}]}
  elif method=='turn/start':
   with Path(__file__).with_suffix('.inputs').open('a') as log:log.write(params['input'][0]['text']+'\\n')

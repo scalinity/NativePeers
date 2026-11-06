@@ -109,6 +109,7 @@ class SteerTests(ControllerCase):
     async def steer(self, call):
         w, first, _ = self.fixture('codex')
         w.client = Mock(call=call);w.running_task = first;w.turn = 'turn-1';w.native = 'thread-1'
+        w.codex_tool_profile=AsyncMock()  # RPC behavior here; inventory refusal has its own controller regression.
         w.activity.begin(first, 1)
         await w.steer(dict(task_id=first, request_id='r1', text='also this', input=dict(client_request_id='np-in:s', origin='parent-model', mode='steer', preview='also this')))
         await w.activity.close()

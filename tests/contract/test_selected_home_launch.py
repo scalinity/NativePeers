@@ -37,6 +37,7 @@ for line in sys.stdin:
   with Path(__file__).with_suffix('.launches').open('a') as log:
    log.write(json.dumps({'home':os.environ.get('CODEX_HOME'),'argv':sys.argv[1:],'method':method,'native':native})+'\\n')
   result={'thread':{'id':native,'source':{'custom':'nativepeers-worker'} if '--nativepeers-worker' in sys.argv else 'cli'},'model':params['model']}
+ elif method=='config/read':result={'config':{'features':{'apps':False,'plugins':False}}}
  elif method=='mcpServerStatus/list':result={'data':[{'name':'nativepeers','tools':{'peer_send':{}}}]}
  elif method=='turn/start':
   turn=str(uuid.uuid4());emit({'id':request['id'],'result':{'turn':{'id':turn}}})
