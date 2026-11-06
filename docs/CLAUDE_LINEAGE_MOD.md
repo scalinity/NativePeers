@@ -675,7 +675,7 @@ integrations/claude/mod/np/
 
 ### 7.4 Spawn paths
 
-**Path A: native Agent call.** `on('agent.spawn', hook)` handles `e.subagentType` starting with `np:`. It applies only when `!e.resume && !e.isTeammate && !e.workflow`.
+**Path A: native Agent call.** `on('agent.spawn', hook)` handles `e.subagentType` starting with `np:`. Resume passes through; fresh calls are checked for the teammate, workflow and nested-caller refusals below.
 
 Deny cases:
 - `e.isTeammate` is true: the engine classifies the call as a teammate. In a session with agent teams enabled, a named main-conversation call in an interactive session is a teammate; an unnamed call is an ordinary subagent. With teams disabled, both named and unnamed calls are ordinary subagents. The plugin uses this pinned engine fact, never `name` alone.
