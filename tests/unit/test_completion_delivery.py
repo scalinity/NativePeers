@@ -128,7 +128,7 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
             if sql.startswith('SELECT * FROM spawn_requests') and not skipped:
                 skipped=True;return None
             return one(sql,params)
-        def route(journal,parent):
+        def route(journal,parent,*,renew=True):
             self.assertFalse(journal.db.in_transaction)
             return {'ready':True,'state':'READY','reason':'fixture','parent_key':parent}
         with patch.object(self.j,'one',side_effect=query),patch('nativepeers.completion_delivery.readiness',side_effect=route) as route_check,patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock) as launch:
@@ -137,11 +137,35 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raced['group_id'],original['group_id']);launch.assert_not_awaited()
         self.assertEqual(self.j.one('SELECT COUNT(*) n FROM groups')['n'],1)
 
+    async def test_spawn_responses_use_passive_route_diagnostics(self):
+        def route(journal,parent,*,renew=True):
+            self.assertIs(renew,False)
+            return dict(ready=False,state='CAPABILITY_MISMATCH',reason='stale parent approval',parent_key=parent)
+        request={'client_request_id':'passive-response','completion_mode':'push','workers':[{'provider':'claude','title':'fixture','task':'fixture'}]}
+        service=Core(self.j).delegation
+        with patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock), patch('nativepeers.completion_delivery.readiness',side_effect=route) as check:
+            for _ in range(2):
+                result=await service.spawn(self.caller,request)
+                self.assertFalse(result['push_ready'])
+                self.assertEqual(result['completion_delivery']['state'],'CAPABILITY_MISMATCH')
+                self.assertIn('Completion push unavailable',result['warnings'][0])
+            self.assertEqual(check.call_count,2)
+
     def test_offline_parent_is_explicit_without_quota_or_mcp_inference(self):
         self.j.db.execute("UPDATE peer_instances SET status='offline'")
         route=readiness(self.j,self.caller.key)
         self.assertEqual(route['state'],'TARGET_OFFLINE'); self.assertFalse(route['ready'])
         self.assertIn('retained',route['result_collection'])
+
+    def test_passive_runtime_check_disables_renewal_for_every_non_codex_route(self):
+        for provider, transport in (('claude', 'claude-inbox'), ('antigravity', 'antigravity-native-hook'), ('grok', 'grok-native-hook')):
+            with self.subTest(provider=provider):
+                peer=Registry(self.j).register(provider,self.home/provider,new_id(),'passive',identity(os.getpid()).json(),self.root,{'kind':transport},owner_kind='test')
+                with patch('nativepeers.compatibility.verify',return_value={}) as verify, patch('nativepeers.adapters.native_delivery.socket_endpoint'), patch('nativepeers.grok.executable',return_value=self.root/'grok'):
+                    readiness(self.j,peer['handle'],renew=False)
+                    self.assertIs(verify.call_args.kwargs['renew'],False)
+                    readiness(self.j,peer['handle'])
+                    self.assertIs(verify.call_args.kwargs['renew'],True)
 
     async def test_terminal_wait_diagnostics_run_once_after_claim_commit_and_match_cli_mcp(self):
         with patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock):

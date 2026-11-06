@@ -21,6 +21,7 @@ from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
 
 TERMINAL={'NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
+READ_SCOPE_HINT='; task_status/task_result use the same scope. Ask the parent to supply selected evidence through context_refs; granted artifacts are readable with artifact_read'
 # Set by the Claude Code session bridge only. Claude Code stops a mod's process together with every
 # descendant, so a supervisor the bridge starts is handed to launchd through a shell that exits at once,
 # as a supervisor started by the CLI already is; it then ends by its own parent-lifetime policy.
@@ -375,7 +376,10 @@ class Delegation:
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 
     def status(self,caller,handle,*,explain_selection=False,completion=True,compact=False):
-        group=self.group(caller,handle)
+        try:group=self.group(caller,handle)
+        except PeerError as error:
+            if error.code!='APPROVAL_BLOCKED':raise
+            raise PeerError(error.code,str(error)+READ_SCOPE_HINT,details=error.details) from None
         result=dict(group_id=group['group_id'],state=group['state'],workers=self.journal.all(
             'SELECT worker_id,peer_key,provider,native_id,role_title,model_requested,model_observed,effort_requested,state,generation FROM workers WHERE group_id=?',(group['group_id'],)),
             tasks=self.journal.all('SELECT t.task_id,t.worker_id,t.native_turn_id,t.state,t.result_artifact_id,t.terminal_reason FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(group['group_id'],)),
@@ -383,14 +387,14 @@ class Delegation:
         if caller.key!=group['parent_key']:
             worker=caller.grants.get('worker_id')
             require(handle==group['group_id'] or any(t['task_id']==handle and t['worker_id']==worker for t in result['tasks']),
-                    'APPROVAL_BLOCKED','A worker can read only its own task results')
+                    'APPROVAL_BLOCKED','A worker can read only its own tasks'+READ_SCOPE_HINT)
             result['workers']=[w for w in result['workers'] if w['worker_id']==worker]
             result['tasks']=[t for t in result['tasks'] if t['worker_id']==worker]
             result['notifications']=[]
         elif completion:
             from .completion_delivery import annotate,describe,readiness
             result['notifications']=[describe(self.journal,route) for route in result['notifications']]
-            annotate(result,readiness(self.journal,group['parent_key']),
+            annotate(result,readiness(self.journal,group['parent_key'],renew=False),
                      push=any(route['mode']=='push' for route in result['notifications']))
         from .fallback import result_details
         from .routing import unread_replies
@@ -419,7 +423,7 @@ class Delegation:
                     vendor_quota_reserved=False)
                 from .ownership import release_status
                 worker['release']=release_status(self.journal,full)
-        result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn')
+        result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn') if caller.key==group['parent_key'] else None
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         if compact:
             from .compact import result_view
