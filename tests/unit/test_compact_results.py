@@ -379,3 +379,13 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(row['summary_truncated'])
             self.assertEqual(row['report_command'],'npeer result '+row['task_id']+' --report')
         self.assertEqual(compact['next_action'],'npeer result '+self.group+' --json')
+
+
+    async def test_completed_without_an_artifact_reports_unavailable_without_inventing_a_disposition(self):
+        task=self.add()
+        self.j.db.execute('UPDATE tasks SET result_artifact_id=NULL WHERE task_id=?',(task,))
+        with self.assertRaises(PeerError) as error:self.service.report(self.caller,task)
+        self.assertEqual(error.exception.code,'PROTOCOL_ERROR')
+        self.assertIn('completed task has no recorded result artifact',error.exception.message)
+        self.assertIn('npeer result '+task+' --compact --json',error.exception.message)
+        self.assertNotIn('retained disposition',error.exception.message)

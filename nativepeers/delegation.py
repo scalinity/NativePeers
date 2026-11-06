@@ -506,7 +506,9 @@ class Delegation:
         task=next(t for t in status['tasks'] if t['task_id']==handle)
         artifact=task['result_artifact_id']
         if not artifact:
-            message=('This terminal task has no model report; read its retained disposition: npeer result '+handle+' --json') if task['state'] in TERMINAL else 'This task has no recorded report yet'
+            if task['state'] in TERMINAL-{'COMPLETED'}:message='This terminal task has no model report; read its retained disposition: npeer result '+handle+' --json'
+            elif task['state']=='COMPLETED':message='This completed task has no recorded result artifact; inspect npeer result '+handle+' --compact --json'
+            else:message='This task has no recorded report yet'
             raise PeerError('PROTOCOL_ERROR',message+'; no input was replayed')
         reader=caller.key;offset=0;pieces=[];identity=None
         while True:
