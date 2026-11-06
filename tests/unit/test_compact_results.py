@@ -350,3 +350,15 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(done.exception.code,2)
         result=json.loads(output.getvalue());self.assertEqual(result['error']['code'],'PAYLOAD_TOO_LARGE')
         self.assertIn('npeer result '+task+' --report',result['error']['message'])
+
+
+    async def test_terminal_dispositions_without_a_model_report_have_a_concrete_remedy(self):
+        for state in ['CANCELED','NOT_DELIVERED_BUDGET','FAILED']:
+            with self.subTest(state=state):
+                task=self.add(state)
+                self.j.db.execute('UPDATE tasks SET result_artifact_id=NULL WHERE task_id=?',(task,))
+                with self.assertRaises(PeerError) as error:self.service.report(self.caller,task)
+                self.assertEqual(error.exception.code,'PROTOCOL_ERROR')
+                self.assertIn('no model report',error.exception.message)
+                self.assertIn('npeer result '+task+' --json',error.exception.message)
+                self.assertNotIn('yet',error.exception.message)

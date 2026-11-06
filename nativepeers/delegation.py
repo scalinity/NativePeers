@@ -505,7 +505,9 @@ class Delegation:
         require(handle!=status['group_id'],'PROTOCOL_ERROR','Complete reports require a task ID; use result GROUP --json to select one')
         task=next(t for t in status['tasks'] if t['task_id']==handle)
         artifact=task['result_artifact_id']
-        require(artifact,'PROTOCOL_ERROR','This task has no recorded report yet; no input was replayed')
+        if not artifact:
+            message=('This terminal task has no model report; read its retained disposition: npeer result '+handle+' --json') if task['state'] in TERMINAL else 'This task has no recorded report yet'
+            raise PeerError('PROTOCOL_ERROR',message+'; no input was replayed')
         reader=caller.key;offset=0;pieces=[];identity=None
         while True:
             try:page=Artifacts(self.journal).read(artifact,reader,offset,RESULT_PAGE)
