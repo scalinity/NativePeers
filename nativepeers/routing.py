@@ -13,6 +13,10 @@ from .models import PEER_FRAME, bounded_text, new_id
 from .receipts import reduce_receipt
 
 
+def unread_replies(journal,task_id):
+    return [r['message_id'] for r in journal.all("SELECT e.subject_id message_id FROM events e WHERE e.kind='in-task-reply' AND json_extract(e.payload_json,'$.task_id')=? AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=e.subject_id AND r.stage='INGESTED') ORDER BY e.sequence",(task_id,))]
+
+
 class Router:
     def __init__(self, journal, registry, adapters=None):
         self.journal, self.registry = journal, registry
@@ -29,12 +33,18 @@ class Router:
         from .completion_delivery import followup
         linked=followup(self.journal,message_id) if message['task_id'] else None
         reply=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='in-task-reply' ORDER BY sequence LIMIT 1",(message_id,))
+        receipts=self.journal.all("SELECT * FROM receipts WHERE message_id=? ORDER BY at",(message_id,))
+        delivery=json.loads(reply['payload_json']) if reply else None
+        if delivery:
+            from .delegation import TERMINAL
+            task=self.journal.one('SELECT state FROM tasks WHERE task_id=?',(delivery['task_id'],))
+            delivery.update(task_state=task['state'] if task else None,state='INGESTED' if any(r['stage']=='INGESTED' for r in receipts) else 'UNREAD_AT_TASK_END' if task and task['state'] in TERMINAL else 'AVAILABLE_IN_TASK')
         return dict(message_id=message_id, exchange_id=message["exchange_id"], target=message["to_key"],
                     state=attempt["state"] if attempt else "OUTBOX_COMMITTED", attempt=attempt,
-                    receipts=self.journal.all("SELECT * FROM receipts WHERE message_id=? ORDER BY at", (message_id,)),
+                    receipts=receipts,
                     **({'suppression':json.loads(suppressed['payload_json'])} if suppressed else {}),
                     **({'followup':linked} if linked else {}),
-                    **({'reply_delivery':json.loads(reply['payload_json'])} if reply else {}))
+                    **({'reply_delivery':delivery} if delivery else {}))
 
     def authorize(self, caller, target, kind, reference=None):
         require(caller.kind in ("peer", "controller"), "CALLER_UNBOUND", "Peer sends require a verified native caller or leased controller")
@@ -229,12 +239,15 @@ class Router:
         predicate+=' AND rowid<=?';params.extend([ceiling,limit+1])
         rows=self.journal.all("SELECT created_at,message_id,payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC,message_id DESC LIMIT ?",params)
         messages=[json.loads(r["payload_json"]) for r in rows[:limit]]
-        messages=[message if retained else self.visible_message(caller,message) for message in messages]
-        for message in messages:
-            if message.get('body') and self.journal.one("SELECT 1 FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],)):
-                outcome=self.outcome(message['message_id'])
-                if outcome['state'] in ('SUBMITTING','ACCEPTED_QUEUED'):
-                    self.record(message['message_id'],outcome['attempt']['attempt_id'],dict(stage='INGESTED',evidence_kind='owned-task-inbox-read'),self.registry.get(caller.key))
+        with self.journal.transaction() as db:
+            messages=[message if retained else self.visible_message(caller,message) for message in messages]
+            for message in messages:
+                if message.get('body') and self.journal.one("SELECT 1 FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],)):
+                    outcome=self.outcome(message['message_id'])
+                    if outcome['state'] in ('SUBMITTING','ACCEPTED_QUEUED'):
+                        attempt=outcome['attempt']['attempt_id'];native=self.registry.get(caller.key)['peer_key']['native_session_id']
+                        db.execute("UPDATE attempts SET state='INGESTED',ended_at=? WHERE attempt_id=?",(time.time(),attempt))
+                        db.execute('INSERT INTO receipts VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),message['message_id'],attempt,'INGESTED','owned-task-inbox-read',native,None,'{}',time.time()))
         if paged or cursor is not None:
             last=rows[limit-1] if len(rows)>limit else None
             return {'messages':messages,'next_cursor':encode(scope,[last['created_at'],last['message_id']],ceiling) if last else None}
@@ -248,8 +261,11 @@ class Router:
             source=self.journal.one('SELECT payload_json FROM messages WHERE message_id=?',(message['in_reply_to'],))
             source=json.loads(source['payload_json']) if source else {}
             if source.get('source_task') and source.get('from',{}).get('peer_key')==caller.key:
-                route=self.journal.one("SELECT 1 FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],))
-                if not route:return dict(message_id=message['message_id'],body_available=False,reason='Reply has no in-task inbox admission; a separate phase uses its own native input.')
+                route=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],))
+                if not route:return dict(message_id=message['message_id'],body_available=False,reason='Reply is pending routing or assigned to a separate phase; read again or inspect exact message status.')
+                delivery=json.loads(route['payload_json'])
+                active=self.journal.one("SELECT 1 FROM tasks t JOIN workers w USING(worker_id) WHERE t.task_id=? AND w.peer_key=? AND t.generation=w.generation AND t.state='RUNNING'",(delivery['task_id'],caller.key))
+                if not active:return dict(message_id=message['message_id'],body_available=False,reason='Reply belongs to an earlier task; inspect exact message status. Accepted input is never replayed.')
         if peer['owner_kind']!='interactive-standalone':return message
         receipt=self.outcome(message['message_id'])
         # Acknowledgment/reply correlation is a model claim, not native admission.

@@ -393,7 +393,10 @@ class Delegation:
             annotate(result,readiness(self.journal,group['parent_key']),
                      push=any(route['mode']=='push' for route in result['notifications']))
         from .fallback import result_details
-        for task in result['tasks']:task.update(result_details(self.journal,task['task_id']))
+        from .routing import unread_replies
+        for task in result['tasks']:
+            task.update(result_details(self.journal,task['task_id']))
+            if task['state'] in TERMINAL:task['unread_in_task_replies']=unread_replies(self.journal,task['task_id'])
         from .worker_process import task_slots
         for worker in result['workers']:
             row=self.journal.one('SELECT generation,provider,native_id,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],))
@@ -517,6 +520,8 @@ class Delegation:
                     error={'code':reason,'may_have_received':task['state']=='INTERRUPTED'})
                 from .fallback import result_details
                 result.update(result_details(self.journal,task['task_id']));results.append(result)
+        for result in results:
+            result['unread_in_task_replies']=next((t.get('unread_in_task_replies',[]) for t in status['tasks'] if t['task_id']==result['task_id']),[])
         return dict(status,results=results)
 
     def terminal_wait(self,caller,handle,timeout_ms,*,waiter=None,controller_generation=None):

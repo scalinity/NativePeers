@@ -87,8 +87,23 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
     async def test_retry_after_task_completion_keeps_original_inbox_route(self):
         question=await self.ask();request=new_id();original=await self.reply(question,request)
         self.complete();retry=await self.reply(question,request)
-        self.assertEqual(original,retry)
+        self.assertEqual(original['message_id'],retry['message_id'])
+        self.assertEqual(retry['reply_delivery']['state'],'UNREAD_AT_TASK_END')
         self.assertEqual(len(self.group.tasks()),1);self.group.send_worker.assert_not_awaited()
+
+    async def test_unread_reply_remains_attributed_and_later_task_cannot_ingest_it(self):
+        question=await self.ask();reply=await self.reply(question)
+        self.complete()
+        outcome=await self.core.status(self.parent,reply['message_id'])
+        self.assertEqual(outcome['state'],'ACCEPTED_QUEUED')
+        self.assertEqual(outcome['reply_delivery']['state'],'UNREAD_AT_TASK_END')
+        result=self.core.delegation.result(self.parent,self.tid)['results'][0]
+        self.assertEqual(result['unread_in_task_replies'],[reply['message_id']])
+        self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),self.wid,None,None,'RUNNING',None,None,1,'{}'))
+        received=next(m for m in self.core.router.inbox(self.worker) if m['message_id']==reply['message_id'])
+        self.assertFalse(received['body_available'])
+        self.assertEqual(self.core.router.outcome(reply['message_id'])['state'],'ACCEPTED_QUEUED')
+        self.assertEqual(len(self.group.phases()),1)
 
     async def test_finished_question_gets_one_explicit_phase_with_remaining_turns(self):
         question=await self.ask();self.complete()
