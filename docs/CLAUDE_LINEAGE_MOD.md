@@ -396,7 +396,7 @@ Each worker controller writes a normalized event for every meaningful provider o
 | `input.accepted` | `{client_request_id, native_turn}` |
 | `task.state` | `{state, reason?}` (QUEUED / RUNNING / WAITING / APPROVAL_BLOCKED …, per `IMPLEMENTATION.md` §12.1) |
 | `fallback.started` | `{from:{provider, model}, to:{provider, model}, reason}` |
-| `task.terminal` | `{status: completed\|interrupted\|failed\|canceled\|timed_out, final_text, result_artifact_id?, error?:{code, message}}` |
+| `task.terminal` | `{status: completed\|interrupted\|failed\|canceled\|timed_out\|not_delivered_budget, final_text, result_artifact_id?, error?:{code, message}}` |
 | `gap` | `{from_seq?, reason}`: lost or unparseable events, never silent |
 
 **Semantic rules**
