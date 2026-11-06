@@ -110,7 +110,8 @@ def backfill(journal, row, home):
                         generation=task['generation'] if task else row['generation'], native_turn=None, item=item, kind=kind,
                         data=shape(kind, data, bounds), source=dict(provider=provider, event='backfill')))
     add('task.started', dict(origin='controller', client_request_id=None, input_preview=''))
-    if found is None:
+    if task and task['state']=='NOT_DELIVERED_BUDGET':pass
+    elif found is None:
         add('gap', dict(reason='no-history-reader' if provider not in ('claude', 'codex') else 'history-not-found'))
     else:
         source = claude_emissions(found, row.get('cwd')) if provider == 'claude' else codex_emissions(found, row.get('cwd'))

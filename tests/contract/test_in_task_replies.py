@@ -85,6 +85,23 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(value['state'],'COMPLETED')
         self.assertEqual(self.core.delegation.status(self.parent,self.gid)['workers'][0]['logical_task_slots']['used'],1)
 
+    async def test_ordinary_inbox_read_takes_no_write_transaction(self):
+        with patch.object(self.j,'transaction',side_effect=AssertionError('ordinary read must not reserve a writer')):
+            self.assertEqual(self.core.router.inbox(self.worker),[])
+
+    async def test_route_admitted_after_read_prescan_waits_for_locked_read(self):
+        question=await self.ask();reply=await self.reply(question)
+        original=self.j.one
+        def before_admission(sql,params=()):
+            if sql.startswith("SELECT 1 FROM events WHERE kind='in-task-reply' AND subject_id IN"):return None
+            return original(sql,params)
+        with patch.object(self.j,'one',side_effect=before_admission):
+            received=next(m for m in self.core.router.inbox(self.worker) if m['message_id']==reply['message_id'])
+        self.assertFalse(received['body_available'])
+        self.assertEqual(self.core.router.outcome(reply['message_id'])['state'],'ACCEPTED_QUEUED')
+        self.core.router.inbox(self.worker)
+        self.assertEqual(self.core.router.outcome(reply['message_id'])['state'],'INGESTED')
+
     async def test_retry_after_task_completion_keeps_original_inbox_route(self):
         question=await self.ask();request=new_id();original=await self.reply(question,request)
         self.complete();retry=await self.reply(question,request)
@@ -229,6 +246,8 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
         await self.group.close()
         compact=self.core.delegation.result(self.parent,self.gid,compact=True)
         self.assertEqual(compact['state'],'COMPLETED');self.assertEqual(compact['lifecycle']['active'],0)
+        self.assertEqual(compact['undelivered_phases'],1)
+        self.assertEqual(self.core.delegation.groups(self.parent)['groups'][0]['undelivered_phases'],1)
         self.assertEqual(compact['lifecycle']['latest'],{'NOT_DELIVERED_BUDGET':1})
         backend=NativeBackend(self.j,Registry(self.j).get(self.parent.key),new_id())
         w=self.j.one('SELECT * FROM workers');g=self.j.one('SELECT * FROM groups')

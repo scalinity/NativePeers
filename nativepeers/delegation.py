@@ -394,9 +394,11 @@ class Delegation:
                      push=any(route['mode']=='push' for route in result['notifications']))
         from .fallback import result_details
         from .routing import unread_replies
+        unread=unread_replies(self.journal,[t['task_id'] for t in result['tasks'] if t['state'] in TERMINAL])
+        result['undelivered_phases']=sum(t['state']=='NOT_DELIVERED_BUDGET' for t in result['tasks'])
         for task in result['tasks']:
             task.update(result_details(self.journal,task['task_id']))
-            if task['state'] in TERMINAL:task['unread_in_task_replies']=unread_replies(self.journal,task['task_id'])
+            if task['state'] in TERMINAL:task['unread_in_task_replies']=unread[task['task_id']]
         from .worker_process import task_slots
         for worker in result['workers']:
             row=self.journal.one('SELECT generation,provider,native_id,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],))
@@ -460,12 +462,12 @@ class Delegation:
         groups=[]
         for row in rows[:limit]:
             workers=self.journal.all('SELECT worker_id,role_title,provider,native_id,state,generation FROM workers WHERE group_id=? ORDER BY worker_id',(row['group_id'],))
-            counts=self.journal.one('SELECT COUNT(*) tasks,COUNT(result_artifact_id) results FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(row['group_id'],))
+            counts=self.journal.one("SELECT COUNT(*) tasks,COUNT(result_artifact_id) results,SUM(t.state='NOT_DELIVERED_BUDGET') undelivered FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?",(row['group_id'],))
             
             from .worker_process import task_slots
             for worker in workers:
                 worker['logical_task_slots']=task_slots(self.journal.one('SELECT generation,lease_json FROM workers WHERE worker_id=?',(worker['worker_id'],)))
-            groups.append(dict(group_id=row['group_id'],state=row['state'],workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results']),progress=self.progress(row)))
+            groups.append(dict(group_id=row['group_id'],state=row['state'],undelivered_phases=counts['undelivered'] or 0,workers=workers,task_count=counts['tasks'],result_count=counts['results'],results_available=bool(counts['results']),progress=self.progress(row)))
         return {'groups':groups,'next_cursor':encode(scope,rows[limit-1]['page_id'],ceiling) if len(rows)>limit else None}
 
     def result(self,caller,handle,*,include_artifacts=False,compact=False):

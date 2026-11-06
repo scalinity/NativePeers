@@ -73,7 +73,7 @@ def result_view(service, status, policy, handle, *, results=True):
                 row['unavailable'] = dict(reason=type(error).__name__, next_action='Inspect the retained result artifact; no model input was replayed')
         rows.append(row)
     value = dict(compact=True, handle=handle, group_id=status['group_id'], state=status['state'],
-                 lifecycle=lifecycle(status, policy), tasks=rows,
+                 lifecycle=lifecycle(status, policy), undelivered_phases=status.get('undelivered_phases',0), tasks=rows,
                  omissions=dict(earlier_tasks=max(0, len(status['tasks'])-len(rows)) if handle == status['group_id'] else 0,
                                 detail='Bounded previews; full findings, checks, failures, attempts and history remain in result/artifact reads. Delivery is not inferred.'),
                  next_action='npeer result '+handle+' --json')

@@ -5,6 +5,7 @@ import json
 import math
 import time
 from functools import partial
+from contextlib import nullcontext
 
 from .adapters.native_delivery import claude_inbox, codex_queue
 from .errors import PeerError, require
@@ -13,8 +14,13 @@ from .models import PEER_FRAME, bounded_text, new_id
 from .receipts import reduce_receipt
 
 
-def unread_replies(journal,task_id):
-    return [r['message_id'] for r in journal.all("SELECT e.subject_id message_id FROM events e WHERE e.kind='in-task-reply' AND json_extract(e.payload_json,'$.task_id')=? AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=e.subject_id AND r.stage='INGESTED') ORDER BY e.sequence",(task_id,))]
+def unread_replies(journal,task_ids):
+    unread={task:[] for task in task_ids}
+    if unread:
+        marks=','.join('?' for _ in unread)
+        for row in journal.all("SELECT e.subject_id message_id,json_extract(e.payload_json,'$.task_id') task_id FROM events e WHERE e.kind='in-task-reply' AND json_extract(e.payload_json,'$.task_id') IN ("+marks+") AND NOT EXISTS (SELECT 1 FROM receipts r WHERE r.message_id=e.subject_id AND r.stage='INGESTED') ORDER BY e.sequence",tuple(unread)):
+            unread[row['task_id']].append(row['message_id'])
+    return unread
 
 
 class Router:
@@ -239,10 +245,15 @@ class Router:
         predicate+=' AND rowid<=?';params.extend([ceiling,limit+1])
         rows=self.journal.all("SELECT created_at,message_id,payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC,message_id DESC LIMIT ?",params)
         messages=[json.loads(r["payload_json"]) for r in rows[:limit]]
-        with self.journal.transaction() as db:
+        reply_ids=[m['message_id'] for m in messages if m.get('in_reply_to')]
+        candidate=reply_ids and self.journal.one("SELECT 1 FROM events WHERE kind='in-task-reply' AND subject_id IN ("+','.join('?' for _ in reply_ids)+") LIMIT 1",tuple(reply_ids))
+        with (self.journal.transaction() if candidate else nullcontext(self.journal.db)) as db:
             messages=[message if retained else self.visible_message(caller,message) for message in messages]
-            for message in messages:
+            for index,message in enumerate(messages):
                 if message.get('body') and self.journal.one("SELECT 1 FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],)):
+                    if not candidate:
+                        messages[index]=dict(message_id=message['message_id'],body_available=False,reason='Reply routing changed during this inbox read; read again.')
+                        continue
                     outcome=self.outcome(message['message_id'])
                     if outcome['state'] in ('SUBMITTING','ACCEPTED_QUEUED'):
                         attempt=outcome['attempt']['attempt_id'];native=self.registry.get(caller.key)['peer_key']['native_session_id']

@@ -68,6 +68,7 @@ class Backfill(unittest.TestCase):
         events=backfill(journal,row,self.tmp)
         self.assertEqual(events[-1]['data']['status'],'not_delivered_budget')
         self.assertEqual(events[-1]['data']['final_text'],'')
+        self.assertNotIn('gap',[e['kind'] for e in events])
 
 
 if __name__ == '__main__':

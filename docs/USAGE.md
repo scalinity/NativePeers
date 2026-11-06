@@ -317,7 +317,7 @@ and `task_turns_remaining_after_admission`. Queued tasks already reserve their s
 With no slot available, the reply returns `NOT_DELIVERED_BUDGET` before creating
 a task, with `input_submitted:false`. A controller budget guard that stops an
 already queued phase before submission retains the distinct terminal state
-`NOT_DELIVERED_BUDGET`; it does not count as failed submitted work. Exact tasks
+`NOT_DELIVERED_BUDGET`; it does not count as failed submitted work. Group status, result and listing expose `undelivered_phases`. Exact tasks
 remain inspectable in status and results; the Claude delegate summary uses the
 latest task other than that unsubmitted disposition, when one exists.
 
