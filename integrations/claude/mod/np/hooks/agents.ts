@@ -11,7 +11,7 @@ export const ACTIVE = ['queued', 'starting', 'running', 'waiting']
 export function counts(workers: readonly NpWorker[]) {
   return { total: workers.length, running: workers.filter(w => ACTIVE.includes(w.status)).length,
     done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out'].includes(w.status)).length,
-    notDelivered: workers.filter(w => w.status === 'not_delivered_budget').length,
+    notDelivered: workers.reduce((n, w) => n + (w.undeliveredPhases ?? (w.status === 'not_delivered_budget' ? 1 : 0)), 0),
     stopped: workers.filter(w => ['canceled', 'interrupted'].includes(w.status)).length }
 }
 

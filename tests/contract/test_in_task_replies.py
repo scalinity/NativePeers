@@ -1,4 +1,5 @@
 """Issue 53: immutable asking-task identity selects inbox OR a new phase, never both."""
+import asyncio
 import json
 import os
 from pathlib import Path
@@ -6,7 +7,7 @@ import tempfile
 import subprocess
 import time
 import unittest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 from nativepeers.artifacts import Artifacts
 from nativepeers.bridge_backend import NativeBackend
@@ -140,6 +141,60 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
         self.group.send_worker.assert_not_awaited();await self.group.close()
         self.assertEqual(self.core.delegation.groups(self.parent)['groups'][0]['state'],'COMPLETED')
 
+    async def test_committed_inbox_read_before_adapter_return_is_not_downgraded(self):
+        question=await self.ask();enqueue=self.core.router.adapters['owned-worker']
+        async def read_before_return(peer,message):
+            receipt=await enqueue(peer,message)
+            received=next(m for m in self.core.router.inbox(self.worker) if m['message_id']==message['message_id'])
+            self.assertEqual(received['artifact_refs'],[self.art])
+            return receipt
+        self.core.router.adapters['owned-worker']=read_before_return
+        reply=await self.reply(question)
+        self.assertEqual(reply['state'],'INGESTED')
+        self.assertEqual(len(self.group.tasks()),1)
+
+    async def test_task_slot_claim_after_supervisor_row_read_is_seen_at_admission(self):
+        question=await self.ask();self.complete()
+        other=Journal(self.j.root);self.addCleanup(other.close)
+        original=self.j.one;claimed=False
+        def racing_read(sql,params=()):
+            nonlocal claimed
+            value=original(sql,params)
+            if sql=='SELECT * FROM workers WHERE worker_id=? AND group_id=?' and not claimed:
+                claimed=True
+                lease=json.loads(value['lease_json']);lease['logical_tasks_used']=2
+                with other.transaction() as db:db.execute('UPDATE workers SET lease_json=?',(canonical(lease).decode(),))
+            return value
+        with patch.object(self.j,'one',side_effect=racing_read):reply=await self.reply(question)
+        self.assertTrue(claimed);self.assertEqual(reply['state'],'NOT_DELIVERED_BUDGET')
+        self.assertEqual(json.loads(self.j.one('SELECT lease_json FROM workers')['lease_json'])['logical_tasks_used'],2)
+        self.assertEqual(len(self.group.tasks()),1)
+
+    async def test_exhausted_reply_is_typed_through_real_socket_and_mcp(self):
+        from types import SimpleNamespace
+        from nativepeers.files import atomic_json
+        from nativepeers.mcp_server import Facade
+        question=await self.ask();self.complete()
+        lease=json.loads(self.j.one('SELECT lease_json FROM workers')['lease_json']);lease['logical_tasks_used']=2
+        self.j.db.execute('UPDATE workers SET lease_json=?',(canonical(lease).decode(),))
+        server=await asyncio.start_unix_server(self.group.connection,path=str(self.group.endpoint))
+        os.chmod(self.group.endpoint,0o600)
+        atomic_json(self.j.root/'groups'/self.gid/'owner.json',dict(owner=self.group.owner,generation=1,endpoint=str(self.group.endpoint),token=self.group.token))
+        try:
+            facade=Facade(self.j,None)
+            args=dict(message_id=question,text='Deliberate exhausted phase request',client_request_id=new_id(),artifact_refs=[self.art])
+            with patch.object(facade,'binding_state',return_value=dict(state='BOUND',provider='codex',grants={})),patch('nativepeers.mcp_server.bind_caller',return_value=self.parent):
+                response=await facade.call(None,SimpleNamespace(name='peer_reply',arguments=args))
+            value=json.loads(response.content[0].text)
+            self.assertTrue(response.is_error);self.assertFalse(value['ok'])
+            self.assertEqual(value['error']['code'],'NOT_DELIVERED_BUDGET')
+            self.assertFalse(value['error']['may_have_received'])
+            self.assertFalse(value['error']['details']['input_submitted'])
+            self.assertEqual(value['data']['state'],'NOT_DELIVERED_BUDGET')
+            self.assertEqual(len(self.group.tasks()),1);self.assertEqual(len(self.group.phases()),1)
+        finally:
+            server.close();await server.wait_closed();self.group.endpoint.unlink(missing_ok=True)
+
     async def test_inbox_cannot_read_reply_before_route_or_steal_finished_task_phase(self):
         question=await self.ask()
         enqueue=self.core.router.adapters['owned-worker']
@@ -179,4 +234,5 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
         w=self.j.one('SELECT * FROM workers');g=self.j.one('SELECT * FROM groups')
         self.assertEqual(backend.worker_row(w,g,None)['status'],'completed')
         self.assertEqual(backend.worker_row(w,g,None)['taskId'],self.tid)
+        self.assertEqual(backend.worker_row(w,g,None)['undeliveredPhases'],1)
         self.assertEqual(self.core.delegation.result(self.parent,self.gid)['results'][-1]['status'],'not_delivered_budget')

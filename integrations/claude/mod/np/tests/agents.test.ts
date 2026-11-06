@@ -103,3 +103,8 @@ test('an unsubmitted budget disposition is reported apart from failed work', () 
   expect(statusSummary([{ status: 'not_delivered_budget' }] as any)).toBe('1 not delivered')
   expect(statusSummary([{ status: 'completed' }, { status: 'not_delivered_budget' }] as any)).toBe('1 done · 1 not delivered')
 })
+
+
+test('a completed worker keeps its undelivered phase count visible', () => {
+  expect(statusSummary([{ status: 'completed', undeliveredPhases: 2 }] as any)).toBe('1 done · 2 not delivered')
+})

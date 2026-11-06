@@ -208,3 +208,13 @@ test('a worker\'s turn is labelled once, and while it runs the newest line above
   expect(await ui.find({ type: 'Text', text: /^Now: / })).toBeFalsy()
   await ui.unmount()
 })
+
+
+test('an undelivered budget phase uses a neutral mark', async ($, on) => {
+  const talk = { workerId: 'W1', cursor: 2, rows: [{ kind: 'note', text: 'Not delivered budget.', item: 'end:2:2' }] }
+  state(on, { paneOpen: true, viewing: 'W1' }, shadow, talk)
+  const ui = await $.ui.mount(pane('desktop'))
+  expect(await ui.find({ type: 'Text', text: '○ Not delivered budget.' })).toBeTruthy()
+  expect(await ui.find({ type: 'Text', text: '✗ Not delivered budget.' })).toBeFalsy()
+  await ui.unmount()
+})

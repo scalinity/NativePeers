@@ -22,7 +22,7 @@ function reason(error: unknown): string {
 // '2 delegates · 1 running · 1 done', with the bridge's state when it is not ready.
 export function summary(c: ReturnType<typeof counts>, bridge: NpBridge, faults: NpFaults): string {
   const head = [`${c.total} delegate${c.total === 1 ? '' : 's'}`, c.running && `${c.running} running`, c.done && `${c.done} done`, c.stopped && `${c.stopped} stopped`,
-    c.failed && `${c.failed} failed`].filter(Boolean).join(' · ')
+    c.failed && `${c.failed} failed`, c.notDelivered && `${c.notDelivered} not delivered`].filter(Boolean).join(' · ')
   // The reason itself is /np doctor's: a raw error does not fit beside the buttons.
   return head + (faults.fallthrough ? ' · agent types off — /np doctor' : bridge.state === 'starting' ? ' · bridge starting'
     : bridge.state !== 'ready' ? ` · bridge ${bridge.state} — /np doctor` : '')
@@ -358,7 +358,7 @@ function conversationRow($: EngineInterface, R: any, w: NpWorker, r: NpRow, n: n
     )
   }
   // How a generation ended (task.terminal) reads as a quiet mark; other notes as they are.
-  const end = r.item?.startsWith('end:') ? (/^Completed/.test(r.text) ? '✓ Completed' : /^(Interrupted|Canceled)/.test(r.text) ? '◼ ' + r.text : '✗ ' + r.text) : r.text
+  const end = r.item?.startsWith('end:') ? (/^Completed/.test(r.text) ? '✓ Completed' : /^Not delivered/.test(r.text) ? '○ ' + r.text : /^(Interrupted|Canceled)/.test(r.text) ? '◼ ' + r.text : '✗ ' + r.text) : r.text
   return <Box key={'row-' + n} flexDirection="column">{label(end)}</Box>
 }
 

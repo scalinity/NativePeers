@@ -27,6 +27,7 @@ export type NpWorker = {
   status: 'not_delivered_budget' | 'queued' | 'starting' | 'running' | 'waiting' | 'completed' | 'failed' | 'canceled' | 'interrupted' | 'timed_out'
   startedAt?: number
   endedAt?: number
+  undeliveredPhases?: number
   outputTokens?: number
   agentId?: string
   parentWorkerId?: string
