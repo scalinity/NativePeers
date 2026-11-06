@@ -6,7 +6,7 @@ import type { NpInput, NpProvider, NpShadow } from '../types'
 import { BridgeError, request, sleep } from './bridge'
 import { NAMES, SENTINEL, shadowModel } from './agents'
 import { HANDBACK_TOOL, followUp, handbackRequired, isBrief, requestId, unforwarded } from './inputs'
-import { MIRROR_TOOL, claimedReport, finalAnswer, openStep, planBatch, retainedLine, toolResult } from './mirror'
+import { MIRROR_TOOL, claimedReport, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, toolResult } from './mirror'
 import { NONE, getIndex, getMember, setFaults, setMember } from './state'
 import type { Activity, Summary } from './mirror'
 
@@ -262,10 +262,10 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       const facts = await summary($, s, t)
       // The parent's report always carries the worker's final text. Where it travels by SubagentHandback, the surface
       // shows that report as the run's last message, so the step writes nothing more.
-      const report = owns ? finalAnswer(t, facts, 'mirror', s.terminals, false, folded, surfaced.mode)
-        : folded.map(f => `[generation ${f.generation}]\n${f.text}`).join('\n\n') + (folded.length ? `\n\nDelivered by Claude Code · npeer result ${s.groupId ?? s.workerId}` : '')
+      const report = owns ? finalAnswer(t, facts, 'mirror', [...folded.map(f => f.generation), t.generation], false, folded, surfaced.mode)
+        : foldedAnswer(folded, s.groupId ?? s.workerId!)
       const kept = !needsHandback(s) && !folded.length ? retainedLine(surfaced, s.groupId ?? s.workerId!) : ''
-      const text = needsHandback(s) ? '' : owns ? finalAnswer(t, facts, 'mirror', s.terminals, shown, folded, surfaced.mode) : report || kept
+      const text = needsHandback(s) ? '' : owns ? finalAnswer(t, facts, 'mirror', [...folded.map(f => f.generation), t.generation], shown, folded, surfaced.mode) : report || kept
       if (text) yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
       Object.assign(s, { phase: 'COMPLETING', inflight: undefined, report, handbacks: undefined })
       const end = ending(e, s, report || kept ? open.answer : '', report, usage, open.block++)

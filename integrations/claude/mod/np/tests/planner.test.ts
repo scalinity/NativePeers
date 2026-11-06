@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, openStep, planBatch, retainedLine, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -150,4 +150,12 @@ test('an unclaimed definite wait route offers its handle without claiming report
   expect(retainedLine(undefined, 'G')).toBe('')
   expect(retainedLine({ owner: 'native', mode: 'push', changed: false }, 'G')).toBe('')
   expect(retainedLine({ owner: 'mirror', route: 'MIRROR_SURFACING', changed: true, mode: 'wait' }, 'G')).toBe('')
+})
+
+
+test('a folded-only report formats only included tasks without attributing the current native task', () => {
+  const report = foldedAnswer([{ generation: 1, text: ' earlier report  ' }, { generation: 3, text: '  ' }], 'G')
+  expect(report).toBe('[generation 1]\nearlier report\n\n[generation 3]\n(no final text)\n\n— NativePeers · earlier task results\nGenerations: 1, 3\nDetails: npeer result G')
+  expect(report).not.toContain('generation 2')
+  expect(foldedAnswer([], 'G')).toBe('')
 })

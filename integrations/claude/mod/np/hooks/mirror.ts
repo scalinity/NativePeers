@@ -214,6 +214,16 @@ export type Summary = {
   resultArtifact?: string; patchArtifact?: string; changes?: { files?: number; added?: number; removed?: number; worktree?: string }
 }
 
+// Only earlier claimed tasks belong here; the current task may be native-owned.
+// Its provider/status facts must not be attributed to these earlier reports.
+export function foldedAnswer(folded: { generation: number; text: string }[], handle: string): string {
+  if (!folded.length) return ''
+  const lines: string[] = []
+  for (const f of folded) lines.push(`[generation ${f.generation}]`, f.text.trim() || '(no final text)', '')
+  lines.push('— NativePeers · earlier task results', `Generations: ${folded.map(f => f.generation).join(', ')}`, `Details: npeer result ${handle}`)
+  return lines.join('\n')
+}
+
 // The final answer the parent reads (spec 7.5.1). People read it too (the desktop app shows a handed-back report as
 // the run's last message), so it closes with a line in words and one handle, the group, for npeer result.
 // `shown`: the step already streamed the worker's final text, so only the closing lines follow it.
