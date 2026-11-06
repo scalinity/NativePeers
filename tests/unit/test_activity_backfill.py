@@ -62,6 +62,13 @@ class Backfill(unittest.TestCase):
         self.assertEqual(backfill(journal, dict(row, provider='antigravity'), home)[1]['data'], dict(reason='no-history-reader'))
         self.assertIsNone(history('claude', home, '../etc'))
 
+    def test_unsubmitted_budget_phase_preserves_disposition_without_old_answer(self):
+        journal=SimpleNamespace(root=self.tmp/'state',one=lambda sql,args:dict(task_id='T',generation=1,state='NOT_DELIVERED_BUDGET'))
+        row=dict(provider='claude',worker_id='W',group_id='G',native_id=None,generation=1,cwd='/w')
+        events=backfill(journal,row,self.tmp)
+        self.assertEqual(events[-1]['data']['status'],'not_delivered_budget')
+        self.assertEqual(events[-1]['data']['final_text'],'')
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -102,6 +102,7 @@ def backfill(journal, row, home):
     stamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
     bounds = limits(journal.root)
     task = journal.one('SELECT task_id,generation,state FROM tasks WHERE worker_id=? ORDER BY rowid DESC LIMIT 1', (worker_id,))
+    if task and task['state']=='NOT_DELIVERED_BUDGET':found=None
     out = []
 
     def add(kind, data, item=None):
@@ -116,6 +117,6 @@ def backfill(journal, row, home):
         for emission in source:
             add(emission.kind, emission.data, emission.item)
     state = (task['state'] if task else 'COMPLETED').lower()
-    status = state if state in ('completed', 'interrupted', 'failed', 'canceled', 'timed_out') else 'interrupted'
+    status = state if state in ('not_delivered_budget', 'completed', 'interrupted', 'failed', 'canceled', 'timed_out') else 'interrupted'
     add('task.terminal', dict(status=status, final_text=next((e['data'].get('text', '') for e in reversed(out) if e['kind'] == 'message.completed'), '')))
     return out

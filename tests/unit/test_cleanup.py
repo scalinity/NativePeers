@@ -85,6 +85,13 @@ class CleanupTests(unittest.TestCase):
         self.assertTrue(work.exists());self.assertEqual((self.source/'.git/index').read_bytes(),index)
         self.assertEqual(self.j.db.total_changes,before);self.assertEqual({p.name:p.read_bytes() for p in (self.j.root/'artifacts').iterdir()},artifacts)
 
+    def test_undelivered_budget_phase_does_not_block_cleanup(self):
+        worker,work,base=self.worker()
+        self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),worker,None,None,'NOT_DELIVERED_BUDGET',None,'BUDGET_EXHAUSTED',1,'{}'))
+        result=self.candidate(worker)
+        self.assertTrue(result['safe_candidate'],result)
+        self.assertTrue(work.exists())
+
     def test_copy_nochange_candidate_uses_manual_selected_copy_removal(self):
         worker,work,base=self.worker(copy=True);value=self.candidate(worker)
         self.assertTrue(value['safe_candidate'],value)

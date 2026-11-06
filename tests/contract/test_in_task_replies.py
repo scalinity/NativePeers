@@ -142,6 +142,14 @@ class InTaskReplyTests(unittest.IsolatedAsyncioTestCase):
         reply=await self.reply(question)
         self.assertNotIn('reply_delivery',reply);self.assertTrue(reply['followup']['starts_phase'])
 
+    async def test_undelivered_initial_batch_is_not_success_or_failed_work(self):
+        self.j.db.execute("UPDATE tasks SET state='NOT_DELIVERED_BUDGET',terminal_reason='BUDGET_EXHAUSTED'")
+        await self.group.close()
+        for value in [self.core.delegation.result(self.parent,self.gid),self.core.delegation.groups(self.parent)['groups'][0]]:
+            self.assertEqual(value['state'],'NOT_DELIVERED_BUDGET')
+        from nativepeers.supervisor import completed_state
+        self.assertEqual(completed_state([dict(state='COMPLETED'),dict(state='FAILED')]),'PARTIAL')
+
     async def test_unsubmitted_phase_is_terminal_and_summary_preserves_completed_work(self):
         self.complete();blocked=new_id()
         self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(blocked,self.wid,None,None,'NOT_DELIVERED_BUDGET',None,'NOT_DELIVERED_BUDGET',1,'{}'))

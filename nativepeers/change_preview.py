@@ -15,7 +15,7 @@ from .isolated_copy import _private_roots,private_path
 from .models import ARTIFACT_MAX
 from .registry import Registry
 
-TERMINAL={'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
+TERMINAL={'NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
 MAX_PATHS=1024
 
 
@@ -42,7 +42,7 @@ def _artifact(journal,caller,handle):
 
 def _result(journal,caller,row,task_id=None):
     task=journal.one('SELECT * FROM tasks WHERE worker_id=? AND generation=?'+
-        (' AND task_id=?' if task_id else '')+' ORDER BY rowid DESC LIMIT 1',
+        (' AND task_id=?' if task_id else " AND state!='NOT_DELIVERED_BUDGET'")+' ORDER BY rowid DESC LIMIT 1',
         (row['worker_id'],row['generation'])+((task_id,) if task_id else ()))
     require(task and task['state'] in TERMINAL and task['result_artifact_id'],
             'RESULT_UNAVAILABLE','No terminal result exists for this worker generation')

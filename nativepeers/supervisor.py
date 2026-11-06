@@ -37,6 +37,12 @@ def _abort_reply(writer):
     if not writer.is_closing() or writer.transport.get_write_buffer_size():writer.transport.abort()
 
 
+def completed_state(tasks):
+    states={t['state'] for t in tasks}
+    if states=={'NOT_DELIVERED_BUDGET'}:return 'NOT_DELIVERED_BUDGET'
+    return 'COMPLETED' if 'COMPLETED' in states and states<={'COMPLETED','NOT_DELIVERED_BUDGET'} else 'PARTIAL'
+
+
 class Group:
     def __init__(self,journal,group_id):
         self.journal,self.id=journal,group_id
@@ -639,7 +645,7 @@ class Group:
             expired=time.time()>=self.lifetime_deadline()
             tasks=self.tasks();active=any(t['state'] not in TERMINAL for t in tasks)
             if self.initial_done():
-                state='COMPLETED' if all(t['state'] in ('COMPLETED','NOT_DELIVERED_BUDGET') for t in tasks if t['task_id'] in self.policy['initial_tasks']) else 'PARTIAL'
+                state=completed_state([t for t in tasks if t['task_id'] in self.policy['initial_tasks']])
                 self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(state,self.id))
                 if not expired:
                     for phase in self.phases():await self.notify(int(phase))
@@ -721,7 +727,7 @@ class Group:
             unresolved.append({'reason':'Control socket transport closure remains unproved'})
         self.endpoint.unlink(missing_ok=True)
         atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=not bool(unresolved),cleanup_unresolved=unresolved))
-        final='COMPLETED' if all(t['state'] in ('COMPLETED','NOT_DELIVERED_BUDGET') for t in self.tasks()) else 'PARTIAL'
+        final=completed_state(self.tasks())
         if unresolved:final='PARTIAL'
         self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(final,self.id))
         self.journal.event(self.id,'supervisor-released',{'owner':self.owner,'cleanup_unresolved':unresolved})
