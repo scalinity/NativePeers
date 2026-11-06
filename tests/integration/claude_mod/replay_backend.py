@@ -27,7 +27,7 @@ class Worker:
     def __init__(self, worker_id, agent_id, provider, spec, script):
         self.id, self.agent, self.provider, self.spec, self.script = worker_id, agent_id, provider, spec, script
         self.group = 'G-' + worker_id;self.events = [];self.generation = 1;self.state = 'running'
-        self.routes = {1: dict(owner='mirror' if agent_id else 'native', route='MIRROR_PENDING' if agent_id else 'UNCLAIMED')}
+        self.routes = {1: dict(owner='mirror' if agent_id else 'native', route=script.get('initial_route', 'MIRROR_PENDING' if agent_id else 'UNCLAIMED'), mode='wait' if agent_id else 'push')}
         self.started = time.time();self.ended = None;self.task = f'T-{worker_id}-1';self.changed = asyncio.Event();self.planned = 1;self.continued = None
 
     def append(self, kind, data, *, item=None, generation=None):
@@ -152,9 +152,9 @@ class ReplayBackend:
             w.agent = body.get('claude_agent_id');self.bindings[w.agent] = w;self.touch()
             if not w.events:asyncio.get_running_loop().create_task(self.play(w, w.script.get('events', []), origin='controller'))
         failure = self.scenario.get('surfacing_failure') or {}
-        fail = op == 'surfacing' and body.get('generation') == failure.get('generation') and not getattr(self, 'surface_failed', False)
+        fail = op == 'surfacing' and body.get('generation') == failure.get('generation') and getattr(self, 'surface_failed', 0) < failure.get('count', 1)
         if fail:
-            self.surface_failed = True
+            self.surface_failed = getattr(self, 'surface_failed', 0) + 1
             if failure['when'] == 'before':raise PeerError('BRIDGE_UNREACHABLE', 'replay: before surfacing')
         if op in ('surfacing', 'ack'):
             w = self.workers[body['worker_id']];generation = body.get('generation', w.generation)
@@ -164,7 +164,7 @@ class ReplayBackend:
                 if route['route'] == source:route['route'] = target;changed = True
             self.log('report-route', worker_id=w.id, generation=generation, **route, changed=changed)
             if fail and failure['when'] == 'after':raise PeerError('BRIDGE_UNREACHABLE', 'replay: lost surfacing reply', may_have_received=True)
-            return dict(op=op, **route, changed=changed, generation=generation, task_id=f'T-{w.id}-{generation}', mode='wait')
+            return dict(op=op, **route, changed=changed, generation=generation, task_id=f'T-{w.id}-{generation}')
         return dict(op=op)
 
     async def activity(self, worker_id, after, wait_ms, maximum, item):
@@ -194,8 +194,9 @@ class ReplayBackend:
             await self.play(w, w.script.get('followup', [{'kind': 'message.completed', 'data': {'text': 'follow-up done', 'is_final_candidate': True}},
                                                         {'kind': 'task.terminal', 'data': {'status': 'completed', 'final_text': 'follow-up done'}}]), origin=body.get('origin'))
         asyncio.get_running_loop().create_task(later())
-        if disposition != 'steered':w.routes[generation] = dict(owner=body.get('delivery_owner', 'mirror'), route='MIRROR_PENDING' if body.get('delivery_owner', 'mirror') == 'mirror' else 'UNCLAIMED')
-        self.inputs[key] = dict(disposition=disposition, task_id=f'T-{w.id}-{generation}', generation=generation, delivery_owner=body.get('delivery_owner', 'mirror'))
+        owner = self.scenario.get('input_owner', body.get('delivery_owner', 'mirror'))
+        w.routes[generation] = dict(owner=owner, route='MIRROR_PENDING' if owner == 'mirror' else 'UNCLAIMED', mode='wait' if owner == 'mirror' else w.routes[1]['mode'])
+        self.inputs[key] = dict(disposition=disposition, task_id=f'T-{w.id}-{generation}', generation=generation, delivery_owner=owner)
         return self.inputs[key]
 
     async def interrupt(self, worker_id, body):
