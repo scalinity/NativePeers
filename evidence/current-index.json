@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
-  "reviewed_commit": "40d1e91d4dfc3bb741f140e2a5918a85743bce26",
-  "publication_branch": "fix/issue-55-resume-inventory",
-  "updated_at": "2026-11-06T00:28:27.397154-05:00",
-  "current_record": "evidence/issue-55-tool-inventory.json",
+  "code_commit": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
+  "reviewed_commit": "a6373ff79a2277e91f20bf9c00b57fa40c34f7de",
+  "publication_branch": "fix/issue-57-single-delivery",
+  "updated_at": "2026-11-06T02:19:31.486287-05:00",
+  "current_record": "evidence/issue-57-single-delivery.json",
   "file_classes": {
     "product": {
       "files": {
@@ -143,24 +143,24 @@
         "integrations/claude/mod/np/hooks/bridge.ts": "c628238857f4e8d08a6957dba21fbe1179a1e70d28ca8cfc0b447deea37948e5",
         "integrations/claude/mod/np/hooks/hooks.json": "d842d789476d67282d0f04b7e5fdc68a3d981ccec65dd79cfa2d11eed13fb828",
         "integrations/claude/mod/np/hooks/inputs.ts": "dd3dda6ad6ac43d586eef1eab5b3b02278ede2800a08f009c1409260545fed57",
-        "integrations/claude/mod/np/hooks/mirror.ts": "94d776965e4bdc2ae6583385db33f1129d12a07ecbf0e315d8821446bcbe13b2",
-        "integrations/claude/mod/np/hooks/register.tsx": "74c2485a0474636e88f3a7fe7a03941cd193dfdcf64b2822ee5bccbb25f01b54",
-        "integrations/claude/mod/np/hooks/shadow.ts": "fb0c71ce3f6db403a07be6686bc5f076c025d2c942f0238bef927fd7d03ef9d6",
+        "integrations/claude/mod/np/hooks/mirror.ts": "d5b0843e46e4ad4c6b0b1f2a14ef24d632463e0fb006bcbb894aaaa76a76e1dd",
+        "integrations/claude/mod/np/hooks/register.tsx": "b2a1447164edd4950c7303d79e89737c7ba702a44883b7123f1f7976cb700f74",
+        "integrations/claude/mod/np/hooks/shadow.ts": "172c450ec62a14f0a99590c71c4293337c9f0ab0d4ae9e9172e65b351859b7a6",
         "integrations/claude/mod/np/hooks/state.ts": "66395eb53c95422476da2a9b4273683eefe72f6c844c7080023cdb2bb59c31a7",
         "integrations/claude/mod/np/hooks/transcript.ts": "60831235dc021b3c6c015e41be825319501300ea03430dfd145d9e23ea343589",
         "integrations/claude/mod/np/hooks/ui.tsx": "0925d02cf618222ad6d396d9c27a16afd6f40ac8a736a02fd716a7639df65f94",
         "integrations/claude/mod/np/tests/agents.test.ts": "7544b7e08c673bc47f2724cf3a691cbe06a4776b0a91f98f7d891f427e186986",
-        "integrations/claude/mod/np/tests/planner.test.ts": "41f71282a0ef622dfe12c1bbbf36052e9fbd2819f841963dcf44aa10607c9bd4",
+        "integrations/claude/mod/np/tests/planner.test.ts": "925f34f200cda0fefe430813e0c3db2aea6445239b51eb770d529e48ecd9b211",
         "integrations/claude/mod/np/tests/transcript.test.ts": "2330355b8592a683a68bac380ff48c8aaee355e10d783a0a5f6b40143b999862",
         "integrations/claude/mod/np/tests/ui.test.tsx": "dda045e19997d669f1f2b2a824bf9256add3fdd9d7ba2e46da19009eef50ff38",
         "integrations/claude/mod/np/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
-        "integrations/claude/mod/np/types/index.d.ts": "ee17b9b4f5fcd08e2695de56391301895401c394819578bf36f4423139319734",
+        "integrations/claude/mod/np/types/index.d.ts": "15c44e4d455657900bf907b36e1be726324bf9298df1eb1ee313db173c44e9ad",
         "integrations/claude/skills/nativepeers/SKILL.md": "44dff14c0278f051ce9226f69fe327ca2d1f86fb0022b02bec14b8fd8e8f5205",
         "integrations/codex/skills/nativepeers/SKILL.md": "9d9b885a50209c56e2ec9fa17b94c8cf0bfe59ae341f8f3ff63871fedb00c958",
         "integrations/zsh/gemini.zsh": "25947321b1a6603681efcc7a58b68aad1c169357ca8ac77d324c49cc785e9bc5"
       },
       "file_count": 25,
-      "sha256": "3a9336fd0fc26e2c40c15abc8a14f2a4779394fc64edd35f5dca14e2263a1348"
+      "sha256": "638e868ee0d354b8f3fae04923397aa4b7ce3b47f0430aab4e63838f50704016"
     },
     "tests": {
       "files": {
@@ -213,7 +213,7 @@
         "tests/integration/claude_mod/bin/npeer-replay": "70b255c667dd1b76535e7ee4a3c1a596ab5468760edcb84d85a8f39b8dc5d98a",
         "tests/integration/claude_mod/driver/.claude-plugin/plugin.json": "006b021b339f154b68c277321770aa1836bde46bd19f6a352b8e4ad07555cb3f",
         "tests/integration/claude_mod/driver/hooks/hooks.json": "c835c92d8e1159d20a40ca78ad654da7433942c3694ffeda0b376b0c4dfd52cf",
-        "tests/integration/claude_mod/driver/hooks/register.ts": "361800b046666a46fb9557c7a4173a561df8f0997479b12493a7d380024851f8",
+        "tests/integration/claude_mod/driver/hooks/register.ts": "3e397f16dddba942ce54def0491bf107c36d7335b06e20af2bfa0e7b52a5e632",
         "tests/integration/claude_mod/driver/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "tests/integration/claude_mod/harness.py": "73440997f640befc61db77f45f3709b9fb33f7fe5f431398ca13a046def6ad3a",
         "tests/integration/claude_mod/mod_harness.py": "7c8b7f744052e4a9e798ba86c1adf73151c8e4bff7ae5c0f19352b75ff89ee68",
@@ -234,7 +234,8 @@
         "tests/integration/claude_mod/mods/xspike/hooks/register.ts": "fc5a4d89c45b486431503eb8f983096b0c503a40a1c15fb69c2ebf9d78132f30",
         "tests/integration/claude_mod/mods/xspike/tsconfig.json": "4087cf0ba92fde503ed0e7c56f37bcb26ad0c085873f10219d0336c0f19b5a8f",
         "tests/integration/claude_mod/pty_session.py": "e025ce4af45cd6801bcd0efa0f20d33cef1d004041e1953f32017b36f900f59c",
-        "tests/integration/claude_mod/replay_backend.py": "920b5566cae184f948a3d54ce81db59e3da3dceb478add62f3db15201810b084",
+        "tests/integration/claude_mod/replay_backend.py": "7b465eeb2d09c3000c4d8643dd18fd1db0d41df16555fc01cf090ef2cf5ff354",
+        "tests/integration/claude_mod/run_delivery_ownership.py": "b1121b908cccb5dce33da2671e8d63ce8b87aaf14f0aeae072c01fd8635c52d9",
         "tests/integration/claude_mod/run_g13.py": "caf5b622ecd2052643535b0dc39554d111998bd3643fc0adc363d24cb9a6c5ca",
         "tests/integration/claude_mod/run_g2.py": "d9320ba0b781d31475bd3fbf431c234493f59a2e0ccafdec10834e0fac570dd3",
         "tests/integration/claude_mod/run_g3b.py": "2a0e662a709a447311f0e8e07b8cb140b84fac5084463c5a2fa5ab35331324c8",
@@ -244,7 +245,7 @@
         "tests/integration/claude_mod/run_g9g10.py": "c474336cc96649f46756d332e05c9c3d7890e622e1a577be5f0fe8d8964c0eb0",
         "tests/integration/claude_mod/run_g9g10b.py": "d2e05618a9880ce4cb4c186884b773be5aab8d1f972ba17f76dd6b0f9b5eb457",
         "tests/integration/claude_mod/run_handback.py": "c8355eb0a5b6a759d435c8f8351d9d79d5e7bbb54d9e189afd4fd3f9dac4db3e",
-        "tests/integration/claude_mod/run_live_acceptance.py": "ecf14c32d20a0a206c0138d5fad316720445cc8fd5f5136761258e980aa7ba21",
+        "tests/integration/claude_mod/run_live_acceptance.py": "cdba02e313a90c71d6fbcffbe6de2bab292e37d2ce34129bc1b2b6ab89bdcd24",
         "tests/integration/claude_mod/run_live_production.py": "fb5249a8802e69bee7b3352d7d5689291c0daa4b9ffbe5ac020c9ce98202b68b",
         "tests/integration/claude_mod/run_live_recovery.py": "5769620080bdd4edc179de576b22d22e2be631e34765f4bb8557fb94051b2635",
         "tests/integration/claude_mod/run_live_resume.py": "bdb1303b15521dad44183f85e85379f686cb39825d423b9b8a60feebdddab70e",
@@ -361,7 +362,7 @@
         "tests/unit/test_live_followup_probe.py": "a8c0521c7f88e3cdd205447d1267c924b6d4ec9937a5a82cf12e757f7276518f",
         "tests/unit/test_managed_activation.py": "a5e6ebe5818824ea58704f68076d73f0a538da0eee9584e5bedaaf3b0ffe68bb",
         "tests/unit/test_message_visibility.py": "9486d1b6114e7cab955ba77ec8637d198329b6465b4de7b9d84cf1704cb3dc65",
-        "tests/unit/test_mirror_routes.py": "93dbeb664de5d446251d2d60355b079147a32a1192e20be2c77e892975050cec",
+        "tests/unit/test_mirror_routes.py": "632b4eed561db23ce1f4a65101fd2214340ed9db2838ba8da76148483bfa4500",
         "tests/unit/test_native_delivery.py": "b51c7b8a3d9a4870d69afbacb0b47991851cb4df530e31fb69cd3ab4f2cadde2",
         "tests/unit/test_native_usage_parsers.py": "30e3f80041d54613b05aa80b67ee91476d7e2b00941c2eeb7354a26753ad02a0",
         "tests/unit/test_nested_caller.py": "23be6293a36883654eb848b34424588db73fb6f4cf2fbec551ec71c55d5eb9c2",
@@ -380,6 +381,7 @@
         "tests/unit/test_reconcile.py": "5a4783658bd418f864960a0cf518f7a194739b503af800ec999af6e62f84cef4",
         "tests/unit/test_reconcile_windows.py": "5b28209b8fb027c124eea37c4f1675729b49dd33209ff1922bf0e4cce86ea599",
         "tests/unit/test_refusal_authority.py": "5511bb1ee5ab184050e27dc6a51c664efcdd54b8864b69915f78fdafc02f9799",
+        "tests/unit/test_replay_delivery.py": "b5bf2d7253744cb6fb2f43ac6055c01f080aa1298920793899c2a91482167ab9",
         "tests/unit/test_resume_idempotency.py": "ea56a4e4ae4812c3d813baeef10bafb451cfe9532c4e7d68cd25649b43534ee4",
         "tests/unit/test_review_preflight.py": "bf6e1d55fc9cc79f7f0ac97283ccef8fa1db1fc1ee6b79e0106e10994ed46354",
         "tests/unit/test_review_quota_boundaries.py": "4c9ee5bc0fdff91955e8ecab99af7d678eed0739b59f94f6ffe7962dfd2fd07a",
@@ -408,33 +410,19 @@
         "tests/unit/test_worktrees_and_contracts.py": "5a27c9593b3df25dbd7587e34f01e51461f6d6d54ba40f1590a93c9ab47b3d97",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
-      "file_count": 243,
-      "sha256": "250eed0b680bdbce29a1a23f92a0a90cf164f4697eb1bca4cd8050d04aaef9c5"
+      "file_count": 245,
+      "sha256": "4f14e18c006ba6bea1518bc10b06258fd28e14db56c408493372a02b151bf4ce"
     }
   },
   "operation_checks": [
     {
-      "operation": "candidate-worker-input",
-      "parent_context": "Codex author; candidate runtime not yet executed",
+      "operation": "single-report-installed-Claude-parent",
+      "parent_context": "Codex author; installed transition deferred until all5 merged",
       "status": "NOT_RUN"
     },
     {
-      "operation": "zero-input-start-resume-inventory",
-      "parent_context": "Owned private app-server diagnostic; no model input",
-      "status": "PASS",
-      "provider": "codex",
-      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
-    },
-    {
-      "operation": "candidate-zero-input-prepare-resume-and-project-refusal",
-      "parent_context": "Codex author; private controller fixture, no model input",
-      "provider": "codex",
-      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
-      "status": "PASS"
-    },
-    {
       "operation": "source-python-suite",
-      "parent_context": "Codex author, isolated issue-55 worktree import verified",
+      "parent_context": "Codex author; isolated issue57 worktree import verified",
       "status": "PASS"
     }
   ],

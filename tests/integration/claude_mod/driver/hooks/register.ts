@@ -99,6 +99,13 @@ export const register: Register = on => {
   // classifier, whose model request the tripwire refuses.
   on('tool.check', { tool: 'Agent' }, async ($, e, next) =>
     e.agentId === undefined && (await $.env.get('NP_DRIVER_ALLOW_AGENT')) === '1' ? { decision: 'allow' as const, reason: 'harness: scripted Agent call' } : next(e))
+  // Only scripted messages to this fixture's own np shadow: no model or real
+  // worker receives them. As for Agent above, stand in for the refusing tripwire's classifier.
+  on('tool.check', { tool: 'SendMessage' }, async ($, e, next) => {
+    const own = (await $.agent.list()).some(a => a.id === String((e.input as any)?.to ?? '') && a.type.startsWith('np:'))
+    return e.agentId === undefined && own && (await $.env.get('NP_DRIVER_ALLOW_MESSAGE')) === '1'
+      ? { decision: 'allow' as const, reason: 'harness: scripted message to owned np shadow' } : next(e)
+  })
   // NP_DRIVER_DENY_HANDBACK=1: every SubagentHandback in a subagent loop is refused, as a classifier refusal would be.
   on('tool.check', { tool: 'SubagentHandback' }, async ($, e, next) =>
     e.agentId !== undefined && (await $.env.get('NP_DRIVER_DENY_HANDBACK')) === '1' ? { decision: 'deny' as const, reason: 'harness: handback refused' } : next(e))

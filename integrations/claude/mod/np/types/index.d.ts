@@ -61,19 +61,16 @@ export type NpShadow = {
   pendingRefs: Record<string, NpPending>
   inputs: NpInput[]
   briefConsumed: boolean
-  surfaced?: { generation: number; taskId?: string }
+  surfaced?: { workerId?: string; generation: number; taskId?: string }
   // Generations a follow-up queued while the worker ran folded into this run: the run's one notification carries them.
-  folded?: { generation: number; taskId?: string; text: string }[]
-  surfacedFolded?: { generation: number; taskId?: string }[]
+  folded?: { workerId?: string; generation: number; taskId?: string; text: string }[]
+  surfacedFolded?: { workerId?: string; generation: number; taskId?: string }[]
   terminals: number[]
   fallthrough?: boolean
   lastFault?: string
   session: string
   startedAt: number
   latest?: string
-  // The generation NativePeers delivers natively (an adopted worker's initial
-  // task); every other generation this shadow carries is mirror-owned.
-  nativeGeneration?: number
   usageCumulative?: number
   waits: number
   // The engine requires this run to end with a SubagentHandback call (sessions in auto mode).

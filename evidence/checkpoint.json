@@ -215,9 +215,9 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/issue-55-resume-inventory",
-    "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
-    "evidence": "evidence/issue-55-tool-inventory.json",
+    "branch": "fix/issue-57-single-delivery",
+    "code_commit": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
+    "evidence": "evidence/issue-57-single-delivery.json",
     "source_map_sha256": "3d7ffcecda81ec4555876e6e04a44ff5488de4141d4b95f3dffd0673e9fe296e",
     "status": "PASS_SOURCE_INSTALLED_NOT_RUN"
   },
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "40d1e91d4dfc3bb741f140e2a5918a85743bce26",
-    "branch": "fix/issue-55-resume-inventory",
-    "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
-    "last_verified_publication": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+    "base_commit": "a6373ff79a2277e91f20bf9c00b57fa40c34f7de",
+    "branch": "fix/issue-57-single-delivery",
+    "code_commit": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
+    "last_verified_publication": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,74 +302,103 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/issue-55-resume-inventory",
+    "branch": "fix/issue-57-single-delivery",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
-    "verified_remote_code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+    "verified_remote_commit": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
+    "verified_remote_code_commit": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-55-source-qualified",
+  "stage": "issue-57-source-qualified",
   "tests_current": {
-    "focused": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_worker_visibility.py tests/unit/test_worker_shell_binding.py tests/unit/test_cancellation.py",
-      "output": "25 passed, 8 subtests passed in 1.73s"
-    },
-    "complete_source": {
+    "python_complete": {
       "status": "PASS",
       "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
-      "output": "1210 passed, 5 skipped, 1086 subtests passed in 429.13s"
+      "source_commit": "c8ac57f31a60333a76a6a1f7a71066e57973f300",
+      "output": "1212 passed, 5 skipped, 1093 subtests passed in 302.84s"
     },
-    "initial_complete": {
-      "status": "FAIL",
+    "mirror_routes": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_mirror_routes.py",
+      "output": "18 passed, 13 subtests passed in 1.86s"
+    },
+    "plugin": {
+      "status": "PASS",
+      "command": "/Users/danny/.local/share/claude/versions/2.1.318 plugin test integrations/claude/mod/np",
+      "output": "57 pass, 0 fail"
+    },
+    "typescript": {
+      "status": "PASS",
+      "command": "tsc -p integrations/claude/mod/np",
+      "output": "exit0 using exact native2.1.318 generated types"
+    },
+    "validation": {
+      "status": "PASS",
+      "command": "/Users/danny/.local/share/claude/versions/2.1.318 plugin validate integrations/claude/mod/np",
+      "output": "exit0; preexisting ICON_MISSING directory warning"
+    },
+    "direct_replay": {
+      "status": "PASS",
+      "command": ".venv/bin/python tests/integration/claude_mod/run_delivery_ownership.py --case direct",
+      "output": "one handback; report has final text and IDs; zero shadow requests; two classifier requests refused"
+    },
+    "adopted_replay": {
+      "status": "PASS",
+      "command": ".venv/bin/python tests/integration/claude_mod/run_delivery_ownership.py --case adopted",
+      "output": "zero handbacks; adoption confirmed; zero shadow requests; two classifier requests refused"
+    },
+    "adoption_off_replay": {
+      "status": "PASS",
+      "command": ".venv/bin/python tests/integration/claude_mod/run_delivery_ownership.py --case off",
+      "output": "zero shadows, handbacks, classifier and shadow requests; strict zero_api true"
+    },
+    "python_complete_initial": {
+      "status": "PASS",
       "command": ".venv/bin/python -m pytest -q",
-      "output": "3 failed, 1200 passed, 5 skipped, 1085 subtests passed in 378.01s",
-      "failures": [
-        "Two stale generated publication pointers, regenerated after source publication; focused coherence 3 passed.",
-        "Antigravity cancellation fixture failed hook observation under suite load; same fixture passed in focused source tests. Rerun pending; no Antigravity code changed."
+      "output": "1211 passed, 5 skipped, 1091 subtests passed in 306.72s",
+      "source_commit": "6659982"
+    },
+    "ownership_matrix": {
+      "status": "PASS",
+      "command": "NP_CLAUDE_BIN=/Users/danny/.local/share/claude/versions/2.1.318 .venv/bin/python tests/integration/claude_mod/run_delivery_ownership.py --case CASE",
+      "output": "11 headless cases pass; zero shadow model requests; classifier calls refused separately; adoption-off/plain cases strict zero_api true",
+      "cases": [
+        "off",
+        "adopted",
+        "direct",
+        "before",
+        "after",
+        "queued",
+        "folded-native",
+        "folded-repeat",
+        "native-plain",
+        "folded-missing",
+        "folded-native-plain"
       ]
     },
-    "remediation_focused": {
+    "completed_backfill": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_worker_visibility.py tests/unit/test_worker_shell_binding.py tests/unit/test_cancellation.py tests/unit/test_interrupt_and_steer.py tests/contract/test_selected_home_launch.py tests/contract/test_lifecycle_shutdown.py",
-      "output": "50 passed, 8 subtests passed in 15.36s"
+      "command": "NP_CLAUDE_BIN=/Users/danny/.local/share/claude/versions/2.1.318 PYTHONPATH=<ignored pyte target> .venv/bin/python tests/integration/claude_mod/run_delivery_ownership.py --case reattach",
+      "output": "Interactive /np attach 1 after MIRROR_DELIVERED; exactly one handback total, zero shadow requests,3 classifier requests refused; fixture close found no remaining processes"
     },
-    "second_complete": {
-      "status": "FAIL",
-      "command": ".venv/bin/python -m pytest -q",
-      "output": "1 failed, 1201 passed, 5 skipped, 1086 subtests passed in 317.85s",
-      "scope": "Original c7a6b22 runtime loaded at test start. The parent edited the qualification record while this run was active, leaving its copied checkpoint tests unequal; this is an agent publication-order failure. No runtime test failed."
-    },
-    "a1fb39b_complete": {
+    "python_complete_00768": {
       "status": "PASS",
       "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "a1fb39b",
-      "output": "1207 passed, 5 skipped, 1086 subtests passed in 389.83s"
+      "source_commit": "00768c7",
+      "output": "1212 passed, 5 skipped, 1093 subtests passed in 310.34s"
     },
-    "steer_target_and_deadline": {
+    "strict_folding": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_worker_visibility.py tests/unit/test_interrupt_and_steer.py",
-      "output": "28 passed, 6 subtests passed in 6.50s"
+      "command": "Pinned2.1.318 run_delivery_ownership.py --case queued|folded-native|folded-repeat|folded-missing|folded-native-plain",
+      "output": "All5 require queued disposition, final-before-folded surfacing order, planner continuing marker or unique folded-only footer; all pass"
     },
-    "028ee97_complete": {
+    "final_formatter_native": {
       "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "028ee97",
-      "output": "1209 passed, 5 skipped, 1086 subtests passed in 333.87s"
-    },
-    "final_focused": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q tests/unit/test_worker_visibility.py tests/unit/test_interrupt_and_steer.py",
-      "output": "29 passed, 6 subtests passed in 3.72s"
-    },
-    "preserved_regressions": {
-      "status": "PASS",
-      "command": "git diff --exit-code 40d1e91d4dfc3bb741f140e2a5918a85743bce26 -- tests/contract/test_phase_admission.py tests/contract/test_notifications.py tests/contract/test_in_task_replies.py",
-      "output": "exit0; existing #13/#28/#53 files unchanged"
+      "command": "Pinned2.1.318 run_delivery_ownership.py --case direct|queued|folded-native-plain|after-plain",
+      "source_commit": "c8ac57f",
+      "output": "4 pass; exact counts/exclusions/acks and zero shadow requests. Plain lost-reply completion is exactly the recovery handle, with no worker text."
     }
   },
   "transports": {
@@ -378,7 +407,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-11-06T00:28:27.397154-05:00",
+  "updated_at": "2026-11-06T02:19:31.486287-05:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2679,6 +2708,87 @@
         "evidence": "evidence/issue-55-tool-inventory.json",
         "source_map_sha256": "1d675f9f1fd1908a21b0d375ac3e5a03957a07a8deab655115d45ad22843fa6c",
         "status": "SOURCE_REVIEW_IN_PROGRESS_NATIVE_NOT_RUN"
+      }
+    },
+    {
+      "stage": "issue-55-source-qualified",
+      "updated_at": "2026-11-06T00:28:27.397154-05:00",
+      "git": {
+        "base_commit": "40d1e91d4dfc3bb741f140e2a5918a85743bce26",
+        "branch": "fix/issue-55-resume-inventory",
+        "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+        "last_verified_publication": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-55-resume-inventory",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+        "verified_remote_code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-55-resume-inventory",
+        "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+        "evidence": "evidence/issue-55-tool-inventory.json",
+        "source_map_sha256": "3d7ffcecda81ec4555876e6e04a44ff5488de4141d4b95f3dffd0673e9fe296e",
+        "status": "PASS_SOURCE_INSTALLED_NOT_RUN"
+      }
+    },
+    {
+      "stage": "issue-57-source-verification",
+      "updated_at": "2026-11-06T00:55:58.019488-05:00",
+      "git": {
+        "base_commit": "a6373ff79a2277e91f20bf9c00b57fa40c34f7de",
+        "branch": "fix/issue-57-single-delivery",
+        "code_commit": "6659982b408ce3cf799d36bdc7f0a991ec0eca88",
+        "last_verified_publication": "6659982b408ce3cf799d36bdc7f0a991ec0eca88",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-57-single-delivery",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "6659982b408ce3cf799d36bdc7f0a991ec0eca88",
+        "verified_remote_code_commit": "6659982b408ce3cf799d36bdc7f0a991ec0eca88",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-57-single-delivery",
+        "code_commit": "6659982b408ce3cf799d36bdc7f0a991ec0eca88",
+        "evidence": "evidence/issue-57-single-delivery.json",
+        "source_map_sha256": "3d7ffcecda81ec4555876e6e04a44ff5488de4141d4b95f3dffd0673e9fe296e",
+        "status": "SOURCE_PENDING_INSTALLED_NOT_RUN"
+      }
+    },
+    {
+      "stage": "issue-57-source-verification",
+      "updated_at": "2026-11-06T01:30:35.409181-05:00",
+      "git": {
+        "base_commit": "a6373ff79a2277e91f20bf9c00b57fa40c34f7de",
+        "branch": "fix/issue-57-single-delivery",
+        "code_commit": "00768c7db940e6c100a8c345a0d3151841f06d70",
+        "last_verified_publication": "00768c7db940e6c100a8c345a0d3151841f06d70",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-57-single-delivery",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "00768c7db940e6c100a8c345a0d3151841f06d70",
+        "verified_remote_code_commit": "00768c7db940e6c100a8c345a0d3151841f06d70",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-57-single-delivery",
+        "code_commit": "00768c7db940e6c100a8c345a0d3151841f06d70",
+        "evidence": "evidence/issue-57-single-delivery.json",
+        "source_map_sha256": "3d7ffcecda81ec4555876e6e04a44ff5488de4141d4b95f3dffd0673e9fe296e",
+        "status": "SOURCE_PENDING_INSTALLED_NOT_RUN"
       }
     }
   ],

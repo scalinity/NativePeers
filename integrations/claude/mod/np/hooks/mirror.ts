@@ -10,6 +10,23 @@ export type Chunk =
   | { kind: 'tool'; index: number; id: string; name: string }
   | { kind: 'input'; index: number; json: string }
 
+// Only the transaction that moved this exact task's route may send its report.
+// A repeated or missing answer can mean the earlier report reached the parent.
+export function claimedReport(reply: any): boolean {
+  return reply?.owner === 'mirror' && reply.route === 'MIRROR_SURFACING' && reply.changed === true
+}
+
+// A folded task stays with the worker that produced it after a replacement.
+export function taskAddress(workerId: string, task: { workerId?: string; taskId?: string; generation: number }): { worker_id: string; task_id?: string; generation: number } {
+  return { worker_id: task.workerId ?? workerId, task_id: task.taskId, generation: task.generation }
+}
+
+// A definite wait route retains a readable result even when this shadow did
+// not win delivery. This line contains no worker report and claims no route.
+export function retainedLine(reply: any, handle: string): string {
+  return !claimedReport(reply) && reply?.mode === 'wait' ? `Kept in NativePeers: npeer result ${handle}` : ''
+}
+
 export const MIRROR_TOOL = 'mcp__np__mirror'
 export const MAX_TOOLS = 8
 export const MAX_EVENTS = 512
@@ -202,27 +219,48 @@ export type Summary = {
   resultArtifact?: string; patchArtifact?: string; changes?: { files?: number; added?: number; removed?: number; worktree?: string }
 }
 
+// Generation numbers restart in a replacement worker. Where they collide,
+// number the included report entries so each heading names one result.
+function generationLabels(generations: number[]): { labels: string[]; summary: string } {
+  const repeated = new Set(generations).size !== generations.length
+  return {
+    labels: generations.map((g, i) => repeated ? `result ${i + 1} · generation ${g}` : `generation ${g}`),
+    summary: repeated ? `Results: ${generations.map((g, i) => `${i + 1} (generation ${g})`).join(', ')}` : `Generations: ${generations.join(', ')}`,
+  }
+}
+
+// Only earlier claimed tasks belong here; the current task may be native-owned.
+// Its provider/status facts must not be attributed to these earlier reports.
+export function foldedAnswer(folded: { generation: number; text: string }[], handle: string): string {
+  if (!folded.length) return ''
+  const lines: string[] = []
+  const names = generationLabels(folded.map(f => f.generation))
+  for (const [i, f] of folded.entries()) lines.push(`[${names.labels[i]}]`, f.text.trim() || '(no final text)', '')
+  lines.push('— NativePeers · earlier task results', names.summary, `Details: npeer result ${handle}`)
+  return lines.join('\n')
+}
+
 // The final answer the parent reads (spec 7.5.1). People read it too (the desktop app shows a handed-back report as
 // the run's last message), so it closes with a line in words and one handle, the group, for npeer result.
 // `shown`: the step already streamed the worker's final text, so only the closing lines follow it.
-export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[], shown = false,
-                            folded: { generation: number; text: string }[] = [], mode?: string): string {
+export function finalAnswer(terminal: Activity, s: Summary, generations: number[], shown = false,
+                            folded: { generation: number; text: string }[] = []): string {
   const d = terminal.data ?? {}
   const status = String(d.status ?? 'completed')
   const body = headTail(String(d.final_text ?? ''), 12288)
   const handle = s.groupId ?? s.workerId
   const lines: string[] = []
   // Earlier generations of this run were shown as they ended; the notification carries only this message, so it repeats them.
-  for (const f of folded) lines.push(`[generation ${f.generation}]`, f.text.trim() || '(no final text)', '')
-  if (folded.length) lines.push(`[generation ${terminal.generation}]`)
+  const names = generationLabels(generations)
+  for (const [i, f] of folded.entries()) lines.push(`[${names.labels[i]}]`, f.text.trim() || '(no final text)', '')
+  if (folded.length) lines.push(`[${names.labels[folded.length]}]`)
   if (body.text.trim() && (!shown || folded.length)) lines.push(body.truncated ? body.text + `\n[… truncated; the full text: npeer result ${handle}]` : body.text)
   if (status === 'interrupted') lines.push('Interrupted: the text above is a partial result.')
   lines.push('', closingLine(terminal, s))
   if (d.error?.code) lines.push(`Error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`.trim())
   if (s.changes?.files) lines.push(`Changed ${s.changes.files} file${s.changes.files === 1 ? '' : 's'} (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})${s.changes.worktree ? ' in ' + s.changes.worktree : ''}`)
-  if (generations.length > 1) lines.push(`Generations: ${generations.join(', ')}`)
-  // A wait-mode route is never pushed: its result stays with NativePeers until asked for.
-  lines.push(owner === 'native' && mode === 'wait' ? `Kept in NativePeers: npeer result ${handle}` : owner === 'native' ? `Delivered by NativePeers · npeer result ${handle}` : `Details: npeer result ${handle}`)
+  if (generations.length > 1) lines.push(names.summary)
+  lines.push(`Details: npeer result ${handle}`)
   return lines.join('\n')
 }
 

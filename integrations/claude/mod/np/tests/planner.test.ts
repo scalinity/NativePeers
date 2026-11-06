@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, closingLine, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, taskAddress, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -60,7 +60,7 @@ test('a terminal followed by a forwarded follow-up continues the same run with a
 
 test('generations folded into one run all reach its final answer, which the one notification carries', () => {
   const terminal = ev(9, 'task.terminal', { status: 'completed', final_text: 'two' }, null, 2)
-  const text = finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1, 2], true, [{ generation: 1, text: 'one' }])
+  const text = finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, [1, 2], true, [{ generation: 1, text: 'one' }])
   expect(text.indexOf('[generation 1]\none')).toBe(0)
   expect(text).toContain('[generation 2]\ntwo')
   expect(text).toContain('Generations: 1, 2')
@@ -100,17 +100,16 @@ test('tool results replay output, exit, duration and diffs; a terminal without c
   expect(toolResult('codex', pending, [ev(4, 'task.terminal', { status: 'interrupted' })], 100).status).toBe('interrupted')
 })
 
-test('the final answer closes in words with one handle, the group, and says who delivered it', () => {
+test('a claimed mirror report closes in words with one group handle', () => {
   const terminal = ev(9, 'task.terminal', { status: 'failed', final_text: 'partial', error: { code: 'QUOTA_EXHAUSTED', message: 'limit' } })
-  const text = finalAnswer(terminal, { provider: 'codex', modelRequested: 'gpt-6.1-sol', modelObserved: 'gpt-6.1-sol', effort: 'high', profile: 'analysis', workerId: 'W', groupId: 'G', taskId: 'T', nativeId: 'N', elapsedMs: 161000, resultArtifact: 'R' }, 'native', [1])
+  const text = finalAnswer(terminal, { provider: 'codex', modelRequested: 'gpt-6.1-sol', modelObserved: 'gpt-6.1-sol', effort: 'high', profile: 'analysis', workerId: 'W', groupId: 'G', taskId: 'T', nativeId: 'N', elapsedMs: 161000, resultArtifact: 'R' }, [1])
   expect(text).toContain('— NativePeers · Codex · GPT-6.1 Sol · high effort · read-only · failed in 2m41s')
   expect(text).toContain('Error: QUOTA_EXHAUSTED limit')
-  expect(text).toContain('Delivered by NativePeers · npeer result G')
+  expect(text).toContain('Details: npeer result G')
   // No worker, task, native or artifact ids: npeer result G names them.
   for (const id of [' W ', ' T ', ' N ', ' R ', 'worker W', 'native N']) expect(text.includes(id)).toBe(false)
-  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'native', [1], false, [], 'wait')).toContain('Kept in NativePeers: npeer result G')
-  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, 'mirror', [1])).toContain('Details: npeer result G')
-  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, 'mirror', [1], true).startsWith('partial')).toBe(false)
+  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W', groupId: 'G' }, [1])).toContain('Details: npeer result G')
+  expect(finalAnswer(terminal, { provider: 'codex', workerId: 'W' }, [1], true).startsWith('partial')).toBe(false)
 })
 
 test('a detail that adds to the title is kept, and a long title is recorded as the call shows it', () => {
@@ -129,4 +128,54 @@ test('the closing line names the worker in words, and the model asked for when a
     .toBe('— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s')
   expect(closingLine(terminal, { provider: 'claude', modelRequested: 'claude-opus-5-5', modelObserved: 'claude-sonnet-5-5', workerId: 'W' })).toContain('Sonnet 5.5 (asked for Opus 5.5)')
   expect(closingLine(ev(9, 'task.terminal', { status: 'timed_out' }), { provider: 'grok', workerId: 'W' })).toBe('— NativePeers · Grok · timed out')
+})
+
+
+test('only the exact winning mirror surfacing transaction owns a report', () => {
+  expect(claimedReport({ owner: 'mirror', route: 'MIRROR_SURFACING', changed: true })).toBe(true)
+  for (const reply of [undefined, {}, { owner: 'native', route: 'PUSH_SUBMITTING', changed: false },
+    { owner: 'native', route: 'NOTIFICATION_UNKNOWN', changed: false },
+    { owner: 'mirror', route: 'MIRROR_PENDING', changed: false },
+    { owner: 'mirror', route: 'UNCLAIMED', changed: false },
+    { owner: 'mirror', route: 'RETAINED', changed: false },
+    { owner: 'mirror', route: 'MIRROR_SURFACING', changed: false },
+    { owner: 'mirror', route: 'MIRROR_DELIVERED', changed: false }]) expect(claimedReport(reply)).toBe(false)
+})
+
+
+test('an unclaimed definite wait route offers its handle without claiming report delivery', () => {
+  for (const route of ['UNCLAIMED', 'MIRROR_PENDING', 'RETAINED', 'NOTIFICATION_UNKNOWN', 'MIRROR_SURFACING'])
+    expect(retainedLine({ owner: 'mirror', route, changed: false, mode: 'wait' }, 'G')).toBe('Kept in NativePeers: npeer result G')
+  expect(retainedLine(undefined, 'G')).toBe('')
+  expect(retainedLine({ owner: 'native', mode: 'push', changed: false }, 'G')).toBe('')
+  expect(retainedLine({ owner: 'mirror', route: 'MIRROR_SURFACING', changed: true, mode: 'wait' }, 'G')).toBe('')
+})
+
+
+test('a folded-only report formats only included tasks without attributing the current native task', () => {
+  const report = foldedAnswer([{ generation: 1, text: ' earlier report  ' }, { generation: 3, text: '  ' }], 'G')
+  expect(report).toBe('[generation 1]\nearlier report\n\n[generation 3]\n(no final text)\n\n— NativePeers · earlier task results\nGenerations: 1, 3\nDetails: npeer result G')
+  expect(report).not.toContain('generation 2')
+  expect(foldedAnswer([], 'G')).toBe('')
+})
+
+
+test('folded surfacing and acknowledgment target the original worker after a replacement', () => {
+  expect(taskAddress('replacement', { workerId: 'original', taskId: 'T1', generation: 1 })).toEqual({ worker_id: 'original', task_id: 'T1', generation: 1 })
+  expect(taskAddress('replacement', { workerId: 'replacement', taskId: 'T2', generation: 1 })).toEqual({ worker_id: 'replacement', task_id: 'T2', generation: 1 })
+  expect(taskAddress('same-worker', { taskId: 'persisted', generation: 2 })).toEqual({ worker_id: 'same-worker', task_id: 'persisted', generation: 2 })
+})
+
+
+test('colliding generation numbers identify included results by position', () => {
+  const folded = [{ generation: 1, text: 'EARLIER' }]
+  const current = ev(4, 'task.terminal', { status: 'completed', final_text: 'CURRENT' }, null, 1)
+  const report = finalAnswer(current, { provider: 'codex', workerId: 'replacement', groupId: 'G' }, [1, 1], false, folded)
+  expect(report).toStartWith('[result 1 · generation 1]\nEARLIER')
+  expect(report).toContain('[result 2 · generation 1]\nCURRENT')
+  expect(report).toContain('Results: 1 (generation 1), 2 (generation 1)')
+  expect(report).not.toContain('Generations: 1, 1')
+  const earlier = foldedAnswer([...folded, { generation: 1, text: 'OTHER' }], 'G')
+  expect(earlier).toContain('[result 2 · generation 1]\nOTHER')
+  expect(earlier).toContain('Results: 1 (generation 1), 2 (generation 1)')
 })
