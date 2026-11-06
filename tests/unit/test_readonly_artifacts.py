@@ -160,6 +160,10 @@ class ReadOnlyArtifactTests(unittest.TestCase):
                     self.assertIn(live if task not in arguments else task, json.dumps(response['data']))
 
     def test_readonly_task_scope_refusals_are_typed_and_name_equivalent_mcp_scope(self):
+        with self.assertRaises(PeerError) as neutral:
+            Delegation(self.journal, Registry(self.journal)).group(Caller('peer', 'stranger'), self.group_id)
+        self.assertEqual(neutral.exception.code, 'APPROVAL_BLOCKED')
+        self.assertNotIn('task_status', str(neutral.exception))
         sibling, foreign_worker, foreign_group = new_id(), new_id(), new_id()
         self.journal.db.execute('INSERT INTO groups VALUES(?,?,?,?,?)',
             (foreign_group, 'other-parent', '{}', 'COMPLETED', '{}'))

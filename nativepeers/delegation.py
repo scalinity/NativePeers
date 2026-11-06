@@ -21,6 +21,7 @@ from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
 
 TERMINAL={'NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
+READ_SCOPE_HINT='; task_status/task_result use the same scope. Ask the parent to supply selected evidence through context_refs; granted artifacts are readable with artifact_read'
 # Set by the Claude Code session bridge only. Claude Code stops a mod's process together with every
 # descendant, so a supervisor the bridge starts is handed to launchd through a shell that exits at once,
 # as a supervisor started by the CLI already is; it then ends by its own parent-lifetime policy.
@@ -42,7 +43,7 @@ def supervisor_environment(journal):
 class Delegation:
     def __init__(self,journal,registry):self.journal,self.registry=journal,registry
 
-    def group(self,caller,handle):
+    def group(self,caller,handle,*,read_hint=False):
         group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(handle,))
         worker_handle=None
         if not group:
@@ -52,7 +53,7 @@ class Delegation:
                 row=worker_handle
             require(row,'PROTOCOL_ERROR','Unknown task/group handle');group=self.journal.one('SELECT * FROM groups WHERE group_id=?',(row['group_id'],))
         require(caller.kind=='peer' and (caller.key==group['parent_key'] or caller.grants.get('group_id')==group['group_id']),
-                'APPROVAL_BLOCKED','Task is outside the bound caller grant; task_status/task_result use the same scope. Ask the parent to supply selected evidence through context_refs; granted artifacts are readable with artifact_read')
+                'APPROVAL_BLOCKED','Task is outside the bound caller grant'+(READ_SCOPE_HINT if read_hint else ''))
         require(not worker_handle,'PROTOCOL_ERROR','This is a worker ID; status/result require an exact task or group ID',
                 details=dict(handle_kind='worker',group_id=group['group_id'],next_action='npeer status '+group['group_id']+' --compact --json'))
         return group
@@ -375,7 +376,7 @@ class Delegation:
             require(manifest.exists(),'OWNERSHIP_UNKNOWN','Supervisor readiness timed out; inspect the reserved group before any retry')
 
     def status(self,caller,handle,*,explain_selection=False,completion=True,compact=False):
-        group=self.group(caller,handle)
+        group=self.group(caller,handle,read_hint=True)
         result=dict(group_id=group['group_id'],state=group['state'],workers=self.journal.all(
             'SELECT worker_id,peer_key,provider,native_id,role_title,model_requested,model_observed,effort_requested,state,generation FROM workers WHERE group_id=?',(group['group_id'],)),
             tasks=self.journal.all('SELECT t.task_id,t.worker_id,t.native_turn_id,t.state,t.result_artifact_id,t.terminal_reason FROM tasks t JOIN workers w USING(worker_id) WHERE w.group_id=?',(group['group_id'],)),
@@ -383,7 +384,7 @@ class Delegation:
         if caller.key!=group['parent_key']:
             worker=caller.grants.get('worker_id')
             require(handle==group['group_id'] or any(t['task_id']==handle and t['worker_id']==worker for t in result['tasks']),
-                    'APPROVAL_BLOCKED','A worker can read only its own tasks; task_status/task_result use the same scope. Ask the parent to supply selected evidence through context_refs; granted artifacts are readable with artifact_read')
+                    'APPROVAL_BLOCKED','A worker can read only its own tasks'+READ_SCOPE_HINT)
             result['workers']=[w for w in result['workers'] if w['worker_id']==worker]
             result['tasks']=[t for t in result['tasks'] if t['worker_id']==worker]
             result['notifications']=[]
