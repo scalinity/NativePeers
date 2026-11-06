@@ -278,5 +278,26 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_omitted_byte_count_excludes_the_original_newline_still_shown(self):
         from nativepeers.compact import summary_preview
-        preview,truncated=summary_preview('L1\n'+'x'*20000,self.ids[0] if self.ids else new_id(),150)
+        preview,truncated=summary_preview('L1\n'+'x'*20000,new_id(),150)
         self.assertTrue(truncated);self.assertTrue(preview.startswith('L1\n[Report truncated: 20000 bytes omitted.'))
+
+
+    async def test_valid_digest_malformed_and_wrong_task_report_records_are_typed_failures(self):
+        task=self.add()
+        for raw in [b'\xff',b'not-json',canonical([]),canonical({'task_id':'wrong','summary':'private'}),canonical({'task_id':task})]:
+            with self.subTest(raw=raw):
+                artifact=Artifacts(self.j).put(raw,self.caller.key)
+                self.j.db.execute('UPDATE tasks SET result_artifact_id=? WHERE task_id=?',(artifact,task))
+                with self.assertRaises(PeerError) as error:self.service.report(self.caller,task)
+                self.assertEqual(error.exception.code,'PROTOCOL_ERROR')
+
+    async def test_aggregate_digest_rejects_an_inconsistent_page_before_report_decode(self):
+        import base64
+        task=self.add();read=Artifacts.read
+        def inconsistent(store,*args,**kwargs):
+            page=read(store,*args,**kwargs)
+            page['data_base64']=base64.b64encode(base64.b64decode(page['data_base64'])+b'extra').decode()
+            return page
+        with patch.object(Artifacts,'read',inconsistent):
+            with self.assertRaises(PeerError) as error:self.service.report(self.caller,task)
+        self.assertEqual(error.exception.code,'PROTOCOL_ERROR');self.assertIn('digest or size differs',error.exception.message)

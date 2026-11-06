@@ -521,7 +521,8 @@ class Delegation:
             require(raw and page['next_offset']==offset,'PROTOCOL_ERROR','Report artifact page did not advance')
         raw=b''.join(pieces)
         require(len(raw)==identity[2] and hashlib.sha256(raw).hexdigest()==identity[1],'PROTOCOL_ERROR','Report artifact digest or size differs')
-        record=json.loads(raw.decode('utf-8'))
+        try:record=json.loads(raw.decode('utf-8'))
+        except ValueError as error:raise PeerError('PROTOCOL_ERROR','Report artifact is not valid UTF-8 JSON; inspect npeer result '+handle+' --json; no input was replayed') from error
         require(isinstance(record,dict) and record.get('task_id')==handle and isinstance(record.get('summary'),str),'PROTOCOL_ERROR',"Artifact is not this task's readable report")
         return dict(task_id=handle,report=record['summary'],result_artifact_id=artifact,sha256=identity[1],byte_size=identity[2])
 
