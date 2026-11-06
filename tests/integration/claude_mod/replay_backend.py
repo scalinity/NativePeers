@@ -127,6 +127,7 @@ class ReplayBackend:
             w.continued = dict(state='pending', from_generation=w.generation);w.changed.set();w.changed = asyncio.Event()
             await asyncio.sleep(1)
             replacement = Worker(f'W{len(self.workers)+1}', None, target['provider'], dict(title=w.spec.get('title'), model=target.get('model')), target)
+            replacement.routes = {1: w.routes[w.generation]}
             self.workers[replacement.id] = replacement
             w.continued = dict(state='moved', from_generation=w.generation, worker_id=replacement.id, task_id=replacement.task, generation=1)
             self.log('fallback', from_worker=w.id, to_worker=replacement.id);w.changed.set();w.changed = asyncio.Event();self.touch()
