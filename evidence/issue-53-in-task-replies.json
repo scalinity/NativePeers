@@ -353,7 +353,7 @@
   "publication_check": {
     "status": "PASS",
     "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
-    "output": "3 passed in 0.07s",
+    "output": "3 passed in 0.08s",
     "scope": "Regenerated published source pointers and independent source classes; documentation/evidence-only finalization."
   }
 }
