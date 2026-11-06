@@ -141,7 +141,7 @@ class RouteTests(RouteCase):
 
 class HandbackTests(RouteCase):
     def test_adoption_never_rewrites_a_native_route_before_during_or_after_push(self):
-        for state in ('UNCLAIMED', 'PUSH_SUBMITTING', 'PUSH_SUBMITTED', 'NOTIFICATION_UNKNOWN', 'RETAINED'):
+        for state in ('UNCLAIMED', 'WAIT_LEASED', 'PUSH_SUBMITTING', 'PUSH_ACCEPTED', 'HELD', 'NOTIFICATION_UNKNOWN', 'RETAINED'):
             with self.subTest(state=state):
                 group, worker, tasks = self.worker(owner='native', mode='push', lease=False, tasks=2)
                 self.j.db.execute('UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=1', (state, group))
