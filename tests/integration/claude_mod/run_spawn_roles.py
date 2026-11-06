@@ -109,6 +109,7 @@ def main():
         checks['caller_is_actual_teammate'] = len(targets) == 2 and bool(members) and all(row.get('caller') == members[0].get('agentId') for row in targets)
         checks['both_denied'] = len(targets) == 2 and {row.get('name') is not None: row.get('disposition') for row in targets} == {True: 'NATIVE_TEAMMATE_NESTING_REFUSED', False: 'NATIVE_BACKGROUND_AGENT_REFUSED'}
     else:
+        checks['call_shape'] = len(targets) == 1 and (targets[0].get('name') == 'named-review') == args.case.endswith('-named')
         checks['native_classification'] = len(targets) == 1 and targets[0]['isTeammate'] == denied and not targets[0].get('parentAgentId')
         checks['disposition'] = len(targets) == 1 and (bool(targets[0].get('deny')) if denied else bool(targets[0].get('agentId')))
     if denied and not teammate:checks['actionable_refusal'] = bool(targets) and all('unnamed Agent(np:*) from the main conversation' in row.get('deny', '') and 'npeer spawn' in row.get('deny', '') for row in targets)
