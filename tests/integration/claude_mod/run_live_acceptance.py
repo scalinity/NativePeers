@@ -149,7 +149,8 @@ try:
     marks['bridges_after_stops'] = bridges()
     # AC12 adoption through npeer spawn.
     to_main();session.type_line('Please adopt a worker.');mark('adopt');session.wait_for(r'Adopted worker', timeout=120);time.sleep(5);snap('16-adopted')
-    mark('adopt-done' if session.wait_for(r'Delivered by NativePeers', timeout=240) else 'adopt-done-timeout');time.sleep(10);snap('17-adopted-done', 4000)
+    to_main()
+    mark('adopt-done' if session.wait_for(r'NativePeers.*Worker results', timeout=240) else 'adopt-done-timeout');time.sleep(10);snap('17-adopted-done', 4000)
     # AC7/AC8: the bridge dies while a mirror-owned worker runs; /np reattach inside the step retry window restores it.
     to_main();session.type_line('Please launch the fault sleeper.');mark('fault');session.wait_for(r'Fault test', timeout=60);wait_index('Fault test', 60);time.sleep(8)
     killed = bridges()

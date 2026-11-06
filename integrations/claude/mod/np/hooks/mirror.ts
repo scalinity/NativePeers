@@ -232,8 +232,8 @@ export function foldedAnswer(folded: { generation: number; text: string }[], han
 // The final answer the parent reads (spec 7.5.1). People read it too (the desktop app shows a handed-back report as
 // the run's last message), so it closes with a line in words and one handle, the group, for npeer result.
 // `shown`: the step already streamed the worker's final text, so only the closing lines follow it.
-export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'native', generations: number[], shown = false,
-                            folded: { generation: number; text: string }[] = [], mode?: string): string {
+export function finalAnswer(terminal: Activity, s: Summary, generations: number[], shown = false,
+                            folded: { generation: number; text: string }[] = []): string {
   const d = terminal.data ?? {}
   const status = String(d.status ?? 'completed')
   const body = headTail(String(d.final_text ?? ''), 12288)
@@ -248,8 +248,7 @@ export function finalAnswer(terminal: Activity, s: Summary, owner: 'mirror' | 'n
   if (d.error?.code) lines.push(`Error: ${d.error.code} ${String(d.error.message ?? '').slice(0, 300)}`.trim())
   if (s.changes?.files) lines.push(`Changed ${s.changes.files} file${s.changes.files === 1 ? '' : 's'} (+${s.changes.added ?? 0} −${s.changes.removed ?? 0})${s.changes.worktree ? ' in ' + s.changes.worktree : ''}`)
   if (generations.length > 1) lines.push(`Generations: ${generations.join(', ')}`)
-  // A wait-mode route is never pushed: its result stays with NativePeers until asked for.
-  lines.push(owner === 'native' && mode === 'wait' ? `Kept in NativePeers: npeer result ${handle}` : owner === 'native' ? `Delivered by NativePeers · npeer result ${handle}` : `Details: npeer result ${handle}`)
+  lines.push(`Details: npeer result ${handle}`)
   return lines.join('\n')
 }
 
