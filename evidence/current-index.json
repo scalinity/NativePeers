@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
-  "reviewed_commit": "222b48b651c4a62ff1ca5723f768d3c21b197c9a",
-  "publication_branch": "fix/issue-53-in-task-replies",
-  "updated_at": "2026-11-05T21:23:25.735999-05:00",
-  "current_record": "evidence/issue-53-in-task-replies.json",
+  "code_commit": "3520e841220baa7f8724cb85ce1bd53c0cd1ddad",
+  "reviewed_commit": "40d1e91d4dfc3bb741f140e2a5918a85743bce26",
+  "publication_branch": "fix/issue-55-resume-inventory",
+  "updated_at": "2026-11-06T00:28:27.397154-05:00",
+  "current_record": "evidence/issue-55-tool-inventory.json",
   "file_classes": {
     "product": {
       "files": {
@@ -72,7 +72,7 @@
         "nativepeers/policy.py": "80be827ae6ceb3bd7199200ea04141ef0693e48e45b200766340b69ade82d701",
         "nativepeers/presentation.py": "164a8f7a15e08703dca34b96c717ba97428d771dbed32bfefefe4ecf44e90f0b",
         "nativepeers/process.py": "ac4e1d8aec27217853a7c37571da00b8e56ae784e1376968204dc50d042de049",
-        "nativepeers/profiles.py": "60be4db17b7a95c13749c14371696a92e23ad61fe0e46957f1688686bbd58cff",
+        "nativepeers/profiles.py": "f8e3be9ee53584f754b90a286a0a8b7959bc1d6e848aa1a5c152bbfc8233f94e",
         "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
         "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
         "nativepeers/readiness.py": "b671e414ed98fb085a005ce604783367eedf52e48ef170c0df711a8d3181bcef",
@@ -100,7 +100,7 @@
         "nativepeers/usage/service.py": "21472e05c8f45b1d498b8d57da3ba6a372ea67db10c15d2626e849a26e08339e",
         "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
         "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
-        "nativepeers/worker_process.py": "06fe69cd04cb7272b4ffcf66ab12a34d9855051592ac95f895f89c230468fec7",
+        "nativepeers/worker_process.py": "8f12e604c58d5ed5cde0351879937a580ad707c13950476d9a91ee65b6a1d75c",
         "nativepeers/worker_report.py": "22f6e29aa584a6fc483fd4694cdf5f172ce5e002ee53794c377ed10d5c900bea",
         "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
         "nativepeers/workspace_retirement.py": "d5dd5ae0c3f7d5ac768e8c9c11b0d54f90f988b6a2862659eb58b68ecd1d280d",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "e46b0e92e21d08710b2c04e5cce1221aff46e6865ec6946607578a9d7e2975b8"
+      "sha256": "3d7ffcecda81ec4555876e6e04a44ff5488de4141d4b95f3dffd0673e9fe296e"
     },
     "launchers": {
       "files": {
@@ -175,7 +175,7 @@
         "tests/contract/test_grok_stream.py": "290ebe784634adc5d3b2435558823c69c3440fef1b5d6e3ba2db76cff465d1d7",
         "tests/contract/test_group_reply_backpressure.py": "69871af02f1e0eb0be830b6170548be1605ab039ca71d636d4da2a6f719017ce",
         "tests/contract/test_in_task_replies.py": "dad36d107e97b49c717d49791a00060ed5cf8df160083a4ca03c288eb3f7fcc2",
-        "tests/contract/test_lifecycle_shutdown.py": "26ed0c8439a63fede387e3e35f20383a13abfc9d0d16dcc99a5cfa09366a8227",
+        "tests/contract/test_lifecycle_shutdown.py": "acf7dd78e1e18badc67eef2919cde75d31936b1374ceddf0a8f3984a61642a1b",
         "tests/contract/test_mcp_ack_groups.py": "ffeea8ae4e9eebfb0fba33915bb41cd83de0ff7ecd3408d3cd3298561150671c",
         "tests/contract/test_native_usage_command.py": "18ab1a9b62ff4bc5d558b1fe5097c088089c503ecbc6104aebd64b0f5a26df83",
         "tests/contract/test_notifications.py": "a3f0a376ab1dcb3a2730b520dd1666f82def7eca8ec13044a3447d67df330dd9",
@@ -184,7 +184,7 @@
         "tests/contract/test_provider_fallback.py": "77ce865150ae6beefdc9713031db81a05e4066430ae07bb526df5fbc4d78f692",
         "tests/contract/test_result_schema.py": "2aef1e2014171aa1e7ef7ba3296ba79e04ea87e0e5eea9b8780a818afadbdc1e",
         "tests/contract/test_review_workflow.py": "4a6c7bd0f2127a23f22157d2180ac5da341f4ce51b0b97d41d0639725ac38225",
-        "tests/contract/test_selected_home_launch.py": "76060c10c0b3430e252dafcdc36e16bc65d5cdc448821f62d46e14379e1af547",
+        "tests/contract/test_selected_home_launch.py": "46aedc24bac0d540e6ec3e4d47add4058bbd615de81dfb40f8b2e92338fb6337",
         "tests/contract/test_supervisor.py": "e3d892d502a362b91233900bcea17956f10106d7822b360287308b9cbb2c060e",
         "tests/contract/test_usage_collectors.py": "b0c3103f9e57d9526c5b093050cb14bfb83ad3ae3d44569dbe5b2551bfbdb3cf",
         "tests/contract/test_worker_descendants.py": "dcc80d05e310a501f1abf19e04572100c6e3175d3107493e50e1f9d9e2162d15",
@@ -205,7 +205,7 @@
         "tests/fixtures/activity/codex/schema/ServerNotification.json": "a1717fb10554d85204ca8d7fc84e6ce4214c5191b37f1a36771d5b315614e6f8",
         "tests/fixtures/fake_antigravity.py": "e2bd99134067ac95e89b62fe3c6e444dc26197cfacbc248850935be27c9e7b25",
         "tests/fixtures/fake_claude.py": "efe5f05d34c36b75f9d51f1694f7159a16a9d38e9a215abd7fb19a99dac20102",
-        "tests/fixtures/fake_codex.py": "31598abb3598a7f276ddf65db113d202892fe85b55850a806178cfdb5ae54562",
+        "tests/fixtures/fake_codex.py": "c33291cd463ca65aeecb6ba101a398b41b3e63f0e2b670ddd601fac90adc7706",
         "tests/fixtures/fake_install_app_server.py": "126eb24c8fe6ac0c12c4b09686e4532b4df42d27ed2aad67755027d5ebfe640d",
         "tests/fixtures/grok/1.0.70-models.txt": "761b89325e8ad709b7b3db273ba1b0427f82d046bdbc5bb26be46af8e4516995",
         "tests/fixtures/grok/1.0.70-stream.jsonl": "4452882cd5ee38eecc1fc1847931e965497369768f2bbcaea5a417689758b3e8",
@@ -353,7 +353,7 @@
         "tests/unit/test_inbox_pages.py": "4c02b5bd0168059320cf8967f8e03848509b4bdb2dc49708a1b9c45542823637",
         "tests/unit/test_install.py": "ab4eb7116407489731880c7527e5b090c00927ab653f400dee00df0c9cc9c514",
         "tests/unit/test_install_home.py": "f7ad753a0f9d0f54693f94813a476b96a205fadfb515431c4a77dc1597ecbdfa",
-        "tests/unit/test_interrupt_and_steer.py": "169dae4cfa211839d87fc12e91e486775a922d464b1bc924f319997af32d06e3",
+        "tests/unit/test_interrupt_and_steer.py": "cfc6a00dfb5a39d6efb6ab8f9ae51effb35d4a0ed76a2ab36dc678c2915394a6",
         "tests/unit/test_isolated_copy.py": "317c2d00e9d8299e28d029268b164bfc17acb0fc0c2e792dc8333f027e1edced",
         "tests/unit/test_launchers.py": "06b916d6fdabe1f27843970a01f3a46bddb46e601244baf57a8e49df08500f92",
         "tests/unit/test_legacy_owner_guard_probe.py": "83369a7d378ff094bb0022d8c900802c2c8ece65c00bdf7d4b691f8ad663adc4",
@@ -401,22 +401,41 @@
         "tests/unit/test_worker_delta.py": "cd8e85ef414c3d49660789cffa20efc8741708d174110770d2362067d89e20eb",
         "tests/unit/test_worker_models.py": "446cc39f4b27d0d487ac75f8dd14bd1c7557483ccbd83e38c5b142b4348a1d6a",
         "tests/unit/test_worker_report.py": "e0595c4cddfe89d48fbc0c958d9bfeb9abe4c628e4924c01fb2031a49b42ee44",
-        "tests/unit/test_worker_shell_binding.py": "bf6a82e47c2faaac47a5388f260c6b37c2a55fa42cabfcb8d19d588e0c0ffd6c",
-        "tests/unit/test_worker_visibility.py": "0908c164408308396008dc18b9b1526f860de028ff4669f6df1d9ebb16f087db",
+        "tests/unit/test_worker_shell_binding.py": "2a5f9b06528b672a579c10a9dc362bc0462c43573cef3ac0f6a5196c70ee3327",
+        "tests/unit/test_worker_visibility.py": "33395390136055f9e2874b76364e4ade58fe86e5a8cc7e8f9b72e63aaa236393",
         "tests/unit/test_workspace_freeze.py": "9324dd95d7e4648cd6299861384f9186b7167ff29ecf12c01a11439c5291053a",
         "tests/unit/test_workspace_retirement.py": "ca254efb8b6f88ef7cc5a76982a8827492c611bfcd7ef7637a6d878e7abba21a",
         "tests/unit/test_worktrees_and_contracts.py": "5a27c9593b3df25dbd7587e34f01e51461f6d6d54ba40f1590a93c9ab47b3d97",
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 243,
-      "sha256": "ed25e0831c3ad880b7dd7e83d32fdf9526ccccf3a1fb753e924ec079e498f6ba"
+      "sha256": "250eed0b680bdbce29a1a23f92a0a90cf164f4697eb1bca4cd8050d04aaef9c5"
     }
   },
   "operation_checks": [
     {
-      "operation": "installed-in-task-reply-with-artifact",
-      "parent_context": "Owned native fixture after merge and dependency-free installed transition",
+      "operation": "candidate-worker-input",
+      "parent_context": "Codex author; candidate runtime not yet executed",
       "status": "NOT_RUN"
+    },
+    {
+      "operation": "zero-input-start-resume-inventory",
+      "parent_context": "Owned private app-server diagnostic; no model input",
+      "status": "PASS",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71"
+    },
+    {
+      "operation": "candidate-zero-input-prepare-resume-and-project-refusal",
+      "parent_context": "Codex author; private controller fixture, no model input",
+      "provider": "codex",
+      "runtime_sha256": "6e9a7f0d902acd61eae68eaef5242210de0e16d820eba7eaf9ccc1a822025f71",
+      "status": "PASS"
+    },
+    {
+      "operation": "source-python-suite",
+      "parent_context": "Codex author, isolated issue-55 worktree import verified",
+      "status": "PASS"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

@@ -30,6 +30,9 @@ def codex_config(journal,binding,profile,*,home=None):
                 NPEER_HOME=str(journal.root),NPEER_BOOTSTRAP=str(binding),NPEER_BINDING=''),
             'mcp_server_policy':policies,
             'plugins':{name:{'enabled':False} for name in config.get('plugins',{})},
+            # Account plugins/connectors are discovered asynchronously and are
+            # not necessarily named in the provider home's configuration.
+            'features.apps':False,'features.plugins':False,
             'features.multi_agent':False,'features.multi_agent_v2':False,
             'features.js_repl':False,'web_search':'disabled',
             'memories.generate_memories':False,'memories.use_memories':False}
