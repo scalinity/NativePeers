@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, taskAddress, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -158,4 +158,11 @@ test('a folded-only report formats only included tasks without attributing the c
   expect(report).toBe('[generation 1]\nearlier report\n\n[generation 3]\n(no final text)\n\n— NativePeers · earlier task results\nGenerations: 1, 3\nDetails: npeer result G')
   expect(report).not.toContain('generation 2')
   expect(foldedAnswer([], 'G')).toBe('')
+})
+
+
+test('folded surfacing and acknowledgment target the original worker after a replacement', () => {
+  expect(taskAddress('replacement', { workerId: 'original', taskId: 'T1', generation: 1 })).toEqual({ worker_id: 'original', task_id: 'T1', generation: 1 })
+  expect(taskAddress('replacement', { workerId: 'replacement', taskId: 'T2', generation: 1 })).toEqual({ worker_id: 'replacement', task_id: 'T2', generation: 1 })
+  expect(taskAddress('same-worker', { taskId: 'persisted', generation: 2 })).toEqual({ worker_id: 'same-worker', task_id: 'persisted', generation: 2 })
 })

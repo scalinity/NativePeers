@@ -61,10 +61,10 @@ export type NpShadow = {
   pendingRefs: Record<string, NpPending>
   inputs: NpInput[]
   briefConsumed: boolean
-  surfaced?: { generation: number; taskId?: string }
+  surfaced?: { workerId?: string; generation: number; taskId?: string }
   // Generations a follow-up queued while the worker ran folded into this run: the run's one notification carries them.
-  folded?: { generation: number; taskId?: string; text: string }[]
-  surfacedFolded?: { generation: number; taskId?: string }[]
+  folded?: { workerId?: string; generation: number; taskId?: string; text: string }[]
+  surfacedFolded?: { workerId?: string; generation: number; taskId?: string }[]
   terminals: number[]
   fallthrough?: boolean
   lastFault?: string

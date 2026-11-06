@@ -16,6 +16,11 @@ export function claimedReport(reply: any): boolean {
   return reply?.owner === 'mirror' && reply.route === 'MIRROR_SURFACING' && reply.changed === true
 }
 
+// A folded task stays with the worker that produced it after a replacement.
+export function taskAddress(workerId: string, task: { workerId?: string; taskId?: string; generation: number }): { worker_id: string; task_id?: string; generation: number } {
+  return { worker_id: task.workerId ?? workerId, task_id: task.taskId, generation: task.generation }
+}
+
 // A definite wait route retains a readable result even when this shadow did
 // not win delivery. This line contains no worker report and claims no route.
 export function retainedLine(reply: any, handle: string): string {

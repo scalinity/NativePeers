@@ -6,7 +6,7 @@ import type { NpInput, NpProvider, NpShadow } from '../types'
 import { BridgeError, request, sleep } from './bridge'
 import { NAMES, SENTINEL, shadowModel } from './agents'
 import { HANDBACK_TOOL, followUp, handbackRequired, isBrief, requestId, unforwarded } from './inputs'
-import { MIRROR_TOOL, claimedReport, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, toolResult } from './mirror'
+import { MIRROR_TOOL, claimedReport, finalAnswer, foldedAnswer, openStep, planBatch, retainedLine, taskAddress, toolResult } from './mirror'
 import { NONE, getIndex, getMember, setFaults, setMember } from './state'
 import type { Activity, Summary } from './mirror'
 
@@ -236,8 +236,8 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       s.inflight = { from: s.cursor, to: plan.consumed };s.cursor = plan.consumed
       s.pendingRefs = { ...s.pendingRefs, ...plan.refs }
       if (plan.usage.cumulative !== undefined) s.usageCumulative = plan.usage.cumulative
-      for (const f of plan.folded) if (!(s.folded ?? []).some(x => x.generation === f.generation))
-        s.folded = [...(s.folded ?? []), { generation: f.generation, taskId: f.task_id ?? undefined, text: String(f.data?.final_text ?? '').slice(0, 12288) }]
+      for (const f of plan.folded) if (!(s.folded ?? []).some(x => (x.workerId ?? s.workerId) === s.workerId && x.generation === f.generation))
+        s.folded = [...(s.folded ?? []), { workerId: s.workerId, generation: f.generation, taskId: f.task_id ?? undefined, text: String(f.data?.final_text ?? '').slice(0, 12288) }]
       await saveShadow($, s)
       quietSince = await $.clock.now()
     }
@@ -256,7 +256,7 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       // this run won surfacing. A lost reply or an earlier surfacing is uncertain.
       const surfaced = await surface($, { worker_id: s.workerId, task_id: t.task_id, generation: t.generation })
       const owns = claimedReport(surfaced)
-      if (owns) s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
+      if (owns) s.surfaced = { workerId: s.workerId, generation: t.generation, taskId: t.task_id ?? undefined }
       const folded = await surfaceFolded($, s)
       const final = String(t.data?.final_text ?? '').trim(), shown = final.length > 0 && open.answer.trim().endsWith(final)
       const facts = await summary($, s, t)
@@ -361,9 +361,9 @@ export async function captureRow($: EngineInterface, agentId: string | undefined
 async function surfaceFolded($: EngineInterface, s: NpShadow): Promise<{ generation: number; text: string }[]> {
   const out: { generation: number; text: string }[] = []
   for (const f of s.folded ?? []) {
-    const r = await surface($, { worker_id: s.workerId, task_id: f.taskId, generation: f.generation })
+    const r = await surface($, taskAddress(s.workerId!, f))
     if (!claimedReport(r)) continue
-    s.surfacedFolded = [...(s.surfacedFolded ?? []), { generation: f.generation, taskId: f.taskId }]
+    s.surfacedFolded = [...(s.surfacedFolded ?? []), { workerId: f.workerId ?? s.workerId, generation: f.generation, taskId: f.taskId }]
     out.push({ generation: f.generation, text: f.text })
   }
   s.folded = []
@@ -393,7 +393,7 @@ export async function completeShadow($: EngineInterface, agentId: string, reason
     s.phase = 'COMPLETED'
   } else if (s.surfaced || s.surfacedFolded?.length) {
     for (const g of [...(s.surfacedFolded ?? []), ...(s.surfaced ? [s.surfaced] : [])])
-      try { await request($, 'POST', '/v1/mirror/ack', { worker_id: s.workerId, task_id: g.taskId, generation: g.generation }) } catch { /* NOTIFICATION_UNKNOWN on lease expiry */ }
+      try { await request($, 'POST', '/v1/mirror/ack', taskAddress(s.workerId!, g)) } catch { /* NOTIFICATION_UNKNOWN on lease expiry */ }
     s.surfaced = undefined;s.surfacedFolded = undefined;s.phase = 'COMPLETED'
   } else if (s.phase === 'COMPLETING') {
     s.phase = 'COMPLETED'
