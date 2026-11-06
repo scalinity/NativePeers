@@ -27,6 +27,7 @@ class Worker:
     def __init__(self, worker_id, agent_id, provider, spec, script):
         self.id, self.agent, self.provider, self.spec, self.script = worker_id, agent_id, provider, spec, script
         self.group = 'G-' + worker_id;self.events = [];self.generation = 1;self.state = 'running'
+        self.routes = {1: dict(owner='mirror' if agent_id else 'native', route='MIRROR_PENDING' if agent_id else 'UNCLAIMED')}
         self.started = time.time();self.ended = None;self.task = f'T-{worker_id}-1';self.changed = asyncio.Event();self.planned = 1;self.continued = None
 
     def append(self, kind, data, *, item=None, generation=None):
@@ -149,7 +150,14 @@ class ReplayBackend:
             w = self.workers.get(body['worker_id']);require(w, 'PROTOCOL_ERROR', 'unknown worker')
             w.agent = body.get('claude_agent_id');self.bindings[w.agent] = w;self.touch()
             if not w.events:asyncio.get_running_loop().create_task(self.play(w, w.script.get('events', []), origin='controller'))
-        return dict(op=op, route='MIRROR_DELIVERED' if op == 'ack' else 'MIRROR_SURFACING' if op == 'surfacing' else None)
+        if op in ('surfacing', 'ack'):
+            w = self.workers[body['worker_id']];generation = body.get('generation', w.generation)
+            route = w.routes[generation];changed = False
+            if route['owner'] == 'mirror':
+                source, target = ('MIRROR_PENDING', 'MIRROR_SURFACING') if op == 'surfacing' else ('MIRROR_SURFACING', 'MIRROR_DELIVERED')
+                if route['route'] == source:route['route'] = target;changed = True
+            return dict(op=op, **route, changed=changed, generation=generation, task_id=f'T-{w.id}-{generation}', mode='wait')
+        return dict(op=op)
 
     async def activity(self, worker_id, after, wait_ms, maximum, item):
         w = self.workers.get(worker_id);require(w, 'PROTOCOL_ERROR', 'unknown worker')
@@ -178,6 +186,7 @@ class ReplayBackend:
             await self.play(w, w.script.get('followup', [{'kind': 'message.completed', 'data': {'text': 'follow-up done', 'is_final_candidate': True}},
                                                         {'kind': 'task.terminal', 'data': {'status': 'completed', 'final_text': 'follow-up done'}}]), origin=body.get('origin'))
         asyncio.get_running_loop().create_task(later())
+        if disposition != 'steered':w.routes[generation] = dict(owner=body.get('delivery_owner', 'mirror'), route='MIRROR_PENDING' if body.get('delivery_owner', 'mirror') == 'mirror' else 'UNCLAIMED')
         self.inputs[key] = dict(disposition=disposition, task_id=f'T-{w.id}-{generation}', generation=generation, delivery_owner=body.get('delivery_owner', 'mirror'))
         return self.inputs[key]
 

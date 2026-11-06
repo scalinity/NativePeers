@@ -6,7 +6,7 @@ import type { NpInput, NpProvider, NpShadow } from '../types'
 import { BridgeError, request, sleep } from './bridge'
 import { NAMES, SENTINEL, shadowModel } from './agents'
 import { HANDBACK_TOOL, followUp, handbackRequired, isBrief, requestId, unforwarded } from './inputs'
-import { MIRROR_TOOL, finalAnswer, openStep, planBatch, toolResult } from './mirror'
+import { MIRROR_TOOL, claimedReport, finalAnswer, openStep, planBatch, toolResult } from './mirror'
 import { NONE, getIndex, getMember, setFaults, setMember } from './state'
 import type { Activity, Summary } from './mirror'
 
@@ -61,7 +61,7 @@ function result(e: TurnStepInput, answer: string, stopReason: 'end_turn' | 'tool
 
 function needsHandback(s: NpShadow): boolean {
   if (!s.handback && handbackSeen.has(s.agentId)) s.handback = true
-  return Boolean(s.handback)
+  return Boolean(s.handback) && s.report !== ''
 }
 
 // How a step that answered ends: with SubagentHandback carrying the parent's report where the engine requires it
@@ -172,7 +172,7 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     // Asked again after a handback: a refused call returns at once, so this answer waits a moment. Without a known
     // handback, the engine's note may still be landing.
     if (s.handbacks) await sleep($, 1000)
-    for (let n = 0;n < 8 && !needsHandback(s);n++) await sleep($, 250)
+    for (let n = 0;s.report !== '' && n < 8 && !needsHandback(s);n++) await sleep($, 250)
     // What arrived meanwhile wins: a follow-up goes on to be forwarded instead of the old report.
     const fresh = await loadShadow($, s.agentId)
     if (fresh) s.inputs = fresh.inputs
@@ -240,26 +240,23 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
     }
     if (plan.end === 'terminal' && plan.terminal) {
       const t = plan.terminal
-      let owner: 'mirror' | 'native' = t.generation === s.nativeGeneration ? 'native' : 'mirror'
-      // A natively owned generation is not changed by surfacing; the answer only reports its route's mode.
+      // The transaction's answer, not a cached generation label, decides whether
+      // this run won surfacing. A lost reply or an earlier surfacing is uncertain.
       let surfaced: any
-      try { surfaced = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the route stays pending; the lease decides */ }
-      if (owner === 'mirror') {
-        // A lapsed lease already handed the route back: NativePeers delivers it,
-        // so this answer must not claim the delivery and is not acked.
-        if (surfaced && surfaced.owner === 'mirror' && surfaced.route !== 'MIRROR_SURFACING') owner = 'native'
-        else s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
-      }
+      try { surfaced = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the lease decides */ }
+      const owns = claimedReport(surfaced)
+      if (owns) s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
       const folded = await surfaceFolded($, s)
       const final = String(t.data?.final_text ?? '').trim(), shown = final.length > 0 && open.answer.trim().endsWith(final)
       const facts = await summary($, s, t)
       // The parent's report always carries the worker's final text. Where it travels by SubagentHandback, the surface
       // shows that report as the run's last message, so the step writes nothing more.
-      const report = finalAnswer(t, facts, owner, s.terminals, false, folded, surfaced?.mode)
-      const text = needsHandback(s) ? '' : finalAnswer(t, facts, owner, s.terminals, shown, folded, surfaced?.mode)
+      const report = owns ? finalAnswer(t, facts, 'mirror', s.terminals, false, folded, surfaced.mode)
+        : folded.map(f => `[generation ${f.generation}]\n${f.text}`).join('\n\n') + (folded.length ? `\n\nDelivered by Claude Code · npeer result ${s.groupId ?? s.workerId}` : '')
+      const text = needsHandback(s) ? '' : owns ? finalAnswer(t, facts, 'mirror', s.terminals, shown, folded, surfaced.mode) : report
       if (text) yield say((open.answer && !open.answer.endsWith('\n') ? '\n\n' : '') + text)
       Object.assign(s, { phase: 'COMPLETING', inflight: undefined, report, handbacks: undefined })
-      const end = ending(e, s, open.answer, report, usage, open.block++)
+      const end = ending(e, s, report ? open.answer : '', report, usage, open.block++)
       await saveShadow($, s)
       for (const chunk of end.chunks) yield chunk
       return end.done
@@ -352,10 +349,9 @@ export async function captureRow($: EngineInterface, agentId: string | undefined
 async function surfaceFolded($: EngineInterface, s: NpShadow): Promise<{ generation: number; text: string }[]> {
   const out: { generation: number; text: string }[] = []
   for (const f of s.folded ?? []) {
-    if (f.generation === s.nativeGeneration) continue
     let r: any
     try { r = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: f.taskId, generation: f.generation }) } catch { /* pending; the lease decides */ }
-    if (r && (r.owner !== 'mirror' || r.route !== 'MIRROR_SURFACING')) continue
+    if (!claimedReport(r)) continue
     s.surfacedFolded = [...(s.surfacedFolded ?? []), { generation: f.generation, taskId: f.taskId }]
     out.push({ generation: f.generation, text: f.text })
   }

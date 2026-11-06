@@ -10,6 +10,12 @@ export type Chunk =
   | { kind: 'tool'; index: number; id: string; name: string }
   | { kind: 'input'; index: number; json: string }
 
+// Only the transaction that moved this exact task's route may send its report.
+// A repeated or missing answer can mean the earlier report reached the parent.
+export function claimedReport(reply: any): boolean {
+  return reply?.owner === 'mirror' && reply.route === 'MIRROR_SURFACING' && reply.changed === true
+}
+
 export const MIRROR_TOOL = 'mcp__np__mirror'
 export const MAX_TOOLS = 8
 export const MAX_EVENTS = 512

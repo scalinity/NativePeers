@@ -140,6 +140,19 @@ class RouteTests(RouteCase):
 
 
 class HandbackTests(RouteCase):
+    def test_adoption_never_rewrites_a_native_route_before_during_or_after_push(self):
+        for state in ('UNCLAIMED', 'PUSH_SUBMITTING', 'PUSH_SUBMITTED', 'NOTIFICATION_UNKNOWN', 'RETAINED'):
+            with self.subTest(state=state):
+                group, worker, tasks = self.worker(owner='native', mode='push', lease=False, tasks=2)
+                self.j.db.execute('UPDATE completion_routes SET state=? WHERE group_id=? AND completion_generation=1', (state, group))
+                mirror.attach(self.j, worker, SESSION, 'adopted', 'parent', sessions=[SESSION], display_only=True)
+                for phase, task in enumerate(tasks, 1):
+                    answer = mirror.surfacing(self.j, worker, [SESSION], task_id=task, generation=phase)
+                    self.assertFalse(answer['changed'])
+                    self.assertEqual(answer['owner'], 'native')
+                    self.assertEqual(answer['route'], state if phase == 1 else 'UNCLAIMED')
+                self.assertEqual(self.state(group), state)
+
     def test_a_display_only_reattach_inside_the_ttl_hands_pending_routes_back(self):
         # The bridge died and restarted within the lease TTL; the old shadow cannot surface any more.
         group, worker, _ = self.worker()

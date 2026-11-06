@@ -104,7 +104,7 @@ The person selects a row with the native keys (↓, then Enter) or presses `[Ope
 
 When the parent follows the existing skill and runs `npeer spawn` (Bash) or calls the MCP `worker_spawn`, the mod adopts the new workers into shadows. The person sees the same rows and can open and message them.
 
-Their **initial** completions keep NativePeers' own delivery (push or wait, as requested). A shadow the mod spawns itself does not notify the parent on its first completion (X8), so for those tasks the shadow is display-only. Follow-ups typed into an adopted shadow are delivered natively, like any resumed run (X9; gate G13).
+Their **initial** completions keep NativePeers' own delivery (push or wait, as requested). For those tasks the shadow is display-only and sends no final report, including when the engine requests `SubagentHandback` (X8). Follow-ups typed into an adopted shadow are delivered natively, like any resumed run (X9; gate G13).
 
 ### 1.5 Desktop
 
@@ -146,7 +146,7 @@ Four throwaway mods (`npspike` to `npspike4`; Appendix A) were run headless agai
 | X5 | A subagent step held **130 s** inside the hook (waiting on `$.process.run(['sleep','130'], { timeoutMs: 180000 })`) completed with `next.signal.aborted === false`, with `CLAUDE_ENABLE_STREAM_WATCHDOG=1` set. `$.process.run` defaults to a 30 s timeout and caps at 10 minutes (D). | mod log |
 | X6 | A `thinking` chunk yielded by the hook was **not recorded** in the subagent transcript. Only text and `tool_use` blocks were appended. | `session.append` log |
 | X7 | `usage` reported on the stop chunk surfaced in `turn.complete.usage` (output tokens summed, model id replaced by the agent's resolved model). It was **not billed** (`modelUsage` excluded it). | result record |
-| X8 | Every completion emitted an SDK `task_notification` stream event (`summary` = the shadow's final text, plus an `output_file`). **The parent conversation, however, did not receive the first completion of a shadow the mod spawned with `$.agent.spawn`.** The debug log shows `[enqueueAgentNotification] skipped … reason=already-notified`, and spikes 2 and 3 show no `<task-notification>` in the parent. The plugin's spawn call consumes that first answer. | debug log + stream |
+| X8 | Every completion emitted an SDK `task_notification` stream event (`summary` = the shadow's final text, plus an `output_file`). **The parent conversation, however, did not receive the first completion of a shadow the mod spawned with `$.agent.spawn`.** The debug log shows `[enqueueAgentNotification] skipped … reason=already-notified`, and spikes 2 and 3 show no `<task-notification>` in the parent. The plugin's spawn call consumes that first answer. Auto-mode `SubagentHandback` bypasses this consumption and reaches the parent even for a plugin-spawned shadow. Native-owned shadows therefore end without a report or a handback call. Claude may emit a generic withheld-handback lifecycle notice; it is not the worker result and must not trigger another request. | debug log + stream |
 | X9 | `$.session.send({ to:{ agentId }, text })` to a **completed** shadow returned `{ isDelivered:true }`. It raised `agent.spawn` with `resume:{agentId}`, appended a user row (`door:'prompt'`, `origin.kind:'coordinator'`, text prefixed `The coordinator sent a message while you were working:\n`), and started a new turn (`turn.step` index 0) under the same task id and a new `run_id`. **That resumed run's completion did reach the parent conversation**: a `queue` record, then `prompt.submit` with `origin.kind:'task-notification'` and `turnId` set, delivered as `<task-notification>…`. | mod log + stream |
 | X10 | A `turn.step` hook that throws mid-stream **without** `.catch` falls through to a **real model request**: the shadow's Haiku answered the placeholder system prompt verbatim, and it cost **$0.00027**. With `.catch` written as an async generator **that returns a complete `TurnStepResult`**, both a throw (`next.error.kind:'throw'`) and a budget overrun (`'timeout'`, at exactly 10 s) were contained: the handler's chunks became the answer and **no API request was made**. The return is load-bearing. The review probe's `.catch` yielded text and stop but returned nothing, and it fell through to real requests. A main hook with a bare `return` fails as "wrong shape (no result)" (D: a handler returning `undefined` leaves the hook absent). | spike2 vs spike3; review probe |
 | X11 | Awaiting a plain JavaScript promise inside a hook consumes the 10 s own-time budget. Awaiting a `$` call does not. All mirror waits must therefore be `$` calls in flight. | spike3 `stall` |
@@ -332,13 +332,13 @@ Claude Code session (CLI or desktop local session)
 |---|---|---|
 | Register shadow types | `$.agent.register(spec)` in `session.start` → `np:<name>` | Use AgentSpec fields only; the schema validates them. |
 | Spawn shadow (Path A) | the engine's own Agent call through our `agent.spawn` hook's `next(e)` | Not a `$.agent.spawn`, so no re-entry skip. |
-| Spawn shadow (B/C) | `$.agent.spawn` from a hook that is **not** `turn.step`, mirror `tool.call` or `tool.check` | Re-entry rule (D). Origins beyond `tool.call` are an M0 gate. Its first completion does not reach the parent (X8), so NativePeers keeps delivery for those tasks. |
+| Spawn shadow (B/C) | `$.agent.spawn` from a hook that is **not** `turn.step`, mirror `tool.call` or `tool.check` | Re-entry rule (D). Origins beyond `tool.call` are an M0 gate. Its native-owned first completion ends without a report or handback (X8), so NativePeers keeps report delivery for those tasks. |
 | Answer shadow steps | `on('turn.step', async function*(…))`, answering alone | Pass through untouched for every non-shadow loop (`return yield* next(e)`). |
 | Fail closed | `.catch(async function*(…))` on that registration | Mandatory (X10). The body and the handler must both **return a complete `TurnStepResult`** on every path. `undefined` or a bare `return` makes the hook absent, which is a real model call. |
 | Mirror tool | `$.tool.register({ name:'mirror', isDeferred:true, … })` → `mcp__np__mirror`, answered by its own `tool.call` registration | `{ result }` only. Never pass to `next`. |
 | Waits | `$.http.fetch(…, { socketPath })` long-polls of at most 25 s, looped; or `$.process.run` with an explicit `timeoutMs` (default 30 s, max 10 min) | Never await a plain promise across time (X11). |
 | Inputs to shadows | `session.append` (agentId, uuid, door, origin), plus `session.send`/`session.receive` for raw text | Rows are never refusable; capture, don't block. |
-| Completion to parent | engine-native for Agent-tool spawns (X14) and resumed runs (X9); **not** for the first run of a `$.agent.spawn` shadow (X8) | The delivery owner (§6.4) follows from this. |
+| Completion to parent | engine-native for Agent-tool spawns (X14) and resumed runs (X9); no report for the native-owned first run of a `$.agent.spawn` shadow (X8) | The delivery owner (§6.4) follows from this. |
 | Resume by message | engine-native (X9) | |
 | Compaction | `session.compact`, `{ skip }` for shadows | |
 | Views | `$.ui.view({ agentId })` from a press, pick or command | Person-initiated only. |
@@ -495,7 +495,7 @@ Every task generation gets exactly one **delivery owner**. It is recorded when t
 |---|---|---|
 | Path A: `Agent(np:*)` through the mod (§7.4) | `mirror`: the engine's native notification tells the parent | X14: Agent-tool spawns notify the parent on their first completion. |
 | A follow-up the mod forwarded (`/v1/workers/:id/input`) | `mirror` when gate G13 confirms that the shadow run carrying it notifies the parent; otherwise `native` | X9: resumed runs notify the parent. |
-| Path B or C (adopted from `npeer spawn` or MCP `worker_spawn`, attach, re-attach) | `native`: NativePeers' existing `push` or `wait`, as requested | X8: a shadow the mod spawns itself does not notify the parent on its first completion. The shadow is display-only for these tasks. |
+| Path B or C (adopted from `npeer spawn` or MCP `worker_spawn`, attach, re-attach) | `native`: NativePeers' existing `push` or `wait`, as requested | The shadow is display-only and sends no final report or `SubagentHandback`, regardless of an engine handback note. Native push or wait remains the sole report route (X8). |
 | Anything without a live mirror (CLI, MCP, other parents) | `native` | Unchanged behavior. |
 
 ```text
@@ -512,7 +512,8 @@ route for a mirror-owned generation, at terminal:
 - **Lease mechanics.** The bridge holds the lease and renews it every 10 s (TTL 30 s) while mod heartbeats arrive and the Claude owner is alive. `mirror` ownership requires a lease. Display-only attachment uses the same lease, for exclusivity.
 - **No push for mirror-owned generations while leased.** The existing completion-budget reservation and its release semantics apply unchanged.
 - **Path A fallback is retain, never push.** Path A spawns use `completion_mode:"wait"`, and the parent model can still run `npeer result`. A surprise inbox frame would duplicate the Agent notification the parent may already have.
-- **Native-owned generations** (Path B and C initial tasks) are delivered by NativePeers exactly as today. The shadow's final row ends `Delivered by NativePeers · npeer result <group>` rather than claiming the delivery.
+- **Native-owned generations** (Path B and C initial tasks) keep NativePeers push or wait delivery. Their shadows end without a final report or `SubagentHandback`; changing a footer cannot prevent a second delivery. Native submission that is started, accepted or uncertain is never rewritten.
+- **Surfacing is authoritative.** Only a reply with `owner:mirror`, `route:MIRROR_SURFACING` and `changed:true` authorizes a report. A missing reply, a repeated surfacing or a route already fallen back sends no report. The same rule applies separately to folded task generations. A run ending on a native-owned task may hand back earlier mirror-owned folded reports, but excludes the native-owned report.
 - **Exclusivity.** A second session attempting to attach is refused with `MIRROR_OWNED`. Read-only viewing in that session's pane stays available.
 
 ### 6.5 Input, interrupt and cancel semantics
@@ -733,7 +734,7 @@ on('turn.step', async function* stepHook($, e, next) { ... }).catch(async functi
 | `input.queued` / `input.accepted` | dim `text` marker, for example `↳ follow-up accepted` | no |
 | `fallback.started` | `text` marker, for example `↳ provider fallback: claude → antigravity gemini-4-argon-high (QUOTA_EXHAUSTED)` | no |
 | `gap` | dim `text`, for example `[N activity events unavailable: <reason>]` | no |
-| `task.terminal` | `POST /v1/mirror/surfacing`, then the final answer `text` (§7.5.1), then `stop{end_turn}`; in a handback run, `SubagentHandback` carrying the report, then `stop{tool_use}` (§7.5.2) | yes |
+| `task.terminal` | `POST /v1/mirror/surfacing`; only a winning mirror transaction sends the final answer (§7.5.1) or required `SubagentHandback` (§7.5.2). Every other outcome ends without that task's report | yes |
 
 6. **Silence.** If the worker is quiet for 60 s, optionally yield one `thinking` heartbeat (`codex: still working (3m12s)`). Nothing is recorded.
 7. **Generations within one run.** A shadow run ends only when its worker has no task in progress and no accepted-but-unstarted input.
@@ -781,11 +782,11 @@ People read this text too (the desktop app shows a handed-back report as the run
 - `failed`, `canceled` and `timed_out` replace `completed` and add `Error: <CODE> <message>`.
 - `interrupted` adds `Interrupted: the text above is a partial result.`
 - **Mirror-owned generation:** the mod posts `/v1/mirror/surfacing` before yielding the final text, and `/v1/mirror/ack` on `turn.complete`. The last line reads `Details: npeer result <group>`.
-- **Native-owned generation:** it posts neither, and the last line reads `Delivered by NativePeers · npeer result <group>`, or `Kept in NativePeers: npeer result <group>` for a wait-mode route.
+- **Native-owned generation:** it posts neither and ends without that task's report. NativePeers delivers or retains the result on its existing route. Earlier mirror-owned folded generations remain independently scoped.
 
 #### 7.5.2 Handback runs (auto mode)
 
-In auto mode only a `SubagentHandback` call reaches the parent (X15). For such a run:
+In auto mode only a `SubagentHandback` call carries the report to the parent (X15). Only a winning mirror surfacing transaction may make that call. A native-owned or uncertain generation ends without its report, even when the engine requires handback. For a run with a mirror-owned report:
 - **Detection.** The engine's note row (door `note`, `origin.kind:'engine'`, naming `SubagentHandback(`) or its enforcement row marks the shadow `handback`. A note that lands before the shadow's record is held by the module until the first step.
 - **The report** is the §7.5.1 text with the worker's final text always included. It is the call's `message`, kept on the shadow until the run completes.
 - **The transcript**: the surface shows the report as the run's last message (X19), so the step writes no closing text of its own.
@@ -1192,12 +1193,12 @@ Each criterion is PASS, FAIL, BLOCKED or NOT_RUN, with evidence.
   - `[Stop all]` cancels every active group of this parent and its descendants.
 
   No unrelated process is affected.
-- **AC7 (exactly once):** while the mod is healthy, each task generation's completion reaches the parent exactly once, through its recorded owner (§6.4). There is no NativePeers push for mirror-owned generations, and no native notification is claimed for native-owned ones. When the mod or bridge is killed mid-task, fallback follows §6.4 exactly, including `NOTIFICATION_UNKNOWN` without a push when surfacing was uncertain.
+- **AC7 (exactly once):** while the mod is healthy, each task generation's completion reaches the parent exactly once, through its recorded owner (§6.4). There is no NativePeers push for mirror-owned generations, and native-owned generations send no shadow report or `SubagentHandback`, even in auto mode. When the mod or bridge is killed mid-task, fallback follows §6.4 exactly, including `NOTIFICATION_UNKNOWN` without a push when surfacing was uncertain.
 - **AC8 (fault injection):** throws, budget overruns, bridge death and malformed activity never produce a Claude model request for a shadow. The worker keeps running, and `/np reattach` restores mirroring.
 - **AC9 (desktop):** in the desktop app's local Code session, shadows appear in its subagent UI, can be opened and messaged, and the band and pane render. Alternatively, G7's documented degraded mode holds and is reported as such.
 - **AC10 (hot reload):** reloading the mod during active mirroring resumes from the persisted cursor. There are no duplicate follow-ups and no duplicate final delivery; display gaps are marked, never silent.
 - **AC11 (resume):** after `claude --resume`, previous workers are listed, completed shadows remain viewable (per G10), and `survive_parent` workers can be re-attached and backfilled.
-- **AC12 (adoption):** `npeer spawn` and MCP `worker_spawn` issued by the parent are adopted into shadows within 2 s of the tool result. Their initial completions are delivered exactly once, by NativePeers as requested, and the shadow says so.
+- **AC12 (adoption):** `npeer spawn` and MCP `worker_spawn` issued by the parent are adopted into shadows within 2 s of the tool result. Their initial completions are delivered exactly once, by NativePeers as requested, and the shadow ends without sending a second report, even when the engine requests a handback.
 - **AC13 (worker mode):** inside NativePeers-owned Claude workers the mod is inert (no agent types, tools or band).
 - **AC14 (hygiene):**
   - the existing NativePeers suite passes;

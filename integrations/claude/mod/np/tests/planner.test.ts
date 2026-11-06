@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, closingLine, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -129,4 +129,16 @@ test('the closing line names the worker in words, and the model asked for when a
     .toBe('— NativePeers · Codex · GPT-6.1 Sol · low effort · read-only · completed in 5s')
   expect(closingLine(terminal, { provider: 'claude', modelRequested: 'claude-opus-5-5', modelObserved: 'claude-sonnet-5-5', workerId: 'W' })).toContain('Sonnet 5.5 (asked for Opus 5.5)')
   expect(closingLine(ev(9, 'task.terminal', { status: 'timed_out' }), { provider: 'grok', workerId: 'W' })).toBe('— NativePeers · Grok · timed out')
+})
+
+
+test('only the exact winning mirror surfacing transaction owns a report', () => {
+  expect(claimedReport({ owner: 'mirror', route: 'MIRROR_SURFACING', changed: true })).toBe(true)
+  for (const reply of [undefined, {}, { owner: 'native', route: 'PUSH_SUBMITTING', changed: false },
+    { owner: 'native', route: 'NOTIFICATION_UNKNOWN', changed: false },
+    { owner: 'mirror', route: 'MIRROR_PENDING', changed: false },
+    { owner: 'mirror', route: 'UNCLAIMED', changed: false },
+    { owner: 'mirror', route: 'RETAINED', changed: false },
+    { owner: 'mirror', route: 'MIRROR_SURFACING', changed: false },
+    { owner: 'mirror', route: 'MIRROR_DELIVERED', changed: false }]) expect(claimedReport(reply)).toBe(false)
 })
