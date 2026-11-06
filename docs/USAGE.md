@@ -312,8 +312,8 @@ and completion phase, `route: in-task-inbox`, `starts_phase:false` and
 records `INGESTED`. This route creates no follow-up task or completion notice.
 
 After the asking task finishes, a reply uses a separate phase. The response's
-`followup` names that phase, `starts_phase:true`, `task_turns_remaining` at admission
-and `task_turns_remaining_after_phase`. Queued tasks already reserve their slots.
+`followup` names that phase, `starts_phase:true`, `task_turns_remaining_at_admission`
+and `task_turns_remaining_after_admission`. Queued tasks already reserve their slots.
 With no slot available, the reply returns `NOT_DELIVERED_BUDGET` before creating
 a task, with `input_submitted:false`. A controller budget guard that stops an
 already queued phase before submission retains the distinct terminal state
@@ -324,3 +324,10 @@ latest task other than that unsubmitted disposition, when one exists.
 An artifact ID written in reply text grants no access. Attach every required
 artifact using repeated `--artifact HANDLE` arguments (MCP: `artifact_refs`).
 Ordinary `send` follow-ups retain their own tasks, phases and completion routes.
+
+An inbox admission does not establish consumption. If the asking task ends
+without reading the reply, exact message status keeps the original attempt and
+reports `reply_delivery.state: UNREAD_AT_TASK_END`. Task status and results list
+`unread_in_task_replies`. Later tasks cannot ingest that earlier task's inbox
+reply. Inspect the exact result and delivery record; accepted input is never
+automatically replayed or promoted to another phase.

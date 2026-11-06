@@ -506,7 +506,7 @@ class Group:
                 queued=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND generation=? AND state='QUEUED'",(worker_id,row['generation'])).fetchone()[0]
                 remaining=max(0,slots['remaining']-queued)
                 require(remaining>0,'NOT_DELIVERED_BUDGET','Reply needs a new phase but no logical task turns remain',details=dict(input_submitted=False,starts_phase=False,group_id=self.id,task_turns_remaining=remaining))
-                admission=dict(starts_phase=True,task_turns_remaining=remaining,task_turns_remaining_after_phase=remaining-1,input_submitted=False)
+                admission=dict(starts_phase=True,task_turns_remaining_at_admission=remaining,task_turns_remaining_after_admission=remaining-1)
             owner=owner_for(self.journal,worker_id,meta.get('claude_session'),meta.get('delivery_owner'))
             count=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND state='QUEUED'",(worker_id,)).fetchone()[0]
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')

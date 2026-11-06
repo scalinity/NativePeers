@@ -37,6 +37,9 @@
         "interrupted"
       ]
     },
+    "input_submitted": {
+      "type": "boolean"
+    },
     "summary": {
       "type": "string"
     },
