@@ -254,3 +254,15 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         with patch('sys.argv',['npeer','result',task,'--report']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(output):
             with self.assertRaises(SystemExit) as done:main()
         self.assertEqual(done.exception.code,0);self.assertEqual(output.getvalue(),text)
+
+
+    async def test_later_compact_reductions_keep_truncation_flags_and_report_commands(self):
+        tasks=[self.add(summary='A'*149+'\n'+'B'*149, native_id='猫'*4000, findings=[dict(severity='warning',summary='z'*2000)]*30) for _ in range(2)]
+        for handle in [self.group,tasks[0]]:
+            compact=self.service.result(self.caller,handle,compact=True)
+            for row in compact['tasks']:
+                self.assertTrue(row['summary_truncated'])
+                self.assertEqual(row['report_command'],'npeer result '+row['task_id']+' --report')
+            expected='npeer result '+handle+(' --json' if handle==self.group else ' --report')
+            self.assertEqual(compact['next_action'],expected)
+            self.assertLessEqual(len(json.dumps(compact).encode()),3400)

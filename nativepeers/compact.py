@@ -96,13 +96,18 @@ def result_view(service, status, policy, handle, *, results=True):
         for row in rows:
             for key in ('findings', 'checks', 'limitations', 'changes'):
                 if key in row:row[key] = dict(omitted=True, count=row[key].get('count') if isinstance(row[key],dict) else None, full_result=row['result_artifact_id'])
-            if 'summary' in row:row['summary'] = summary_preview(row['summary'],row['task_id'],160,total_bytes=row.get('summary_bytes'))[0]
+            if 'summary' in row:
+                row['summary'],clipped = summary_preview(row['summary'],row['task_id'],160,total_bytes=row.get('summary_bytes'))
+                row['summary_truncated'] = row.get('summary_truncated',False) or clipped
+                if row['summary_truncated'] and row['result_artifact_id']:row['report_command'] = 'npeer result '+row['task_id']+' --report'
             if row.get('failure'):
                 row['failure'] = {k:v for k,v in row['failure'].items() if k in ('code', 'may_have_received')}
                 row['failure']['details_omitted'] = True
     if len(json.dumps(value).encode()) > 3400:
         value['tasks'] = [dict(task_id=row['task_id'], phase=row['phase'], state=row['state'],
-                              result_artifact_id=row['result_artifact_id'], details_omitted=True, report_command=row.get('report_command'),
+                              result_artifact_id=row['result_artifact_id'], details_omitted=True,
+                              summary_truncated=bool(row.get('summary')) or row.get('summary_truncated',False),
+                              report_command='npeer result '+row['task_id']+' --report' if row['result_artifact_id'] else None,
                               findings_count=(row.get('findings') or {}).get('count'),
                               checks_count=(row.get('checks') or {}).get('count'),
                               unavailable=bool(row.get('unavailable')),
@@ -111,6 +116,7 @@ def result_view(service, status, policy, handle, *, results=True):
                                            may_have_received=row['failure'].get('may_have_received'),
                                            details_omitted=True) if row.get('failure') else None)
                           for row in rows]
+    if len(value['tasks'])==1 and value['tasks'][0].get('report_command'):value['next_action']=value['tasks'][0]['report_command']
     return value
 
 
