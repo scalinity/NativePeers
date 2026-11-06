@@ -1,5 +1,5 @@
 import { expect, test } from 'claude-code/testing'
-import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, openStep, planBatch, toolResult } from '../hooks/mirror'
+import { MIRROR_TOOL, claimedReport, closingLine, finalAnswer, openStep, planBatch, retainedLine, toolResult } from '../hooks/mirror'
 import type { Activity } from '../hooks/mirror'
 
 let n = 0
@@ -141,4 +141,13 @@ test('only the exact winning mirror surfacing transaction owns a report', () => 
     { owner: 'mirror', route: 'RETAINED', changed: false },
     { owner: 'mirror', route: 'MIRROR_SURFACING', changed: false },
     { owner: 'mirror', route: 'MIRROR_DELIVERED', changed: false }]) expect(claimedReport(reply)).toBe(false)
+})
+
+
+test('an unclaimed definite wait route offers its handle without claiming report delivery', () => {
+  for (const route of ['UNCLAIMED', 'MIRROR_PENDING', 'RETAINED', 'NOTIFICATION_UNKNOWN', 'MIRROR_SURFACING'])
+    expect(retainedLine({ owner: 'mirror', route, changed: false, mode: 'wait' }, 'G')).toBe('Kept in NativePeers: npeer result G')
+  expect(retainedLine(undefined, 'G')).toBe('')
+  expect(retainedLine({ owner: 'native', mode: 'push', changed: false }, 'G')).toBe('')
+  expect(retainedLine({ owner: 'mirror', route: 'MIRROR_SURFACING', changed: true, mode: 'wait' }, 'G')).toBe('')
 })

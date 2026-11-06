@@ -16,6 +16,12 @@ export function claimedReport(reply: any): boolean {
   return reply?.owner === 'mirror' && reply.route === 'MIRROR_SURFACING' && reply.changed === true
 }
 
+// A definite wait route retains a readable result even when this shadow did
+// not win delivery. This line contains no worker report and claims no route.
+export function retainedLine(reply: any, handle: string): string {
+  return !claimedReport(reply) && reply?.mode === 'wait' ? `Kept in NativePeers: npeer result ${handle}` : ''
+}
+
 export const MIRROR_TOOL = 'mcp__np__mirror'
 export const MAX_TOOLS = 8
 export const MAX_EVENTS = 512
