@@ -150,12 +150,19 @@ class ReplayBackend:
             w = self.workers.get(body['worker_id']);require(w, 'PROTOCOL_ERROR', 'unknown worker')
             w.agent = body.get('claude_agent_id');self.bindings[w.agent] = w;self.touch()
             if not w.events:asyncio.get_running_loop().create_task(self.play(w, w.script.get('events', []), origin='controller'))
+        failure = self.scenario.get('surfacing_failure') or {}
+        fail = op == 'surfacing' and body.get('generation') == failure.get('generation') and not getattr(self, 'surface_failed', False)
+        if fail:
+            self.surface_failed = True
+            if failure['when'] == 'before':raise PeerError('BRIDGE_UNREACHABLE', 'replay: before surfacing')
         if op in ('surfacing', 'ack'):
             w = self.workers[body['worker_id']];generation = body.get('generation', w.generation)
             route = w.routes[generation];changed = False
             if route['owner'] == 'mirror':
                 source, target = ('MIRROR_PENDING', 'MIRROR_SURFACING') if op == 'surfacing' else ('MIRROR_SURFACING', 'MIRROR_DELIVERED')
                 if route['route'] == source:route['route'] = target;changed = True
+            self.log('report-route', worker_id=w.id, generation=generation, **route, changed=changed)
+            if fail and failure['when'] == 'after':raise PeerError('BRIDGE_UNREACHABLE', 'replay: lost surfacing reply', may_have_received=True)
             return dict(op=op, **route, changed=changed, generation=generation, task_id=f'T-{w.id}-{generation}', mode='wait')
         return dict(op=op)
 

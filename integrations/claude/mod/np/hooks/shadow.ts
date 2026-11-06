@@ -93,6 +93,18 @@ async function poll($: EngineInterface, path: string): Promise<any> {
   }
 }
 
+// Retrying this CAS cannot authorize the same report twice. A lost successful
+// reply comes back changed:false; only a newly won transition may send text.
+async function surface($: EngineInterface, body: object): Promise<any> {
+  const backoff = [500, 1000, 2000]
+  for (let attempt = 0;;attempt++) {
+    try { return await request($, 'POST', '/v1/mirror/surfacing', body) } catch (error) {
+      if (!(error instanceof BridgeError) || !['BRIDGE_UNREACHABLE', 'BRIDGE_DOWN'].includes(error.code) || attempt >= backoff.length) return undefined
+      await sleep($, backoff[attempt]!)
+    }
+  }
+}
+
 async function bind($: EngineInterface, s: NpShadow): Promise<string | undefined> {
   while (!s.workerId) {
     const b = await poll($, `/v1/bindings/${s.agentId}?wait_ms=25000`)
@@ -242,8 +254,7 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       const t = plan.terminal
       // The transaction's answer, not a cached generation label, decides whether
       // this run won surfacing. A lost reply or an earlier surfacing is uncertain.
-      let surfaced: any
-      try { surfaced = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: t.task_id, generation: t.generation }) } catch { /* the lease decides */ }
+      const surfaced = await surface($, { worker_id: s.workerId, task_id: t.task_id, generation: t.generation })
       const owns = claimedReport(surfaced)
       if (owns) s.surfaced = { generation: t.generation, taskId: t.task_id ?? undefined }
       const folded = await surfaceFolded($, s)
@@ -350,8 +361,7 @@ export async function captureRow($: EngineInterface, agentId: string | undefined
 async function surfaceFolded($: EngineInterface, s: NpShadow): Promise<{ generation: number; text: string }[]> {
   const out: { generation: number; text: string }[] = []
   for (const f of s.folded ?? []) {
-    let r: any
-    try { r = await request($, 'POST', '/v1/mirror/surfacing', { worker_id: s.workerId, task_id: f.taskId, generation: f.generation }) } catch { /* pending; the lease decides */ }
+    const r = await surface($, { worker_id: s.workerId, task_id: f.taskId, generation: f.generation })
     if (!claimedReport(r)) continue
     s.surfacedFolded = [...(s.surfacedFolded ?? []), { generation: f.generation, taskId: f.taskId }]
     out.push({ generation: f.generation, text: f.text })
