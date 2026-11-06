@@ -419,7 +419,7 @@ class Delegation:
                     vendor_quota_reserved=False)
                 from .ownership import release_status
                 worker['release']=release_status(self.journal,full)
-        result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn')
+        result['usage_at_spawn']=json.loads(group['policy_json']).get('usage_at_spawn') if caller.key==group['parent_key'] else None
         result['progress']=self.progress(group,worker_id=caller.grants.get('worker_id') if caller.key!=group['parent_key'] else None)
         if compact:
             from .compact import result_view

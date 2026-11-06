@@ -129,6 +129,9 @@ class ReadOnlyArtifactTests(unittest.TestCase):
 
     def test_analysis_worker_task_reads_do_not_write_and_groups_keep_parent_scope(self):
         task = self.add_task()
+        policy = json.loads(self.journal.one('SELECT policy_json FROM groups')['policy_json'])
+        policy['usage_at_spawn'] = {'workers': [{'title': 'sibling-private', 'home': '/private-sibling-home', 'model': 'other-model'}]}
+        self.journal.db.execute('UPDATE groups SET policy_json=?', (json.dumps(policy),))
         self.journal.db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
         live = self.add_task()
         for arguments in (
@@ -136,6 +139,7 @@ class ReadOnlyArtifactTests(unittest.TestCase):
             ['result', live, '--json'],
             ['result', live, '--report', '--json'],
             ['status', live, '--json'],
+            ['status', self.group_id, '--json'],
             ['status', self.group_id, '--compact', '--json'],
             ['groups', '--mine', '--json'],
         ):
@@ -143,6 +147,8 @@ class ReadOnlyArtifactTests(unittest.TestCase):
                 code, response = self.cli(arguments=arguments)
                 self.assertEqual(code, 0, response)
                 self.assertTrue(response['ok'], response)
+                self.assertNotIn('sibling-private', json.dumps(response))
+                self.assertNotIn('/private-sibling-home', json.dumps(response))
                 if arguments[0] == 'groups':
                     self.assertEqual(response['data']['groups'], [])
                 elif '--report' in arguments:
