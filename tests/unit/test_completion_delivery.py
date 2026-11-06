@@ -137,6 +137,20 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raced['group_id'],original['group_id']);launch.assert_not_awaited()
         self.assertEqual(self.j.one('SELECT COUNT(*) n FROM groups')['n'],1)
 
+    async def test_spawn_responses_use_passive_route_diagnostics(self):
+        def route(journal,parent,*,renew=True):
+            self.assertIs(renew,False)
+            return dict(ready=False,state='CAPABILITY_MISMATCH',reason='stale parent approval',parent_key=parent)
+        request={'client_request_id':'passive-response','completion_mode':'push','workers':[{'provider':'claude','title':'fixture','task':'fixture'}]}
+        service=Core(self.j).delegation
+        with patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock), patch('nativepeers.completion_delivery.readiness',side_effect=route) as check:
+            for _ in range(2):
+                result=await service.spawn(self.caller,request)
+                self.assertFalse(result['push_ready'])
+                self.assertEqual(result['completion_delivery']['state'],'CAPABILITY_MISMATCH')
+                self.assertIn('Completion push unavailable',result['warnings'][0])
+            self.assertEqual(check.call_count,2)
+
     def test_offline_parent_is_explicit_without_quota_or_mcp_inference(self):
         self.j.db.execute("UPDATE peer_instances SET status='offline'")
         route=readiness(self.j,self.caller.key)
