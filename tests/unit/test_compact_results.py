@@ -249,11 +249,11 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         import contextlib
         import io
         from nativepeers.cli import main
-        text='START\n'+'猫 report\n'*2200+'END-π'
-        task=self.add(summary=text);output=io.StringIO()
-        with patch('sys.argv',['npeer','result',task,'--report']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(output):
+        text='START 🔴\n'+'猫 report\n'*2200+'END-π'
+        task=self.add(summary=text);output=io.BytesIO();stream=io.TextIOWrapper(output,encoding='ascii')
+        with patch('sys.argv',['npeer','result',task,'--report']),patch('nativepeers.cli.Journal',return_value=self.j),patch('nativepeers.cli.bind_caller',return_value=self.caller),contextlib.redirect_stdout(stream):
             with self.assertRaises(SystemExit) as done:main()
-        self.assertEqual(done.exception.code,0);self.assertEqual(output.getvalue(),text)
+        self.assertEqual(done.exception.code,0);self.assertEqual(output.getvalue(),text.encode('utf-8'));stream.detach()
 
 
     async def test_later_compact_reductions_keep_truncation_flags_and_report_commands(self):

@@ -292,7 +292,7 @@ def main():
     finally:
         if journal:journal.close()
     if args.command=='result' and args.report and not args.json and response['ok']:
-        print(response['data']['report'],end='',flush=True)
+        sys.stdout.buffer.write(response['data']['report'].encode('utf-8'));sys.stdout.buffer.flush()
         raise SystemExit(exit_code)
     raw=canonical(response)
     if len(raw)>CONTROL_RESPONSE:
