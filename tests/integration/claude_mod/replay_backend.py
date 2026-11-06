@@ -197,6 +197,7 @@ class ReplayBackend:
         owner = self.scenario.get('input_owner', body.get('delivery_owner', 'mirror'))
         w.routes[generation] = dict(owner=owner, route='MIRROR_PENDING' if owner == 'mirror' else 'UNCLAIMED', mode='wait' if owner == 'mirror' else w.routes[1]['mode'])
         self.inputs[key] = dict(disposition=disposition, task_id=f'T-{w.id}-{generation}', generation=generation, delivery_owner=owner)
+        self.log('input-result', worker_id=w.id, **self.inputs[key])
         return self.inputs[key]
 
     async def interrupt(self, worker_id, body):

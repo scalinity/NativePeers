@@ -122,6 +122,12 @@ def main():
             checks['one_winning_transition'] = sum(row['changed'] and row['route'] == 'MIRROR_SURFACING' for row in routes) == 1
             checks['no_ack_after_lost_reply'] = case != 'after' or not any(row['kind'] == 'mirror.ack' for row in rows)
         if queued:
+            checks['queued_disposition'] = [row['disposition'] for row in rows if row['kind'] == 'input-result'] == ['queued']
+            surfacing = [row['body']['generation'] for row in rows if row['kind'] == 'mirror.surfacing']
+            checks['folded_surfacing_order'] = bool(surfacing) and surfacing[0] == 2 and 1 in surfacing
+            shadow_text = '\n'.join(str(b.get('text','')) for event in events if event.get('parent_tool_use_id') for b in message_blocks(event))
+            if case.startswith('folded-native'):checks['folded_only_formatter'] = 'earlier task results' in joined
+            else:checks['planner_fold_marker'] = 'completed; continuing' in shadow_text
             checks['one_forwarded_input'] = sum(row['kind'] == 'input' for row in rows) == 1
             if case.startswith('folded-native'):checks['only_earlier_mirror_report'] = 'Three easy wins' in joined and 'FOLD_SECOND' not in joined
             else:checks['only_second_report'] = 'FOLD_SECOND' in joined and 'Three easy wins' not in joined and 'Found 3 TODOs' not in joined
