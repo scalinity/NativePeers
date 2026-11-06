@@ -362,3 +362,10 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
                 self.assertIn('no model report',error.exception.message)
                 self.assertIn('npeer result '+task+' --json',error.exception.message)
                 self.assertNotIn('yet',error.exception.message)
+
+
+    async def test_one_task_group_points_to_that_tasks_complete_report(self):
+        task=self.add(summary='long line '*3000)
+        compact=self.service.result(self.caller,self.group,compact=True)
+        self.assertEqual(compact['next_action'],'npeer result '+task+' --report')
+        self.assertEqual(compact['tasks'][0]['report_command'],compact['next_action'])
