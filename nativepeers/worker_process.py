@@ -333,12 +333,15 @@ class Worker:
         """Codex turn/steer into the running turn ({threadId, expectedTurnId, input} in the installed schema). An RPC error is a definite refusal."""
         outcome=dict(steered=False)
         submitted=False
+        turn=self.turn
         try:
-            if self.client and self.running_task==event['task_id'] and self.turn and self.canceling_task is None:
-                await self.codex_tool_profile('steer-input')
+            if self.client and self.running_task==event['task_id'] and turn and self.canceling_task is None:
+                await asyncio.wait_for(self.codex_tool_profile('steer-input'),3)
                 self.check_submission()
+                require(self.running_task==event['task_id'] and self.turn==turn and self.canceling_task is None and self.client,
+                    'STEER_REFUSED','The target turn changed during the inventory check; steer input was not submitted')
                 submitted=True
-                await self.client.call('turn/steer',{'threadId':self.native,'expectedTurnId':self.turn,'input':[{'type':'text','text':event['text']}]},timeout=5)
+                await self.client.call('turn/steer',{'threadId':self.native,'expectedTurnId':turn,'input':[{'type':'text','text':event['text']}]},timeout=5)
                 outcome['steered']=True;self.activity.emit('input.queued',event['input'],event='turn/steer')
         except ProviderError as error:outcome['error']={'code':'STEER_REFUSED','native_error':error.error}
         except PeerError as error:outcome['error']={'code':'STEER_REFUSED','native_error':error.json()}

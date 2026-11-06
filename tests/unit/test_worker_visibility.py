@@ -296,3 +296,30 @@ class WorkerVisibilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(outcome['steered']);self.assertFalse(outcome.get('uncertain',False))
         self.assertEqual(outcome['error']['code'],'STEER_REFUSED')
         self.assertNotIn('turn/steer',[c.args[0] for c in self.client.call.await_args_list])
+
+    async def test_turn_changes_during_inventory_cannot_steer_the_successor(self):
+        self.worker.client=self.client
+        for change_task in (False,True):
+            self.worker.running_task='task';self.worker.turn='turn-1'
+            async def moved(stage):
+                self.worker.turn='turn-2'
+                if change_task:self.worker.running_task='next-task'
+            self.worker.codex_tool_profile=moved
+            await self.worker.steer(dict(task_id='task',request_id='request',text='must not reach successor',input={}))
+            outcome=self.worker.emit.call_args.kwargs
+            self.assertFalse(outcome['steered']);self.assertFalse(outcome.get('uncertain',False))
+            self.assertEqual(outcome['error']['code'],'STEER_REFUSED')
+        self.assertNotIn('turn/steer',[c.args[0] for c in self.client.call.await_args_list])
+
+    async def test_inventory_timeout_is_definite_before_the_supervisor_deadline(self):
+        self.worker.client=self.client;self.worker.running_task='task';self.worker.turn='turn'
+        finished=asyncio.Event()
+        async def blocked(stage):
+            try:await asyncio.Event().wait()
+            finally:finished.set()
+        self.worker.codex_tool_profile=blocked
+        await asyncio.wait_for(self.worker.steer(dict(task_id='task',request_id='request',text='must not steer',input={})),5)
+        outcome=self.worker.emit.call_args.kwargs
+        self.assertFalse(outcome['steered']);self.assertFalse(outcome.get('uncertain',False))
+        self.assertEqual(outcome['error']['code'],'STEER_REFUSED');self.assertTrue(finished.is_set())
+        self.assertNotIn('turn/steer',[c.args[0] for c in self.client.call.await_args_list])
