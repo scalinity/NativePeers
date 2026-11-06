@@ -73,6 +73,7 @@ def main():
         if team:environment['CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS'] = '1'
         plugins = [HERE / 'driver', HERE / 'spawn_observer', REPO / 'integrations/claude/mod/np']
         if interactive:
+            # Keep this import after the pin: pty_session binds harness.CLAUDE at import.
             from pty_session import Session
             session = Session(plugins, env=environment, args=['--permission-mode', 'default'], settings=settings, keep=args.keep, label=args.case)
             try:
