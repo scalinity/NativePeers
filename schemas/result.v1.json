@@ -28,6 +28,7 @@
     },
     "status": {
       "enum": [
+        "not_delivered_budget",
         "completed",
         "failed",
         "canceled",

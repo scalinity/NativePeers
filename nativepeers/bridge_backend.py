@@ -29,7 +29,7 @@ from .models import bounded_text
 from .process import ancestry, identity, matches
 
 PROVIDERS = ('codex', 'claude', 'antigravity', 'grok')
-STATUS = {'QUEUED': 'queued', 'RUNNING': 'running', 'WAITING': 'waiting', 'APPROVAL_BLOCKED': 'waiting', 'FALLBACK_PENDING': 'running',
+STATUS = {'NOT_DELIVERED_BUDGET': 'not_delivered_budget', 'QUEUED': 'queued', 'RUNNING': 'running', 'WAITING': 'waiting', 'APPROVAL_BLOCKED': 'waiting', 'FALLBACK_PENDING': 'running',
           'COMPLETED': 'completed', 'FAILED': 'failed', 'CANCELED': 'canceled', 'INTERRUPTED': 'interrupted', 'PARTIAL': 'interrupted', 'TIMED_OUT': 'timed_out'}
 ORIGINS = ('human-claude-view', 'parent-model')
 DELIVERABLE = ('READY', 'RUNNING', 'IDLE_GRACE')
@@ -211,7 +211,8 @@ class NativeBackend:
         return self.catalog_cache[1]
 
     def worker_row(self, w, group, parent_worker):
-        task = self.journal.one('SELECT * FROM tasks WHERE worker_id=? ORDER BY rowid DESC LIMIT 1', (w['worker_id'],))
+        task = self.journal.one("SELECT * FROM tasks WHERE worker_id=? AND state!='NOT_DELIVERED_BUDGET' ORDER BY rowid DESC LIMIT 1", (w['worker_id'],))
+        task=task or self.journal.one('SELECT * FROM tasks WHERE worker_id=? ORDER BY rowid DESC LIMIT 1',(w['worker_id'],))
         count = self.journal.one('SELECT COUNT(*) AS n FROM tasks WHERE worker_id=?', (w['worker_id'],))['n']
         lease = mirror.live_lease(self.journal, w['worker_id']);mine = bool(lease and lease['claude_session'] in self.sessions)
         state = task['state'] if task else w['state']

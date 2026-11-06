@@ -815,6 +815,7 @@
         "properties": {
           "status": {
             "enum": [
+              "not_delivered_budget",
               "completed",
               "interrupted",
               "failed",

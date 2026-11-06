@@ -11,6 +11,7 @@ export const ACTIVE = ['queued', 'starting', 'running', 'waiting']
 export function counts(workers: readonly NpWorker[]) {
   return { total: workers.length, running: workers.filter(w => ACTIVE.includes(w.status)).length,
     done: workers.filter(w => w.status === 'completed').length, failed: workers.filter(w => ['failed', 'timed_out'].includes(w.status)).length,
+    notDelivered: workers.filter(w => w.status === 'not_delivered_budget').length,
     stopped: workers.filter(w => ['canceled', 'interrupted'].includes(w.status)).length }
 }
 
@@ -25,7 +26,7 @@ export function statusLabel(status: string): string {
 export function statusSummary(workers: readonly NpWorker[]): string | undefined {
   const c = counts(workers.filter(w => !w.parentWorkerId))
   if (!c.total) return undefined
-  return [c.running && `${c.running} running`, c.done && `${c.done} done`, c.failed && `${c.failed} failed`, c.stopped && `${c.stopped} stopped`].filter(Boolean).join(' · ')
+  return [c.running && `${c.running} running`, c.done && `${c.done} done`, c.failed && `${c.failed} failed`, c.stopped && `${c.stopped} stopped`, c.notDelivered && `${c.notDelivered} not delivered`].filter(Boolean).join(' · ')
 }
 
 // The workers that started running since `seen`, which this adds them to. Workers already finished (a resumed

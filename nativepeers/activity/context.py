@@ -18,7 +18,7 @@ import json
 
 from .events import ORIGINS
 
-OUTCOMES = ('completed', 'interrupted', 'canceled', 'timed_out')
+OUTCOMES = ('not_delivered_budget', 'completed', 'interrupted', 'canceled', 'timed_out')
 USAGE_KEYS = (('input_tokens', 'input_tokens'), ('output_tokens', 'output_tokens'), ('cache_read_input_tokens', 'cached_input_tokens'),
               ('cached_input_tokens', 'cached_input_tokens'), ('reasoning_tokens', 'reasoning_tokens'))
 

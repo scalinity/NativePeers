@@ -20,7 +20,7 @@ from .process import matches
 from .profiles import ROOT,PYTHON
 from .worktrees import prepare,snapshot,freeze,validate_frozen
 
-TERMINAL={'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
+TERMINAL={'NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}
 # Set by the Claude Code session bridge only. Claude Code stops a mod's process together with every
 # descendant, so a supervisor the bridge starts is handed to launchd through a shell that exits at once,
 # as a supervisor started by the CLI already is; it then ends by its own parent-lifetime policy.

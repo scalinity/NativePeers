@@ -28,11 +28,13 @@ class Router:
         suppressed = self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='notification-suppressed' ORDER BY sequence LIMIT 1", (message_id,))
         from .completion_delivery import followup
         linked=followup(self.journal,message_id) if message['task_id'] else None
+        reply=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='in-task-reply' ORDER BY sequence LIMIT 1",(message_id,))
         return dict(message_id=message_id, exchange_id=message["exchange_id"], target=message["to_key"],
                     state=attempt["state"] if attempt else "OUTBOX_COMMITTED", attempt=attempt,
                     receipts=self.journal.all("SELECT * FROM receipts WHERE message_id=? ORDER BY at", (message_id,)),
                     **({'suppression':json.loads(suppressed['payload_json'])} if suppressed else {}),
-                    **({'followup':linked} if linked else {}))
+                    **({'followup':linked} if linked else {}),
+                    **({'reply_delivery':json.loads(reply['payload_json'])} if reply else {}))
 
     def authorize(self, caller, target, kind, reference=None):
         require(caller.kind in ("peer", "controller"), "CALLER_UNBOUND", "Peer sends require a verified native caller or leased controller")
@@ -104,6 +106,13 @@ class Router:
                 if expect_reply:
                     pending=db.execute("SELECT COUNT(*) FROM messages WHERE to_key=? AND expires_at>? AND json_extract(payload_json,'$.expect_reply')=1 AND NOT EXISTS(SELECT 1 FROM messages r WHERE r.in_reply_to=messages.message_id) AND NOT EXISTS(SELECT 1 FROM receipts q WHERE q.message_id=messages.message_id AND q.stage='RETAINED' AND q.evidence_kind='notification-policy') AND NOT (EXISTS(SELECT 1 FROM events e WHERE e.subject_id=messages.message_id AND e.kind='notification-suppressed') AND NOT EXISTS(SELECT 1 FROM attempts h WHERE h.message_id=messages.message_id AND h.state IN ('HELD','REJECTED')))",(peer["handle"],now)).fetchone()[0]
                     require(pending<local["pending_messages"],"CAPACITY_UNAVAILABLE","Recipient has 32 pending requests")
+                worker=caller.grants.get('worker_id')
+                if worker:
+                    task=db.execute("SELECT t.task_id,t.generation,w.group_id,g.policy_json FROM tasks t JOIN workers w USING(worker_id) JOIN groups g USING(group_id) WHERE t.worker_id=? AND w.peer_key=? AND t.generation=w.generation AND t.state='RUNNING'",(worker,caller.key)).fetchone()
+                    if task:
+                        from .compact import phase
+                        envelope['source_task']=dict(task_id=task['task_id'],worker_id=worker,group_id=task['group_id'],generation=task['generation'],completion_phase=phase(json.loads(task['policy_json']),task['task_id']))
+                require(len(canonical(envelope))<=PEER_FRAME,'PAYLOAD_TOO_LARGE','Peer frame exceeds 64 KiB')
                 for ref in artifact_refs:Artifacts(self.journal).grant(ref,caller.key,[peer["handle"]])
                 db.execute("INSERT INTO send_requests VALUES(?,?,?,?)",(caller.key,request_id,digest,message_id))
                 db.execute("INSERT INTO messages VALUES(?,?,?,?,?,?,?,?,?,?)",(message_id,envelope["exchange_id"],caller.key,peer["handle"],in_reply_to,None,canonical(envelope).decode(),sha256(envelope),now+expiry,now))
@@ -221,6 +230,11 @@ class Router:
         rows=self.journal.all("SELECT created_at,message_id,payload_json FROM messages WHERE to_key=?"+predicate+" ORDER BY created_at DESC,message_id DESC LIMIT ?",params)
         messages=[json.loads(r["payload_json"]) for r in rows[:limit]]
         messages=[message if retained else self.visible_message(caller,message) for message in messages]
+        for message in messages:
+            if message.get('body') and self.journal.one("SELECT 1 FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],)):
+                outcome=self.outcome(message['message_id'])
+                if outcome['state'] in ('SUBMITTING','ACCEPTED_QUEUED'):
+                    self.record(message['message_id'],outcome['attempt']['attempt_id'],dict(stage='INGESTED',evidence_kind='owned-task-inbox-read'),self.registry.get(caller.key))
         if paged or cursor is not None:
             last=rows[limit-1] if len(rows)>limit else None
             return {'messages':messages,'next_cursor':encode(scope,[last['created_at'],last['message_id']],ceiling) if last else None}
@@ -230,6 +244,12 @@ class Router:
         """Share native recipient admission across inbox and exact status reads."""
         if message.get('from',{}).get('peer_key')==caller.key:return message
         peer=self.registry.get(caller.key)
+        if peer['transport'].get('kind')=='owned-worker' and message.get('in_reply_to'):
+            source=self.journal.one('SELECT payload_json FROM messages WHERE message_id=?',(message['in_reply_to'],))
+            source=json.loads(source['payload_json']) if source else {}
+            if source.get('source_task') and source.get('from',{}).get('peer_key')==caller.key:
+                route=self.journal.one("SELECT 1 FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],))
+                if not route:return dict(message_id=message['message_id'],body_available=False,reason='Reply has no in-task inbox admission; a separate phase uses its own native input.')
         if peer['owner_kind']!='interactive-standalone':return message
         receipt=self.outcome(message['message_id'])
         # Acknowledgment/reply correlation is a model claim, not native admission.

@@ -24,7 +24,7 @@ export type NpWorker = {
   effort?: string
   profile?: string
   title: string
-  status: 'queued' | 'starting' | 'running' | 'waiting' | 'completed' | 'failed' | 'canceled' | 'interrupted' | 'timed_out'
+  status: 'not_delivered_budget' | 'queued' | 'starting' | 'running' | 'waiting' | 'completed' | 'failed' | 'canceled' | 'interrupted' | 'timed_out'
   startedAt?: number
   endedAt?: number
   outputTokens?: number

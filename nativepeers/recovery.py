@@ -29,7 +29,7 @@ def settle_stopped_tasks(db,worker_id,generation,reason):
     """Call only after the owned writer has stopped; never infer a submitted result."""
     db.execute("UPDATE tasks SET state='CANCELED',terminal_reason=? WHERE worker_id=? AND generation=? AND state='QUEUED' AND native_turn_id IS NULL",
                (reason,worker_id,generation))
-    db.execute("UPDATE tasks SET state='INTERRUPTED',terminal_reason='DELIVERY_UNKNOWN_AFTER_OWNER_LOSS' WHERE worker_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",
+    db.execute("UPDATE tasks SET state='INTERRUPTED',terminal_reason='DELIVERY_UNKNOWN_AFTER_OWNER_LOSS' WHERE worker_id=? AND generation=? AND state NOT IN ('NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED')",
                (worker_id,generation))
 
 
