@@ -33,7 +33,7 @@ def summary_preview(text, task_id, limit, *, total_bytes=None):
     reserve = len(f'\n[Report truncated: {total} bytes omitted. Complete report: {command}]'.encode())
     prefix = raw[:max(0, limit-reserve)]
     prefix = prefix.rsplit(b'\n', 1)[0] if b'\n' in prefix else b''
-    marker = f'[Report truncated: {total-len(prefix)} bytes omitted. Complete report: {command}]'
+    marker = f'[Report truncated: {total-len(prefix)-(1 if prefix else 0)} bytes omitted. Complete report: {command}]'
     return (prefix.decode() + '\n' if prefix else '') + marker, True
 
 

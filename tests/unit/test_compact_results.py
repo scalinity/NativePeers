@@ -206,7 +206,7 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertLessEqual(len(normal['summary'].encode()),12288)
         self.assertTrue(normal['summary_truncated'])
         omitted=int(re.search(r'(\d+) bytes omitted',marker).group(1))
-        self.assertEqual(omitted,len(text.encode())-len(prefix.encode()))
+        self.assertEqual(omitted,len(text.encode())-len((prefix+'\n').encode()))
         command='npeer result '+task+' --report'
         self.assertIn(command,marker)
         compact=self.service.result(self.caller,task,compact=True)
@@ -274,3 +274,9 @@ class CompactResultsTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(compact['summary'].startswith('[Report truncated: 60000 bytes omitted.'))
         self.assertNotIn('猫',compact['summary'])
         self.assertEqual(compact['report_command'],'npeer result '+task+' --report')
+
+
+    async def test_omitted_byte_count_excludes_the_original_newline_still_shown(self):
+        from nativepeers.compact import summary_preview
+        preview,truncated=summary_preview('L1\n'+'x'*20000,self.ids[0] if self.ids else new_id(),150)
+        self.assertTrue(truncated);self.assertTrue(preview.startswith('L1\n[Report truncated: 20000 bytes omitted.'))
