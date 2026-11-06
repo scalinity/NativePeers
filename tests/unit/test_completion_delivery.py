@@ -143,6 +143,16 @@ class CompletionDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(route['state'],'TARGET_OFFLINE'); self.assertFalse(route['ready'])
         self.assertIn('retained',route['result_collection'])
 
+    def test_passive_runtime_check_disables_renewal_for_every_non_codex_route(self):
+        for provider, transport in (('claude', 'claude-inbox'), ('antigravity', 'antigravity-native-hook'), ('grok', 'grok-native-hook')):
+            with self.subTest(provider=provider):
+                peer=Registry(self.j).register(provider,self.home/provider,new_id(),'passive',identity(os.getpid()).json(),self.root,{'kind':transport},owner_kind='test')
+                with patch('nativepeers.compatibility.verify',return_value={}) as verify, patch('nativepeers.adapters.native_delivery.socket_endpoint'), patch('nativepeers.grok.executable',return_value=self.root/'grok'):
+                    readiness(self.j,peer['handle'],renew=False)
+                    self.assertIs(verify.call_args.kwargs['renew'],False)
+                    readiness(self.j,peer['handle'])
+                    self.assertIs(verify.call_args.kwargs['renew'],True)
+
     async def test_terminal_wait_diagnostics_run_once_after_claim_commit_and_match_cli_mcp(self):
         with patch.object(Delegation,'ensure_supervisor',new_callable=AsyncMock):
             spawned=await Core(self.j).delegation.spawn(self.caller,{'workers':[{'provider':'claude','title':'terminal','task':'fixture'}]})
