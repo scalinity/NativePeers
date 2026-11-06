@@ -318,8 +318,14 @@ class WorkerVisibilityTests(unittest.IsolatedAsyncioTestCase):
             try:await asyncio.Event().wait()
             finally:finished.set()
         self.worker.codex_tool_profile=blocked
-        await asyncio.wait_for(self.worker.steer(dict(task_id='task',request_id='request',text='must not steer',input={})),5)
+        with patch('nativepeers.worker_process.STEER_INVENTORY_SECONDS',.05):
+            await asyncio.wait_for(self.worker.steer(dict(task_id='task',request_id='request',text='must not steer',input={})),1)
         outcome=self.worker.emit.call_args.kwargs
         self.assertFalse(outcome['steered']);self.assertFalse(outcome.get('uncertain',False))
-        self.assertEqual(outcome['error']['code'],'STEER_REFUSED');self.assertTrue(finished.is_set())
+        self.assertEqual(outcome['error']['code'],'STEER_REFUSED');self.assertEqual(outcome['error']['message'],'TimeoutError')
+        self.assertTrue(finished.is_set())
         self.assertNotIn('turn/steer',[c.args[0] for c in self.client.call.await_args_list])
+
+    def test_steer_bounds_leave_time_for_the_supervisor_response(self):
+        from nativepeers import worker_process,supervisor
+        self.assertLess(worker_process.STEER_INVENTORY_SECONDS+worker_process.STEER_RPC_SECONDS+1,supervisor.STEER_SECONDS)
