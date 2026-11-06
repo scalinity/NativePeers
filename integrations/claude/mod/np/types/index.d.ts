@@ -71,9 +71,6 @@ export type NpShadow = {
   session: string
   startedAt: number
   latest?: string
-  // The generation NativePeers delivers natively (an adopted worker's initial
-  // task); every other generation this shadow carries is mirror-owned.
-  nativeGeneration?: number
   usageCumulative?: number
   waits: number
   // The engine requires this run to end with a SubagentHandback call (sessions in auto mode).

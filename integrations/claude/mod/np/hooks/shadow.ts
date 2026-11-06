@@ -274,7 +274,6 @@ export async function* stepShadow($: EngineInterface, e: TurnStepInput, s: NpSha
       return end.done
     }
     if (moved?.state === 'moved' && moved.worker_id && moved.worker_id !== s.workerId && (plan.consumed ?? s.cursor) >= Number(batch.last_seq ?? 0)) {
-      if (s.nativeGeneration === moved.from_generation) s.nativeGeneration = moved.generation
       Object.assign(s, { workerId: moved.worker_id, taskId: moved.task_id, generation: moved.generation, cursor: 0, terminals: [], pendingRefs: {}, usageCumulative: undefined })
       ctx.workerId = moved.worker_id;moved = undefined
       await saveShadow($, s)

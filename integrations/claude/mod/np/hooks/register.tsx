@@ -169,7 +169,7 @@ async function attachWorker($: EngineInterface, w: NpWorker, origin: string, bac
   if (!r.agentId) return `${w.title}: ${r.deny ?? 'not started'}`
   const session = await $.session.id()
   const s = newShadow(r.agentId, w.provider, w.title, session, w.startedAt ?? (await $.clock.now()), { workerId: w.workerId, groupId: w.groupId, taskId: w.taskId,
-    generation: w.generation, model: w.modelRequested, effort: w.effort, profile: w.profile, brief, deliveryOwner: 'native', nativeGeneration: w.generation, phase: 'STREAMING', cursor: backfill ? 0 : 0 })
+    generation: w.generation, model: w.modelRequested, effort: w.effort, profile: w.profile, brief, deliveryOwner: 'native', phase: 'STREAMING', cursor: backfill ? 0 : 0 })
   await saveShadow($, s)
   try {
     await request($, 'POST', '/v1/mirror/attach', { client_request_id: `np-attach:${session}:${w.workerId}:${r.agentId}`, worker_id: w.workerId, claude_agent_id: r.agentId, display_only: true, origin })
