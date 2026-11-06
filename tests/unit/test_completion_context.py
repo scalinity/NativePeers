@@ -23,3 +23,14 @@ def test_both_native_budget_causes_and_unavailable_counts_are_rendered_with_phas
             assert "initial {'FAILED': 1}" in text and 'active 1' in text
             assert 'do not replay accepted or uncertain input' in text
             assert 'npeer result '+task+' --compact' in text
+
+
+def test_a_shortened_completion_notice_names_the_complete_task_report():
+    task=new_id()
+    result=dict(worker=dict(provider='codex',title='fixture',native_session_id=new_id()),task_id=task,
+                model_requested='exact',model_observed=None,status='completed',summary='long report '*3000,result_artifact_id='art_fixture')
+    text=completion('group',1,[result])
+    assert '[Summary shortened; full text is retained.]' in text
+    assert 'Complete report: npeer result '+task+' --report' in text
+    result['summary']='[Report truncated]';result['summary_truncated']=True
+    assert 'Complete report: npeer result '+task+' --report' in completion('group',1,[result])

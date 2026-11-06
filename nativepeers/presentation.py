@@ -51,7 +51,9 @@ def completion(group_id,generation,results,summary_limit=2000,title_limit=512,*,
                 limit=error['limit'];observed=limit.get('observed')
                 lines.append('Budget: '+str(limit.get('field'))+' configured '+str(limit.get('value'))+'; observed '+(str(observed) if observed is not None else 'not available')+'. Logical inputs and wall deadlines are separate.')
             lines.append('Input may have executed: '+str(error.get('may_have_received','unknown'))+'. Inspect retained evidence before deciding recovery; do not replay accepted or uncertain input.')
-        if result.get('task_id'):lines.append('Inspect: npeer result '+result['task_id']+' --compact --json')
+        if result.get('task_id'):
+            lines.append('Inspect: npeer result '+result['task_id']+' --compact --json')
+            if len(summary)>summary_limit or result.get('summary_truncated'):lines.append('Complete report: npeer result '+result['task_id']+' --report')
         fallback=result.get('fallback')
         if fallback:lines.append('Fallback from '+fallback['primary']['provider']+'/'+fallback['primary']['model']+': '+fallback['reason'].rstrip('.')+' ('+str(len(result.get('attempts',[])))+' retained attempts).')
         lines.append('Native session: '+str(worker.get('native_session_id') or 'not created'))
