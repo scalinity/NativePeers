@@ -47,8 +47,10 @@ def main():
     binary = harness.CLAUDE.resolve()
     harness.CLAUDE = binary
     with binary.open('rb') as stream:digest = hashlib.file_digest(stream, 'sha256').hexdigest()
-    engine = dict(path=str(binary), sha256=digest, size=binary.stat().st_size,
-                  version=subprocess.run([str(binary), '--version'], check=True, capture_output=True, text=True, timeout=15).stdout.strip())
+    with tempfile.TemporaryDirectory(prefix='np-version-') as version_home:
+        version = subprocess.run([str(binary), '--version'], check=True, capture_output=True, text=True, timeout=15,
+            env={'HOME': version_home, 'PATH': '/usr/bin:/bin', 'DISABLE_AUTOUPDATER': '1'}).stdout.strip()
+    engine = dict(path=str(binary), sha256=digest, size=binary.stat().st_size, version=version)
     args.keep.mkdir(parents=True, exist_ok=True)
     roles = args.keep / 'roles'
     roles.mkdir()
