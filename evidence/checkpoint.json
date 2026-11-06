@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/issue-16-workflow",
-    "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
-    "evidence": "evidence/issue-16-workflow.json",
-    "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
-    "status": "PASS_SCOPED_TRACKER16_OPEN"
+    "branch": "fix/issue-53-in-task-replies",
+    "code_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
+    "evidence": "evidence/issue-53-in-task-replies.json",
+    "source_map_sha256": "e46b0e92e21d08710b2c04e5cce1221aff46e6865ec6946607578a9d7e2975b8",
+    "status": "PASS_SOURCE_NATIVE_NOT_RUN"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
-    "branch": "fix/issue-16-workflow",
-    "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
-    "last_verified_publication": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+    "base_commit": "222b48b651c4a62ff1ca5723f768d3c21b197c9a",
+    "branch": "fix/issue-53-in-task-replies",
+    "code_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
+    "last_verified_publication": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,94 +302,99 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/issue-16-workflow",
+    "branch": "fix/issue-53-in-task-replies",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
-    "verified_remote_code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+    "verified_remote_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
+    "verified_remote_code_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-16-workflow-installed-acceptance",
+  "stage": "issue-53-source-qualified",
   "tests_current": {
-    "focused": {
+    "reply_regressions": {
       "status": "PASS",
-      "tests": 25,
-      "subtests": 34
+      "command": ".venv/bin/python -m pytest -q tests/contract/test_in_task_replies.py tests/unit/test_worker_models.py",
+      "tests": 21,
+      "subtests": 28,
+      "output": "21 passed, 28 subtests passed in 0.94s"
     },
-    "budget_facade": {
+    "claude_plugin": {
       "status": "PASS",
-      "tests": 30,
-      "subtests": 54
-    },
-    "initial_complete": {
-      "status": "FAIL",
-      "passed": 1148,
-      "failed": 2,
-      "skipped": 4,
-      "subtests": 1076,
-      "seconds": 278.32,
-      "failures": "Generated publication pointers still described predecessor source; assertions are unchanged. Functional tests passed. Final source qualification remains pending."
-    },
-    "publication_coherence": {
-      "status": "PASS",
-      "tests": 3,
-      "scope": "Regenerated from pushed a33c8fd; original two failures preserved. Assertions unchanged."
-    },
-    "remediation_context": {
-      "status": "PASS",
-      "tests": 18,
-      "subtests": 10
-    },
-    "remediation_launcher_antigravity": {
-      "status": "PASS",
-      "tests": 23,
-      "subtests": 31
-    },
-    "helper": {
-      "status": "PASS",
-      "tests": 24,
-      "scope": "Source-only public bundle and canonical master; history preserved"
+      "command": "claude plugin test integrations/claude/mod/np",
+      "tests": 52,
+      "output": "52 pass; 0 fail; 4 files; 0.64s"
     },
     "complete_source": {
       "status": "PASS",
-      "tests": 1152,
-      "subtests": 1076,
-      "skipped": 4,
-      "seconds": 270.77,
-      "scope": "Candidate source b5209d0 with regenerated source pointers; exact Python3.14.10/candidate import checked",
-      "source_commit": "b5209d0c5405c3605dfc4232231326815a79d623"
-    },
-    "facade_contract_after_fixes": {
-      "status": "PASS",
-      "tests": 12,
-      "subtests": 19
-    },
-    "combined_source": {
-      "status": "PASS",
-      "source_commit": "b14603fbb79571d575d8426c04b0d9c04a44be51",
-      "scope": "Isolated combined candidate b14603f; complete offline suite; later owner diagnostic not yet included",
-      "tests": 1177,
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+      "tests": 1197,
       "subtests": 1084,
-      "skipped": 4,
-      "seconds": 281.2
+      "skipped": 5,
+      "seconds": 377.13,
+      "output": "1197 passed, 5 skipped, 1084 subtests passed in 377.13s",
+      "scope": "Final runtime code and test classes. Later F201 event-table correction is documentation only; class equality is checked separately."
     },
-    "final_merged_source": {
-      "status": "PASS",
-      "tests": 1178,
+    "initial_complete": {
+      "status": "FAIL",
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 1181,
+      "failed": 4,
+      "skipped": 5,
       "subtests": 1084,
-      "skipped": 4,
-      "seconds": 261.94,
-      "source_commit": "62b20401967767ce43c4ad71f433a081b4bb28d0",
-      "scope": "Complete candidate after final #39 diagnostic; Lineage51 later changes only its own integration/docs/records and retains owner checks."
+      "seconds": 344.98,
+      "output": "4 failed, 1181 passed, 5 skipped, 1084 subtests passed in 344.98s",
+      "scope": "Two timeout classification regressions corrected; two source-fingerprint assertions pending regenerated publication pointers. Original failure retained."
     },
-    "post_lineage51_coherence": {
+    "focused_after_timeout_correction": {
       "status": "PASS",
-      "tests": 24,
-      "subtests": 20,
-      "seconds": 7.67,
-      "scope": "Regenerated candidate pointers plus launcher/context regressions after accepted Lineage51 merge. NP Python/launchers/schema/dependencies byte-identical to full-qualified62b2040; Lineage51 test/desktop limits remain its owner record."
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_activity_controller.py tests/unit/test_cancellation.py tests/unit/test_worker_models.py tests/contract/test_in_task_replies.py tests/contract/test_phase_admission.py tests/contract/test_notifications.py tests/unit/test_compact_results.py",
+      "tests": 106,
+      "subtests": 58,
+      "seconds": 9.17,
+      "output": "106 passed, 58 subtests passed in 9.17s"
+    },
+    "remediation_focused": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/contract/test_in_task_replies.py tests/contract/test_phase_admission.py tests/contract/test_notifications.py tests/unit/test_bridge_backend.py tests/unit/test_worker_models.py tests/unit/test_activity_controller.py tests/unit/test_cancellation.py tests/unit/test_compact_results.py",
+      "tests": 141,
+      "subtests": 77,
+      "seconds": 20.17,
+      "output": "141 passed, 77 subtests passed in 20.17s"
+    },
+    "terminal_consumers": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_cleanup.py tests/unit/test_change_preview.py tests/unit/test_workspace_retirement.py tests/unit/test_history_cleanup.py tests/unit/test_activity_backfill.py",
+      "tests": 78,
+      "subtests": 7,
+      "seconds": 72.22,
+      "output": "78 passed, 7 subtests passed in 72.22s; two subsequently added retirement/backfill cases also passed in 1.48s"
+    },
+    "interrupted_complete": {
+      "status": "NOT_RUN",
+      "command": ".venv/bin/python -m pytest -q",
+      "scope": "Interrupted for material review remediation. Partial output: 591 passed, 1 skipped, 523 subtests passed in 93.69s. Not a complete-suite pass."
+    },
+    "complete_c9e1f5f": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+      "tests": 1194,
+      "subtests": 1084,
+      "skipped": 5,
+      "seconds": 428.59,
+      "output": "1194 passed, 5 skipped, 1084 subtests passed in 428.59s",
+      "scope": "Before final reporting and uncertain-inbox-read corrections; retained separately, not transferred."
+    },
+    "reporting_corrections": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/contract/test_in_task_replies.py tests/unit/test_routing.py tests/unit/test_message_visibility.py tests/unit/test_compact_results.py tests/unit/test_activity_backfill.py",
+      "tests": 50,
+      "subtests": 21,
+      "seconds": 1.66,
+      "output": "50 passed, 21 subtests passed in 1.66s"
     }
   },
   "transports": {
@@ -398,7 +403,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-10-31T02:59:56.439226-04:00",
+  "updated_at": "2026-11-05T21:23:25.735999-05:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2483,6 +2488,114 @@
         "evidence": "evidence/issue-16-workflow.json",
         "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
         "status": "COMBINED_SOURCE_PASS_INSTALLED_PENDING"
+      }
+    },
+    {
+      "stage": "issue-16-workflow-installed-acceptance",
+      "updated_at": "2026-10-31T02:59:56.439226-04:00",
+      "git": {
+        "base_commit": "d1ef0ad7935a9670e9c4d420f55138b9cdbd9bb9",
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+        "last_verified_publication": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-16-workflow",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+        "verified_remote_code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-16-workflow",
+        "code_commit": "77f32fb210c40b1a1bc2593f32ef6e407e8d499b",
+        "evidence": "evidence/issue-16-workflow.json",
+        "source_map_sha256": "73722a127574e567059e9d1ac0c205a32b714504b3851ac0c8ec044ac1dad259",
+        "status": "PASS_SCOPED_TRACKER16_OPEN"
+      }
+    },
+    {
+      "stage": "issue-53-source-review",
+      "updated_at": "2026-11-05T20:52:18.590076-05:00",
+      "git": {
+        "base_commit": "222b48b651c4a62ff1ca5723f768d3c21b197c9a",
+        "branch": "fix/issue-53-in-task-replies",
+        "code_commit": "e3e87b557a0be2d39ac8fcb51296e8dcc991b637",
+        "last_verified_publication": "e3e87b557a0be2d39ac8fcb51296e8dcc991b637",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-53-in-task-replies",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "e3e87b557a0be2d39ac8fcb51296e8dcc991b637",
+        "verified_remote_code_commit": "e3e87b557a0be2d39ac8fcb51296e8dcc991b637",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-53-in-task-replies",
+        "code_commit": "e3e87b557a0be2d39ac8fcb51296e8dcc991b637",
+        "evidence": "evidence/issue-53-in-task-replies.json",
+        "source_map_sha256": "7ea34b32b804f431a187b121ce2d20ab6b16954d748e8e6050b7458cdd2157ce",
+        "status": "IN_PROGRESS"
+      }
+    },
+    {
+      "stage": "issue-53-source-review",
+      "updated_at": "2026-11-05T21:02:56.514550-05:00",
+      "git": {
+        "base_commit": "222b48b651c4a62ff1ca5723f768d3c21b197c9a",
+        "branch": "fix/issue-53-in-task-replies",
+        "code_commit": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+        "last_verified_publication": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-53-in-task-replies",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+        "verified_remote_code_commit": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-53-in-task-replies",
+        "code_commit": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+        "evidence": "evidence/issue-53-in-task-replies.json",
+        "source_map_sha256": "b8c4afe98130d51664c49e27052fad0bb60850431d41b9a80191f6c7f4b989f7",
+        "status": "IN_PROGRESS"
+      }
+    },
+    {
+      "stage": "issue-53-source-review",
+      "updated_at": "2026-11-05T21:15:44.853770-05:00",
+      "git": {
+        "base_commit": "222b48b651c4a62ff1ca5723f768d3c21b197c9a",
+        "branch": "fix/issue-53-in-task-replies",
+        "code_commit": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+        "last_verified_publication": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-53-in-task-replies",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+        "verified_remote_code_commit": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-53-in-task-replies",
+        "code_commit": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+        "evidence": "evidence/issue-53-in-task-replies.json",
+        "source_map_sha256": "e46b0e92e21d08710b2c04e5cce1221aff46e6865ec6946607578a9d7e2975b8",
+        "status": "IN_PROGRESS"
       }
     }
   ],

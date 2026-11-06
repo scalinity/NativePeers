@@ -302,7 +302,8 @@ class WorkerModelTests(unittest.IsolatedAsyncioTestCase):
             await worker.task(task,'fixture')
         row=self.journal.one('SELECT * FROM tasks WHERE task_id=?',(tasks[1],))
         result=json.loads((self.journal.root/'artifacts'/row['result_artifact_id']).read_text())
-        self.assertEqual(row['state'],'FAILED');self.assertEqual(result['error']['code'],'BUDGET_EXHAUSTED')
+        self.assertEqual(row['state'],'NOT_DELIVERED_BUDGET');self.assertEqual(result['error']['code'],'BUDGET_EXHAUSTED')
+        self.assertFalse(result['input_submitted'])
         self.assertFalse(result['error']['may_have_received']);self.assertEqual(result['native_turn_ids'],[])
         worker.claude_turn.assert_awaited_once()
         from nativepeers.worker_process import task_slots

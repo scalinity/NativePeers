@@ -29,7 +29,7 @@ from .models import bounded_text
 from .process import ancestry, identity, matches
 
 PROVIDERS = ('codex', 'claude', 'antigravity', 'grok')
-STATUS = {'QUEUED': 'queued', 'RUNNING': 'running', 'WAITING': 'waiting', 'APPROVAL_BLOCKED': 'waiting', 'FALLBACK_PENDING': 'running',
+STATUS = {'NOT_DELIVERED_BUDGET': 'not_delivered_budget', 'QUEUED': 'queued', 'RUNNING': 'running', 'WAITING': 'waiting', 'APPROVAL_BLOCKED': 'waiting', 'FALLBACK_PENDING': 'running',
           'COMPLETED': 'completed', 'FAILED': 'failed', 'CANCELED': 'canceled', 'INTERRUPTED': 'interrupted', 'PARTIAL': 'interrupted', 'TIMED_OUT': 'timed_out'}
 ORIGINS = ('human-claude-view', 'parent-model')
 DELIVERABLE = ('READY', 'RUNNING', 'IDLE_GRACE')
@@ -211,8 +211,10 @@ class NativeBackend:
         return self.catalog_cache[1]
 
     def worker_row(self, w, group, parent_worker):
-        task = self.journal.one('SELECT * FROM tasks WHERE worker_id=? ORDER BY rowid DESC LIMIT 1', (w['worker_id'],))
+        task = self.journal.one("SELECT * FROM tasks WHERE worker_id=? AND state!='NOT_DELIVERED_BUDGET' ORDER BY rowid DESC LIMIT 1", (w['worker_id'],))
+        task=task or self.journal.one('SELECT * FROM tasks WHERE worker_id=? ORDER BY rowid DESC LIMIT 1',(w['worker_id'],))
         count = self.journal.one('SELECT COUNT(*) AS n FROM tasks WHERE worker_id=?', (w['worker_id'],))['n']
+        undelivered=self.journal.one("SELECT COUNT(*) AS n FROM tasks WHERE worker_id=? AND state='NOT_DELIVERED_BUDGET'",(w['worker_id'],))['n']
         lease = mirror.live_lease(self.journal, w['worker_id']);mine = bool(lease and lease['claude_session'] in self.sessions)
         state = task['state'] if task else w['state']
         status = 'starting' if state == 'QUEUED' and w['state'] == 'RESERVED' else STATUS.get(state, 'failed' if w['state'] == 'FAILED' else 'queued')
@@ -220,7 +222,7 @@ class NativeBackend:
         if task:
             started, ended = self.task_times(task)
             tokens = sum(json.loads(r['payload_json']).get('tokens', {}).get('output_tokens') or 0 for r in self.journal.all('SELECT payload_json FROM task_usage WHERE task_id=?', (task['task_id'],))) or None
-        return dict(workerId=w['worker_id'], groupId=w['group_id'], taskId=task['task_id'] if task else None, generation=count, provider=w['provider'],
+        return dict(workerId=w['worker_id'], groupId=w['group_id'], taskId=task['task_id'] if task else None, generation=count, undeliveredPhases=undelivered, provider=w['provider'],
                     modelRequested=w['model_requested'], modelObserved=w['model_observed'], effort=w['effort_requested'],
                     profile=json.loads(w['lease_json']).get('spec', {}).get('permission_profile'), title=w['role_title'], status=status,
                     startedAt=ms(started or json.loads(group['policy_json']).get('created_at')), endedAt=ms(ended), outputTokens=tokens,

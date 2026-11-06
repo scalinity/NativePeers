@@ -23,7 +23,7 @@ from .ownership import release_status
 from .process import owned_status
 
 
-TERMINAL = ('COMPLETED', 'FAILED', 'CANCELED', 'TIMED_OUT', 'PARTIAL', 'INTERRUPTED')
+TERMINAL = ('NOT_DELIVERED_BUDGET', 'COMPLETED', 'FAILED', 'CANCELED', 'TIMED_OUT', 'PARTIAL', 'INTERRUPTED')
 UNRESOLVED = ('OUTBOX_COMMITTED', 'ADMISSION_DEFERRED', 'SUBMITTING', 'DELIVERY_UNKNOWN', 'HELD', 'SUBMITTED_UNCONFIRMED')
 
 
@@ -96,7 +96,7 @@ def _released(journal, row):
     require(tasks and all(t['state'] in TERMINAL for t in tasks), 'OWNERSHIP_CONFLICT', 'Worker has active or queued tasks')
     require(not any('DELIVERY_UNKNOWN' in (t['terminal_reason'] or '') for t in tasks), 'DELIVERY_UNKNOWN', 'Worker retains unresolved native-input delivery')
     group = journal.one('SELECT * FROM groups WHERE group_id=?', (row['group_id'],))
-    require(group and group['state'] in ('COMPLETED', 'PARTIAL', 'FAILED'), 'OWNERSHIP_CONFLICT', 'Group lifetime is not terminal')
+    require(group and group['state'] in ('NOT_DELIVERED_BUDGET', 'COMPLETED', 'PARTIAL', 'FAILED'), 'OWNERSHIP_CONFLICT', 'Group lifetime is not terminal')
     owner_path = journal.root/'groups'/row['group_id']/'owner.json'
     owner = json.loads(owner_path.read_text()) if owner_path.exists() else json.loads(group['owner_manifest'])
     require(owner.get('owner') and owned_status(owner['owner']) == 'DEAD', 'OWNERSHIP_CONFLICT', 'Group supervisor is live or its ownership is unknown')

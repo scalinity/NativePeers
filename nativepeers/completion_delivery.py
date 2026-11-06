@@ -88,7 +88,7 @@ def _describe(journal, route):
 
 def followup(journal,message_id):
     """Exact committed message/task/phase linkage; no receipt or delivery mutation."""
-    row=journal.one('SELECT t.task_id,t.state,t.result_artifact_id,w.group_id,g.policy_json FROM tasks t '
+    row=journal.one('SELECT t.task_id,t.state,t.result_artifact_id,t.task_json,w.group_id,g.policy_json FROM tasks t '
                     'JOIN workers w USING(worker_id) JOIN groups g USING(group_id) WHERE t.request_message_id=?',(message_id,))
     if not row:return None
     policy=json.loads(row['policy_json'])
@@ -97,10 +97,10 @@ def followup(journal,message_id):
     fallback='push' if route and route['mode']=='push' else 'retain'
     wait='npeer wait '+row['task_id']+' --timeout-ms 30000 --on-timeout '+fallback+' --json'
     result='npeer result '+row['task_id']+' --json'
-    return dict(group_id=row['group_id'],task_id=row['task_id'],completion_phase=phase,
+    return dict(**json.loads(row['task_json']).get('reply_admission',{}),group_id=row['group_id'],task_id=row['task_id'],completion_phase=phase,
                 completion_mode=route['mode'] if route else None,notification_state=route['state'] if route else 'MISSING',
                 task_state=row['state'],result_artifact_id=row['result_artifact_id'],
-                wait_command=wait,result_command=result,next_action=result if row['state'] in ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED') else wait)
+                wait_command=wait,result_command=result,next_action=result if row['state'] in ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED','NOT_DELIVERED_BUDGET') else wait)
 
 
 def annotate(value, route, *, push=False):

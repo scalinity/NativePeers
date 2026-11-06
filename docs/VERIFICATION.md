@@ -1,3 +1,43 @@
+# Issue 53: in-task replies and unsubmitted budget phases — 2026-11-05
+
+Parent replies are linked to the worker's recorded asking task and phase. A reply
+uses that exact running task's inbox without a new phase or logical turn. After
+completion, a reply reports its phase and admission-time slots, or refuses with
+`NOT_DELIVERED_BUDGET` before creating a task. Actual inbox reads strengthen the
+original receipt, including an uncertain admission, without replay. Unread replies
+remain attributed to the asking task and cannot be consumed by a later task.
+
+The final runtime-code suite at `bac5aa6` passes **1,197 tests and 1,084 subtests,
+with five skips, in 377.13 seconds**. The later event-table correction is
+prose only; product, launcher, integration, test and dependency classes are
+unchanged. Focused remediation passes 141 tests / 77 subtests; final reporting and
+uncertain-read checks pass 50 / 21. Claude plugin tests pass 52. Existing #13
+phase-aware notice and #28 send-followup push tests remain unchanged and pass.
+
+Three independent native Claude Sonnet 5.5/high reviews of the Codex-authored
+change produced 16 actionable IDs. Every ID has a concrete disposition and parent
+verification in [the scoped record](../evidence/issue-53-in-task-replies.json).
+The final narrow reviewer read all 128,595 primary bytes and the activation/fixture
+artifacts, found no runtime defect or warning, and proposed the applied event-table
+correction. Reviewer-executed checks remain `not_run`; parent checks are separate.
+
+The initial full run's four failures (two timeout-classification regressions and
+two stale source-map checks), its correction and the interrupted intermediate
+run remain recorded. Source imports were verified inside the isolated worktree.
+The ten requested historical-group reads were refused with `APPROVAL_BLOCKED`
+(exit4); no foreign identity, private-journal bypass or historical replay was used.
+
+This source record does not claim installed or physical/UI acceptance. The
+installed update is gated on the merged exact tree and release of other runtime
+users, uses the existing installer/manager/runtime locks and supported install
+modes, and preserves provider configuration and approvals. The bounded native
+observation and tracker disposition are recorded from actual results in
+[issue53](https://github.com/scalinity/NativePeers/issues/53). Private captures stay
+under the project-owned ignored issue53 scratch directory. Recovery uses a normal
+source revert and supported installation, never whole provider-state restoration.
+
+---
+
 # Review and live-follow-up workflow — installed scoped acceptance (2026-10-30)
 
 [PR #36](https://github.com/scalinity/NativePeers/pull/36) merged at 1125fa7. The [scoped record](../evidence/review-followup-workflow.json) keeps all finding dispositions, source classes, runtime-specific operations and failed attempts separate. Final complete source: **1,144 tests / 1,060 subtests / four skips, 288.96 s**. Complete installed source 1125fa7: **1,144 / 1,060 / four skips, 278.10 s**. Evidence/prose-only closeout receives the unchanged coherence checks; historical failures remain retained.

@@ -10,7 +10,7 @@ KINDS = ('task.started', 'message.delta', 'message.completed', 'reasoning.delta'
          'files.changed', 'plan.updated', 'usage', 'input.queued', 'input.accepted', 'task.state', 'fallback.started', 'task.terminal', 'gap')
 TOOL_KINDS = ('exec', 'edit', 'read', 'search', 'web', 'mcp', 'plan', 'agent', 'other')
 TOOL_STATUSES = ('ok', 'error', 'declined', 'interrupted')
-TERMINAL_STATUSES = ('completed', 'interrupted', 'failed', 'canceled', 'timed_out')
+TERMINAL_STATUSES = ('not_delivered_budget', 'completed', 'interrupted', 'failed', 'canceled', 'timed_out')
 ORIGINS = ('parent-model', 'human', 'controller', 'fallback')
 TEXT_KINDS = ('message.delta', 'message.completed', 'reasoning.delta', 'task.terminal')
 

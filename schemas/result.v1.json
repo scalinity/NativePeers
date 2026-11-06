@@ -28,6 +28,7 @@
     },
     "status": {
       "enum": [
+        "not_delivered_budget",
         "completed",
         "failed",
         "canceled",
@@ -35,6 +36,9 @@
         "partial",
         "interrupted"
       ]
+    },
+    "input_submitted": {
+      "type": "boolean"
     },
     "summary": {
       "type": "string"

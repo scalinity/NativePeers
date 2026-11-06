@@ -396,7 +396,7 @@ Each worker controller writes a normalized event for every meaningful provider o
 | `input.accepted` | `{client_request_id, native_turn}` |
 | `task.state` | `{state, reason?}` (QUEUED / RUNNING / WAITING / APPROVAL_BLOCKED …, per `IMPLEMENTATION.md` §12.1) |
 | `fallback.started` | `{from:{provider, model}, to:{provider, model}, reason}` |
-| `task.terminal` | `{status: completed\|interrupted\|failed\|canceled\|timed_out, final_text, result_artifact_id?, error?:{code, message}}` |
+| `task.terminal` | `{status: completed\|interrupted\|failed\|canceled\|timed_out\|not_delivered_budget, final_text, result_artifact_id?, error?:{code, message}}` |
 | `gap` | `{from_seq?, reason}`: lost or unparseable events, never silent |
 
 **Semantic rules**
@@ -899,7 +899,7 @@ All trees use only `Box`, `Text`, `Button`, `Code`, `Markdown`, and `Input` for 
    | `/np resume-cmd <n>` | Copy the exact manual resume command. |
 
 7. **Status, toasts and notifications:**
-   - `$.ui.status('<r> running · <d> done · <f> failed · <s> stopped')`, zero counts left out, while the session has delegates; refreshed on every lineage change.
+   - `$.ui.status('<r> running · <d> done · <f> failed · <s> stopped · <u> not delivered')`, zero counts left out, while the session has delegates; refreshed on every lineage change.
    - Toasts are sentences without a prefix: the engine heads them with the plugin's name (X17).
    - A toast on each completion or failure.
    - Optional `$.ui.notify` (config `notifyOnCompletion`, default off) for completions of tasks that ran 2 minutes or more. It sends at once through the person's channel, and is skipped where it answers `no-surface` (desktop and SDK hosts).
@@ -912,8 +912,8 @@ export type NpProvider = 'codex' | 'claude' | 'antigravity' | 'grok'
 export type NpBridge = { state: 'off'|'starting'|'ready'|'degraded'|'down'; version?: string; peer?: string; reason?: string; since: number }
 export type NpWorker = { workerId: string; groupId: string; taskId?: string; generation: number; provider: NpProvider;
   modelRequested?: string; modelObserved?: string; effort?: string; profile?: string; title: string;
-  status: 'queued'|'starting'|'running'|'waiting'|'completed'|'failed'|'canceled'|'interrupted'|'timed_out';
-  startedAt?: number; endedAt?: number; outputTokens?: number; agentId?: string; parentWorkerId?: string; latest?: string; mirrorOwner?: 'this'|'other'|null }
+  status: 'not_delivered_budget'|'queued'|'starting'|'running'|'waiting'|'completed'|'failed'|'canceled'|'interrupted'|'timed_out';
+  startedAt?: number; endedAt?: number; outputTokens?: number; undeliveredPhases?: number; agentId?: string; parentWorkerId?: string; latest?: string; mirrorOwner?: 'this'|'other'|null }
 export type NpShadow = { agentId: string; workerId?: string; spawnError?: string;
   phase: 'SPAWNING'|'BINDING'|'STREAMING'|'TOOL_PENDING'|'COMPLETING'|'COMPLETED'|'FAULTED'|'DETACHED';
   cursor: number; inflight?: { from: number; to: number };

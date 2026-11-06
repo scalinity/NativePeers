@@ -54,6 +54,12 @@ class RetirementTests(unittest.TestCase):
         self.assertTrue(self.work.exists())
         return error.exception
 
+    def test_unsubmitted_budget_phase_is_terminal_for_retirement(self):
+        self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),self.worker,None,None,'NOT_DELIVERED_BUDGET',None,'BUDGET_EXHAUSTED',1,'{}'))
+        result=self.retire()
+        self.assertEqual(result['state'],'retired')
+        self.assertFalse(self.work.exists())
+
     def test_dirty_ignored_untracked_staged_and_unique_commits_recover_without_histories(self):
         (self.work/'input').write_text('committed unique\n'); git(self.work, 'add', 'input'); git(self.work, 'commit', '-qm', 'Preserve unique work')
         head = git(self.work, 'rev-parse', 'HEAD').stdout.decode().strip()

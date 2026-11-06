@@ -23,7 +23,7 @@ from .errors import require
 from .files import advisory_lock, atomic_json, canonical, private_directory
 from .process import owned_status
 
-TERMINAL = {'COMPLETED', 'FAILED', 'CANCELED', 'TIMED_OUT', 'PARTIAL', 'INTERRUPTED'}
+TERMINAL = {'NOT_DELIVERED_BUDGET', 'COMPLETED', 'FAILED', 'CANCELED', 'TIMED_OUT', 'PARTIAL', 'INTERRUPTED'}
 MAX_BYTES = 512 * 1024 * 1024
 MAX_ENTRIES = 30000
 

@@ -97,3 +97,14 @@ test('a worker counts as started once, when it is first seen running, however it
   expect(startedSince(seen, ws)).toEqual([])
   expect(startedSince(seen, [...ws, { workerId: 'W3', status: 'queued' }]).map((w: any) => w.workerId)).toEqual(['W3'])
 })
+
+
+test('an unsubmitted budget disposition is reported apart from failed work', () => {
+  expect(statusSummary([{ status: 'not_delivered_budget' }] as any)).toBe('1 not delivered')
+  expect(statusSummary([{ status: 'completed' }, { status: 'not_delivered_budget' }] as any)).toBe('1 done · 1 not delivered')
+})
+
+
+test('a completed worker keeps its undelivered phase count visible', () => {
+  expect(statusSummary([{ status: 'completed', undeliveredPhases: 2 }] as any)).toBe('1 done · 2 not delivered')
+})

@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "originating_task": "NativePeers issue #53",
+  "stage": "issue-53-source-qualified",
+  "status": "PASS_SOURCE_NATIVE_NOT_RUN",
+  "reviewed_commit": "222b48b651c4a62ff1ca5723f768d3c21b197c9a",
+  "tests": {
+    "reply_regressions": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/contract/test_in_task_replies.py tests/unit/test_worker_models.py",
+      "tests": 21,
+      "subtests": 28,
+      "output": "21 passed, 28 subtests passed in 0.94s"
+    },
+    "claude_plugin": {
+      "status": "PASS",
+      "command": "claude plugin test integrations/claude/mod/np",
+      "tests": 52,
+      "output": "52 pass; 0 fail; 4 files; 0.64s"
+    },
+    "complete_source": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "bac5aa6ee6366b0c4e3e268307c13ada1c980f0c",
+      "tests": 1197,
+      "subtests": 1084,
+      "skipped": 5,
+      "seconds": 377.13,
+      "output": "1197 passed, 5 skipped, 1084 subtests passed in 377.13s",
+      "scope": "Final runtime code and test classes. Later F201 event-table correction is documentation only; class equality is checked separately."
+    },
+    "initial_complete": {
+      "status": "FAIL",
+      "command": ".venv/bin/python -m pytest -q",
+      "passed": 1181,
+      "failed": 4,
+      "skipped": 5,
+      "subtests": 1084,
+      "seconds": 344.98,
+      "output": "4 failed, 1181 passed, 5 skipped, 1084 subtests passed in 344.98s",
+      "scope": "Two timeout classification regressions corrected; two source-fingerprint assertions pending regenerated publication pointers. Original failure retained."
+    },
+    "focused_after_timeout_correction": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_activity_controller.py tests/unit/test_cancellation.py tests/unit/test_worker_models.py tests/contract/test_in_task_replies.py tests/contract/test_phase_admission.py tests/contract/test_notifications.py tests/unit/test_compact_results.py",
+      "tests": 106,
+      "subtests": 58,
+      "seconds": 9.17,
+      "output": "106 passed, 58 subtests passed in 9.17s"
+    },
+    "remediation_focused": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/contract/test_in_task_replies.py tests/contract/test_phase_admission.py tests/contract/test_notifications.py tests/unit/test_bridge_backend.py tests/unit/test_worker_models.py tests/unit/test_activity_controller.py tests/unit/test_cancellation.py tests/unit/test_compact_results.py",
+      "tests": 141,
+      "subtests": 77,
+      "seconds": 20.17,
+      "output": "141 passed, 77 subtests passed in 20.17s"
+    },
+    "terminal_consumers": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/unit/test_cleanup.py tests/unit/test_change_preview.py tests/unit/test_workspace_retirement.py tests/unit/test_history_cleanup.py tests/unit/test_activity_backfill.py",
+      "tests": 78,
+      "subtests": 7,
+      "seconds": 72.22,
+      "output": "78 passed, 7 subtests passed in 72.22s; two subsequently added retirement/backfill cases also passed in 1.48s"
+    },
+    "interrupted_complete": {
+      "status": "NOT_RUN",
+      "command": ".venv/bin/python -m pytest -q",
+      "scope": "Interrupted for material review remediation. Partial output: 591 passed, 1 skipped, 523 subtests passed in 93.69s. Not a complete-suite pass."
+    },
+    "complete_c9e1f5f": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q",
+      "source_commit": "c9e1f5f6a484e6a0aedc7876723ff071b480f14f",
+      "tests": 1194,
+      "subtests": 1084,
+      "skipped": 5,
+      "seconds": 428.59,
+      "output": "1194 passed, 5 skipped, 1084 subtests passed in 428.59s",
+      "scope": "Before final reporting and uncertain-inbox-read corrections; retained separately, not transferred."
+    },
+    "reporting_corrections": {
+      "status": "PASS",
+      "command": ".venv/bin/python -m pytest -q tests/contract/test_in_task_replies.py tests/unit/test_routing.py tests/unit/test_message_visibility.py tests/unit/test_compact_results.py tests/unit/test_activity_backfill.py",
+      "tests": 50,
+      "subtests": 21,
+      "seconds": 1.66,
+      "output": "50 passed, 21 subtests passed in 1.66s"
+    }
+  },
+  "historical_groups": {
+    "status": "BLOCKED",
+    "command": "npeer result GROUP --compact --json; npeer result GROUP --json",
+    "groups": [
+      "40341c1c-a3c1-4e09-8541-3900d8b79720",
+      "f1170ee3-038c-4d93-b26e-2c223aaeb417",
+      "894a595f-2d58-4802-9192-0d7ff921b8b3",
+      "cf2929ab-df9a-435f-8e8c-fe0dc2246257",
+      "e894799e-9bad-493c-ae06-e282b3af62c2"
+    ],
+    "reason": "All ten reads returned APPROVAL_BLOCKED: Task is outside the bound caller grant; exit 4. No foreign identity or journal bypass used. Historical routing-message IDs were unavailable through the refused reads; message status checks were not run."
+  },
+  "review": {
+    "group_id": "f7c4cb66-dde1-41de-9553-81612d460884",
+    "task_id": "91425d85-ec05-438d-989d-5bf63bcc0784",
+    "worker_id": "37d93667-a9d9-4b24-b119-bf4fd22e2b2b",
+    "native_id": "23a3d162-27e4-4ab9-a3f1-783aee88bb87",
+    "provider": "claude",
+    "model_requested": "sonnet",
+    "effort_requested": "high",
+    "author_provider": "codex",
+    "context_primary_bytes": 247320,
+    "context_recovery_bytes": 1088186,
+    "findings": [
+      {
+        "id": "F001",
+        "disposition": "fixed and verified",
+        "topic": "Terminal-state consumers and cleanup",
+        "commit": "653dd67"
+      },
+      {
+        "id": "F002",
+        "disposition": "fixed and verified",
+        "topic": "No submitted work must not be completed",
+        "commit": "653dd67"
+      },
+      {
+        "id": "F003",
+        "disposition": "fixed and verified",
+        "topic": "Unread reply stays linked to exact task",
+        "commit": "12a4807"
+      },
+      {
+        "id": "F004",
+        "disposition": "fixed and verified",
+        "topic": "Admission field names and result schema",
+        "commit": "c1a1eb9"
+      },
+      {
+        "id": "F005",
+        "disposition": "fixed and verified",
+        "topic": "Pending inbox wording",
+        "commit": "12a4807"
+      },
+      {
+        "id": "F006",
+        "disposition": "fixed and verified",
+        "topic": "Undelivered phase summary and neutral mark",
+        "commit": "c9e1f5f"
+      },
+      {
+        "id": "F007",
+        "disposition": "fixed and verified",
+        "topic": "Real socket refusal and missing regressions",
+        "commit": "c9e1f5f"
+      },
+      {
+        "id": "F101",
+        "disposition": "fixed and verified",
+        "evidence": "Documented default and --claude-mod dry-run/apply/repeat selected; installed file identity will be checked after merge. No hot reload/physical UI claim."
+      },
+      {
+        "id": "F102",
+        "disposition": "fixed and verified",
+        "evidence": "Updated ignored activation script records long-lived facades informationally; fixture operations use fresh installed CLI processes."
+      },
+      {
+        "id": "F103",
+        "disposition": "already satisfied with evidence",
+        "evidence": "Prepared installed-fixture-spec.json explicitly sets followup_grace_seconds:60 and max_task_turns_per_worker:2; plan sends refusal immediately after phase2."
+      },
+      {
+        "id": "F104",
+        "disposition": "fixed and verified",
+        "evidence": "Updated ignored activation script fetches origin main, labels peer/own-group listings informational, and refuses live controllers. Script compilation passed; live execution deferred until merge."
+      },
+      {
+        "id": "F105",
+        "disposition": "fixed and verified",
+        "evidence": "93f8a33 and bac5aa6; ordinary reads avoid a writer, late pre-scan admission waits for a locked read, unread queries batch once;50 focused tests/21 subtests passed."
+      },
+      {
+        "id": "F106",
+        "disposition": "fixed and verified",
+        "evidence": "93f8a33 updates current state sketch/status union/undeliveredPhases and controller outcome docstring."
+      },
+      {
+        "id": "F107",
+        "disposition": "fixed and verified",
+        "evidence": "93f8a33 removes missing-history gap for definitely unsubmitted phases; dedicated regression passes."
+      },
+      {
+        "id": "F108",
+        "disposition": "fixed and verified",
+        "evidence": "93f8a33 adds top-level undelivered_phases to groups/status/results/compact; dedicated regressions pass."
+      },
+      {
+        "id": "F201",
+        "disposition": "fixed and verified",
+        "evidence": "Exact reviewer-proposed status added to docs/CLAUDE_LINEAGE_MOD.md task.terminal row399; schema already declares the status.",
+        "commit": "a917f29"
+      }
+    ],
+    "recheck": {
+      "group_id": "78251cdb-e69f-43b7-82c1-2e3aaf465d6f",
+      "task_id": "f277aff3-16bd-4c42-926b-8f71bcaeae7e",
+      "native_id": "0c22e962-15f5-418a-9067-4298843decee",
+      "model_observed": "claude-sonnet-5-5",
+      "verdict": "Approve with Suggestions",
+      "coverage": "Complete diff and first80KB of335KB primary, plus direct candidate supporting-source reads; remaining primary/recovery unpaged. Source files remained at c9e1f5f during review. No worker-executed tests.",
+      "correspondence": "All readable F101-F108 matched parsed IDs/severities. F104 lacked a numeric line and used an artifact alias; locally mapped to the ignored activation script fetch/dependency-observation code. No finding was dropped."
+    },
+    "final_narrow": {
+      "group_id": "20fab917-cdcc-4df7-b048-224602a6e749",
+      "task_id": "3775e9d6-65b1-458b-a700-3c8e15baf316",
+      "worker_id": "2e9f2120-6604-4fe2-964c-42c1efbb7c74",
+      "native_id": "749ef7aa-6ec7-432b-b082-eb5f276f9c79",
+      "model_observed": "claude-sonnet-5-5",
+      "verdict": "Approve with Suggestions",
+      "coverage": "All128595 primary bytes in9 pages; updated activation script, fixture plan and actual fixture spec read. Recovery sampled; supporting candidate source inspected. No worker-executed tests. Final code bac5aa6 unchanged during review.",
+      "runtime_findings": 0
+    },
+    "all_findings_disposed": true,
+    "final_material_delta_independently_reviewed": true
+  },
+  "operation_checks": [
+    {
+      "operation": "installed-in-task-reply-with-artifact",
+      "parent_context": "Owned native fixture after merge and dependency-free installed transition",
+      "status": "NOT_RUN"
+    }
+  ],
+  "recovery": "Revert the named source delta through a pull request and the supported installed transition. Preserve journal receipts, histories, provider approvals and configuration. Never replay accepted or uncertain input.",
+  "code_commit": "a917f298b65fe0bce0bd876529a55924c0c9cc51",
+  "source": {
+    "nativepeers/__init__.py": "b6d1dec7be33131154b7e7d544a84d6e7861a2cbd0c54f8162dbbbf48fd575fb",
+    "nativepeers/__main__.py": "6d8b7d7846a845059d7a3107143f11131f63c5511d669b44085b15ec5e3d2279",
+    "nativepeers/activity/__init__.py": "e8141e603948b121b9c0488950d3fc8c7ef1900bb87c11c883aca612b01ae711",
+    "nativepeers/activity/antigravity.py": "0c859aae693bc9243625aa170b203de6033d2048ae7584adce3ad9fcccbc696a",
+    "nativepeers/activity/backfill.py": "360c0f80d2dedb3ffdef9d0eef4651fdfc8b0aeb7d266d5d604db8ce41b2a114",
+    "nativepeers/activity/bounds.py": "8e39fbba82329cbdc6101f5c70bd99fd9b937949a3c5c8360cf2befde013212e",
+    "nativepeers/activity/claude.py": "2b1454647d1ba497831b6d949e2c2c4267c50e120e7b8da8171e21157c708d74",
+    "nativepeers/activity/codex.py": "be9b810672ce4b48b1e119c2536d3284a1322186ba9d075d206a654b847a22e6",
+    "nativepeers/activity/command.py": "f798f87ae23d50b5310807038570fac14fc430dd7c576a10b17b1de5b1be56cf",
+    "nativepeers/activity/config.py": "81a7ae71c0adb8a0baeaaf80a1a6c817037cc13179c72091ad142be306735bbc",
+    "nativepeers/activity/context.py": "fc2e4935f885a6a54698300d2a886c6d06e2c76ff95dca3fd1735bf50deb568c",
+    "nativepeers/activity/events.py": "433b3a14827f0a15192b5d858d8c8d333068cbab97b3e54307cf8afa8cb8c7c3",
+    "nativepeers/activity/grok.py": "ab6538d72bfd65c1dd0ff791002c7a199325197cb0a18bc9989f07b796997377",
+    "nativepeers/activity/reader.py": "fe587c8d2198b19b7ae90691be7337e76ab33e62f3f0522167c2388442aa6f81",
+    "nativepeers/activity/recorder.py": "7b15594769a8e7494532b2918149c5d08508b7460cea0048d673c6439cf7ed6c",
+    "nativepeers/activity/redact.py": "b9563ca18525f47845e9c7976835f8b27cabcb6a93b96b62f81b242aba3dc18e",
+    "nativepeers/activity/store.py": "4afbab994dd9bbac6ebf2e41c1d495513a80df19724d8ad13359a9520a85a00e",
+    "nativepeers/adapters/__init__.py": "f6b278167c47465c28a94d8094142fd55b3a717beca2231ce9c1a84b4ec67e26",
+    "nativepeers/adapters/codex_app_server.py": "66381cc7db99a35ef4c0ddc99bb613a92a92ec0ca6f5a907acda9257e0d0b4c8",
+    "nativepeers/adapters/metadata.py": "02a98fcb483b28653c2e800680cd598317a515604f443543ce30ad1140e3db63",
+    "nativepeers/adapters/native_delivery.py": "56ae95de5b6e67931c01bd5b8163554dbad7a0fc6dc1fa006ef719e76fc75aeb",
+    "nativepeers/antigravity.py": "8398ee810a48c7f0d5ff4835e2e5bbd4ec7d808ca351fa345674bbdc52624be3",
+    "nativepeers/antigravity_install.py": "6a565ad9d3403c839992e72631d431ae357b8f047ddc980a7bc2aa59e93bc291",
+    "nativepeers/artifacts.py": "0b629f1e480ce25460ab188ca219a03f6e310d1313d76e9df9123ae563f9fe32",
+    "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
+    "nativepeers/bridge_backend.py": "28edd5af838bbb6e127f60c84b57c8876bb9424d2c1e27d4ce2e12904a3b9afa",
+    "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
+    "nativepeers/caller.py": "feac9c8288133ddb8f8c2b0ed82a89142ea187b249463522ee51bd4fade7a2b6",
+    "nativepeers/change_preview.py": "b9237b96069cdd19403c0137e910654f28d1e1831a6cc89fd4aa4759470bb3c1",
+    "nativepeers/claude_mod_check.py": "10a72fc1f0bae52928d86c5585420e3fe69115303c7a9ce0abc6daf97f794a71",
+    "nativepeers/claude_mod_install.py": "ccab3cfd4abe468c45d79a93690d23a3ca87cabafa1e6c795e7a11c5d2501f67",
+    "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
+    "nativepeers/cleanup.py": "9d5bb2b6023bf630e66675007807c354664c92fa53e475ff79a0d9b06d66988f",
+    "nativepeers/cli.py": "4a7b083da3a2b074d71e6db1d3fc63e4bcc2f29e63d3037ef04bc3e3dd6d7d02",
+    "nativepeers/compact.py": "851f40cdb18143bcd7c0800562acea6db26b6d86e02d18b9eb61fb28cef6b159",
+    "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
+    "nativepeers/completion_delivery.py": "7655c6dad151a49cc6133c1d8ca4b04513d715c21cce395c6c14770a18230eca",
+    "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
+    "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
+    "nativepeers/delegation.py": "65dee2bf7641a84adea06bf164a1ae00775eab4bb03f29c368a0ffb4b8f494ee",
+    "nativepeers/desktop_host.py": "d31795ce8509b7ad43813ae1f450c19240940a592aad7b70d24806cfce3317e3",
+    "nativepeers/errors.py": "66e93425ffffffb2a066d7492cff8f398a30df9bcae596c45d5328785c6ee6c6",
+    "nativepeers/fallback.py": "62cd4b1ff02f0d8280f5427de0f9710aa298e70c2f827f8c28d687efcbeb0481",
+    "nativepeers/files.py": "0d4a5aa977625dc3c609d9a2081728ed2afe8aca3c60a54f16f2a30e49c6ae1d",
+    "nativepeers/grok.py": "ef04d38d50e77b6f60f26324e0ec3720397676cfcc93dd3b929d52a6162fded6",
+    "nativepeers/grok_hooks.py": "5bbef9a7efc60d4dc6bcc8b34bc07b6564eb5808b61a76353fc4590e681a9776",
+    "nativepeers/grok_install.py": "caf6a4fb0c2348697586c0174f7a221fc7f197e611c310b0efbcf2d39f75974a",
+    "nativepeers/grok_worker.py": "19bcf05b42d818adc25ab36fc63deb2053b48286c8e900cc3d3fa18322e1f687",
+    "nativepeers/history_cleanup.py": "af3f7c8c46d67ee0926e17639554ca669895ba7dd3bc65516d77cf2f8bdc8f46",
+    "nativepeers/hooks.py": "b9c98838939d4de4b14a851d6a7d6e15bce3473fb37e2acb02904a6d5d9fb776",
+    "nativepeers/install.py": "da00ffe46c3c6cb494ade876623c81fb691848d9a14ea9240420f21a8a2fec6c",
+    "nativepeers/isolated_copy.py": "6d3873d0fd4d738ba4885a7ae9c17b266fc55d39aa631ce68242c2fa3ba9ac6d",
+    "nativepeers/journal.py": "44f284c9aad07c416ce6efd4ef5c94134ab9b5b3a21543f61716c9d08bf99be6",
+    "nativepeers/launch.py": "45b9aab0e7466414dd9e4391cc8b6af63b4ebec85ee53431ceb78f2312e31c9d",
+    "nativepeers/mcp_server.py": "1e9f71388057ef03bec0ff84de29968993c91950b5aff38644194d2103d76f2b",
+    "nativepeers/mirror.py": "b3713d90a12171c58f4f800ffc62a26eb113b299189e11f6517b44c490b27ff3",
+    "nativepeers/models.py": "de17e04d5eda71a961b40b5123ba1a1642483f22cefc38cd0d6a0d6ff7f80adb",
+    "nativepeers/notification_policy.py": "f61af4495fea105d2ae2db74546e34945058a9823c565274f01c9c5992cefca5",
+    "nativepeers/notifications.py": "325f0dbf1588930198362af5d04081f5d0e848f9bc7102b8fa2b5070bb81858e",
+    "nativepeers/ownership.py": "38b87083a2735233ef497db7f0a453cb60f5b0088d31cae8317181946e04e2a5",
+    "nativepeers/pagination.py": "bad84fca93aa76b359a1569a2927327a07f61a229086cb5525c0720289b99612",
+    "nativepeers/policy.py": "80be827ae6ceb3bd7199200ea04141ef0693e48e45b200766340b69ade82d701",
+    "nativepeers/presentation.py": "164a8f7a15e08703dca34b96c717ba97428d771dbed32bfefefe4ecf44e90f0b",
+    "nativepeers/process.py": "ac4e1d8aec27217853a7c37571da00b8e56ae784e1376968204dc50d042de049",
+    "nativepeers/profiles.py": "60be4db17b7a95c13749c14371696a92e23ad61fe0e46957f1688686bbd58cff",
+    "nativepeers/protocol.py": "4b1dfd456b14ee877ee6a074a2bcaa30155cb1971dc5d5d5594cb031fdf3cb02",
+    "nativepeers/provider_errors.py": "52594ff4c8bf27710f94c29d23ec936b820e293591a18942d80b70d19cec39d3",
+    "nativepeers/readiness.py": "b671e414ed98fb085a005ce604783367eedf52e48ef170c0df711a8d3181bcef",
+    "nativepeers/receipts.py": "ca559249b8983fb77cbb3554faa70d41446deadda46a870faf49eb198dcbf7cd",
+    "nativepeers/reconcile.py": "db39b9500f1c0237ce3f1084d772b796ec0558be3045aa8ff3e6dc0f40075f36",
+    "nativepeers/recovery.py": "f6367bb82b03612d0efaeee4949cca401aae883c1efd96c51eeefc652e163015",
+    "nativepeers/registry.py": "76bd8005f7a203332ad5abbcc61f8e2fcbebae0b374944ea5d30c4d75fd89b99",
+    "nativepeers/routing.py": "8ff2c427eb13e1cbe42199cc372e3aa02612cb611ec3398a4c581556955c8e3d",
+    "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
+    "nativepeers/selected_context.py": "cdf63b792f8d6eec90343155c24cc53df504feb2bfd804e51334f458588c25b0",
+    "nativepeers/supervisor.py": "e2b304d92e2e050feea373a9af390cb2954bc6db8d9b4e8fbd4e3497287a7bd3",
+    "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
+    "nativepeers/usage/antigravity_native.py": "c66f2c9ff2fb10e6dfa4fdfc6b62911381443bb7193a012ed6c730ccbe6be411",
+    "nativepeers/usage/claude_native.py": "ad1c43a813a257067a1acfb8058ef9851cd9fac5ede91c8f34f84f9ac1168e99",
+    "nativepeers/usage/collectors.py": "d52d6d6034e3e33dc0364a9ccf470a6cec5892b213b6c0ed065920ed4a6cee06",
+    "nativepeers/usage/config.py": "aa427528e54572d6be732c48692f4a741cacc9967848723898daeb7bf1d81554",
+    "nativepeers/usage/contracts.py": "fa28d801364fd2f9305e8965aabe4f0203988f13518de67017e879247b83ecb3",
+    "nativepeers/usage/events.py": "2f6660c246a814f76fdaa143f37c454227e5ad76fc8c515936695027f6acf9b5",
+    "nativepeers/usage/forecast.py": "ed637f520ddd798ce0201d430ce70ce14e1612ef72a5cdbd0c5de48e0b6c400f",
+    "nativepeers/usage/grok_native.py": "a0d2411c77c88623a0db1e8c860fb471b9195932a6639426aef840d2dc6b271c",
+    "nativepeers/usage/import_snapshot.py": "d952602ae271dcc076b7b268e9e96c216b186f53ddbf481a2b4310e0a60a17d3",
+    "nativepeers/usage/install.py": "9d34bbabc7ed069a71a92ee5e88a09cf6080d03c8048408e744564e52f7127c0",
+    "nativepeers/usage/native_command.py": "0102b9b9fae9f22d4d1dfc6cbee1f87ec9dd2a5d938d3c5bef5275cb2fe3c462",
+    "nativepeers/usage/normalize.py": "f6d3c9f6343ad6f08ed4ee575c49cdbb3f59789cbe67c38de8704e5ae8b41e35",
+    "nativepeers/usage/service.py": "21472e05c8f45b1d498b8d57da3ba6a372ea67db10c15d2626e849a26e08339e",
+    "nativepeers/usage/statusline.py": "287ad26df3d5ccc50f0137efa9fafe96707a8a3761620177461cdffed23c0af9",
+    "nativepeers/usage/store.py": "3b637e95f332d1d64e1419fa1f81ad19136b2799a425450326664784d64e2adb",
+    "nativepeers/worker_process.py": "06fe69cd04cb7272b4ffcf66ab12a34d9855051592ac95f895f89c230468fec7",
+    "nativepeers/worker_report.py": "22f6e29aa584a6fc483fd4694cdf5f172ce5e002ee53794c377ed10d5c900bea",
+    "nativepeers/worker_visibility.py": "9da5f83e8c0d984f096b1305eaf5515819d1943b000e23e50af22392d75d480f",
+    "nativepeers/workspace_retirement.py": "d5dd5ae0c3f7d5ac768e8c9c11b0d54f90f988b6a2862659eb58b68ecd1d280d",
+    "nativepeers/worktrees.py": "8828520fa049888de318a20c1764d56bb0b4626767e0e204b44e1c0ec331b2e9",
+    "pyproject.toml": "529ad97f49d96e6f4949e9fed048729d8ea0f92f16cc31b077cbf74704ee4f4f",
+    "schemas/activity.v1.json": "69fa63e88911819f5d80dcfe44f33570eef51c0dca12d728cba136cad06ff1d1",
+    "schemas/message.v1.json": "b006e29a7447fae196cd925f6d24a4d1193dc8d6b0a5d0dd3c3dceb5730266c3",
+    "schemas/peer.v1.json": "f92135c15ecc1372d7eda7e8d3afe09d27a6aa09da53c91b68e389f9b6008024",
+    "schemas/receipt.v1.json": "ee05acef9a19a56113885952e3b9b827ff766803e1a6e797c2a7b29f2682e928",
+    "schemas/requirements.v1.json": "326106aac17bbe21e5ec8a79f8896f31e72321beb8c113cfd886fb685ea9ced1",
+    "schemas/result.v1.json": "4ae0c689a3e4f10e571daa06861551d98d8cd738a262b8de4248dbd6a0ee6f94",
+    "schemas/spawn.v1.json": "cacc21096c24d2a83eeeec5ea7bc6a4f241d9c5f97126e092af11bb1fdda7740",
+    "schemas/usage-import.v1.json": "15d57cd7510f356176b2c799470495ba489989ca9d37eac7e0292a991a2d9d2d",
+    "schemas/usage.v1.json": "e54657a2fbfb30424fd09017ee08772ee67730215bbec6f25237f165cf2c303e",
+    "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
+  },
+  "source_map_sha256": "e46b0e92e21d08710b2c04e5cce1221aff46e6865ec6946607578a9d7e2975b8",
+  "updated_at": "2026-11-05T21:23:25.735999-05:00",
+  "source_class_equality": {
+    "command": "git diff --exit-code bac5aa6 a917f29 -- nativepeers schemas bin integrations tests pyproject.toml uv.lock",
+    "status": "PASS",
+    "output": "exit0; product/launcher/integration/test/dependency bytes unchanged"
+  },
+  "publication_check": {
+    "status": "PASS",
+    "command": ".venv/bin/python -m pytest -q tests/unit/test_evidence_checkpoint.py",
+    "output": "3 passed in 0.08s",
+    "scope": "Regenerated published source pointers and independent source classes; documentation/evidence-only finalization."
+  }
+}

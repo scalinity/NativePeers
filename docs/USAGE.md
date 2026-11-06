@@ -302,3 +302,32 @@ value and observed count when reported. Their preparation-time group context
 separates initial failures, later results and active follow-ups. Retained immutable
 records remain authoritative after that snapshot. Quiet routing remains governed
 by [the notification policy](NOTIFICATIONS.md).
+
+## Replies to an owned worker's question
+
+A parent reply to a message sent during the worker's current running task uses
+that task's inbox. The response's `reply_delivery` identifies the recorded task
+and completion phase, `route: in-task-inbox`, `starts_phase:false` and
+`task_turns_spent:0`. Inbox admission is `ACCEPTED_QUEUED`; a worker inbox read
+records `INGESTED`. This route creates no follow-up task or completion notice.
+
+After the asking task finishes, a reply uses a separate phase. The response's
+`followup` names that phase, `starts_phase:true`, `task_turns_remaining_at_admission`
+and `task_turns_remaining_after_admission`. Queued tasks already reserve their slots.
+With no slot available, the reply returns `NOT_DELIVERED_BUDGET` before creating
+a task, with `input_submitted:false`. A controller budget guard that stops an
+already queued phase before submission retains the distinct terminal state
+`NOT_DELIVERED_BUDGET`; it does not count as failed submitted work. Group status, result and listing expose `undelivered_phases`. Exact tasks
+remain inspectable in status and results; the Claude delegate summary uses the
+latest task other than that unsubmitted disposition, when one exists.
+
+An artifact ID written in reply text grants no access. Attach every required
+artifact using repeated `--artifact HANDLE` arguments (MCP: `artifact_refs`).
+Ordinary `send` follow-ups retain their own tasks, phases and completion routes.
+
+An inbox admission does not establish consumption. If the asking task ends
+without reading the reply, exact message status keeps the original attempt and
+reports `reply_delivery.state: UNREAD_AT_TASK_END`. Task status and results list
+`unread_in_task_replies`. Later tasks cannot ingest that earlier task's inbox
+reply. Inspect the exact result and delivery record; accepted input is never
+automatically replayed or promoted to another phase.

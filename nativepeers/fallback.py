@@ -149,7 +149,7 @@ def result_details(journal,task_id):
     considered={(c['provider'],c['model']) for c in choices}
     choices=[*choices,*[dict(provider=c['provider'],model=c['model'],state='NOT_TRIED',
         reason='An earlier choice completed the task.' if task['state']=='COMPLETED' else
-               'No further clean admission within the original task lifetime/limits was established.' if task['state'] in ('FAILED','TIMED_OUT','INTERRUPTED','CANCELED') else 'Awaiting the clean handoff.')
+               'No further clean admission within the original task lifetime/limits was established.' if task['state'] in ('NOT_DELIVERED_BUDGET','FAILED','TIMED_OUT','INTERRUPTED','CANCELED') else 'Awaiting the clean handoff.')
         for c in configured if (c['provider'],c['model']) not in considered]]
     return {'attempts':history,'fallback':{'primary_failure':record.get('error'),
             'reason':(record.get('error') or {}).get('message') or 'Confirmed provider failure before task execution.',

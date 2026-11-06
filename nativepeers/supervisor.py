@@ -37,6 +37,12 @@ def _abort_reply(writer):
     if not writer.is_closing() or writer.transport.get_write_buffer_size():writer.transport.abort()
 
 
+def completed_state(tasks):
+    states={t['state'] for t in tasks}
+    if states=={'NOT_DELIVERED_BUDGET'}:return 'NOT_DELIVERED_BUDGET'
+    return 'COMPLETED' if 'COMPLETED' in states and states<={'COMPLETED','NOT_DELIVERED_BUDGET'} else 'PARTIAL'
+
+
 class Group:
     def __init__(self,journal,group_id):
         self.journal,self.id=journal,group_id
@@ -254,7 +260,7 @@ class Group:
                 'native_session_id':row['native_id'],'title':row['role_title'],'peer_key':row['peer_key']},status=state.lower(),summary=task_error.get('message') or task_error['code'],error=task_error,
                 model_requested=row['model_requested'],model_observed=row['model_observed'],native_turn_ids=[],started_at=None,completed_at=time.time())
             artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or worker_id,[self.row['parent_key']],media_type='application/json')
-            changed=self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND (state NOT IN ('COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED') OR (? AND state='CANCELED' AND terminal_reason='WORKER_RELEASED' AND result_artifact_id IS NULL AND native_turn_id IS NULL))",(state,artifact,json.dumps(task_error),task['task_id'],row['generation'],cleanup_cancel)).rowcount
+            changed=self.journal.db.execute("UPDATE tasks SET state=?,result_artifact_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND (state NOT IN ('NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED') OR (? AND state='CANCELED' AND terminal_reason='WORKER_RELEASED' AND result_artifact_id IS NULL AND native_turn_id IS NULL))",(state,artifact,json.dumps(task_error),task['task_id'],row['generation'],cleanup_cancel)).rowcount
             if changed:self.journal.db.execute('INSERT OR IGNORE INTO task_attempts VALUES(?,?,?,?,?)',(task['task_id'],json.loads(task['task_json']).get('attempt_index',0),worker_id,state,artifact))
         self.changed.set()
 
@@ -472,6 +478,8 @@ class Group:
         stored=self.journal.one('SELECT payload_json,task_id FROM messages WHERE message_id=?',(message['message_id'],))
         require(stored and canonical(json.loads(stored['payload_json']))==canonical(message),'CALLER_UNBOUND','Follow-up must reference the immutable routing journal')
         if stored['task_id']:return {'stage':'ACCEPTED_QUEUED','evidence_kind':'controller-queue-admission','external_submission_id':stored['task_id']}
+        admitted=self.journal.one("SELECT payload_json FROM events WHERE subject_id=? AND kind='in-task-reply'",(message['message_id'],))
+        if admitted:return dict(stage='ACCEPTED_QUEUED',evidence_kind='owned-task-inbox-admission',**json.loads(admitted['payload_json']))
         require(row['state'] in ('READY','RUNNING','IDLE_GRACE'),'TARGET_OFFLINE','Worker controller has released ownership')
         task_id=new_id()
         from .presentation import render
@@ -481,15 +489,33 @@ class Group:
         meta=self.journal.one("SELECT b.request_json FROM bridge_requests b JOIN send_requests s ON s.caller_key=b.caller_key AND s.client_request_id=b.client_request_id WHERE b.operation='input' AND s.message_id=?",(message['message_id'],))
         meta=json.loads(meta['request_json']) if meta else {}
         with self.journal.transaction() as db:
+            # Serialize the exact asking-task check with its terminal commit. No clock/window inference.
+            reply_to=db.execute('SELECT from_actor_key,payload_json FROM messages WHERE message_id=?',(message.get('in_reply_to'),)).fetchone()
+            parent_reply=bool(reply_to and reply_to['from_actor_key']==row['peer_key'] and message['from'].get('peer_key')==self.row['parent_key'])
+            source=json.loads(reply_to['payload_json']).get('source_task') if parent_reply else None
+            asking=db.execute('SELECT * FROM tasks WHERE task_id=? AND worker_id=? AND generation=?',(source['task_id'],worker_id,row['generation'])).fetchone() if source and source['generation']==row['generation'] and source['group_id']==self.id and source['worker_id']==worker_id else None
+            if asking and asking['state']=='RUNNING':
+                delivery=dict(group_id=self.id,task_id=asking['task_id'],completion_phase=source['completion_phase'],starts_phase=False,task_turns_spent=0,input_submitted=False,route='in-task-inbox')
+                self.journal.event(message['message_id'],'in-task-reply',delivery)
+                return dict(stage='ACCEPTED_QUEUED',evidence_kind='owned-task-inbox-admission',**delivery)
+            admission={}
+            if parent_reply:
+                from .worker_process import task_slots
+                current=dict(db.execute('SELECT * FROM workers WHERE worker_id=?',(worker_id,)).fetchone())
+                slots=task_slots(current)
+                queued=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND generation=? AND state='QUEUED'",(worker_id,row['generation'])).fetchone()[0]
+                remaining=max(0,slots['remaining']-queued)
+                require(remaining>0,'NOT_DELIVERED_BUDGET','Reply needs a new phase but no logical task turns remain',details=dict(input_submitted=False,starts_phase=False,group_id=self.id,task_turns_remaining=remaining))
+                admission=dict(starts_phase=True,task_turns_remaining_at_admission=remaining,task_turns_remaining_after_admission=remaining-1)
             owner=owner_for(self.journal,worker_id,meta.get('claude_session'),meta.get('delivery_owner'))
             count=db.execute("SELECT COUNT(*) FROM tasks WHERE worker_id=? AND state='QUEUED'",(worker_id,)).fetchone()[0]
             require(count<32,'CAPACITY_UNAVAILABLE','Worker follow-up queue is full')
             from .usage.service import Usage
-            lease=json.loads(row['lease_json'])
+            lease=json.loads(db.execute('SELECT lease_json FROM workers WHERE worker_id=?',(worker_id,)).fetchone()[0])
             Usage(self.journal).admit_local_demand(lease,worker_id=worker_id)
             db.execute('UPDATE workers SET lease_json=? WHERE worker_id=?',(canonical(lease).decode(),worker_id))
             db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(task_id,worker_id,message['message_id'],None,'QUEUED',None,None,row['generation'],
-                canonical({'text':input_text,'initial':False,**{k:meta[k] for k in ('origin','client_request_id') if k in meta}}).decode()))
+                canonical({'text':input_text,'initial':False,**({'reply_admission':admission} if admission else {}),**{k:meta[k] for k in ('origin','client_request_id') if k in meta}}).decode()))
             db.execute('UPDATE messages SET task_id=? WHERE message_id=?',(task_id,message['message_id']))
             policy=json.loads(db.execute('SELECT policy_json FROM groups WHERE group_id=?',(self.id,)).fetchone()[0])
             phases=policy.get('phases',{'1':policy['initial_tasks']})
@@ -619,7 +645,7 @@ class Group:
             expired=time.time()>=self.lifetime_deadline()
             tasks=self.tasks();active=any(t['state'] not in TERMINAL for t in tasks)
             if self.initial_done():
-                state='COMPLETED' if all(t['state']=='COMPLETED' for t in tasks if t['task_id'] in self.policy['initial_tasks']) else 'PARTIAL'
+                state=completed_state([t for t in tasks if t['task_id'] in self.policy['initial_tasks']])
                 self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(state,self.id))
                 if not expired:
                     for phase in self.phases():await self.notify(int(phase))
@@ -701,7 +727,7 @@ class Group:
             unresolved.append({'reason':'Control socket transport closure remains unproved'})
         self.endpoint.unlink(missing_ok=True)
         atomic_json(self.journal.root/'groups'/self.id/'owner.json',dict(owner=self.owner,group_id=self.id,generation=self.generation,endpoint=str(self.endpoint),token=self.token,released=not bool(unresolved),cleanup_unresolved=unresolved))
-        final='COMPLETED' if all(t['state']=='COMPLETED' for t in self.tasks()) else 'PARTIAL'
+        final=completed_state(self.tasks())
         if unresolved:final='PARTIAL'
         self.journal.db.execute('UPDATE groups SET state=? WHERE group_id=?',(final,self.id))
         self.journal.event(self.id,'supervisor-released',{'owner':self.owner,'cleanup_unresolved':unresolved})

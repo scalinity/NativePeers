@@ -188,13 +188,14 @@ class Worker:
             return await self._task(task_id,text)
 
     async def _task(self,task_id,text):
-        claimed=self.journal.db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
-        if not claimed:return
+        with self.journal.transaction() as db:
+            claimed=db.execute("UPDATE tasks SET state='RUNNING' WHERE task_id=? AND worker_id=? AND generation=? AND state='QUEUED'",(task_id,self.row['worker_id'],self.row['generation'])).rowcount
+            if not claimed:return
+            self.tasks_started+=1
+            self.lease.update(logical_tasks_used=min(self.tasks_started,self.spec.get('max_task_turns',8)),logical_tasks_generation=self.row['generation'])
+            db.execute('UPDATE workers SET lease_json=? WHERE worker_id=? AND generation=?',(canonical(self.lease).decode(),self.row['worker_id'],self.row['generation']))
         from .worker_visibility import requested
         requested(self.row,self.lease)
-        self.tasks_started+=1
-        self.lease.update(logical_tasks_used=min(self.tasks_started,self.spec.get('max_task_turns',8)),logical_tasks_generation=self.row['generation'])
-        self.journal.db.execute('UPDATE workers SET lease_json=? WHERE worker_id=? AND generation=?',(canonical(self.lease).decode(),self.row['worker_id'],self.row['generation']))
         self.running_task=task_id;started=time.time();self.turn=None;self.input_submitted=False;self.partial=''
         task_row=self.journal.one('SELECT task_json FROM tasks WHERE task_id=?',(task_id,))
         task_spec=json.loads(task_row['task_json']);deadline=task_spec.setdefault('deadline',started+self.spec.get('wall_time_seconds',1800))
@@ -251,6 +252,8 @@ class Worker:
                 result['error']['execution']=error.details['execution']
             if self.stopping and self.shutdown_reason not in (None,'USER_CANCELED'):
                 result.update(status='interrupted',error={'code':'DELIVERY_UNKNOWN_AFTER_OWNER_LOSS','cause':self.shutdown_reason})
+            if isinstance(error,PeerError) and error.code=='BUDGET_EXHAUSTED' and (error.details or {}).get('input_submitted') is False and not result['error']['may_have_received']:
+                result['status']='not_delivered_budget'
             if isinstance(error,(KeyboardInterrupt,SystemExit)):raise
         scoped_cancel=self.canceling_task==task_id and not self.stopping
         if scoped_cancel and self.interrupting and result['status'] in ('failed','canceled'):
@@ -264,7 +267,7 @@ class Worker:
             worker={'provider':self.row['provider'],'native_session_id':self.native,'title':self.row['role_title'],'peer_key':row['peer_key']},
             model_requested=self.row['model_requested'],model_observed=self.model_observed,
             reasoning_effort_requested=self.spec.get('reasoning_effort'),reasoning_effort_observed=None,
-            status=result['status'],summary=result.get('text') or (result.get('error') or {}).get('message') or (result.get('error') or {}).get('code') or 'No final text was returned.',findings=findings,artifacts=[],
+            status=result['status'],input_submitted=self.input_submitted,summary=result.get('text') or (result.get('error') or {}).get('message') or (result.get('error') or {}).get('code') or 'No final text was returned.',findings=findings,artifacts=[],
             verification={'tests_run':checks,'limitations':report_limits+['Worker-supplied checks are not independently verified.','Reasoning effort independently echoed by inference: unverified.']},
             started_at=started,completed_at=time.time(),native_turn_ids=result.get('native_turn_ids',[]),
             error=result.get('error'),usage=result.get('usage'),changes={'worktree':self.row['cwd'] if self.row['worktree_id'] else None,'commit':None,'patch_artifact':None})
@@ -315,7 +318,7 @@ class Worker:
         artifact=Artifacts(self.journal).put(canonical(record),row['peer_key'] or self.row['worker_id'],[self.lease['parent_key']],media_type='application/json')
         with self.journal.transaction() as db:
             db.execute('INSERT INTO task_attempts VALUES(?,?,?,?,?)',(task_id,task_spec.get('attempt_index',0),self.row['worker_id'],result['status'].upper(),artifact))
-            db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('COMPLETED','FAILED','CANCELED')",
+            db.execute("UPDATE tasks SET state=?,result_artifact_id=?,native_turn_id=?,terminal_reason=? WHERE task_id=? AND generation=? AND state NOT IN ('NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED')",
                 ('FALLBACK_PENDING' if pending else result['status'].upper(),None if pending else artifact,self.turn,json.dumps(result.get('error')),task_id,self.row['generation']))
             if pending:self.retire_after_task=True;self.fallback_pending=True
             db.execute("UPDATE workers SET state=? WHERE worker_id=?",('RELEASING' if self.retire_after_task else 'IDLE_GRACE',self.row['worker_id']))

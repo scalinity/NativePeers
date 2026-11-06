@@ -1,7 +1,7 @@
 """What the controller knows about a task and when the recorder is told. No failure here may reach the task.
 
 Outcome mapping. `task.terminal.status` is the controller's own status, unchanged: completed, failed, canceled, timed_out or
-interrupted. `canceled` is what the controller records for a cancel request, and also for a Codex turn the provider itself ends
+interrupted or not_delivered_budget. `not_delivered_budget` means the logical-input guard refused before submission. `canceled` is what the controller records for a cancel request, and also for a Codex turn the provider itself ends
 as `interrupted` (`Worker.codex_turn` maps that native status to canceled). `interrupted` is what it records when the controller
 or its supervisor is lost mid-task (DELIVERY_UNKNOWN_AFTER_OWNER_LOSS), and what the recorder writes for a task it finds
 unfinished after a crash. The provider's own word is kept in `task.terminal.data.native_status` (Codex `turn.status`, Claude
@@ -18,7 +18,7 @@ import json
 
 from .events import ORIGINS
 
-OUTCOMES = ('completed', 'interrupted', 'canceled', 'timed_out')
+OUTCOMES = ('not_delivered_budget', 'completed', 'interrupted', 'canceled', 'timed_out')
 USAGE_KEYS = (('input_tokens', 'input_tokens'), ('output_tokens', 'output_tokens'), ('cache_read_input_tokens', 'cached_input_tokens'),
               ('cached_input_tokens', 'cached_input_tokens'), ('reasoning_tokens', 'reasoning_tokens'))
 

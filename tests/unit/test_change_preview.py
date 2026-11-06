@@ -62,6 +62,13 @@ class PreviewTests(unittest.TestCase):
         index=self.source/'.git/index'
         return files,index.read_bytes() if index.exists() else None
 
+    def test_default_preview_keeps_last_real_result_after_unsubmitted_budget_phase(self):
+        worker,work,baseline=self.worker();(work/'edit').write_text('changed\n')
+        task,artifact=self.result(worker,work,baseline)
+        self.j.db.execute('INSERT INTO tasks VALUES(?,?,?,?,?,?,?,?,?)',(new_id(),worker,None,None,'NOT_DELIVERED_BUDGET',None,'BUDGET_EXHAUSTED',1,'{}'))
+        result=preview(self.j,self.caller,worker)
+        self.assertEqual(result['task_id'],task)
+
     def test_worker_only_delta_allows_unrelated_current_edits_without_doubling_dirty_input(self):
         worker,work,base=self.worker(dirty=True);(work/'edit').write_text('worker\n')
         self.result(worker,work,base)

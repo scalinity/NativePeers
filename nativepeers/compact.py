@@ -21,7 +21,7 @@ def lifecycle(status, policy):
     latest = max((phase(policy, t['task_id']) or 0 for t in tasks), default=0)
     return dict(initial=dict(Counter(t['state'] for t in tasks if t['task_id'] in initial)),
                 latest_phase=latest, latest=dict(Counter(t['state'] for t in tasks if phase(policy, t['task_id']) == latest)),
-                active=sum(t['state'] not in {'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED','QUEUED'} for t in tasks),
+                active=sum(t['state'] not in {'NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED','QUEUED'} for t in tasks),
                 queued=sum(t['state']=='QUEUED' for t in tasks))
 
 
@@ -39,7 +39,7 @@ def result_view(service, status, policy, handle, *, results=True):
                    worker_id=worker['worker_id'], provider=worker['provider'], native_id=worker['native_id'],
                    model_requested=clip(worker['model_requested'], 128), model_observed=None,
                    result_artifact_id=task['result_artifact_id'])
-        if task['result_artifact_id'] or task['state'] in {'COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}:
+        if task['result_artifact_id'] or task['state'] in {'NOT_DELIVERED_BUDGET','COMPLETED','FAILED','CANCELED','TIMED_OUT','PARTIAL','INTERRUPTED'}:
             # A live worker can already belong to a later resume or fallback.
             # Historical identity is unknown until its own artifact is read.
             row.update(provider=None, native_id=None, model_requested=None, model_observed=None)
@@ -73,7 +73,7 @@ def result_view(service, status, policy, handle, *, results=True):
                 row['unavailable'] = dict(reason=type(error).__name__, next_action='Inspect the retained result artifact; no model input was replayed')
         rows.append(row)
     value = dict(compact=True, handle=handle, group_id=status['group_id'], state=status['state'],
-                 lifecycle=lifecycle(status, policy), tasks=rows,
+                 lifecycle=lifecycle(status, policy), undelivered_phases=status.get('undelivered_phases',0), tasks=rows,
                  omissions=dict(earlier_tasks=max(0, len(status['tasks'])-len(rows)) if handle == status['group_id'] else 0,
                                 detail='Bounded previews; full findings, checks, failures, attempts and history remain in result/artifact reads. Delivery is not inferred.'),
                  next_action='npeer result '+handle+' --json')
