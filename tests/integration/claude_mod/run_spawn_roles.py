@@ -26,8 +26,8 @@ def teammate_calls(home, roles):
             row = json.loads(line)
             blocks = row.get('message', {}).get('content', [])
             for block in blocks if isinstance(blocks, list) else []:
-                if block.get('type') == 'tool_use' and block.get('name') == 'Agent':
-                    calls[block['id']] = dict(type='teammate-call', caller=member, name=block.get('input', {}).get('name'))
+                if block.get('type') == 'tool_use' and block.get('name') == 'Agent' and block.get('input', {}).get('subagent_type') == 'np:codex':
+                    calls[block['id']] = dict(type='teammate-call', caller=row.get('agentId'), name=block.get('input', {}).get('name'))
                 if block.get('type') == 'tool_result':
                     text = str(block.get('content', ''))
                     if 'Teammates cannot spawn other teammates' in text:results[block['tool_use_id']] = 'NATIVE_TEAMMATE_NESTING_REFUSED'
@@ -71,7 +71,9 @@ def main():
                 deadline = time.monotonic() + 35
                 while time.monotonic() < deadline:
                     observed = [json.loads(path.read_text()) for path in roles.glob('*.json')]
-                    if len(teammate_calls(session.home, observed)) == 2 if teammate else any(row['type'] == 'np:codex' for row in observed):break
+                    calls = teammate_calls(session.home, observed) if teammate else []
+                    done = len(calls) == 2 and all(call['disposition'] for call in calls) if teammate else any(row['type'] == 'np:codex' for row in observed)
+                    if done:break
                     time.sleep(.1)
                 # Include any unexpected model fallthrough after the role check.
                 time.sleep(2)
@@ -95,7 +97,7 @@ def main():
         members = [row for row in rows if row['type'] == 'npdriver:member']
         checks['actual_teammate'] = len(members) == 1 and members[0]['isTeammate'] and bool(members[0].get('agentId'))
         checks['caller_is_actual_teammate'] = len(targets) == 2 and bool(members) and all(row.get('caller') == members[0].get('agentId') for row in targets)
-        checks['both_denied'] = len(targets) == 2 and {row.get('disposition') for row in targets} == {'NATIVE_TEAMMATE_NESTING_REFUSED', 'NATIVE_BACKGROUND_AGENT_REFUSED'}
+        checks['both_denied'] = len(targets) == 2 and {row.get('name') is not None: row.get('disposition') for row in targets} == {True: 'NATIVE_TEAMMATE_NESTING_REFUSED', False: 'NATIVE_BACKGROUND_AGENT_REFUSED'}
     else:
         checks['native_classification'] = len(targets) == 1 and targets[0]['isTeammate'] == denied and not targets[0].get('parentAgentId')
         checks['disposition'] = len(targets) == 1 and (bool(targets[0].get('deny')) if denied else bool(targets[0].get('agentId')))
