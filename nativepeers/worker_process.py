@@ -154,19 +154,7 @@ class Worker:
             self.bind(response['thread']['id'],model=response.get('model'))
             persisted(self.journal,self.row,self.lease,response['thread'],required=bool(history_arguments))
             await self.client.call('thread/name/set',{'threadId':self.native,'name':self.row['role_title']})
-            # A real inventory, including inherited MCP/plugin tools, is checked before model input.
-            deadline=time.monotonic()+5
-            while True:
-                inventory=await self.client.call('mcpServerStatus/list',{'threadId':self.native})
-                unsafe=[s['name'] for s in inventory['data'] if s['name']!='nativepeers' and s.get('tools')]
-                require(not unsafe,'PERMISSION_CAPABILITY_UNKNOWN','Worker inherited unscoped MCP tools',details=unsafe)
-                own=next((s for s in inventory['data'] if s['name']=='nativepeers'),{})
-                if 'peer_send' in own.get('tools',{}):break
-                require(time.monotonic()<deadline,'CALLER_NOT_READY','Native provider did not refresh bound MCP tools')
-                await asyncio.sleep(.1)
-            self.journal.event(self.row['worker_id'],'effective-tool-profile',{'profile':self.spec['permission_profile'],
-                'servers':[{ 'name':s['name'],'tools':list(s['tools']),'runtime_status':s.get('runtimeStatus')} for s in inventory['data']],
-                'sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
+            await self.codex_tool_profile('resume' if self.row['native_id'] else 'start')
         elif self.row['provider']=='antigravity':self.verify_antigravity()
         elif self.row['provider']=='grok':
             from .grok_worker import catalog,arguments
@@ -376,7 +364,38 @@ class Worker:
             self.provider.stdin.close()
         require(not canceled,'USER_CANCELED','Task canceled before native input submission')
 
+    async def codex_tool_profile(self,stage):
+        # Apps/plugins are disabled in the launch overlay. A connecting foreign
+        # server is unsafe even before it advertises tools; do not race startup.
+        deadline=time.monotonic()+5
+        while True:
+            self.check_submission()
+            servers=[];cursor=None;seen=set()
+            while True:
+                params={'threadId':self.native}
+                if cursor:params['cursor']=cursor
+                page=await self.client.call('mcpServerStatus/list',params)
+                servers.extend(page['data']);cursor=page.get('nextCursor')
+                if not cursor:break
+                require(cursor not in seen,'PERMISSION_CAPABILITY_UNKNOWN','Codex MCP inventory repeated a page cursor; no task input submitted')
+                seen.add(cursor)
+                require(time.monotonic()<deadline,'PERMISSION_CAPABILITY_UNKNOWN','Codex MCP inventory did not finish; no task input submitted')
+            unsafe=[s['name'] for s in servers if s['name']!='nativepeers' and (s.get('tools') or s.get('runtimeStatus')!='disabled')]
+            require(not unsafe,'PERMISSION_CAPABILITY_UNKNOWN',
+                'Codex worker has an unscoped or starting MCP server; no task input submitted. '
+                'Keep Apps and Plugins disabled in the worker overlay and disable the named server in the worker project configuration before retrying; do not replay accepted input.',
+                details={'servers':unsafe,'stage':stage,'native_id':self.native,'input_submitted':False})
+            own=next((s for s in servers if s['name']=='nativepeers'),{})
+            if 'peer_send' in own.get('tools',{}):break
+            require(time.monotonic()<deadline,'CALLER_NOT_READY','Native provider did not refresh bound MCP tools')
+            await asyncio.sleep(.1)
+        self.journal.event(self.row['worker_id'],'effective-tool-profile',{'profile':self.spec['permission_profile'],
+            'stage':stage,'native_id':self.native,'apps_enabled':False,'plugins_enabled':False,
+            'servers':[{'name':s['name'],'tools':sorted(s.get('tools',{})),'runtime_status':s.get('runtimeStatus')} for s in servers],
+            'sandbox':'read-only' if self.spec['permission_profile']=='analysis' else 'workspace-write'})
+
     async def codex_turn(self,text):
+        await self.codex_tool_profile('task-input')
         self.check_submission()
         self.input_submitted=True
         response=await self.client.call('turn/start',{'threadId':self.native,'input':[{'type':'text','text':text}],

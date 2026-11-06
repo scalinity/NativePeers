@@ -28,3 +28,16 @@ class WorkerShellBindingTests(unittest.TestCase):
                 self.assertEqual(config.read_text(),raw)
                 self.assertNotIn('sandbox',overlay)
             finally:journal.close()
+
+    def test_account_apps_and_plugins_are_disabled_for_both_profiles(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);home=root/'provider';home.mkdir()
+            path=home/'config.toml';raw='[features]\napps=true\nplugins=true\n';path.write_text(raw)
+            journal=Journal(root/'state')
+            try:
+                for profile in ('analysis','workspace'):
+                    overlay=codex_config(journal,journal.root/'bindings/worker',profile,home=home)
+                    self.assertIs(overlay['features.apps'],False)
+                    self.assertIs(overlay['features.plugins'],False)
+                self.assertEqual(path.read_text(),raw)
+            finally:journal.close()

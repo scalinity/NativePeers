@@ -168,3 +168,59 @@ class WorkerVisibilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(argv.count('CODEX_HOME='+str(self.root/'codex-home')),2)
         self.assertIn('legacy unclassified histories',result['resume_visibility_note'])
         self.assertFalse(result['launched'])
+
+    async def test_foreign_server_starting_without_tools_is_refused_before_input(self):
+        original=self.client.call.side_effect
+        async def late(method,params,**kwargs):
+            response=await original(method,params,**kwargs)
+            if method=='mcpServerStatus/list':
+                response['data'].append({'name':'late-account-server','tools':{},'runtimeStatus':'starting'})
+            return response
+        self.client.call.side_effect=late
+        with self.assertRaises(PeerError) as caught:await self.worker.prepare()
+        self.assertEqual(caught.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+        self.assertEqual(caught.exception.details['servers'],['late-account-server'])
+        self.assertFalse(caught.exception.may_have_received)
+        self.assertIn('disable the named server',str(caught.exception))
+        self.assertNotIn('turn/start',[c.args[0] for c in self.client.call.await_args_list])
+
+    async def test_late_tools_after_ready_are_refused_on_every_input(self):
+        for resumed in (False,True):
+            with self.subTest(resumed=resumed):
+                self.worker=self.make_worker(self.native if resumed else None)
+                if resumed:self.worker.lease['released_native']=True
+                original=self.client.call.side_effect
+                await self.worker.prepare()
+                async def late(method,params,**kwargs):
+                    response=await original(method,params,**kwargs)
+                    if method=='mcpServerStatus/list':
+                        response['data'].append({'name':'late-account-server','tools':{'unscoped':{}},'runtimeStatus':'connected'})
+                    return response
+                self.client.call.side_effect=late;self.client.call.reset_mock()
+                with self.assertRaises(PeerError) as caught:await self.worker.codex_turn('must not be submitted')
+                self.assertEqual(caught.exception.code,'PERMISSION_CAPABILITY_UNKNOWN')
+                self.assertFalse(self.worker.input_submitted)
+                self.assertEqual(caught.exception.details['stage'],'task-input')
+                self.assertNotIn('turn/start',[c.args[0] for c in self.client.call.await_args_list])
+                self.client.call.side_effect=original
+
+    async def test_inventory_pages_cannot_hide_a_starting_foreign_server(self):
+        original=self.client.call.side_effect
+        async def pages(method,params,**kwargs):
+            if method=='mcpServerStatus/list':
+                if params.get('cursor')=='second':return {'data':[{'name':'late-server','tools':{},'runtimeStatus':'starting'}]}
+                return {'data':[{'name':'nativepeers','tools':{'peer_send':{}}}],'nextCursor':'second'}
+            return await original(method,params,**kwargs)
+        self.client.call.side_effect=pages
+        with self.assertRaises(PeerError) as caught:await self.worker.prepare()
+        self.assertEqual(caught.exception.details['servers'],['late-server'])
+
+    async def test_start_and_resume_record_the_same_effective_servers(self):
+        await self.worker.prepare()
+        self.worker.row['native_id']=self.worker.native;self.worker.lease['released_native']=True
+        await self.worker.prepare()
+        rows=self.journal.all("SELECT payload_json FROM events WHERE subject_id=? AND kind='effective-tool-profile' ORDER BY sequence",(self.worker.row['worker_id'],))
+        first,second=[json.loads(r['payload_json']) for r in rows]
+        self.assertEqual([first['stage'],second['stage']],['start','resume'])
+        self.assertEqual(first['servers'],second['servers'])
+        self.assertFalse(first['apps_enabled']);self.assertFalse(second['plugins_enabled'])
