@@ -11,6 +11,25 @@ _cache={}
 AUTO_RENEW=True
 
 
+def renewal_next_action(provider,state):
+    """The one command that restores worker/inbox admission, or the managed-Codex hold."""
+    if provider=='codex' and state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED'):
+        return ('Wait for the CodexForge activation owner to qualify the runtime; inspect npeer doctor --json. '
+                'Retry an ADMISSION_DEFERRED peer message with its unchanged request ID. Failed worker requests stay terminal: '
+                'inspect the retained result before submitting new work with a new client request ID.')
+    if provider=='codex':
+        return 'Inspect npeer doctor --json and ask the runtime owner to resolve the named condition.'
+    if state=='QUALIFICATION_REQUIRED':
+        return f'npeer runtime-check --provider {provider} --qualify --json'
+    if state=='INCOMPATIBLE':
+        return ('Adapt the named missing option or marker in the adapter contract, then run '
+                f'npeer runtime-check --provider {provider} --qualify --json.')
+    named={'EXECUTABLE_NOT_FOUND':'Restore the selected native executable, then rerun doctor.',
+           'REVOKED':'Select a qualified non-revoked runtime; routine renewal cannot override revocation.',
+           'PROVENANCE_UNVERIFIED':'Inspect the vendor installation and its code signature.'}
+    return named.get(state,f'npeer runtime-check --provider {provider} --apply --json')
+
+
 def update_status(provider,expected,actual,document):
     """Add detail without changing the existing machine-facing refusal code."""
     state='UPDATE_UNTESTED' if expected else 'QUALIFICATION_REQUIRED'
@@ -22,17 +41,8 @@ def update_status(provider,expected,actual,document):
         check=document.get('update_checks',{}).get(provider,{})
         if check.get('runtime')==actual:
             state=check['compatibility_state'];reason=check['reason']
-    action={'EXECUTABLE_NOT_FOUND':'Restore the selected native executable, then rerun doctor.',
-            'REVOKED':'Select a qualified non-revoked runtime; routine renewal cannot override revocation.',
-            'INCOMPATIBLE':'Inspect the named missing contract and qualify/adapt the affected seam; see docs/RUNTIME_UPDATES.md.',
-            'PROVENANCE_UNVERIFIED':'Inspect the vendor installation and its code signature.',
-            'QUALIFICATION_REQUIRED':'Qualify the affected native seams; see docs/RUNTIME_UPDATES.md.'}
     return dict(compatibility_state=state,reason=reason,operations=['worker_turns','inbox'],
-        next_action=('Wait for the CodexForge activation owner to qualify the runtime; inspect npeer doctor --json. Retry an ADMISSION_DEFERRED peer message with its unchanged request ID. Failed worker requests stay terminal: inspect the retained result before submitting new work with a new client request ID.'
-                     if provider=='codex' and state in ('UPDATE_UNTESTED','QUALIFICATION_REQUIRED','UPDATE_RACED')
-                     else action.get(state,'Inspect npeer doctor --json and ask the runtime owner to resolve the named condition.' if provider=='codex'
-                                     else f'npeer runtime-check --provider {provider} --apply --json')),
-        actual_runtime=actual, approved_runtime=expected)
+        next_action=renewal_next_action(provider,state),actual_runtime=actual,approved_runtime=expected)
 
 
 def fingerprint(path,*,fresh=False):

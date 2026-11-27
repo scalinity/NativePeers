@@ -10,7 +10,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
-from .compatibility import fingerprint, update_verified, verify
+from .compatibility import fingerprint, renewal_next_action, update_verified, verify
 from .errors import PeerError, require
 from .files import advisory_lock, atomic_json
 
@@ -28,6 +28,8 @@ CONTRACTS={
     'grok':dict(series=(1,0),minimum=(1,0,70),team='5Y6N3AJ54S',identifier='xai-grok-pager',
         flags=['--output-format','--model','--sandbox','--permission-mode','--tools','--no-subagents',
                '--disable-web-search','--disallowed-tools','--deny','--max-turns','--no-auto-update'],
+        # Boolean flags --help may omit. A valued flag is never probed.
+        switches=('--no-auto-update',),
         markers=['streaming-json','PreToolUse','SessionStart','additionalContext','dontAsk']),
 }
 READ_ONLY_PROFILE='(version 1)(allow default)(deny network*)(deny file-write*)'
@@ -37,6 +39,14 @@ RENEW_BACKOFF_SECONDS=60
 def version(value):
     matches={tuple(map(int,match)) for match in re.findall(r'\b(\d+)\.(\d+)\.(\d+)(?=[\s(;]|$)',value)}
     return next(iter(matches)) if len(matches)==1 else None
+
+
+def approval_series(prior,contract):
+    """The release series later patches renew inside. A receipt without one uses the contract floor."""
+    recorded=prior.get('series')
+    if isinstance(recorded,list) and len(recorded)==2 and all(type(item) is int for item in recorded):
+        return tuple(recorded)
+    return contract['series']
 
 
 @contextmanager
@@ -62,8 +72,10 @@ def executable_snapshot(journal,runtime):
                 details={'compatibility_state':'CHECK_UNAVAILABLE','cause':type(error).__name__}) from None
 
 
-def check_runtime(journal,provider,*,apply=False):
-    """Inspect by default. --apply renews only worker/inbox approval, never quota."""
+def check_runtime(journal,provider,*,apply=False,qualify=False):
+    """Inspect by default. --apply renews a forward patch. --qualify admits a newer series.
+    Both renew only worker/inbox approval, never quota."""
+    require(not (apply and qualify),'PROTOCOL_ERROR','Choose either --apply or --qualify')
     from .usage.collectors import executable
     selected=executable(provider)
     try:runtime=fingerprint(selected,fresh=True)
@@ -80,7 +92,7 @@ def check_runtime(journal,provider,*,apply=False):
                 native_acceptance='NOT_RUN',approved=False,approval_written=False,checks=[])
 
     def refuse(state,reason):
-        if apply and state in ('INCOMPATIBLE','PROVENANCE_UNVERIFIED','QUALIFICATION_REQUIRED'):
+        if (apply or qualify) and state in ('INCOMPATIBLE','PROVENANCE_UNVERIFIED','QUALIFICATION_REQUIRED'):
             # Remember an observed failed check, never an approval. Read doctor
             # remains passive and a later executable does not inherit this result.
             with advisory_lock(journal.root/'locks/runtime.lock'):
@@ -90,7 +102,8 @@ def check_runtime(journal,provider,*,apply=False):
                         details={'compatibility_state':'UPDATE_RACED'})
                 current.setdefault('update_checks',{})[provider]=dict(runtime=runtime,compatibility_state=state,reason=reason)
                 atomic_json(path,current)
-        raise PeerError('CAPABILITY_MISMATCH',reason,details=dict(result,compatibility_state=state,reason=reason))
+        raise PeerError('CAPABILITY_MISMATCH',reason,details=dict(result,compatibility_state=state,reason=reason,
+                        next_action=renewal_next_action(provider,state)))
 
     retained=document.get('retained',{}).get(provider,{}).get(runtime['sha256'],{})
     if retained.get('revoked'):refuse('REVOKED','The selected runtime was explicitly revoked; renewal cannot override it')
@@ -105,7 +118,8 @@ def check_runtime(journal,provider,*,apply=False):
         refuse('QUALIFICATION_REQUIRED','Managed Codex updates require the manager\'s affected queue, hook and worker-history qualification')
     contract=CONTRACTS[provider]
     previous=version(prior.get('version',''))
-    if not previous or previous[:2]!=contract['series'] or previous<contract['minimum']:
+    baseline=approval_series(prior,contract)
+    if not previous or ((previous[:2]!=baseline or previous<contract['minimum']) and not qualify):
         refuse('QUALIFICATION_REQUIRED','The previous approval is outside the supported adapter release series')
     if sys.platform!='darwin':refuse('CHECK_UNAVAILABLE','Routine renewal requires the macOS vendor signature and read-only execution guard')
 
@@ -129,12 +143,26 @@ def check_runtime(journal,provider,*,apply=False):
             if value.returncode:refuse('CHECK_UNAVAILABLE','Native '+flag+' failed under the no-network, no-write guard')
             return (value.stdout+value.stderr).decode('utf-8',errors='replace')
         observed=metadata('--version').strip();numbers=version(observed)
-        if not numbers or numbers[:2]!=contract['series'] or numbers<=previous or numbers<contract['minimum']:
+        forward=bool(numbers and numbers[:2]==baseline and numbers>previous and numbers>=contract['minimum'])
+        series_step=bool(qualify and numbers and numbers[:2]>baseline and numbers>previous and numbers>=contract['minimum'])
+        if not forward and not series_step:
             refuse('QUALIFICATION_REQUIRED','This release is outside the supported forward patch-update envelope')
-        result.update(version=observed,checks=result['checks']+['supported-forward-patch'])
+        result.update(version=observed,checks=result['checks']+['release-series-canaries' if series_step else 'supported-forward-patch'])
         help_text=metadata('--help')
-        missing=[flag for flag in contract['flags'] if not re.search(re.escape(flag)+r'(?=[\s,=<]|$)',help_text)]
-        if missing:refuse('INCOMPATIBLE','Required native CLI options are absent: '+', '.join(missing))
+        def listed(flag):return re.search(re.escape(flag)+r'(?=[\s,=<]|$)',help_text)
+        missing=[flag for flag in contract['flags'] if not listed(flag)]
+        switches=tuple(contract.get('switches',()))
+        accepted=[];absent=[]
+        for flag in missing:
+            if flag not in switches:absent.append(flag);continue
+            probed=run(['/usr/bin/sandbox-exec','-p',READ_ONLY_PROFILE,str(checked),flag,'--version'])
+            text=(probed.stdout+probed.stderr).decode('utf-8',errors='replace')
+            if probed.returncode==0 and version(text) is not None:accepted.append(flag);continue
+            if probed.returncode not in (0,2):
+                refuse('CHECK_UNAVAILABLE','Native '+flag+' could not be checked under the no-network, no-write guard')
+            absent.append(flag)
+        if absent:refuse('INCOMPATIBLE','Required native CLI options are absent: '+', '.join(absent))
+        if accepted:result['checks'].append('accepted-hidden-switches')
         with checked.open('rb') as stream, mmap.mmap(stream.fileno(),0,access=mmap.ACCESS_READ) as source:
             require(hashlib.sha256(source).hexdigest()==runtime['sha256'],'CAPABILITY_MISMATCH','Checked snapshot changed',details={'compatibility_state':'UPDATE_RACED'})
             missing=[marker for marker in contract['markers'] if source.find(marker.encode())<0]
@@ -143,8 +171,10 @@ def check_runtime(journal,provider,*,apply=False):
         require(fingerprint(selected,fresh=True)==runtime,'CAPABILITY_MISMATCH','Selected runtime changed during validation',
                 details=dict(compatibility_state='UPDATE_RACED',operations=result['operations']))
         result.update(compatibility_state='SUPPORTED_UPDATE',reason='Vendor signature, forward patch version, option names and adapter markers passed; native behavior NOT_RUN')
-        if apply:
-            approval=dict(runtime,version=observed,operations=result['operations'],native_acceptance='NOT_RUN',scope='Bounded signed patch-update checks; native acceptance NOT_RUN',
+        if series_step:result['reason']='Vendor signature, newer release series, option names and adapter markers passed; native behavior NOT_RUN'
+        if apply or qualify:
+            approval=dict(runtime,version=observed,series=list(numbers[:2]),operations=result['operations'],native_acceptance='NOT_RUN',
+                          scope='Affected-seam canaries for a new release series; native acceptance NOT_RUN' if series_step else 'Bounded signed patch-update checks; native acceptance NOT_RUN',
                           update_basis=dict(previous=prior['sha256'],checks=result['checks']))
             update_verified(journal,{provider:approval},expected={provider:prior},selected={provider:selected})
             result['approval_written']=True

@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
-  "reviewed_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
-  "publication_branch": "fix/issue-59-named-spawn",
-  "updated_at": "2026-11-06T04:05:56.599452-05:00",
-  "current_record": "evidence/issue-59-named-spawn.json",
+  "code_commit": "233292ae5b68154204814b789b851af57081b3dc",
+  "reviewed_commit": "544f765df55ff80308c5456e944d4e62905c9dd3",
+  "publication_branch": "fix/issue-67-runtime-updates",
+  "updated_at": "2026-11-27T01:08:47.072620-05:00",
+  "current_record": "evidence/issue-67-runtime-updates.json",
   "file_classes": {
     "product": {
       "files": {
@@ -35,15 +35,15 @@
         "nativepeers/bridge.py": "a43d85540a908a8e230d5ad2c0d6ae9263c1ca9d0e4dbb30281fb034dad7507b",
         "nativepeers/bridge_backend.py": "28edd5af838bbb6e127f60c84b57c8876bb9424d2c1e27d4ce2e12904a3b9afa",
         "nativepeers/budget.py": "06f3fdd8e211068c8e7b949ae16f418fef7a9881f747693330e373bebb58cf4e",
-        "nativepeers/caller.py": "feac9c8288133ddb8f8c2b0ed82a89142ea187b249463522ee51bd4fade7a2b6",
+        "nativepeers/caller.py": "da4b377af33d54dbc96d6288e37a4f793567f988d0305a1a633bb6bb0019f93d",
         "nativepeers/change_preview.py": "b9237b96069cdd19403c0137e910654f28d1e1831a6cc89fd4aa4759470bb3c1",
         "nativepeers/claude_mod_check.py": "10a72fc1f0bae52928d86c5585420e3fe69115303c7a9ce0abc6daf97f794a71",
         "nativepeers/claude_mod_install.py": "ccab3cfd4abe468c45d79a93690d23a3ca87cabafa1e6c795e7a11c5d2501f67",
         "nativepeers/claude_stream.py": "a164a9c677783ae180b7c2913dd3e17948459f51b7eaaf59ade9efa5e30ecc6e",
         "nativepeers/cleanup.py": "9d5bb2b6023bf630e66675007807c354664c92fa53e475ff79a0d9b06d66988f",
-        "nativepeers/cli.py": "c1bc3a6bfd2c080c1e08f82b8167a766d88427e6e0bfca16e49f26282fb62f63",
+        "nativepeers/cli.py": "96896c59b97d962cb52869803738c0c8bdd3903d18a259e6efb5bed37b82fa57",
         "nativepeers/compact.py": "2ee0720326f15d585e287257002aa6a5482f329eb5d669a7621873ecc64e4de2",
-        "nativepeers/compatibility.py": "97aaf7aea41d211c89f86a63aa19c7a453d1e80a7a2a9cbd66de7d8bf4407d6d",
+        "nativepeers/compatibility.py": "aef26668484f95baeec4304f75790e49faeff20183f3ac131c43024e4f00d0eb",
         "nativepeers/completion_delivery.py": "c4324f8e1351ef61222ba59b7a4411f90709f440c3bf9d57eae33b6e1d633da6",
         "nativepeers/control.py": "24ca225df430ba63bc411e2ad266816d562a57760a136de6e50c4c7cb86f1e40",
         "nativepeers/core.py": "9d29ff63b016e9b9a7a34b0212231ad6bea77b5d524e5ed3c0a313062cea27b5",
@@ -81,7 +81,7 @@
         "nativepeers/recovery.py": "f6367bb82b03612d0efaeee4949cca401aae883c1efd96c51eeefc652e163015",
         "nativepeers/registry.py": "76bd8005f7a203332ad5abbcc61f8e2fcbebae0b374944ea5d30c4d75fd89b99",
         "nativepeers/routing.py": "8ff2c427eb13e1cbe42199cc372e3aa02612cb611ec3398a4c581556955c8e3d",
-        "nativepeers/runtime_updates.py": "c26941907ebcdb25bb05401cbfa03b3cb02c9955d12d6010dfb3b1441417ba8c",
+        "nativepeers/runtime_updates.py": "ffba020086b51900cf28af98bdb1dc363953e4135d7f59506656368a2a108671",
         "nativepeers/selected_context.py": "cdf63b792f8d6eec90343155c24cc53df504feb2bfd804e51334f458588c25b0",
         "nativepeers/supervisor.py": "e2b304d92e2e050feea373a9af390cb2954bc6db8d9b4e8fbd4e3497287a7bd3",
         "nativepeers/usage/__init__.py": "9626999d9c742f3b887b09edb35f600588aaf5108b5c11d26cca6c6b44f93a5f",
@@ -118,7 +118,7 @@
         "uv.lock": "a33d1bfa4a2adcc269114931f84df7085b405c0cea80db78bfce50e46834fd50"
       },
       "file_count": 108,
-      "sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8"
+      "sha256": "a88a5c5173ba6d8bbb6d944a2aa7d106ee46dddca19804eda43061b2bb2b4b9c"
     },
     "launchers": {
       "files": {
@@ -181,7 +181,7 @@
         "tests/contract/test_notifications.py": "a3f0a376ab1dcb3a2730b520dd1666f82def7eca8ec13044a3447d67df330dd9",
         "tests/contract/test_phase_admission.py": "bdce92eb9ff00122d38bf1062597ff0f42467f267bb5b70d678e700ac0d79015",
         "tests/contract/test_pro_review_artifacts.py": "0ea2ceeccc66a2b47f3a92e1b9f72dd6d1ef7ca81f763b1ab3a8bb741916433b",
-        "tests/contract/test_provider_fallback.py": "77ce865150ae6beefdc9713031db81a05e4066430ae07bb526df5fbc4d78f692",
+        "tests/contract/test_provider_fallback.py": "d77196b4d485cec6b3f7a15f82172bcafbbc5a4c3d7e38c6df152ecff1d16ed8",
         "tests/contract/test_result_schema.py": "2aef1e2014171aa1e7ef7ba3296ba79e04ea87e0e5eea9b8780a818afadbdc1e",
         "tests/contract/test_review_workflow.py": "4a6c7bd0f2127a23f22157d2180ac5da341f4ce51b0b97d41d0639725ac38225",
         "tests/contract/test_selected_home_launch.py": "46aedc24bac0d540e6ec3e4d47add4058bbd615de81dfb40f8b2e92338fb6337",
@@ -374,7 +374,7 @@
         "tests/unit/test_notification_guard_hooks.py": "a52922c6cc8094256b3ac4abcf9c8fe16890cf5f18eeaa0eca0e724c22af944b",
         "tests/unit/test_notification_policy.py": "fb70d38e1ffe45617e6725d665cac8d2af5c994e599404c1f274b328eb005b6c",
         "tests/unit/test_notification_upgrade.py": "29c383f4eb3e476dd6c7bd9eca1c194c21a50138a8f34790fd90503317786ec4",
-        "tests/unit/test_operation_readiness.py": "7a074b50ee077f0dd093c5be4788d9707541f0b8b4adb363e0eb790a2308790b",
+        "tests/unit/test_operation_readiness.py": "7aa01a26172af194001fca7431fef03a8dbd3a6e833d03b0fdd6e8ae57cbecdc",
         "tests/unit/test_owned_caller_identity.py": "aa8a619371bd04c92b8161c0e0167fe45df8a2f449092f7da6543241b247216c",
         "tests/unit/test_process.py": "0ff58a74a48d49f263a2d02d599f66104d90c8d70e5c55a7e49bba086d1d30f2",
         "tests/unit/test_provider_errors.py": "bd7e2628d964fa2a45f4d2988f304b4e3381984f253ce0d40c95a38cbe43cf54",
@@ -392,7 +392,7 @@
         "tests/unit/test_review_quota_boundaries.py": "4c9ee5bc0fdff91955e8ecab99af7d678eed0739b59f94f6ffe7962dfd2fd07a",
         "tests/unit/test_routing.py": "9fceb768781f94fe4e2163942774f991c6b235683af6453c3e8ae9bac57e712e",
         "tests/unit/test_runtime_initialization.py": "5d80859721558b9e9a5a81fc91bbd3e019c3d68689d4b88889d7ca9500412e7a",
-        "tests/unit/test_runtime_updates.py": "8008694ac924dfe5ebac8e211728777e52df889468178c92ff8ab341e9c97046",
+        "tests/unit/test_runtime_updates.py": "d67da187b307b69bbf1f8cf99d4909ce16e6c9a1793905cc483e8fa41e00dd00",
         "tests/unit/test_selected_context.py": "53f2c75df567ebf384cf29939fe8b0fdb1b664f8c00cc7ca98d0f82c3828018c",
         "tests/unit/test_spawn_check.py": "ba7332618fc6e2ed5a9f05d0f7cdd3a5fb68a49957ffbdfc9724a757244c455e",
         "tests/unit/test_spawn_policy.py": "b67eb7e04b01ef6edb50a91789ac371d53ab397dbc4bfcde44e340d8644c5e82",
@@ -416,14 +416,42 @@
         "tests/unit/test_writing_results.py": "248609a3f84ae20a0a8df37f16e34f4f8ed03ec07376f207ccefb3f7ceb039fd"
       },
       "file_count": 250,
-      "sha256": "c999c7b5c3e6efb01b636cd07c27fe975512a8962363107b536b4d2f2f985363"
+      "sha256": "67a91dbdd1261696918d766f66a6da4d66907e48d5c884936aaaafb5a53af9b1"
     }
   },
   "operation_checks": [
     {
-      "operation": "installed-named-Agent",
-      "status": "NOT_RUN",
-      "parent_context": "OwnedClaudeparent afterallfivePRsmergedandcoordinatedinstall"
+      "operation": "runtime-check-qualify",
+      "provider": "antigravity",
+      "status": "PASS",
+      "parent_context": "unbound runtime-check --qualify from the issue-67 worktree interpreter; model_inputs 0; native_acceptance NOT_RUN",
+      "runtime_sha256": "89d0b97a9ebcefcaebbdfe4ffeb2de877ef92ee4504de188e35a38489136be13"
+    },
+    {
+      "operation": "runtime-check-apply",
+      "provider": "grok",
+      "status": "PASS",
+      "parent_context": "unbound runtime-check --apply from the issue-67 worktree interpreter; hidden switch accepted; model_inputs 0; native_acceptance NOT_RUN",
+      "runtime_sha256": "8b5f67b24f2cc9a4341d8e2eb7f67e3228d7d647ed04752a4f932f7133e5ab08"
+    },
+    {
+      "operation": "spawn-check-neon-xhigh",
+      "provider": "antigravity",
+      "status": "PASS",
+      "parent_context": "registered Grok parent and the installed launcher; one analysis inherit-read-only worker; model_input_submitted false",
+      "runtime_sha256": "89d0b97a9ebcefcaebbdfe4ffeb2de877ef92ee4504de188e35a38489136be13"
+    },
+    {
+      "operation": "hydrogen-low-worker-turn",
+      "provider": "antigravity",
+      "status": "PASS",
+      "parent_context": "registered Grok parent; group cc095959-8d99-4bb8-af54-d794e20dedfe; npeer result COMPLETED; summary ready; model_observed gemini-4-hydrogen-low",
+      "runtime_sha256": "89d0b97a9ebcefcaebbdfe4ffeb2de877ef92ee4504de188e35a38489136be13"
+    },
+    {
+      "operation": "whoami-after-claude-continue",
+      "status": "PASS",
+      "parent_context": "unit test test_whoami_uses_the_live_claude_binding_after_continue; a live claude -c process was not started"
     }
   ],
   "source_map_scope": "Product Python, schemas and dependency definitions only; launchers, integrations and tests have independent class digests.",

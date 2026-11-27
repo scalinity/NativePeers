@@ -47,6 +47,38 @@ def test_binding_diagnosis_distinguishes_reserved_expired_and_generation(tmp_pat
     finally:j.close()
 
 
+def test_whoami_uses_the_live_claude_binding_after_continue(tmp_path):
+    import asyncio
+    from pathlib import Path
+    from nativepeers.cli import dispatch,parser
+    from nativepeers.process import identity
+    from nativepeers.registry import Registry
+    j=Journal(tmp_path/'state');owner=identity(os.getpid());home=tmp_path/'claude-home';home.mkdir()
+    peer=Registry(j).register('claude',home,'6f1c2a40-7b0e-4c1a-9d3e-2a8b5c6d7e8f','continued',owner.json(),tmp_path,{'kind':'fake'})
+    live=j.root/'bindings'/'live';stale=j.root/'bindings'/'stale'
+    body=dict(state='BOUND',kind='peer',peer_key=peer['handle'],incarnation_id=peer['incarnation_id'],expires_at=time.time()+3600)
+    atomic_json(live,dict(body,owner=owner.json()))
+    atomic_json(stale,dict(body,owner=dict(owner.json(),pid=2**30,start='0:0')))
+    binaries={Path(owner.executable):'claude'}
+    environment={'NPEER_BINDING':str(stale),'NPEER_BOOTSTRAP':'','CODEX_THREAD_ID':''}
+    try:
+        with patch('nativepeers.caller.ancestry',return_value=[owner]),patch('nativepeers.caller.native_binaries',return_value=binaries),patch.dict(os.environ,environment):
+            result=asyncio.run(dispatch(parser().parse_args(['whoami','--json']),j))
+        assert result['kind']=='peer' and result['key']==peer['handle']
+        assert result['notification_policy']=={'state':'OPEN','configured':False,'message_cutoff':0,'route_cutoff':0,'closed_at':None,'opened_at':None,'written_by_incarnation':None}
+        extra=j.root/'bindings'/'also-live';atomic_json(extra,dict(body,owner=owner.json()))
+        with patch('nativepeers.caller.ancestry',return_value=[owner]),patch('nativepeers.caller.native_binaries',return_value=binaries),patch.dict(os.environ,environment):
+            with pytest.raises(PeerError) as ambiguous:asyncio.run(dispatch(parser().parse_args(['whoami','--json']),j))
+        assert ambiguous.value.details['reason']=='AMBIGUOUS_BINDING'
+        with patch('nativepeers.caller.ancestry',return_value=[owner]),patch('nativepeers.caller.native_binaries',return_value=binaries),patch.dict(os.environ,dict(environment,NPEER_BOOTSTRAP=str(live))):
+            with pytest.raises(PeerError) as bootstrap:asyncio.run(dispatch(parser().parse_args(['whoami','--json']),j))
+        assert bootstrap.value.details['reason']=='OWNER_GONE'
+        with patch('nativepeers.caller.ancestry',return_value=[owner]),patch('nativepeers.caller.native_binaries',return_value={Path(owner.executable):'grok'}),patch.dict(os.environ,environment):
+            with pytest.raises(PeerError) as grok:asyncio.run(dispatch(parser().parse_args(['whoami','--json']),j))
+        assert grok.value.details['reason']=='OWNER_GONE'
+    finally:j.close()
+
+
 def test_missing_configured_binding_is_structured_in_cli_and_mcp(tmp_path,capsys):
     import asyncio,json
     from types import SimpleNamespace

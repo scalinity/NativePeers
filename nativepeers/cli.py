@@ -82,7 +82,7 @@ def parser():
     q=command('resume-command');q.add_argument('worker_id');q.add_argument('--explain',action='store_true')
     q=command('resume-worker');q.add_argument('worker_id');q.add_argument('--task-file',type=Path,required=True);q.add_argument('--completion-mode',choices=['push','wait']);q.add_argument('--client-request-id')
     q=command('recover');q.add_argument('--group',required=True);q.add_argument('--dry-run',action='store_true')
-    q=command('runtime-check');q.add_argument('--provider',choices=['claude','codex','antigravity','grok'],required=True);q.add_argument('--apply',action='store_true')
+    q=command('runtime-check');q.add_argument('--provider',choices=['claude','codex','antigravity','grok'],required=True);q.add_argument('--apply',action='store_true');q.add_argument('--qualify',action='store_true')
     q=command('runtime-revoke');q.add_argument('--provider',choices=['claude','codex','antigravity','grok'],required=True);q.add_argument('--sha256',required=True)
     q=command('doctor');q.add_argument('--live',action='store_true');q.add_argument('--budget-file',type=Path)
     for name in ['install','uninstall']:
@@ -216,7 +216,7 @@ async def dispatch(args,journal):
     if name=='runtime-check':
         from .runtime_updates import check_runtime
         require(not caller.grants.get('worker_id') and caller.kind!='controller','APPROVAL_BLOCKED','Owned workers cannot renew runtime approvals')
-        value=check_runtime(journal,args.provider,apply=args.apply)
+        value=check_runtime(journal,args.provider,apply=args.apply,qualify=args.qualify)
         if args.provider=='claude':
             # A separate verdict: the np mod's zero-API contract on this build. It never changes the runtime approval.
             from .claude_mod_check import check as mod_check
