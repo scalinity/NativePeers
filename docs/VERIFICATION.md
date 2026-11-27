@@ -10,7 +10,7 @@ A patch inside the series recorded on the approval renews on first use. A newer 
 
 From a registered Grok parent, the installed launcher admitted one `gemini-4-neon-xhigh` analysis worker with `inherit-read-only`: `npeer spawn --check --compact` returned `ready: true`, `model_input_submitted: false`, and no failures. One live `gemini-4-hydrogen-low` analysis turn, effort `low`, completed. `npeer result` for group `cc095959-8d99-4bb8-af54-d794e20dedfe` is `COMPLETED`, summary `ready`, `model_observed` `gemini-4-hydrogen-low`, collected at 12:57 AM EST. An earlier Hydrogen attempt in group `db6cf6ed-f4a4-453d-ac75-b9f0d1839499` was interrupted with `PARENT_LOST` when its parent exited before collection. That attempt is not the completion.
 
-The reparented suite at this source, before the evidence-pointer publication, is 2 failed, 1240 passed, 5 skipped, 1117 subtests passed, in 341.66 seconds. Both failures are the previous source-map hash of `nativepeers/caller.py`. Command: `OPENBLAS_NUM_THREADS=1 .venv/bin/python -m pytest -q`.
+The reparented suite at the qualification commit, before the evidence-pointer publication, is 2 failed, 1240 passed, 5 skipped, 1117 subtests passed, in 341.66 seconds. Both failures are the previous source-map hash of `nativepeers/caller.py`. After that publication, the same command passes 1242 tests, 5 skipped, and 1117 subtests, in 464.61 seconds. Command: `OPENBLAS_NUM_THREADS=1 .venv/bin/python -m pytest -q`.
 
 ---
 
