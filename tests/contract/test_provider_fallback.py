@@ -407,11 +407,12 @@ int main(int argc, char **argv) {
     async def test_non_git_editing_fallback_keeps_selected_frozen_bytes(self):
         # Keep the fixture's existing identity when removing its only Git config.
         # No host configuration or product commit identity is changed.
-        identities={}
-        for role in ('AUTHOR','COMMITTER'):
-            value=git(self.source,'var','GIT_'+role+'_IDENT').stdout.decode().rsplit(' ',2)[0]
-            name,email=value.rsplit(' <',1)
-            identities.update({'GIT_'+role+'_NAME':name,'GIT_'+role+'_EMAIL':email.removesuffix('>')})
+        # asyncSetUp points HOME at an empty fixture home, so Git config in the
+        # real home is not visible. The fixture commit already has its identity.
+        name=git(self.source,'log','-1','--format=%an').stdout.decode().strip()
+        email=git(self.source,'log','-1','--format=%ae').stdout.decode().strip()
+        identities={role+'_NAME':name for role in ('GIT_AUTHOR','GIT_COMMITTER')}
+        identities.update({role+'_EMAIL':email for role in ('GIT_AUTHOR','GIT_COMMITTER')})
         self.enterContext(patch.dict(os.environ,identities))
         shutil.rmtree(self.source/'.git')
         request=self.request(editing=True);request['workers'][0]['workspace']={'mode':'isolated-copy','file_allowlist':['main.py']}

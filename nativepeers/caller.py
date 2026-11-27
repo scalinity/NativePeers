@@ -136,10 +136,62 @@ def verify_owned_binding(journal, value, ancestors, *, provider=None, native_id=
     return row
 
 
+def _binding_kind(path):
+    try:fd=os.open(path,os.O_RDONLY|os.O_NOFOLLOW)
+    except OSError:return None
+    try:
+        info=os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode&0o077:return None
+        raw=os.read(fd,65537)
+    finally:os.close(fd)
+    if len(raw)>65536:return None
+    try:value=json.loads(raw)
+    except ValueError:return None
+    return value.get('kind') if isinstance(value,dict) else None
+
+
+def continued_claude_binding(journal):
+    """`claude -c` leaves the shell exporting the exited process's binding.
+
+    SessionStart wrote one new binding for the live process. Use it when it is
+    the only live peer binding owned by this Claude process. A worker bootstrap,
+    a controller lease and any other nearest native provider stay untouched.
+    """
+    if os.getenv('NPEER_BOOTSTRAP'):return None
+    ancestors=[process.json() for process in ancestry()]
+    nearest=nearest_native(ancestors,journal=journal)
+    if nearest is None or native_provider(nearest['executable'],native_binaries(journal))!='claude':return None
+    directory=journal.root/'bindings'
+    if not directory.is_dir():return None
+    found=[]
+    for path in sorted(directory.iterdir()):
+        if not path.is_file():continue
+        try:value=read_binding(journal,path)
+        except PeerError:continue
+        if value.get('kind')=='peer' and value.get('state')=='BOUND' and native_ancestor(value.get('owner') or {},[nearest]):
+            found.append(value)
+    if len(found)>1:
+        raise PeerError('CALLER_UNBOUND','More than one live Claude binding matches this process',
+                        details={'reason':'AMBIGUOUS_BINDING','state':'UNKNOWN'})
+    return found[0] if found else None
+
+
+def _binding_after_continue(journal,path,error,*,fixed_binding):
+    details=error.details or {}
+    if (fixed_binding is not None or not os.getenv('NPEER_BINDING') or os.getenv('NPEER_BOOTSTRAP')
+            or error.code!='CALLER_UNBOUND' or details.get('reason')!='OWNER_GONE' or _binding_kind(path)!='peer'):
+        raise error
+    recovered=continued_claude_binding(journal)
+    if recovered is None:raise error
+    return recovered
+
+
 def bind_caller(journal, registry, *, fixed_binding=None, allow_external=True):
     path = fixed_binding or os.getenv("NPEER_BINDING") or os.getenv("NPEER_BOOTSTRAP")
     if path:
-        value = read_binding(journal, Path(path))
+        try:value = read_binding(journal, Path(path))
+        except PeerError as error:
+            value=_binding_after_continue(journal,Path(path),error,fixed_binding=fixed_binding)
         if value["kind"] == "controller":
             require(fixed_binding is not None, "CALLER_UNBOUND", "Controller actor requires its fixed lease")
             return Caller("controller", "controller:"+value["group_id"]+":"+str(value["generation"]), grants=value)

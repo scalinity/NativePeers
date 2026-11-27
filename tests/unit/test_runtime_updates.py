@@ -381,3 +381,78 @@ def test_a_worker_without_a_pinned_runtime_renews_but_a_pinned_one_stays_strict(
         assert error.value.details['compatibility_state']=='UPDATE_UNTESTED' and not calls
         assert verify(j,'claude',binary,worker_id='fresh')==now and calls
 
+
+def test_a_new_series_qualifies_once_and_then_its_patches_renew(runtime):
+    from nativepeers.cli import dispatch,parser
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,prior=runtime
+    binary.write_text(binary.read_text().replace('2.1.311','2.2.0'))
+    receipt=j.root/'compat/runtime.json';original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        with pytest.raises(PeerError) as error:check_runtime(j,'claude',apply=True)
+        assert error.value.details['compatibility_state']=='QUALIFICATION_REQUIRED'
+        assert error.value.details['next_action']=='npeer runtime-check --provider claude --qualify --json'
+        assert json.loads(receipt.read_text())['providers']['claude']==prior
+        assert diagnose(j,{'claude':binary})[0]['next_action']==error.value.details['next_action']
+        result=asyncio.run(dispatch(parser().parse_args(['runtime-check','--provider','claude','--qualify']),j))
+        assert result['approved'] and result['model_inputs']==0 and 'release-series-canaries' in result['checks']
+        approval=json.loads(receipt.read_text())['providers']['claude']
+        assert approval['series']==[2,2] and approval['update_basis']['previous']==prior['sha256']
+        binary.write_text(binary.read_text().replace('2.2.0','2.2.1'))
+        renewed=check_runtime(j,'claude',apply=True)
+        assert renewed['approved'] and 'supported-forward-patch' in renewed['checks']
+        assert json.loads(receipt.read_text())['providers']['claude']['series']==[2,2]
+        with pytest.raises(PeerError) as both:
+            asyncio.run(dispatch(parser().parse_args(['runtime-check','--provider','claude','--apply','--qualify']),j))
+        assert both.value.code=='PROTOCOL_ERROR'
+        assert json.loads(receipt.read_text())['providers']['claude']['series']==[2,2]
+
+
+def test_a_removed_switch_stays_refused_until_the_contract_drops_it(runtime,monkeypatch):
+    from nativepeers.runtime_updates import CONTRACTS,check_runtime
+    j,binary,prior=runtime
+    script=binary.read_text().replace(' --restricted','')
+    script=script.replace('esac\n','--restricted) exit 2;;\nesac\n',1)
+    binary.write_text(script)
+    monkeypatch.setitem(CONTRACTS,'claude',dict(CONTRACTS['claude'],switches=('--restricted',)))
+    receipt=j.root/'compat/runtime.json';original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        for kwargs in (dict(apply=True),dict(qualify=True)):
+            with pytest.raises(PeerError) as error:check_runtime(j,'claude',**kwargs)
+            assert error.value.details['compatibility_state']=='INCOMPATIBLE'
+            assert '--restricted' in error.value.details['reason']
+            assert error.value.details['next_action']=='Adapt the named missing option or marker in the adapter contract, then run npeer runtime-check --provider claude --qualify --json.'
+        assert json.loads(receipt.read_text())['providers']['claude']==prior
+        reduced=dict(CONTRACTS['claude'])
+        reduced['flags']=[flag for flag in reduced['flags'] if flag!='--restricted']
+        reduced['switches']=()
+        monkeypatch.setitem(CONTRACTS,'claude',reduced)
+        assert check_runtime(j,'claude',apply=True)['approved']
+    assert verify(j,'claude',binary)==fingerprint(binary)
+
+
+def test_a_hidden_switch_the_binary_accepts_renews(runtime,monkeypatch):
+    from nativepeers.runtime_updates import CONTRACTS,check_runtime
+    j,binary,prior=runtime;contract=CONTRACTS['claude']
+    flags=' '.join(flag for flag in contract['flags'] if flag!='--restricted')
+    markers=' '.join(contract['markers'])
+    binary.write_text('#!/bin/sh\nif [ "$1" = "--restricted" ]; then shift; fi\ncase "$1" in\n--version) echo "2.1.311 (Claude Code)";;\n--help) echo "'+flags+'";;\n*) exit 2;;\nesac\n# '+markers+'\n')
+    monkeypatch.setitem(CONTRACTS,'claude',dict(contract,switches=('--restricted',)))
+    original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        result=check_runtime(j,'claude',apply=True)
+    assert result['approved'] and 'accepted-hidden-switches' in result['checks']
+    approval=json.loads((j.root/'compat/runtime.json').read_text())['providers']['claude']
+    assert approval['update_basis']['previous']==prior['sha256'] and '--no-auto-update' in CONTRACTS['grok']['switches']
+
+
+def test_approval_follows_bytes_when_the_home_path_changes(runtime,tmp_path):
+    from nativepeers.runtime_updates import check_runtime
+    j,binary,_=runtime;original=subprocess.run
+    with patch('nativepeers.usage.collectors.executable',return_value=binary),patch('subprocess.run',side_effect=signed_run(original)):
+        assert check_runtime(j,'claude',apply=True)['approved']
+    moved=tmp_path/'renamed-home'/'claude';moved.parent.mkdir();moved.write_bytes(binary.read_bytes());moved.chmod(0o700)
+    assert verify(j,'claude',moved,renew=False)==fingerprint(moved)
+    assert fingerprint(moved)['sha256']==fingerprint(binary)['sha256']
+    assert fingerprint(moved)['path']!=fingerprint(binary)['path']
+
