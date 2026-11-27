@@ -215,11 +215,11 @@
   },
   "current_protected_baseline": "evidence/private/live-usage/baseline.json",
   "current_review": {
-    "branch": "fix/issue-59-named-spawn",
-    "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
-    "evidence": "evidence/issue-59-named-spawn.json",
-    "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
-    "status": "SOURCE_PASS_INSTALLED_NOT_RUN"
+    "branch": "fix/issue-67-runtime-updates",
+    "code_commit": "233292ae5b68154204814b789b851af57081b3dc",
+    "evidence": "evidence/issue-67-runtime-updates.json",
+    "source_map_sha256": "a88a5c5173ba6d8bbb6d944a2aa7d106ee46dddca19804eda43061b2bb2b4b9c",
+    "status": "SOURCE_PASS_RUNTIME_ADMITTED"
   },
   "feature_work": {
     "name": "live-usage-sources",
@@ -232,10 +232,10 @@
   },
   "fingerprints": "evidence/fingerprints.json",
   "git": {
-    "base_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
-    "branch": "fix/issue-59-named-spawn",
-    "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
-    "last_verified_publication": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+    "base_commit": "544f765df55ff80308c5456e944d4e62905c9dd3",
+    "branch": "fix/issue-67-runtime-updates",
+    "code_commit": "233292ae5b68154204814b789b851af57081b3dc",
+    "last_verified_publication": "233292ae5b68154204814b789b851af57081b3dc",
     "owned_uncommitted_changes": []
   },
   "historical_blockers": [
@@ -302,53 +302,21 @@
   "project": "/Users/danny/Documents/Tools/NativePeers",
   "protected_files": "evidence/protected-files.json",
   "publication": {
-    "branch": "fix/issue-59-named-spawn",
+    "branch": "fix/issue-67-runtime-updates",
     "repository": "https://github.com/scalinity/NativePeers",
     "status": "PUSHED",
-    "verified_remote_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
-    "verified_remote_code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+    "verified_remote_commit": "233292ae5b68154204814b789b851af57081b3dc",
+    "verified_remote_code_commit": "233292ae5b68154204814b789b851af57081b3dc",
     "source_zip_uploaded": false,
     "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
   },
   "schema_version": 2,
-  "stage": "issue-59-source-verification",
+  "stage": "issue-67-source-verification",
   "tests_current": {
-    "plugin_validation": {
-      "status": "PASS",
-      "command": "Claude2.1.319 plugin validate integrations/claude/mod/np",
-      "output": "exit0; existing ICON_MISSING warning"
-    },
-    "typescript": {
-      "status": "PASS",
-      "command": "tsc -p integrations/claude/mod/np; tsc -p tests/integration/claude_mod/driver; tsc -p tests/integration/claude_mod/spawn_observer",
-      "output": "exit0"
-    },
-    "plugin_units": {
-      "status": "PASS",
-      "command": "Claude2.1.319 plugin test integrations/claude/mod/np",
-      "output": "58 pass,0fail"
-    },
-    "native_roles": {
-      "status": "PASS",
-      "command": "NP_CLAUDE_BIN=exact2.1.319 python tests/integration/claude_mod/run_spawn_roles.py --interactive --case CASE --keep OWN_IGNORED_DIR",
-      "output": "Fiveinteractivecasesandbothdefaultprintcasespassed onfinalfixturecode. Zero tripwiremodelrequests; printalsoAPI duration0/cost0/empty modelUsage; interactivehasnoheadlessresultmetrics."
-    },
-    "driver_regression": {
-      "status": "PASS",
-      "command": "python tests/integration/claude_mod/run_delivery_ownership.py --case direct",
-      "output": "passed exact2.1.319 afterdriverchange"
-    },
-    "python_complete": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "e2cfcae",
-      "output": "1237 passed, 5 skipped, 1117 subtests passed in296.45s"
-    },
-    "initial_python_complete": {
-      "status": "PASS",
-      "command": ".venv/bin/python -m pytest -q",
-      "source_commit": "1072d95",
-      "output": "1237 passed,5skipped,1117subtests in313.20s"
+    "python_before_publication": {
+      "status": "FAIL",
+      "command": "OPENBLAS_NUM_THREADS=1 .venv/bin/python -m pytest -q",
+      "output": "2 failed, 1240 passed, 5 skipped, 1117 subtests passed in 341.66s. Both failures are the previous source-map hash of nativepeers/caller.py. Pytest was reparented so its ancestry does not include grok."
     }
   },
   "transports": {
@@ -357,7 +325,7 @@
     "codex_queue": "Native ordinary/standalone seam PASS and actual product cross/same-provider messages ingested"
   },
   "uncertain_submissions": [],
-  "updated_at": "2026-11-06T04:05:56.599452-05:00",
+  "updated_at": "2026-11-27T01:08:47.072620-05:00",
   "publication_history": [
     {
       "stage": "USAGE_INTELLIGENCE_COMPLETE",
@@ -2901,6 +2869,33 @@
         "evidence": "evidence/issue-59-named-spawn.json",
         "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
         "status": "SOURCE_PENDING_FINAL_REVIEW_AND_FULL_SUITE"
+      }
+    },
+    {
+      "stage": "issue-59-source-verification",
+      "updated_at": "2026-11-06T04:05:56.599452-05:00",
+      "git": {
+        "base_commit": "d3ee85ec43810f84b1e28c07ef8bfe90f412932c",
+        "branch": "fix/issue-59-named-spawn",
+        "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+        "last_verified_publication": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+        "owned_uncommitted_changes": []
+      },
+      "publication": {
+        "branch": "fix/issue-59-named-spawn",
+        "repository": "https://github.com/scalinity/NativePeers",
+        "status": "PUSHED",
+        "verified_remote_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+        "verified_remote_code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+        "source_zip_uploaded": false,
+        "scope": "Verified remote product source commit. Later evidence and documentation publication commits are descendants; native acceptance remains operation-specific."
+      },
+      "current_review": {
+        "branch": "fix/issue-59-named-spawn",
+        "code_commit": "e2cfcaeef9f6f3ce003ee810b44cfa2a35c9219f",
+        "evidence": "evidence/issue-59-named-spawn.json",
+        "source_map_sha256": "f58ee29d194660244db5d34b763d6d7c1c7145050990ec465fc58eb1fa5200a8",
+        "status": "SOURCE_PASS_INSTALLED_NOT_RUN"
       }
     }
   ],
